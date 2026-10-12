@@ -58,6 +58,11 @@ export function MyScreen() {
           onPress={() => router.push("/support")}
         />
         <Button
+          label="서비스 이용약관"
+          variant="ghost"
+          onPress={() => router.push("/terms")}
+        />
+        <Button
           label="개인정보처리방침"
           variant="ghost"
           onPress={() => router.push("/privacy")}

@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
@@ -98,18 +99,32 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
         value={password}
         onChangeText={setPassword}
         secureTextEntry={!visible}
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={visible ? "비밀번호 숨기기" : "비밀번호 보기"}
+            onPress={() => setVisible((x) => !x)}
+            style={{
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons
+              name={visible ? "eye-off-outline" : "eye-outline"}
+              size={22}
+            />
+          </Pressable>
+        }
         autoCapitalize="none"
         autoComplete={signup ? "new-password" : "current-password"}
-      />
-      <Button
-        label={visible ? "비밀번호 숨기기" : "비밀번호 보기"}
-        variant="ghost"
-        onPress={() => setVisible((x) => !x)}
       />
       {fields.password && <ErrorNotice error={fields.password} />}
       {signup && (
         <>
           <T size={13}>8~64자, 영문·숫자를 포함해 주세요</T>
+          <T size={13}>만 14세 이상만 가입할 수 있어요</T>
           <Field
             ref={confirmRef}
             label="비밀번호 확인"
@@ -132,6 +147,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
                 accessibilityRole="checkbox"
                 accessibilityLabel={`필수 ${label} 동의`}
                 accessibilityState={{ checked }}
+                aria-checked={checked}
                 onPress={() => change(!checked)}
                 style={{ flex: 1, paddingVertical: 16 }}
               >
@@ -140,9 +156,13 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
                 </T>
               </Pressable>
               <Button
-                label="보기"
+                label={`${label} 보기`}
                 variant="ghost"
-                onPress={() => router.push("/privacy")}
+                onPress={() =>
+                  router.push(
+                    label === "서비스 이용약관" ? "/terms" : "/privacy",
+                  )
+                }
               />
             </View>
           ))}
