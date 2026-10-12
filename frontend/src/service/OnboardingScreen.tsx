@@ -84,6 +84,21 @@ function Content({ step }: { step: Step }) {
       setError("기준 날짜와 시간을 다시 확인해 주세요");
       return;
     }
+    const amount =
+      step === "balance"
+        ? v.balance
+        : step === "income"
+          ? v.incomeAmount
+          : step === "card"
+            ? v.cardUnpaid
+            : undefined;
+    if (
+      amount !== undefined &&
+      (!Number.isSafeInteger(amount) || amount < 0 || amount >= 1e12)
+    ) {
+      setError("금액은 0원 이상, 1조 미만으로 입력해 주세요");
+      return;
+    }
     if (
       step === "income" &&
       (!Number.isInteger(v.payday) || v.payday < 1 || v.payday > 31)
@@ -97,6 +112,7 @@ function Content({ step }: { step: Step }) {
         (x) =>
           !x.name.trim() ||
           x.amount < 1 ||
+          x.amount >= 1e12 ||
           !Number.isInteger(x.day) ||
           x.day < 1 ||
           x.day > 31,
@@ -107,7 +123,9 @@ function Content({ step }: { step: Step }) {
     }
     if (
       step === "protect" &&
-      v.protectedItems.some((x) => !x.name.trim() || x.amount < 1)
+      v.protectedItems.some(
+        (x) => !x.name.trim() || x.amount < 1 || x.amount >= 1e12,
+      )
     ) {
       setError("보호할 항목의 이름과 금액을 확인해 주세요");
       return;

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { test, expect, type Page } from "@playwright/test";
 const apiBase = "http://localhost:8080/api/v1";
 const password = "Testpass1234";
@@ -71,18 +72,44 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     .click();
   await page.getByLabel("보호 항목 1 이름", { exact: true }).fill("비상금");
   await page.getByLabel("보호 항목 1 금액 (원)", { exact: true }).fill("50000");
+  let droppedUserLookup = false;
+  await page.route("**/api/v1/me", (route) => {
+    if (route.request().method() === "GET" && !droppedUserLookup) {
+      droppedUserLookup = true;
+      return route.abort("failed");
+    }
+    return route.continue();
+  });
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(page.getByText(/연결이 불안정해요/)).toBeVisible();
+  await expect(page).toHaveURL(/\/onboarding\/protect$/);
+  expect(budgetWrites).toBe(1);
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/done$/);
   expect(budgetWrites).toBe(1);
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(
-    page.getByText("아직 기록한 거래가 없어요", { exact: true }),
+    page.getByText("이번 정산 주기에 기록한 거래가 없어요", { exact: true }),
   ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/service-home.png",
+    fullPage: true,
+  });
   const before = await snapshot(page, "/budget/today");
   await page
     .getByRole("button", { name: "+ 거래 직접 기록", exact: true })
     .click();
+  await page.getByLabel("금액 (원)", { exact: true }).fill("1000000000000");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(
+    page.getByText("금액은 1원 이상, 1조 미만으로 입력해 주세요", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByLabel("금액 (원)", { exact: true })).toHaveValue(
+    "1,000,000,000,000",
+  );
   await page.getByLabel("금액 (원)", { exact: true }).fill("8500");
   await page
     .getByLabel("내용 (40자 이내)", { exact: true })
@@ -195,7 +222,21 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await expect(
     page.getByRole("radio", { name: "기타", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  await page.route("**/api/v1/transactions/*", (route) =>
+    route.request().method() === "DELETE"
+      ? route.abort("failed")
+      : route.continue(),
+  );
   await page.getByRole("button", { name: "거래 삭제", exact: true }).click();
+  await page.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(page.getByText(/연결이 불안정해요/)).toBeVisible();
+  await expect(page.getByLabel("금액 (원)", { exact: true })).toHaveValue(
+    "7,000",
+  );
+  await page.unroute("**/api/v1/transactions/*");
+  await page
+    .getByRole("button", { name: "거래 삭제 다시 시도", exact: true })
+    .click();
   await page.getByRole("button", { name: "삭제", exact: true }).click();
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(page.getByText("테스트 점심", { exact: true })).toHaveCount(0);
@@ -289,11 +330,60 @@ test("expired token returns to start; public routes and demo remain accessible",
   ).toBeVisible();
   expect(await token(page)).toBeNull();
   await page.goto("/privacy");
-  await expect(page.getByText("2026-10-13", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("- 시행일: 2026년 10월 13일", { exact: true }),
+  ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.0.0", { exact: true })).toBeVisible();
   await page.goto("/demo");
   await expect(
     page.getByText("시연용 · 예시 데이터 · v1.1.0", { exact: true }),
   ).toBeVisible();
+});
+
+test("approved legal copy and public terms link preserve signup input", async ({
+  page,
+}) => {
+  await page.goto("/auth/signup");
+  await expect(
+    page.getByText("만 14세 이상만 가입할 수 있어요", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("이메일", { exact: true }).fill("draft@example.com");
+  await page
+    .getByRole("button", { name: "서비스 이용약관 보기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/terms$/);
+  await expect(
+    page.getByText("이 약관은 2026년 10월 13일부터 시행합니다.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+  await expect(page.getByLabel("이메일", { exact: true })).toHaveValue(
+    "draft@example.com",
+  );
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.screenshot({
+    path: "test-results/signup-360.png",
+    fullPage: true,
+  });
+  const fs = await import("node:fs/promises");
+  for (const [route, file] of [
+    ["/privacy", "privacy-policy.md"],
+    ["/terms", "terms.md"],
+  ] as const) {
+    const source = await fs.readFile(`../docs/play-store/${file}`, "utf8");
+    const body = source.replace(/\r/g, "").split("\n---\n")[1].trim();
+    await page.goto(route);
+    const text = await page.locator("body").innerText();
+    for (const line of body
+      .split("\n")
+      .filter((x) => x.trim() && !/^\|[-| ]+\|$/.test(x))) {
+      if (line.startsWith("|")) {
+        for (const cell of line.split("|").slice(1, -1))
+          expect(text).toContain(cell.trim());
+      } else
+        expect(text).toContain(line.replace(/^## /, "").replace(/\*\*/g, ""));
+    }
+  }
 });

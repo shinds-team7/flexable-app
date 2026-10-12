@@ -42,7 +42,8 @@ export function CategoriesScreen() {
         value={type}
         onChange={setType}
       />
-      <ErrorNotice error={error ?? result.error} retry={result.retry} />
+      <ErrorNotice error={error} />
+      <ErrorNotice error={result.error} retry={result.retry} />
       {result.loading ? (
         <Loading />
       ) : (

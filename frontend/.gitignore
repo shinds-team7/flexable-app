@@ -43,3 +43,5 @@ yarn-error.*
 # Browser integration test artifacts
 /test-results/
 /playwright-report/
+
+/dist-android/

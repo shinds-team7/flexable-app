@@ -54,6 +54,7 @@ function Form({ existing }: { existing?: Transaction }) {
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<unknown>();
+  const [errorAction, setErrorAction] = useState<"save" | "delete">("save");
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const key = useRef<string | null>(null);
@@ -74,6 +75,7 @@ function Form({ existing }: { existing?: Transaction }) {
   };
   const save = async () => {
     if (lock.current) return;
+    setErrorAction("save");
     if (
       !uncertain &&
       (!Number.isInteger(Number(amount)) ||
@@ -135,6 +137,7 @@ function Form({ existing }: { existing?: Transaction }) {
   const remove = async () => {
     if (!existing || lock.current) return;
     setConfirm(false);
+    setErrorAction("delete");
     lock.current = true;
     setBusy(true);
     setError(undefined);
@@ -166,6 +169,7 @@ function Form({ existing }: { existing?: Transaction }) {
           }}
         />
         <Field
+          editable={!busy && !uncertain}
           label="금액 (원)"
           value={amount ? money(Number(amount)) : ""}
           keyboardType="number-pad"
@@ -178,6 +182,7 @@ function Form({ existing }: { existing?: Transaction }) {
           {list.map((c) => (
             <Pressable
               key={c.id}
+              disabled={busy || uncertain}
               accessibilityRole="radio"
               accessibilityLabel={c.name}
               accessibilityState={{ checked: categoryId === c.id }}
@@ -228,12 +233,14 @@ function Form({ existing }: { existing?: Transaction }) {
           }}
         />
         <Field
+          editable={!busy && !uncertain}
           label="내용 (40자 이내)"
           value={title}
           onChangeText={setTitle}
           maxLength={40}
         />
         <Field
+          editable={!busy && !uncertain}
           label="메모 (200자 이내, 선택)"
           value={memo}
           onChangeText={setMemo}
@@ -246,13 +253,23 @@ function Form({ existing }: { existing?: Transaction }) {
       )}
       <ErrorNotice error={error} />
       <Button
-        label={busy ? "저장 중…" : error ? "다시 시도" : "저장"}
+        label={
+          busy
+            ? "처리 중…"
+            : error && errorAction === "save"
+              ? "다시 시도"
+              : "저장"
+        }
         disabled={busy}
         onPress={save}
       />
       {existing && (
         <Button
-          label="거래 삭제"
+          label={
+            error && errorAction === "delete"
+              ? "거래 삭제 다시 시도"
+              : "거래 삭제"
+          }
           variant="ghost"
           disabled={busy}
           onPress={() => setConfirm(true)}

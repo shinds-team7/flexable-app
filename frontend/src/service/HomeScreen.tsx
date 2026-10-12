@@ -85,8 +85,8 @@ export function HomeScreen() {
           <ErrorNotice error={ledger.error} retry={ledger.retry} />
           {ledger.data?.items.length === 0 && (
             <Card>
-              <T>아직 기록한 거래가 없어요</T>
-              <T size={13}>수동으로 첫 거래를 기록해보세요</T>
+              <T>이번 정산 주기에 기록한 거래가 없어요</T>
+              <T size={13}>수동으로 거래를 기록해보세요</T>
             </Card>
           )}
           <Button

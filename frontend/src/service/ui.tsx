@@ -26,35 +26,56 @@ export const digits = (s: string) =>
   s
     .replace(/[^0-9]/g, "")
     .replace(/^0+(?=\d)/, "")
-    .slice(0, 12);
+    .slice(0, 13);
 export function Field({
   label,
+  right,
   ...props
-}: TextInputProps & { label: string; ref?: Ref<TextInput> }) {
+}: TextInputProps & {
+  label: string;
+  ref?: Ref<TextInput>;
+  right?: ReactNode;
+}) {
   return (
     <View style={{ gap: 7 }}>
       <T size={13} weight="600">
         {label}
       </T>
-      <TextInput
-        {...props}
-        accessibilityLabel={label}
-        placeholderTextColor={colors.placeholder}
-        style={[
-          {
-            fontFamily: font,
-            fontSize: 16,
-            minHeight: 50,
-            padding: 14,
-            borderWidth: 1,
-            borderColor: colors.line,
-            borderRadius: 14,
-            backgroundColor: "#fff",
-            color: colors.text,
-          },
-          props.style,
-        ]}
-      />
+      <View style={{ position: "relative" }}>
+        <TextInput
+          {...props}
+          accessibilityLabel={label}
+          placeholderTextColor={colors.placeholder}
+          style={[
+            {
+              fontFamily: font,
+              fontSize: 16,
+              minHeight: 50,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: colors.line,
+              borderRadius: 14,
+              backgroundColor: "#fff",
+              color: colors.text,
+            },
+            right ? { paddingRight: 52 } : undefined,
+            props.style,
+          ]}
+        />
+        {right && (
+          <View
+            style={{
+              position: "absolute",
+              right: 6,
+              top: 4,
+              bottom: 4,
+              justifyContent: "center",
+            }}
+          >
+            {right}
+          </View>
+        )}
+      </View>
     </View>
   );
 }
