@@ -11,6 +11,7 @@ import { DEFAULT_INCOME } from '@/data/mock';
 import { useStore } from '@/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function Income() {
   const edit = !!useLocalSearchParams<{ edit?: string }>().edit;
@@ -21,6 +22,7 @@ export default function Income() {
 
   return (
     <OnboardingFrame
+      backFallback={edit ? demoRoutes.my : demoRoutes.onboarding}
       editMode={edit}
       step={2}
       title={'매달 들어오는 수입을\n확인해 주세요'}
@@ -28,8 +30,8 @@ export default function Income() {
       disabled={amount <= 0}
       onNext={() => {
         setIncome({ amount, payday: day });
-        if (edit) goBack('/my');
-        else router.push('/onboarding/fixed');
+        if (edit) goBack(demoRoutes.my);
+        else router.push(demoRoutes.onboardingFixed);
       }}
     >
       <View style={styles.ai}>

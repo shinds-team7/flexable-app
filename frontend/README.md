@@ -1,7 +1,8 @@
-# Flex-able 텅장관리 — Frontend (Mock)
+# Flex-able 텅장관리 — Frontend
 
 Expo(React Native) + Expo Router 기반. **하나의 코드로 iOS / Android / Web** 을 동시에 빌드한다.
-현재는 멘토링 시연용 Mock 단계로, 모든 데이터는 `src/data/mock.ts` 에서 오늘 날짜 기준으로 생성된다.
+시연(Mock, 버전 1.1.0)은 모두 `/demo` 아래에 있고, 데이터는 `src/data/mock.ts` 에서 오늘 날짜 기준으로 생성된다.
+실제 서비스(버전 1.0.0)는 `/` 이하에 별도로 만들며 현재는 준비 중 화면만 있다. 분리 설계는 [`docs/DESIGN_DEMO_SERVICE_SPLIT.md`](docs/DESIGN_DEMO_SERVICE_SPLIT.md).
 
 실제 Spring·FastAPI·SQLite 기반 서비스로 전환할 때의 코드 경계와 불변식은 [`docs/SERVICE_MIGRATION.md`](docs/SERVICE_MIGRATION.md)를 따른다.
 
@@ -20,44 +21,44 @@ npm run typecheck
 
 ## 화면
 
-처음 접속하면 온보딩이 나온다. "체험 데이터로 둘러보기"로 바로 홈 진입 가능 (웹은 완료 여부를 localStorage에 기억, 마이 → "처음 설정 다시 하기"로 초기화).
+`/demo`에 처음 접속하면 시연 온보딩이 나온다. "체험 데이터로 둘러보기"로 바로 홈 진입 가능 (웹은 완료 여부를 localStorage에 기억, 마이 → "처음 설정 다시 하기"로 초기화).
 
-**상단 네비 4탭 (`src/app/(tabs)`)**
+**시연 상단 네비 4탭 (`src/app/demo/(tabs)`)**
 
 | 경로 | 화면 | 핵심 기능 |
 |------|------|-----------|
-| `/` | 홈 | 오늘 쓸 수 있는 돈(결제마다 재계산, 최근 반영 결제 표시), 오늘 예정 소비 별도 표시, 다음 수입일·남은 생활비, 이번 주 금액(→분석), 정산 요청, 이번 주 후보 거래(예상 금액 + 수정/삭제), 고액 지출 D-day |
-| `/plan` | 지출계획 | 고액 지출 금액 입력 → AI 추천 결제 주, `< >` 1주 단위 조정, 확정 시 홈 반영 |
-| `/analysis` | 소비 분석 | 이번 주 / 이번 정산 주기 도넛, AI 리포트, 카테고리별 사용 현황 |
-| `/transactions` | 거래내역 | 연결 계좌 거래내역(반영 제외·1/N 배지), 월 이동, 필터. 항목 선택 → `/tx/[id]` |
-| `/home2` | 홈 B안 (비교용) | 상단 중앙에 캐릭터(Lv.1 광부 → Lv.5 왕). 이번 주기 소비 속도로 레벨 결정, 좌우 희미한 `< >`로 시연용 레벨 변경. 아래는 기존 홈과 동일 |
-| `/my` | 마이 | 연결 계좌, 수입·고정지출·보호 금액 수정, AI 메모리, 푸시 알림 설정(정산 요약 받는 시간 변경), 시연 메뉴 |
+| `/demo` | 홈 | 오늘 쓸 수 있는 돈(결제마다 재계산, 최근 반영 결제 표시), 오늘 예정 소비 별도 표시, 다음 수입일·남은 생활비, 이번 주 금액(→분석), 정산 요청, 이번 주 후보 거래(예상 금액 + 수정/삭제), 고액 지출 D-day |
+| `/demo/plan` | 지출계획 | 고액 지출 금액 입력 → AI 추천 결제 주, `< >` 1주 단위 조정, 확정 시 홈 반영 |
+| `/demo/analysis` | 소비 분석 | 이번 주 / 이번 정산 주기 도넛, AI 리포트, 카테고리별 사용 현황 |
+| `/demo/transactions` | 거래내역 | 연결 계좌 거래내역(반영 제외·1/N 배지), 월 이동, 필터. 항목 선택 → `/demo/tx/[id]` |
+| `/demo/home2` | 홈 B안 (비교용) | 상단 중앙에 캐릭터(Lv.1 광부 → Lv.5 왕). 이번 주기 소비 속도로 레벨 결정, 좌우 희미한 `< >`로 시연용 레벨 변경. 아래는 기존 홈과 동일 |
+| `/demo/my` | 마이 | 연결 계좌, 수입·고정지출·보호 금액 수정, AI 메모리, 푸시 알림 설정(정산 요약 받는 시간 변경), 시연 메뉴 |
 
-**상세 화면**
+**시연 상세 화면**
 
 | 경로 | 화면 |
 |------|------|
-| `/onboarding` → `account` → `income` → `fixed` → `protect` → `analyze` | 스플래시 → 계좌 연결(오픈뱅킹 Mock) → 수입일·금액 → 고정지출 → 잔액·보호 금액 → AI 분석 & 첫 금액 공개 |
-| `/budget-detail` | 오늘 금액 산출 상세 (계산 항목 나열, 보호 금액 수정) |
-| `/schedule/new` | 예정 지출 등록 — 자연어(AI 초안, 즉시 반영 후 수정/취소), 캘린더 불러오기, 직접 입력. 큰 지출이면 `/plan`으로 안내 |
-| `/schedule` | 후보 거래(예정 지출) 목록 — 가로 박스 좌측 예상 금액, 우측 수정·삭제 / 정산 필요 / 정산 완료 기록 |
-| `/settle/[id]` | 지난 일정 ↔ 실제 결제 연결, 차액 시뮬레이션 + 확인 모달, AI 메모리 학습 |
-| `/tx/[id]` | 거래 상세 — 최하단 [1/N] [반영 제외] (N빵·대신 결제) |
-| `/memory` | AI 메모리 — 항목별 1회 평균 금액 수정, 소비 습관 잊기 |
-| `/notifications` | 알림 센터 (아침 정산 요약, 확인 요청, 정산 요청, D-day) |
+| `/demo/onboarding` → `account` → `income` → `fixed` → `protect` → `analyze` | 스플래시 → 계좌 연결(오픈뱅킹 Mock) → 수입일·금액 → 고정지출 → 잔액·보호 금액 → AI 분석 & 첫 금액 공개 |
+| `/demo/budget-detail` | 오늘 금액 산출 상세 (계산 항목 나열, 보호 금액 수정) |
+| `/demo/schedule/new` | 예정 지출 등록 — 자연어(AI 초안, 즉시 반영 후 수정/취소), 캘린더 불러오기, 직접 입력. 큰 지출이면 `/demo/plan`으로 안내 |
+| `/demo/schedule` | 후보 거래(예정 지출) 목록 — 가로 박스 좌측 예상 금액, 우측 수정·삭제 / 정산 필요 / 정산 완료 기록 |
+| `/demo/settle/[id]` | 지난 일정 ↔ 실제 결제 연결, 차액 시뮬레이션 + 확인 모달, AI 메모리 학습 |
+| `/demo/tx/[id]` | 거래 상세 — 최하단 [1/N] [반영 제외] (N빵·대신 결제) |
+| `/demo/memory` | AI 메모리 — 항목별 1회 평균 금액 수정, 소비 습관 잊기 |
+| `/demo/notifications` | 알림 센터 (아침 정산 요약, 확인 요청, 정산 요청, D-day) |
 
-## 시연 URL (서버가 필요한 기능은 결과 화면만)
+## 시뮬레이션 URL (서버가 필요한 기능은 결과 화면만)
 
-마이 → "시연 메뉴" (`/demo`)에서 모두 실행할 수 있다.
+마이 → "시연 메뉴" (`/demo/simulations`)에서 모두 실행할 수 있다. 구 주소 `/demo/pay`, `/demo/push`는 쿼리를 유지한 채 새 주소로 이동한다.
 
 | URL | 시연 내용 |
 |-----|-----------|
-| `/demo/pay?merchant=스타벅스&amount=5600&category=cafe` | 결제 수신 → 오늘 쓸 수 있는 돈 재계산 → 결제 푸시(잠금화면) |
-| `/demo/push?type=morning` | 아침 정산 요약 푸시 (마이에서 설정한 시간) |
-| `/demo/push?type=settle` | 지난 일정 정산 요청 푸시 |
-| `/demo/push?type=plan` | 고액 지출 D-7 푸시 |
-| `/tx/nbbang` · `/tx/proxy` | 회식비 1/N · 대신 결제 반영 제외 |
-| `/settle/s0` | 지난 일정 ↔ 실제 결제 정산 |
+| `/demo/simulations/pay?merchant=스타벅스&amount=5600&category=cafe` | 결제 수신 → 오늘 쓸 수 있는 돈 재계산 → 결제 푸시(잠금화면) |
+| `/demo/simulations/push?type=morning` | 아침 정산 요약 푸시 (마이에서 설정한 시간) |
+| `/demo/simulations/push?type=settle` | 지난 일정 정산 요청 푸시 |
+| `/demo/simulations/push?type=plan` | 고액 지출 D-7 푸시 |
+| `/demo/tx/nbbang` · `/demo/tx/proxy` | 회식비 1/N · 대신 결제 반영 제외 |
+| `/demo/settle/s0` | 지난 일정 ↔ 실제 결제 정산 |
 
 > 상태는 메모리에만 있어서 URL을 직접 새로 열면 Mock 초기 상태에서 시작한다.
 
@@ -65,7 +66,8 @@ npm run typecheck
 
 ```
 src/
-  app/          # 라우트 (파일 = 화면). _layout.tsx 에 헤더 + 상단 네비
+  app/          # 라우트 (파일 = 화면). index.tsx = 서비스(준비 중), demo/ = 시연 전체
+  demo/         # 시연 경로 helper(routes.ts)·시연 버전
   components/   # UI 컴포넌트 (ui.tsx 공통, Donut, WeekCalendar, AddScheduleModal ...)
   store/        # AppStore(전역 상태), budget.ts(예산 계산·AI 추천 Mock 로직)
   data/         # Mock 데이터 (거래내역, 계좌, 카테고리)

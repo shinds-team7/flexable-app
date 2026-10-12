@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, usePathname } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
+import { demoRoutes } from '@/demo/routes';
 import { colors } from '@/theme';
 import { useStore } from '@/store/AppStore';
 import { toKey } from '@/utils/date';
@@ -12,17 +13,18 @@ export function Logo({ size = 30 }: { size?: number }) {
   return <Image source={require('../../assets/brand/logo.png')} style={{ width: size, height: size, borderRadius: size * 0.28 }} />;
 }
 
+/** 시연 상단 탭 — 경로는 모두 /demo 아래 */
 const TABS = [
-  { href: '/', label: '홈', match: (p: string) => p === '/' || p.startsWith('/home2') },
-  { href: '/plan', label: '지출계획', match: (p: string) => p.startsWith('/plan') },
-  { href: '/analysis', label: '분석', match: (p: string) => p.startsWith('/analysis') || p.startsWith('/transactions') },
-  { href: '/my', label: '마이페이지', match: (p: string) => p.startsWith('/my') },
+  { href: demoRoutes.home, label: '홈', match: (p: string) => p === demoRoutes.home || p.startsWith(demoRoutes.home2) },
+  { href: demoRoutes.plan, label: '지출계획', match: (p: string) => p.startsWith(demoRoutes.plan) },
+  { href: demoRoutes.analysis, label: '분석', match: (p: string) => p.startsWith(demoRoutes.analysis) || p.startsWith(demoRoutes.transactions) },
+  { href: demoRoutes.my, label: '마이페이지', match: (p: string) => p.startsWith(demoRoutes.my) },
 ] as const;
 
 export function AppHeader() {
   const pathname = usePathname();
   const { scheduled, today, homeStyle } = useStore();
-  const homeHref = homeStyle === 'character' ? '/home2' : '/';
+  const homeHref = homeStyle === 'character' ? demoRoutes.home2 : demoRoutes.home;
   const pendingCount = scheduled.filter((x) => x.status === 'planned' && x.date < toKey(today)).length;
   return (
     <View style={styles.wrap}>
@@ -38,7 +40,7 @@ export function AppHeader() {
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.actions, pressed && { backgroundColor: colors.sunken }]}
-          onPress={() => router.push('/notifications')}
+          onPress={() => router.push(demoRoutes.notifications)}
           accessibilityRole="button"
           accessibilityLabel={pendingCount > 0 ? `알림, 확인할 일 ${pendingCount}건` : '알림'}
         >
@@ -55,7 +57,7 @@ export function AppHeader() {
               style={styles.tab}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
-              onPress={() => router.navigate(t.href === '/' ? homeHref : t.href)}
+              onPress={() => router.navigate(t.href === demoRoutes.home ? homeHref : t.href)}
             >
               <T size={15} weight={on ? '700' : '500'} color={on ? colors.text : colors.textMuted} numberOfLines={1}>
                 {t.label}

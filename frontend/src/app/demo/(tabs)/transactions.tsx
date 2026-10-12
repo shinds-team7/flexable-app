@@ -12,6 +12,7 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { fromKey, isSameDay, addDays } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 type Filter = 'all' | 'out' | 'in';
 
@@ -123,7 +124,7 @@ export default function Transactions() {
                 const income = t.amount > 0;
                 const split = t.splitN && t.splitN > 1 ? t.splitN : 0;
                 return (
-                  <Pressable accessibilityRole="button" key={t.id} style={styles.tx} onPress={() => router.push(`/tx/${t.id}`)}>
+                  <Pressable accessibilityRole="button" key={t.id} style={styles.tx} onPress={() => router.push(demoRoutes.tx(t.id))}>
                     <IconCircle name={c.icon} color={c.color} size={40} />
                     <View style={{ flex: 1, gap: 2 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

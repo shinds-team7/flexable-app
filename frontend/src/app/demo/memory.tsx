@@ -11,6 +11,7 @@ import { getCategory } from '@/data/categories';
 import { useStore } from '@/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function Memory() {
   const { memory, updateMemory, insights, removeInsight, restoreInsight } = useStore();
@@ -21,7 +22,7 @@ export default function Memory() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="AI 메모리" />
+      <SubHeader title="AI 메모리" fallback={demoRoutes.my} />
       <Screen>
         <Card style={{ backgroundColor: colors.brandSofter }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

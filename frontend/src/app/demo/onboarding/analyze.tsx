@@ -10,6 +10,7 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { md } from '@/utils/date';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 const STEPS = ['거래 1,284건 분류하는 중', '고정지출·수입 확인하는 중', '나의 소비 단가 학습하는 중', '오늘 쓸 수 있는 돈 계산하는 중'];
 
@@ -26,6 +27,7 @@ export default function Analyze() {
 
   return (
     <OnboardingFrame
+      backFallback={demoRoutes.onboarding}
       step={5}
       title={done ? '준비 끝!' : 'AI가 6개월 소비를\n분석하고 있어요'}
       subtitle={done ? `${md(summary.cycleStart)} ~ ${md(summary.cycleEnd)} 주기 · 다음 수입일까지 ${summary.daysLeft}일` : undefined}
@@ -33,7 +35,7 @@ export default function Analyze() {
       disabled={!done}
       onNext={() => {
         completeOnboarding();
-        router.replace('/');
+        router.replace(demoRoutes.home);
       }}
     >
       {!done ? (

@@ -11,6 +11,7 @@ import { useStore } from '@/store/AppStore';
 import { noOutline, colors, font } from '@/theme';
 import { addDays, diffDays, endOfWeek, isSameDay, md, startOfWeek, toKey, weekLabel } from '@/utils/date';
 import { manwon, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 const QUICK = [
   { v: 100000, label: '+10만' },
@@ -71,7 +72,7 @@ export default function Plan() {
     if (!analyzed) return;
     addPlan({ title: title.trim() || `고액 지출 ${manwon(analyzed)}`, amount: analyzed, weekStart: toKey(selected) });
     setRaw('');
-    router.navigate('/');
+    router.navigate(demoRoutes.home);
   };
 
   const payDays = diffDays(endOfWeek(selected), today) + 1;

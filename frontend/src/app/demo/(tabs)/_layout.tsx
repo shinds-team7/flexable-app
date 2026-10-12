@@ -4,10 +4,11 @@ import { View } from 'react-native';
 import { AppHeader } from '@/components/AppHeader';
 import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
+import { demoRoutes } from '@/demo/routes';
 
 export default function TabsLayout() {
   const { onboarded } = useStore();
-  if (!onboarded) return <Redirect href="/onboarding" />;
+  if (!onboarded) return <Redirect href={demoRoutes.onboarding} />;
 
   return (
     <View style={{ flex: 1 }}>

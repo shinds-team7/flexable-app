@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import type { Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -17,6 +18,7 @@ export function OnboardingFrame({
   onNext,
   disabled,
   editMode,
+  backFallback,
 }: {
   step: number;
   total?: number;
@@ -28,11 +30,13 @@ export function OnboardingFrame({
   disabled?: boolean;
   /** 마이페이지에서 수정 목적으로 들어온 경우: 진행 바 숨기고 '저장' 버튼 */
   editMode?: boolean;
+  /** 뒤로 갈 기록이 없을 때(웹 직접 진입) 이동할 경로 */
+  backFallback: Href;
 }) {
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.top}>
-        <Pressable accessibilityRole="button" accessibilityLabel="뒤로 가기" onPress={() => goBack(editMode ? '/my' : '/onboarding')} hitSlop={10}>
+        <Pressable accessibilityRole="button" accessibilityLabel="뒤로 가기" onPress={() => goBack(backFallback)} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         {editMode ? (

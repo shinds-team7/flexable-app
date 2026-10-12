@@ -40,10 +40,10 @@ type Store = {
   transactions: Transaction[];
   /** 거래 수정 — 반영 제외, 1/N, 카테고리 */
   updateTx: (id: string, patch: Partial<Pick<Transaction, 'excluded' | 'splitN' | 'memo' | 'category'>>) => void;
-  /** 새 결제 수신 (시연: /demo/pay) — 서버가 카드/오픈뱅킹 알림을 받아 넣어주는 부분 */
+  /** 새 결제 수신 (시연: /demo/simulations/pay) — 서버가 카드/오픈뱅킹 알림을 받아 넣어주는 부분 */
   addTransaction: (t: Omit<Transaction, 'id' | 'status'> & { id?: string }) => void;
 
-  /** 홈 화면 스타일 — 기본(/) 또는 캐릭터(/home2) */
+  /** 홈 화면 스타일 — 기본(/demo) 또는 캐릭터(/demo/home2) */
   homeStyle: HomeStyle;
   setHomeStyle: (h: HomeStyle) => void;
 
@@ -77,8 +77,29 @@ const Ctx = createContext<Store | null>(null);
 let seq = 100;
 const nextId = (p: string) => `${p}-${++seq}`;
 
-const ONBOARD_KEY = 'flexable:onboarded';
-const HOME_KEY = 'flexable:homeStyle';
+/** 시연 전용 저장 키 — 실제 서비스 저장소와 섞이지 않도록 demo namespace를 쓴다. */
+const ONBOARD_KEY = 'flexable:demo:onboarded';
+const HOME_KEY = 'flexable:demo:homeStyle';
+/** /demo 분리 전 키(flexable:onboarded, flexable:homeStyle) → 시연 키로 1회 이행 */
+const LEGACY_KEYS: [string, string][] = [
+  ['flexable:onboarded', ONBOARD_KEY],
+  ['flexable:homeStyle', HOME_KEY],
+];
+function migrateLegacyKeys() {
+  if (Platform.OS !== 'web') return;
+  try {
+    const ls = globalThis.localStorage;
+    if (!ls) return;
+    for (const [from, to] of LEGACY_KEYS) {
+      const v = ls.getItem(from);
+      if (v === null) continue;
+      if (ls.getItem(to) === null) ls.setItem(to, v);
+      ls.removeItem(from);
+    }
+  } catch {
+    /* 저장 불가 환경은 무시 */
+  }
+}
 function readHomeStyle(): HomeStyle {
   if (Platform.OS !== 'web') return 'classic';
   try {
@@ -159,7 +180,10 @@ function initialScheduled(today: Date): ScheduledSpend[] {
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [today] = useState(() => startOfDay(new Date()));
-  const [onboarded, setOnboarded] = useState(readOnboarded);
+  const [onboarded, setOnboarded] = useState(() => {
+    migrateLegacyKeys();
+    return readOnboarded();
+  });
   const [income, setIncome] = useState<Income>({ amount: DEFAULT_INCOME.amount, payday: DEFAULT_INCOME.payday });
   const [fixed, setFixed] = useState<FixedExpense[]>(DEFAULT_FIXED);
   const [protectedList, setProtected] = useState<Protected[]>(DEFAULT_PROTECTED);

@@ -4,23 +4,21 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ToastProvider } from '@/components/Toast';
-import { AppStoreProvider } from '@/store/AppStore';
 import { colors } from '@/theme';
 
+/** 공통 틀(안전영역·폰 프레임·토스트)만 둔다. 시연 Mock 상태는 demo/_layout에서만 주입한다. */
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AppStoreProvider>
-        <View style={styles.outer}>
-          <SafeAreaView style={styles.phone} edges={['top', 'bottom']}>
-            <StatusBar style="dark" />
-            {/* (tabs): 상단 네비 4탭 / 그 외: 뒤로가기 헤더를 가진 상세 화면 / onboarding: 최초 설정 */}
-            <ToastProvider>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
-            </ToastProvider>
-          </SafeAreaView>
-        </View>
-      </AppStoreProvider>
+      <View style={styles.outer}>
+        <SafeAreaView style={styles.phone} edges={['top', 'bottom']}>
+          <StatusBar style="dark" />
+          {/* demo/: 시연(Mock) / 그 외: 실제 서비스 */}
+          <ToastProvider>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+          </ToastProvider>
+        </SafeAreaView>
+      </View>
     </SafeAreaProvider>
   );
 }

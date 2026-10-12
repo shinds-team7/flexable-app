@@ -12,6 +12,7 @@ import { useStore } from '@/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { addDays, fromKey, md, toKey } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function Settle() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,7 +41,7 @@ export default function Settle() {
   if (!plan) {
     return (
       <View style={{ flex: 1 }}>
-        <SubHeader title="일정 정산" />
+        <SubHeader title="일정 정산" fallback={demoRoutes.home} />
         <Screen>
           <T color={colors.textMuted}>일정을 찾을 수 없어요</T>
         </Screen>
@@ -56,7 +57,7 @@ export default function Settle() {
   if (done) {
     return (
       <View style={{ flex: 1 }}>
-        <SubHeader title="일정 정산" />
+        <SubHeader title="일정 정산" fallback={demoRoutes.home} />
         <Screen>
           <Card style={{ alignItems: 'center', paddingVertical: 32, gap: 8 }}>
             <IconCircle name="checkmark" color={colors.brand} size={56} />
@@ -77,8 +78,8 @@ export default function Settle() {
               </View>
             )}
           </Card>
-          <Button label="홈으로" onPress={() => router.dismissTo('/')} />
-          <Button label="AI 메모리 보기" variant="soft" onPress={() => router.replace('/memory')} />
+          <Button label="홈으로" onPress={() => router.dismissTo(demoRoutes.home)} />
+          <Button label="AI 메모리 보기" variant="soft" onPress={() => router.replace(demoRoutes.memory)} />
         </Screen>
       </View>
     );
@@ -86,7 +87,7 @@ export default function Settle() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="일정 정산" />
+      <SubHeader title="일정 정산" fallback={demoRoutes.home} />
       <Screen>
         <Card>
           <T size={13} color={colors.textMuted}>
@@ -199,7 +200,7 @@ export default function Settle() {
         </Card>
 
         <Button label="정산하기" onPress={() => setConfirming(true)} disabled={!noTx && sel.length === 0} />
-        <Button label="나중에 할게요" variant="ghost" onPress={() => goBack('/')} />
+        <Button label="나중에 할게요" variant="ghost" onPress={() => goBack(demoRoutes.home)} />
       </Screen>
 
       <ConfirmModal
