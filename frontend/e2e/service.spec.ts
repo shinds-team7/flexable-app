@@ -90,7 +90,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(
-    page.getByText("이번 정산 주기에 기록한 거래가 없어요", { exact: true }),
+    page.getByText("아직 기록한 거래가 없어요", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/service-home.png",

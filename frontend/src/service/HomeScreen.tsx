@@ -5,14 +5,11 @@ import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors } from "@/theme";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
-import type { Today, Transaction } from "./types";
+import type { Today } from "./types";
 export function HomeScreen() {
   const result = useResource<Today>("/budget/today");
   const [basis, setBasis] = useState(false);
   const s = result.data;
-  const ledger = useResource<{ items: Transaction[] }>(
-    s ? `/transactions?from=${s.cycleStart}&to=${s.date}` : null,
-  );
   return (
     <Screen>
       {result.loading && !s && <Loading />}
@@ -48,10 +45,13 @@ export function HomeScreen() {
           )}
           <Card style={{ gap: 14 }}>
             <T size={14} color={colors.textSub}>
-              이번 주 쓴 돈
+              이번 주 쓸 수 있는 돈
             </T>
             <T size={26} weight="800">
-              {money(s.weekSpent)}원
+              {money(s.weekAvailable)}원
+            </T>
+            <T size={13} color={colors.textMuted}>
+              남은 {s.weekDaysLeft}일 · 이번 주 쓴 돈 {money(s.weekSpent)}원
             </T>
             <View style={{ height: 1, backgroundColor: colors.line }} />
             <T size={13} color={colors.textMuted}>
@@ -82,11 +82,10 @@ export function HomeScreen() {
               ))}
             </View>
           </Card>
-          <ErrorNotice error={ledger.error} retry={ledger.retry} />
-          {ledger.data?.items.length === 0 && (
+          {!s.hasTransactions && (
             <Card>
-              <T>이번 정산 주기에 기록한 거래가 없어요</T>
-              <T size={13}>수동으로 거래를 기록해보세요</T>
+              <T>아직 기록한 거래가 없어요</T>
+              <T size={13}>수동으로 첫 거래를 기록해보세요</T>
             </Card>
           )}
           <Button

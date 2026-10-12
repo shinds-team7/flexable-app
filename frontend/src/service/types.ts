@@ -52,7 +52,10 @@ export type Today = {
   todayAvailable: number;
   shortage: number;
   weekSpent: number;
+  weekDaysLeft: number;
+  weekAvailable: number;
   cycleStart: string;
+  hasTransactions: boolean;
 };
 export type Analysis = {
   from: string;
