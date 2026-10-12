@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Browser integration test artifacts
+/test-results/
+/playwright-report/
