@@ -1,0 +1,5 @@
+# API_DOMAIN(.env)으로 Let's Encrypt 인증서를 자동 발급·갱신한다.
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8080
+}
