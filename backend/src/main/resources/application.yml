@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: flexable-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/flexable?serverTimezone=UTC&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:flexable}
+    password: ${DB_PASSWORD:flexable}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    ttl-days: 30
+  cors-origins: ${CORS_ORIGINS:http://localhost:8081}
+  zone: Asia/Seoul

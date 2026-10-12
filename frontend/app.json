@@ -10,6 +10,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.flexable.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0046FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,7 +29,8 @@
     },
     "scheme": "flexable",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ]
   }
 }
