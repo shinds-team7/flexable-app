@@ -41,7 +41,7 @@ yarn-error.*
 /android
 
 # Browser integration test artifacts
-/test-results/
+/test-results*/
 /playwright-report/
 
 /dist-android/

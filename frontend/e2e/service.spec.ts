@@ -135,7 +135,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     }
     return route.continue();
   });
-  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(
     page.getByText(
       "저장 여부를 확인하지 못했어요. 같은 내용으로 다시 확인할게요",
