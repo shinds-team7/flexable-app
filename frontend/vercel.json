@@ -2,5 +2,21 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npx expo export -p web",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/onboarding", "destination": "/demo/onboarding", "permanent": false },
+    { "source": "/onboarding/:path*", "destination": "/demo/onboarding/:path*", "permanent": false },
+    { "source": "/home2", "destination": "/demo/home2", "permanent": false },
+    { "source": "/plan", "destination": "/demo/plan", "permanent": false },
+    { "source": "/analysis", "destination": "/demo/analysis", "permanent": false },
+    { "source": "/transactions", "destination": "/demo/transactions", "permanent": false },
+    { "source": "/my", "destination": "/demo/my", "permanent": false },
+    { "source": "/budget-detail", "destination": "/demo/budget-detail", "permanent": false },
+    { "source": "/notifications", "destination": "/demo/notifications", "permanent": false },
+    { "source": "/memory", "destination": "/demo/memory", "permanent": false },
+    { "source": "/schedule", "destination": "/demo/schedule", "permanent": false },
+    { "source": "/schedule/:path*", "destination": "/demo/schedule/:path*", "permanent": false },
+    { "source": "/tx/:id", "destination": "/demo/tx/:id", "permanent": false },
+    { "source": "/settle/:id", "destination": "/demo/settle/:id", "permanent": false }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

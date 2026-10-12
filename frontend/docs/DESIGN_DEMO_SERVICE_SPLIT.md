@@ -31,7 +31,7 @@ GitHub 태그·릴리즈 제목과 앱 버전은 구분한다.
 서비스·공개 경로(신규): `/` (서비스 홈/로그인 분기), `/auth/login`, `/auth/signup`, `/auth/recover`, `/onboarding/*`, `/transactions`, `/transactions/new`, `/inbox`, `/settings/auto-record`, `/my`, `/account/delete`, `/privacy`, `/delete-account`.
 
 주의
-- 구 `/analysis` 등은 시연으로 redirect하지 않는다(서비스가 같은 주소를 쓴다). 서비스 미구현 단계에서는 `/`에 "준비 중" 페이지를 표시하고 시연을 몰래 대신 보여주지 않는다.
+- 앱 라우터에서는 구 `/analysis` 등을 시연으로 redirect하지 않는다(서비스가 같은 주소를 쓴다). 대신 이미 공유된 배포 링크(예: `/onboarding`)를 살리기 위해 `vercel.json`에 **임시(307) redirect**로 `/demo/...`에 연결한다. 서비스가 해당 경로를 쓰기 시작하는 C단계에서 그 경로의 redirect를 지운다. 브라우저가 기억하는 영구(308) redirect는 쓰지 않는다. `/`는 redirect하지 않는다. 서비스 미구현 단계에서는 `/`에 "준비 중" 페이지를 표시하고 시연을 몰래 대신 보여주지 않는다.
 - 구 `/demo/pay`, `/demo/push`만 `/demo/simulations/...`로 redirect(쿼리 유지).
 - 현재 `vercel.json`은 `/(.*) → /index.html` 전체 rewrite다. `/demo/...`, `/privacy`, `/delete-account` 직접 접근·새로고침이 동작하는지는 B단계에서 검증 예정(미검증).
 - Expo Router `(demo)` 그룹은 URL에 안 붙는다. 실제 `demo/` 폴더 segment 사용.

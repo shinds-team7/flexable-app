@@ -89,3 +89,5 @@ src/
 
 Vercel 프로젝트 설정에서 **Root Directory = `frontend`** 로 지정하면 `vercel.json` 설정대로 빌드된다.
 (Build: `npx expo export -p web`, Output: `dist`, SPA rewrite 포함)
+
+분리 전 시연 주소(`/onboarding`, `/plan`, `/tx/:id` 등)는 `vercel.json`의 임시(307) redirect로 `/demo/...`에 연결된다. 실제 서비스가 같은 경로를 쓰기 시작하면 해당 redirect를 지운다.
