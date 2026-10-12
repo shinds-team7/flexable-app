@@ -52,7 +52,7 @@ export function OnboardingFrame({
           </>
         )}
       </View>
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <T size={24} weight="800" style={{ lineHeight: 33 }}>
           {title}
         </T>

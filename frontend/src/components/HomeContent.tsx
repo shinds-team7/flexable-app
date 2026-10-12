@@ -2,13 +2,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { TodayHeroView } from './TodayHeroView';
+import { styles } from './HomeStyles';
 import { ScheduleRow } from './ScheduleRow';
-import { AddButton, Badge, Card, IconCircle, Screen, SectionTitle, T, useRollingNumber } from './ui';
+import { AddButton, Badge, Card, IconCircle, Screen, SectionTitle, T } from './ui';
 import { planDailyReserve } from '@/store/budget';
 import { useStore } from '@/store/AppStore';
-import { colors, pressTransition, radius } from '@/theme';
+import { colors, pressTransition } from '@/theme';
 import { diffDays, endOfWeek, fromKey, md, startOfWeek, toKey, weekLabel } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
 import { demoRoutes } from '@/demo/routes';
@@ -233,146 +235,6 @@ export function DowBudgetCard() {
 /** 오늘 쓸 수 있는 돈 — 파란 메인 카드 (기존 홈 / 캐릭터 홈 공용)
  *  화면에서 유일하게 '큰' 요소. 아래 급여 주기 스트립은 수입일~다음 수입일을 하루 한 칸으로 보여준다. */
 export function TodayHeroCard() {
-  const { today, summary: s, transactions } = useStore();
-  const lastPay = transactions.find((t) => t.date === toKey(today) && t.amount < 0);
-  const over = s.todayAvailable < 0;
-  const shown = useRollingNumber(Math.max(0, s.todayAvailable));
-
-  const totalDays = diffDays(s.cycleEnd, s.cycleStart) + 1;
-  const todayIdx = diffDays(today, s.cycleStart);
-
-  return (
-    <View style={styles.hero}>
-      <View style={styles.heroTop}>
-        <T size={15} weight="700" color={colors.onBrand}>
-          오늘 쓸 수 있는 돈
-        </T>
-        <T size={13} weight="500" color={colors.onBrandSub}>
-          {today.getMonth() + 1}월 {today.getDate()}일 {DOW[today.getDay()]}요일
-        </T>
-      </View>
-
-      <T
-        size={44}
-        weight="800"
-        color={colors.onBrand}
-        num
-        style={{ marginTop: 6, lineHeight: 52 }}
-        accessibilityLiveRegion="polite"
-        accessibilityLabel={`오늘 쓸 수 있는 돈 ${won(Math.max(0, s.todayAvailable))}원`}
-      >
-        {won(shown)}
-        <T size={26} weight="700" color={colors.onBrand}>
-          원
-        </T>
-      </T>
-
-      {over ? (
-        <T size={13} weight="600" color="#FFE1DE" style={{ marginTop: 2 }} num>
-          오늘 {won(-s.todayAvailable)}원 넘게 썼어요. 남은 {s.daysLeft - 1}일에 나눠서 반영할게요
-        </T>
-      ) : (
-        <T size={13} color={colors.onBrandSub} style={{ marginTop: 2 }} num>
-          {DOW[today.getDay()]}요일 기준 {won(s.dailyLimit)}원({s.todayWeight}%) 중 {won(s.todaySpent)}원 썼어요
-        </T>
-      )}
-      {/* 급여 주기 스트립 */}
-      <View style={styles.cycle} accessible accessibilityLabel={`급여 주기 ${totalDays}일 중 ${todayIdx + 1}일째, 다음 수입일까지 ${s.daysLeft}일`}>
-        <View style={styles.ticks}>
-          {Array.from({ length: totalDays }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.tick,
-                i < todayIdx && styles.tickPast,
-                i === todayIdx && styles.tickToday,
-              ]}
-            />
-          ))}
-        </View>
-        <View style={styles.rowBetween}>
-          <T size={12} color={colors.onBrandSub} num>
-            {md(s.cycleStart)} 급여
-          </T>
-          <T size={12} weight="700" color={colors.onBrand} num>
-            다음 급여까지 {s.daysLeft}일
-          </T>
-        </View>
-      </View>
-
-      {s.todayPlanned.length > 0 && (
-        <View style={styles.heroPlan}>
-          <Ionicons name="calendar" size={14} color={colors.onBrand} />
-          <T size={13} weight="600" color={colors.onBrand} style={{ flex: 1 }} numberOfLines={2} num>
-            {s.todayPlanned.map((x) => x.title).join(', ')} {won(s.todayPlanned.reduce((a, x) => a + x.amount, 0))}원은 미리 빼뒀어요
-          </T>
-        </View>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [styles.heroFoot, pressed && { opacity: 0.7 }]}
-        onPress={() => router.push(demoRoutes.budgetDetail)}
-        accessibilityRole="button"
-        accessibilityLabel="계산 근거 보기"
-      >
-        <T size={12} color={colors.onBrandSub} numberOfLines={1} style={{ flex: 1 }} num>
-          {lastPay ? `방금 ${lastPay.merchant} ${won(-lastPay.amount)}원 반영 (${lastPay.time})` : '오늘 05:00에 마지막으로 계산했어요'}
-        </T>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <T size={12} weight="700" color={colors.onBrand}>
-            계산 근거
-          </T>
-          <Ionicons name="chevron-forward" size={14} color={colors.onBrand} />
-        </View>
-      </Pressable>
-    </View>
-  );
+ const { today, summary, transactions } = useStore();
+ return <TodayHeroView today={today} summary={summary} transactions={transactions} onDetails={() => router.push(demoRoutes.budgetDetail)} />;
 }
-
-const styles = StyleSheet.create({
-  hero: { backgroundColor: colors.brand, borderRadius: radius.xl, padding: 22, paddingBottom: 14 },
-  heroTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  heroBar: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.28)', marginTop: 12, overflow: 'hidden' },
-  heroFill: { height: 4, borderRadius: 2 },
-  cycle: { marginTop: 18, gap: 8 },
-  ticks: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 16 },
-  tick: { flex: 1, height: 10, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.45)' },
-  tickPast: { backgroundColor: 'rgba(0,20,90,0.35)' },
-  tickToday: { height: 16, backgroundColor: colors.onBrand },
-  heroPlan: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.brandDeep,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: radius.sm,
-  },
-  heroFoot: {
-    marginTop: 14,
-    paddingTop: 12,
-    minHeight: 36,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.22)',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  panel: { backgroundColor: colors.card, borderRadius: radius.lg, overflow: 'hidden' },
-  panelRow: { padding: 20 },
-  panelRowSm: { paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  panelPressed: { backgroundColor: colors.brandSofter },
-  dowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dowTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.bg, overflow: 'hidden' },
-  dowFill: { height: 8, borderRadius: 4 },
-  hair: { height: 1, backgroundColor: colors.line, marginHorizontal: 20 },
-  dPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.brandSoft },
-  settle: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  more: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 32 },
-  bar: { height: 6, borderRadius: 3, backgroundColor: colors.sunken, marginTop: 14, marginBottom: 10, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.brand },
-  empty: { paddingVertical: 18, alignItems: 'center', marginBottom: 12 },
-  plan: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-});
