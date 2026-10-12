@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, floating, motion, radius } from '@/theme';
-import { T, useReducedMotion } from './ui';
+import { T, useAnimValue, useReducedMotion } from './ui';
 
 type Toast = { id: number; message: string; undo?: () => void };
 const Ctx = createContext<(message: string, undo?: () => void) => void>(() => {});
@@ -11,7 +11,7 @@ const Ctx = createContext<(message: string, undo?: () => void) => void>(() => {}
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const p = useRef(new Animated.Value(0)).current;
+  const p = useAnimValue(0);
   const reduced = useReducedMotion();
   const native = Platform.OS !== 'web';
 

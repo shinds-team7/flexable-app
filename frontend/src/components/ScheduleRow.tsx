@@ -9,6 +9,7 @@ import { fromKey, isSameDay } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
 import { useToast } from './Toast';
 import { T } from './ui';
+import { demoRoutes } from '@/demo/routes';
 
 /**
  * 후보 거래(예정 지출) 가로 박스.
@@ -76,7 +77,7 @@ export function ScheduleRow({
           accessibilityLabel={`${item.title} 수정`}
           hitSlop={4}
           style={({ pressed }) => [styles.btn, styles.edit, pressTransition, pressed && pressedFx]}
-          onPress={onEdit ?? (() => router.push({ pathname: '/schedule', params: { edit: item.id } }))}
+          onPress={onEdit ?? (() => router.push({ pathname: demoRoutes.schedule, params: { edit: item.id } }))}
         >
           <T size={13} weight="700" color={colors.brandDark}>
             수정

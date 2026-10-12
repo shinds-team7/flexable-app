@@ -5,13 +5,14 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { T } from '@/components/ui';
 import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
+import { demoRoutes } from '@/demo/routes';
 
 export default function Welcome() {
   const { completeOnboarding } = useStore();
   return (
     <View style={styles.wrap}>
       <View style={styles.center}>
-        <Image source={require('../../../assets/brand/mark-white.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../../../../assets/brand/mark-white.png')} style={styles.logo} resizeMode="contain" />
         <T size={30} weight="800" color="#fff" style={{ marginTop: 22 }}>
           텅장관리
         </T>
@@ -27,7 +28,7 @@ export default function Welcome() {
       </View>
 
       <View style={styles.bottom}>
-        <Pressable accessibilityRole="button" style={styles.start} onPress={() => router.push('/onboarding/account')}>
+        <Pressable accessibilityRole="button" style={styles.start} onPress={() => router.push(demoRoutes.onboardingAccount)}>
           <T size={16} weight="800" color={colors.brandDark}>
             시작하기
           </T>
@@ -36,7 +37,7 @@ export default function Welcome() {
           style={{ padding: 14, alignItems: 'center' }}
           onPress={() => {
             completeOnboarding();
-            router.replace('/');
+            router.replace(demoRoutes.home);
           }}
         >
           <T size={14} weight="600" color="rgba(255,255,255,0.9)">

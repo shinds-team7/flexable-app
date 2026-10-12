@@ -11,6 +11,8 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { md } from '@/utils/date';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
+import { DEMO_VERSION } from '@/demo/version';
 
 export default function My() {
   const { income, fixed, protectedList, summary, restartOnboarding, notify, setNotify, homeStyle, setHomeStyle } = useStore();
@@ -88,10 +90,10 @@ export default function My() {
       {/* 예산 설정 */}
       <Card>
         <SectionTitle title="예산 설정" />
-        <Menu label="월 수입" value={`${won(income.amount)}원`} sub={`매월 ${income.payday}일 · 다음 수입일 ${md(summary.nextPayday)}`} href={{ pathname: '/onboarding/income', params: { edit: '1' } }} />
-        <Menu label="고정지출" value={`${won(fixedTotal)}원`} sub={`${fixed.length}건 · 월세, 통신비, 구독 등`} href={{ pathname: '/onboarding/fixed', params: { edit: '1' } }} />
-        <Menu label="보호 금액" value={`${won(protectedTotal)}원`} sub={protectedList.map((p) => p.name).join(', ')} href={{ pathname: '/onboarding/protect', params: { edit: '1' } }} />
-        <Menu label="계산 근거 보기" sub={`오늘 하루 기준 ${won(summary.dailyLimit)}원`} href="/budget-detail" />
+        <Menu label="월 수입" value={`${won(income.amount)}원`} sub={`매월 ${income.payday}일 · 다음 수입일 ${md(summary.nextPayday)}`} href={{ pathname: demoRoutes.onboardingIncome, params: { edit: '1' } }} />
+        <Menu label="고정지출" value={`${won(fixedTotal)}원`} sub={`${fixed.length}건 · 월세, 통신비, 구독 등`} href={{ pathname: demoRoutes.onboardingFixed, params: { edit: '1' } }} />
+        <Menu label="보호 금액" value={`${won(protectedTotal)}원`} sub={protectedList.map((p) => p.name).join(', ')} href={{ pathname: demoRoutes.onboardingProtect, params: { edit: '1' } }} />
+        <Menu label="계산 근거 보기" sub={`오늘 하루 기준 ${won(summary.dailyLimit)}원`} href={demoRoutes.budgetDetail} />
       </Card>
 
       {/* 홈 화면 스타일 (기본 ↔ 캐릭터) */}
@@ -105,19 +107,19 @@ export default function My() {
           value={homeStyle}
           onChange={(k) => {
             setHomeStyle(k);
-            router.navigate(k === 'character' ? '/home2' : '/');
+            router.navigate(k === 'character' ? demoRoutes.home2 : demoRoutes.home);
           }}
         />
         <T size={12} color={colors.textMuted} style={{ marginTop: 10 }}>
-          상단 '홈' 탭을 누르면 선택한 화면으로 열려요
+          상단 ‘홈’ 탭을 누르면 선택한 화면으로 열려요
         </T>
       </Card>
 
       {/* AI */}
       <Card>
         <SectionTitle title="AI" />
-        <Menu label="AI 메모리" sub="AI가 기억하는 내 소비 단가·습관 보기/수정" href="/memory" />
-        <Menu label="예정 지출 관리" sub="등록한 소비 일정 수정·삭제" href="/schedule" />
+        <Menu label="AI 메모리" sub="AI가 기억하는 내 소비 단가·습관 보기/수정" href={demoRoutes.memory} />
+        <Menu label="예정 지출 관리" sub="등록한 소비 일정 수정·삭제" href={demoRoutes.schedule} />
       </Card>
 
       {/* 알림 (모바일 푸시) */}
@@ -151,7 +153,7 @@ export default function My() {
           <T size={15}>처음 설정 다시 하기 (온보딩)</T>
           <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
         </Pressable>
-        <Pressable accessibilityRole="button" style={styles.menu} onPress={() => router.push('/demo')}>
+        <Pressable accessibilityRole="button" style={styles.menu} onPress={() => router.push(demoRoutes.simulations)}>
           <T size={15}>시연 메뉴 (결제·푸시 시뮬레이션)</T>
           <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
         </Pressable>
@@ -170,7 +172,7 @@ export default function My() {
         ))}
       </Card>
       <T size={12} color={colors.textMuted} style={{ textAlign: 'center' }}>
-        Flex-able 텅장관리 v0.3.0 (mock)
+        Flex-able 텅장관리 시연용 v{DEMO_VERSION}
       </T>
 
       <Sheet visible={timeOpen} onClose={() => setTimeOpen(false)} title="정산 요약 받을 시간" subtitle="새벽 정산이 끝난 뒤, 이 시간에 오늘 쓸 수 있는 돈을 푸시로 보내드려요">
@@ -208,7 +210,7 @@ export default function My() {
         onConfirm={() => {
           setResetOpen(false);
           restartOnboarding();
-          router.replace('/onboarding');
+          router.replace(demoRoutes.onboarding);
         }}
       />
     </Screen>

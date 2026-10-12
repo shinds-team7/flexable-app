@@ -10,6 +10,7 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { diffDays, endOfWeek, fromKey, toKey } from '@/utils/date';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 type Noti = { id: string; icon: 'sunny' | 'card' | 'receipt' | 'flag' | 'sparkles'; color: string; title: string; body: string; time: string; href?: Href; unread?: boolean };
 
@@ -24,22 +25,22 @@ export default function Notifications() {
     transactions
       .filter((t) => t.date === toKey(today) && t.amount < 0 && spendOf(t) > 0)
       .forEach((t, i) => {
-        list.push({ id: `pay-${t.id}`, icon: 'card', color: colors.text, title: `${t.merchant} ${won(spendOf(t))}원 결제`, body: `오늘 쓸 수 있는 돈 ${won(Math.max(0, remain))}원 남았어요`, time: t.time, href: `/tx/${t.id}`, unread: i === 0 });
+        list.push({ id: `pay-${t.id}`, icon: 'card', color: colors.text, title: `${t.merchant} ${won(spendOf(t))}원 결제`, body: `오늘 쓸 수 있는 돈 ${won(Math.max(0, remain))}원 남았어요`, time: t.time, href: demoRoutes.tx(t.id), unread: i === 0 });
         remain += spendOf(t);
       });
   }
 
   if (notify.morning)
-    list.push({ id: 'morning', icon: 'sunny', color: colors.brand, title: `오늘은 ${won(s.dailyLimit)}원까지 쓸 수 있어요`, body: `어제 정산을 마쳤어요. 다음 수입일까지 ${s.daysLeft}일 남았어요`, time: hhmm, href: '/budget-detail' });
+    list.push({ id: 'morning', icon: 'sunny', color: colors.brand, title: `오늘은 ${won(s.dailyLimit)}원까지 쓸 수 있어요`, body: `어제 정산을 마쳤어요. 다음 수입일까지 ${s.daysLeft}일 남았어요`, time: hhmm, href: demoRoutes.budgetDetail });
 
   scheduled
     .filter((x) => x.status === 'planned' && x.date < toKey(today))
-    .forEach((x) => list.push({ id: `settle-${x.id}`, icon: 'receipt', color: colors.info, title: `‘${x.title}’ 정산해 주세요`, body: `예상 ${won(x.amount)}원 · 실제 결제와 연결하면 남은 돈을 생활비로 돌려드려요`, time: hhmm, href: `/settle/${x.id}` }));
+    .forEach((x) => list.push({ id: `settle-${x.id}`, icon: 'receipt', color: colors.info, title: `‘${x.title}’ 정산해 주세요`, body: `예상 ${won(x.amount)}원 · 실제 결제와 연결하면 남은 돈을 생활비로 돌려드려요`, time: hhmm, href: demoRoutes.settle(x.id) }));
 
   scheduled
     .filter((x) => x.status === 'planned' && x.source === 'calendar' && x.date >= toKey(today))
     .slice(0, 1)
-    .forEach((x) => list.push({ id: `cal-${x.id}`, icon: 'sparkles', color: colors.brand, title: `캘린더 일정 ‘${x.title}’을 예산에 넣었어요`, body: `AI 예상 ${won(x.amount)}원 · 다르면 수정해 주세요`, time: '어제', href: { pathname: '/schedule', params: { edit: x.id } } }));
+    .forEach((x) => list.push({ id: `cal-${x.id}`, icon: 'sparkles', color: colors.brand, title: `캘린더 일정 ‘${x.title}’을 예산에 넣었어요`, body: `AI 예상 ${won(x.amount)}원 · 다르면 수정해 주세요`, time: '어제', href: { pathname: demoRoutes.schedule, params: { edit: x.id } } }));
 
   if (notify.plan)
     plans
@@ -48,7 +49,7 @@ export default function Notifications() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="알림" />
+      <SubHeader title="알림" fallback={demoRoutes.home} />
       <Screen>
         <Card style={{ paddingVertical: 6, paddingHorizontal: 6 }}>
           {list.map((n, i) => (

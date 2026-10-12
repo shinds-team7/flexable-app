@@ -11,6 +11,7 @@ import { DEFAULT_FIXED, type FixedExpense } from '@/data/mock';
 import { useStore } from '@/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function Fixed() {
   const edit = !!useLocalSearchParams<{ edit?: string }>().edit;
@@ -36,6 +37,7 @@ export default function Fixed() {
 
   return (
     <OnboardingFrame
+      backFallback={edit ? demoRoutes.my : demoRoutes.onboarding}
       editMode={edit}
       step={3}
       title={'매달 빠져나가는\n고정지출이에요'}
@@ -43,8 +45,8 @@ export default function Fixed() {
       cta={`월 ${won(total)}원 · 다음`}
       onNext={() => {
         setFixed(list.filter((f) => f.on).map(({ on: _on, ...f }) => f));
-        if (edit) goBack('/my');
-        else router.push('/onboarding/protect');
+        if (edit) goBack(demoRoutes.my);
+        else router.push(demoRoutes.onboardingProtect);
       }}
     >
       {list.map((f) => (

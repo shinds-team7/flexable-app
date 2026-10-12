@@ -10,6 +10,7 @@ import { useStore } from '@/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { fromKey, md } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 type Editing = { id: string; name: string; amount: number } | null;
 
@@ -31,7 +32,7 @@ export default function BudgetDetail() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="계산 근거" />
+      <SubHeader title="계산 근거" fallback={demoRoutes.home} />
       <Screen>
         <Card style={{ backgroundColor: colors.brandSofter }}>
           <T size={13} color={colors.textSub}>
@@ -54,12 +55,12 @@ export default function BudgetDetail() {
               amount={s.addBack}
               sign="+"
               tone="warn"
-              onPress={() => router.navigate('/transactions')}
+              onPress={() => router.navigate(demoRoutes.transactions)}
             />
           )}
           <Divider />
 
-          <Group title="미납 고정지출" total={s.unpaidFixedTotal} onEdit={() => router.push('/my')}>
+          <Group title="미납 고정지출" total={s.unpaidFixedTotal} onEdit={() => router.push(demoRoutes.my)}>
             {s.unpaidFixed.length === 0 && <Sub text="이번 주기에 남은 고정지출이 없어요" />}
             {s.unpaidFixed.map((f) => (
               <Sub key={f.item.id + md(f.date)} text={`${f.item.name} (${md(f.date)})`} amount={f.item.amount} />
@@ -76,7 +77,7 @@ export default function BudgetDetail() {
             ))}
           </Group>
 
-          <Group title="확보한 예정 지출" total={s.plannedTotal} onEdit={() => router.push('/schedule')}>
+          <Group title="확보한 예정 지출" total={s.plannedTotal} onEdit={() => router.push(demoRoutes.schedule)}>
             {s.upcoming.length === 0 && <Sub text="등록된 예정 지출이 없어요" />}
             {s.upcoming.map((x) => (
               <Sub key={x.id} text={`${x.title} (${md(fromKey(x.date))})`} amount={x.amount} />
@@ -84,7 +85,7 @@ export default function BudgetDetail() {
           </Group>
 
           {s.reserveTotal > 0 && (
-            <Group title="고액 지출 적립 (이번 주기분)" total={s.reserveTotal} onEdit={() => router.navigate('/plan')}>
+            <Group title="고액 지출 적립 (이번 주기분)" total={s.reserveTotal} onEdit={() => router.navigate(demoRoutes.plan)}>
               {s.planReserves.map((r) => (
                 <Sub key={r.plan.id} text={`${r.plan.title} · 하루 ${won(r.daily)}원`} amount={r.total} />
               ))}

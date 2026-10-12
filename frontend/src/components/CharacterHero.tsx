@@ -3,7 +3,7 @@
  * 좌우 < > 버튼은 시연용(희미하게 표시) — 누르면 레벨이 바뀐다.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import type { BudgetSummary } from '@/store/budget';
@@ -12,7 +12,7 @@ import { colors } from '@/theme';
 import { diffDays } from '@/utils/date';
 import { TodayHeroCard } from './HomeContent';
 import { TierBadge } from './TierBadge';
-import { T, useReducedMotion } from './ui';
+import { T, useAnimValue, useReducedMotion } from './ui';
 
 type Level = 1 | 2 | 3 | 4 | 5;
 
@@ -72,11 +72,16 @@ export function CharacterHero() {
   const { summary: s, today } = useStore();
   const auto = levelFromBudget(s, today);
   const [level, setLevel] = useState<Level>(auto);
-  useEffect(() => setLevel(auto), [auto]);
+  // 예산 상태가 바뀌면 시연용으로 바꾼 레벨을 자동 레벨로 되돌린다
+  const [prevAuto, setPrevAuto] = useState(auto);
+  if (auto !== prevAuto) {
+    setPrevAuto(auto);
+    setLevel(auto);
+  }
 
   // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
-  const scale = useRef(new Animated.Value(1)).current;
-  const shift = useRef(new Animated.Value(0)).current;
+  const scale = useAnimValue(1);
+  const shift = useAnimValue(0);
   const reduced = useReducedMotion();
   const bump = (d: -1 | 1) => {
     if (reduced) return;

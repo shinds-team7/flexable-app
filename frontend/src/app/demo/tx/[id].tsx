@@ -12,6 +12,7 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { fromKey } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function TxDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,7 +25,7 @@ export default function TxDetail() {
   if (!tx) {
     return (
       <View style={{ flex: 1 }}>
-        <SubHeader title="거래 상세" fallback="/transactions" />
+        <SubHeader title="거래 상세" fallback={demoRoutes.transactions} />
         <Screen>
           <T color={colors.textMuted}>거래를 찾을 수 없어요</T>
         </Screen>
@@ -45,7 +46,7 @@ export default function TxDetail() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="거래 상세" fallback="/transactions" />
+      <SubHeader title="거래 상세" fallback={demoRoutes.transactions} />
       <Screen>
         <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
           <IconCircle name={c.icon} color={c.color} size={56} />

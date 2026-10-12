@@ -1,7 +1,7 @@
 /** 예정 지출 목록 — 수정·삭제, 정산 필요 일정, 정산 완료 기록 */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ScheduleEditSheet } from '@/components/ScheduleEditSheet';
@@ -12,14 +12,18 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { fromKey, md, toKey } from '@/utils/date';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function ScheduleList() {
   const { today, scheduled, summary } = useStore();
   const params = useLocalSearchParams<{ edit?: string }>();
   const [editId, setEditId] = useState<string | null>(null);
-  useEffect(() => {
+  // 알림 등에서 edit 파라미터로 들어오면 해당 일정 수정 시트를 연다
+  const [prevEditParam, setPrevEditParam] = useState<string | undefined>(undefined);
+  if (params.edit !== prevEditParam) {
+    setPrevEditParam(params.edit);
     if (params.edit) setEditId(params.edit);
-  }, [params.edit]);
+  }
 
   const todayKey = toKey(today);
   const ceKey = toKey(summary.cycleEnd);
@@ -31,14 +35,14 @@ export default function ScheduleList() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="후보 거래 (예정 지출)" right={<Pressable accessibilityRole="button" accessibilityLabel="예정 지출 추가" onPress={() => router.push('/schedule/new')} hitSlop={8}><Ionicons name="add" size={26} color={colors.text} /></Pressable>} />
+      <SubHeader title="후보 거래 (예정 지출)" fallback={demoRoutes.home} right={<Pressable accessibilityRole="button" accessibilityLabel="예정 지출 추가" onPress={() => router.push(demoRoutes.scheduleNew)} hitSlop={8}><Ionicons name="add" size={26} color={colors.text} /></Pressable>} />
       <Screen>
         {toSettle.length > 0 && (
           <Card>
             <SectionTitle title="정산이 필요해요" />
             <View style={{ gap: 8 }}>
               {toSettle.map((s) => (
-                <ScheduleRow key={s.id} item={s} today={today} onPress={() => router.push(`/settle/${s.id}`)} />
+                <ScheduleRow key={s.id} item={s} today={today} onPress={() => router.push(demoRoutes.settle(s.id))} />
               ))}
             </View>
           </Card>
@@ -64,7 +68,7 @@ export default function ScheduleList() {
             ))}
           </View>
           <View style={{ marginTop: 12 }}>
-            <AddButton label="소비 일정 추가" onPress={() => router.push('/schedule/new')} />
+            <AddButton label="소비 일정 추가" onPress={() => router.push(demoRoutes.scheduleNew)} />
           </View>
         </Card>
 

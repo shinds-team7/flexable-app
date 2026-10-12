@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import type { ScheduledSpend } from '@/store/budget';
@@ -17,12 +17,16 @@ export function ScheduleEditSheet({ item, onClose }: { item: ScheduledSpend | nu
   const [date, setDate] = useState(toKey(today));
   const [raw, setRaw] = useState('');
 
-  useEffect(() => {
-    if (!item) return;
-    setTitle(item.title);
-    setDate(item.date);
-    setRaw(String(item.amount));
-  }, [item]);
+  // 다른 일정을 열면 입력값을 그 일정 값으로 채운다
+  const [prevItem, setPrevItem] = useState<ScheduledSpend | null>(null);
+  if (item !== prevItem) {
+    setPrevItem(item);
+    if (item) {
+      setTitle(item.title);
+      setDate(item.date);
+      setRaw(String(item.amount));
+    }
+  }
 
   const days = useMemo(() => Array.from({ length: 28 }, (_, i) => addDays(today, i)), [today]);
   const amount = Number(raw.replace(/[^0-9]/g, '')) || 0;

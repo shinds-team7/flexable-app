@@ -8,6 +8,7 @@ import { OnboardingFrame } from '@/components/OnboardingFrame';
 import { T } from '@/components/ui';
 import { ACCOUNTS } from '@/data/mock';
 import { colors } from '@/theme';
+import { demoRoutes } from '@/demo/routes';
 
 const BANKS = ['신한은행', 'KB국민', '카카오뱅크', '토스뱅크', '우리은행', '하나은행', '신한카드', '삼성카드'];
 
@@ -33,12 +34,13 @@ export default function Account() {
 
   return (
     <OnboardingFrame
+      backFallback={demoRoutes.onboarding}
       step={1}
       title={state === 'done' ? '계좌를 연결했어요' : '쓰고 있는 계좌와 카드를\n연결해 주세요'}
       subtitle={state === 'done' ? '최근 6개월 거래내역 1,284건을 불러왔어요. AI가 소비 패턴을 분석할게요' : '오픈뱅킹으로 안전하게 연결하고, 최근 6개월 거래내역을 불러와요'}
       cta={state === 'done' ? '다음' : state === 'loading' ? '연결 중…' : `${picked.length}곳 연결하기`}
       disabled={state === 'loading' || picked.length === 0}
-      onNext={() => (state === 'done' ? router.push('/onboarding/income') : connect())}
+      onNext={() => (state === 'done' ? router.push(demoRoutes.onboardingIncome) : connect())}
     >
       {state === 'idle' && (
         <View style={styles.grid}>

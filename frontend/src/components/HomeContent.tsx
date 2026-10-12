@@ -1,4 +1,4 @@
-/** 홈 본문 — 기존 홈(/)과 캐릭터 홈(/home2)이 함께 쓴다. top 으로 상단에 요소를 끼워 넣을 수 있다. */
+/** 홈 본문 — 시연 기존 홈(/demo)과 캐릭터 홈(/demo/home2)이 함께 쓴다. top 으로 상단에 요소를 끼워 넣을 수 있다. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
@@ -11,6 +11,7 @@ import { useStore } from '@/store/AppStore';
 import { colors, pressTransition, radius } from '@/theme';
 import { diffDays, endOfWeek, fromKey, md, startOfWeek, toKey, weekLabel } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boolean }) {
   const { today, summary, scheduled, plans } = useStore();
@@ -48,7 +49,7 @@ export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boo
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`이번 주 쓸 수 있는 돈 ${won(Math.max(0, s.weekAvailable))}원, 분석 보기`}
-          onPress={() => router.navigate({ pathname: '/analysis', params: { period: 'week' } })}
+          onPress={() => router.navigate({ pathname: demoRoutes.analysis, params: { period: 'week' } })}
           style={({ pressed }) => [styles.panelRow, pressTransition, pressed && styles.panelPressed]}
         >
           <View style={styles.rowBetween}>
@@ -76,7 +77,7 @@ export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boo
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`다음 수입일까지 남은 생활비 ${won(Math.max(0, s.remainingNow))}원, 계산 근거 보기`}
-          onPress={() => router.push('/budget-detail')}
+          onPress={() => router.push(demoRoutes.budgetDetail)}
           style={({ pressed }) => [styles.panelRow, styles.panelRowSm, pressTransition, pressed && styles.panelPressed]}
         >
           <View style={{ flex: 1 }}>
@@ -100,7 +101,7 @@ export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boo
 
       {/* 지난 일정 정산 요청 */}
       {toSettle.map((x) => (
-        <Card key={x.id} onPress={() => router.push(`/settle/${x.id}`)} style={styles.settle}>
+        <Card key={x.id} onPress={() => router.push(demoRoutes.settle(x.id))} style={styles.settle}>
           <IconCircle name="receipt" color={colors.info} size={40} />
           <View style={{ flex: 1 }}>
             <T size={14} weight="700">
@@ -119,7 +120,7 @@ export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boo
         <SectionTitle
           title="이번 주 후보 거래"
           right={
-            <Pressable accessibilityRole="button" onPress={() => router.push('/schedule')} style={styles.more} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={() => router.push(demoRoutes.schedule)} style={styles.more} hitSlop={8}>
               <T size={13} color={colors.textMuted}>
                 {thisWeek.length}건 {won(thisWeek.reduce((a, x) => a + x.amount, 0))}원
               </T>
@@ -140,7 +141,7 @@ export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boo
             ))}
           </View>
         )}
-        <AddButton label="소비 일정 추가" onPress={() => router.push('/schedule/new')} />
+        <AddButton label="소비 일정 추가" onPress={() => router.push(demoRoutes.scheduleNew)} />
       </Card>
 
       {/* 고액 지출 D-day */}
@@ -183,7 +184,7 @@ export function HomeContent({ top, hideHero }: { top?: ReactNode; hideHero?: boo
             })}
           </View>
         )}
-        <AddButton label="고액 지출 계획하기" onPress={() => router.navigate('/plan')} />
+        <AddButton label="고액 지출 계획하기" onPress={() => router.navigate(demoRoutes.plan)} />
       </Card>
     </Screen>
   );
@@ -310,7 +311,7 @@ export function TodayHeroCard() {
 
       <Pressable
         style={({ pressed }) => [styles.heroFoot, pressed && { opacity: 0.7 }]}
-        onPress={() => router.push('/budget-detail')}
+        onPress={() => router.push(demoRoutes.budgetDetail)}
         accessibilityRole="button"
         accessibilityLabel="계산 근거 보기"
       >

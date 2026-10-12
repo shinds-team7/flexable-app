@@ -15,6 +15,7 @@ import { computeBudget } from '@/store/budget';
 import { colors, font, noOutline } from '@/theme';
 import { addDays, fromKey, isSameDay, toKey } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 const EXAMPLES = ['다음주 금요일 아카데미 회식', '토요일 저녁먹고 영화', '내일 미용실', '15일 친구 생일 선물 5만원'];
 
@@ -90,7 +91,7 @@ export default function NewSchedule() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="소비 일정 추가" />
+      <SubHeader title="소비 일정 추가" fallback={demoRoutes.home} />
       <Screen>
         <Segment
           items={[
@@ -173,7 +174,7 @@ export default function NewSchedule() {
           />
         ))}
 
-        {live.length > 0 && <Button label="완료" variant="soft" onPress={() => goBack('/')} />}
+        {live.length > 0 && <Button label="완료" variant="soft" onPress={() => goBack(demoRoutes.home)} />}
       </Screen>
 
       {/* 캘린더 불러오기 (Mock) */}
@@ -300,7 +301,7 @@ function ResultCard({ result, onEdit, onCancel }: { result: Result; onEdit: () =
           style={styles.large}
           onPress={() => {
             onCancel();
-            router.navigate({ pathname: '/plan', params: { amount: String(large.amount || s.amount), title: large.title } });
+            router.navigate({ pathname: demoRoutes.plan, params: { amount: String(large.amount || s.amount), title: large.title } });
           }}
         >
           <Ionicons name="flag" size={16} color={colors.brandDark} />
@@ -374,7 +375,7 @@ function ManualForm() {
         style={{ marginTop: 20 }}
         onPress={() => {
           addScheduled({ title: title.trim(), date: toKey(days[day]), amount, source: 'manual', items: [{ label: title.trim(), amount, basis: '직접 입력한 금액' }] });
-          goBack('/');
+          goBack(demoRoutes.home);
         }}
       />
     </Card>

@@ -11,6 +11,7 @@ import type { Protected } from '@/data/mock';
 import { useStore } from '@/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { won } from '@/utils/format';
+import { demoRoutes } from '@/demo/routes';
 
 export default function Protect() {
   const edit = !!useLocalSearchParams<{ edit?: string }>().edit;
@@ -23,14 +24,15 @@ export default function Protect() {
 
   return (
     <OnboardingFrame
+      backFallback={edit ? demoRoutes.my : demoRoutes.onboarding}
       editMode={edit}
       step={4}
       title={'절대 건드리면 안 되는 돈을\n정해 주세요'}
       subtitle="통장에 있어도 생활비로 계산하지 않고 따로 지켜둘게요"
       onNext={() => {
         setProtected(list.filter((p) => p.amount > 0));
-        if (edit) goBack('/my');
-        else router.push('/onboarding/analyze');
+        if (edit) goBack(demoRoutes.my);
+        else router.push(demoRoutes.onboardingAnalyze);
       }}
     >
       <View style={styles.balance}>

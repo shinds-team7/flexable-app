@@ -6,13 +6,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '@/theme';
 import { T } from './ui';
 
-/** 히스토리가 없으면(웹 직접 진입) fallback 경로로 이동 */
-export function goBack(fallback: Href = '/') {
+/** 히스토리가 없으면(웹 직접 진입) fallback 경로로 이동. 시연/서비스 경로가 다르므로 fallback은 항상 명시한다. */
+export function goBack(fallback: Href) {
   if (router.canGoBack()) router.back();
   else router.replace(fallback);
 }
 
-export function SubHeader({ title, right, fallback }: { title: string; right?: ReactNode; fallback?: Href }) {
+export function SubHeader({ title, right, fallback }: { title: string; right?: ReactNode; fallback: Href }) {
   return (
     <View style={styles.wrap}>
       <Pressable accessibilityRole="button" accessibilityLabel="뒤로 가기" onPress={() => goBack(fallback)} hitSlop={10} style={styles.side}>
