@@ -111,7 +111,7 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
 
 export function Screen({ children }: { children: ReactNode }) {
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>
   );
@@ -145,6 +145,7 @@ export function Button({ label, variant = 'primary', icon, style, disabled, ...r
       accessibilityState={{ disabled: !!disabled }}
       {...rest}
       disabled={disabled}
+      aria-disabled={!!disabled}
       style={({ pressed }) => [
         styles.btn,
         pressTransition,
@@ -154,7 +155,7 @@ export function Button({ label, variant = 'primary', icon, style, disabled, ...r
       ]}
     >
       {icon && <Ionicons name={icon} size={18} color={disabled ? colors.textFaint : fg} />}
-      <T size={16} weight="700" color={disabled ? colors.textMuted : fg} numberOfLines={1}>
+      <T size={16} weight="700" color={disabled ? colors.textMuted : fg} style={{ textAlign: 'center' }}>
         {label}
       </T>
     </Pressable>
@@ -233,6 +234,7 @@ export function Segment<K extends string>({
             key={it.key}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
+            aria-selected={on}
             onPress={() => onChange(it.key)}
             style={[styles.segItem, pressTransition, on && styles.segOn]}
           >
@@ -291,9 +293,10 @@ export function Sheet({
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.dimBg, { opacity: p }]} />
-      <Pressable style={styles.dim} onPress={onClose} accessibilityLabel="닫기" accessibilityRole="button">
+      <View style={styles.dim}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="닫기" accessibilityRole="button" />
         <Animated.View style={[styles.sheet, floating, { transform: [{ translateY }] }]}>
-          <Pressable onPress={() => {}} accessible={false} style={{ cursor: 'auto' } as object}>
+          <View>
             <View style={styles.grabber} />
             <View style={styles.sheetHead}>
               <T size={19} weight="700" style={{ flex: 1 }} accessibilityRole="header">
@@ -309,9 +312,9 @@ export function Sheet({
               </T>
             )}
             <View style={{ marginTop: 18 }}>{children}</View>
-          </Pressable>
+          </View>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -369,7 +372,7 @@ export function Chip({ label, on, onPress }: { label: string; on?: boolean; onPr
       hitSlop={4}
       style={({ pressed }) => [styles.chip, pressTransition, on && styles.chipOn, pressed && pressedFx]}
     >
-      <T size={13} weight="600" color={on ? colors.onBrand : colors.textSub} numberOfLines={1}>
+      <T size={13} weight="600" color={on ? colors.onBrand : colors.textSub} style={{ textAlign: 'center' }}>
         {label}
       </T>
     </Pressable>
@@ -405,7 +408,9 @@ export const styles = StyleSheet.create({
   btnPrimaryPressed: { transform: [{ scale: 0.97 }], backgroundColor: colors.brandDark },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   btn: {
-    height: 54,
+    minHeight: 54,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',

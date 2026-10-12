@@ -29,31 +29,33 @@ const Ctx = createContext<{
 } | null>(null);
 export function BudgetDraftProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
-  return <DraftProvider key={user?.id ?? "guest"}>{children}</DraftProvider>;
-}
-function DraftProvider({ children }: { children: ReactNode }) {
-  const { user } = useSession();
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [error, setError] = useState<unknown>();
-  const queue = useRef(Promise.resolve());
-  const active = useRef(user?.id);
   const id = user?.id;
+  const [loaded, setLoaded] = useState<{ owner: number; draft: Draft } | null>(
+    null,
+  );
+  const [failure, setFailure] = useState<{ owner?: number; error: unknown }>();
+  const queue = useRef(Promise.resolve());
+  const active = useRef<number | undefined>(id);
   const key = `flexable.service.draft.${id}`;
+  const draft = loaded?.owner === id ? (loaded?.draft ?? null) : null;
   useEffect(() => {
     let alive = true;
     active.current = id;
     if (id !== undefined)
       readStorage(key)
         .then((saved) => {
-          if (alive)
-            setDraft(
-              saved
+          if (alive) {
+            setLoaded({
+              owner: id,
+              draft: saved
                 ? JSON.parse(saved)
                 : { value: initial(), step: "index", editing: false },
-            );
+            });
+            setFailure(undefined);
+          }
         })
-        .catch((e) => {
-          if (alive) setError(e);
+        .catch((error) => {
+          if (alive) setFailure({ owner: id, error });
         });
     return () => {
       alive = false;
@@ -61,15 +63,15 @@ function DraftProvider({ children }: { children: ReactNode }) {
     };
   }, [key, id]);
   const persist = (next: Draft) => {
-    setDraft(next);
-    const id = user?.id;
+    if (id === undefined) return;
+    setLoaded({ owner: id, draft: next });
     queue.current = queue.current
       .catch(() => {})
       .then(async () => {
         if (active.current === id)
           await writeStorage(key, JSON.stringify(next));
       })
-      .catch((e) => setError(e));
+      .catch((error) => setFailure({ owner: id, error }));
   };
   const set = (value: BudgetSettings, step = draft?.step ?? "index") =>
     persist({ value, step, editing: draft?.editing ?? false });
@@ -82,10 +84,22 @@ function DraftProvider({ children }: { children: ReactNode }) {
   const reset = async () => {
     await queue.current;
     await writeStorage(key, null);
-    setDraft({ value: initial(), step: "index", editing: false });
+    if (id !== undefined)
+      setLoaded({
+        owner: id,
+        draft: { value: initial(), step: "index", editing: false },
+      });
   };
   return (
-    <Ctx.Provider value={{ draft, error, set, begin, reset }}>
+    <Ctx.Provider
+      value={{
+        draft,
+        error: failure?.owner === id ? failure?.error : undefined,
+        set,
+        begin,
+        reset,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

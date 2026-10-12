@@ -58,6 +58,33 @@ export function Field({
     </View>
   );
 }
+export function DateTimeField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [date = "", time = ""] = value.split("T");
+  return (
+    <View style={{ gap: 12 }}>
+      <Field
+        label={`${label} 날짜 (년-월-일)`}
+        value={date}
+        placeholder="예: 2026-10-13"
+        onChangeText={(next) => onChange(`${next}T${time}`)}
+      />
+      <Field
+        label={`${label} 시간 (시:분, 한국 시간)`}
+        value={time}
+        placeholder="예: 14:30"
+        onChangeText={(next) => onChange(`${date}T${next}`)}
+      />
+    </View>
+  );
+}
 export function MoneyField({
   label,
   value,
@@ -141,41 +168,62 @@ export function CategoryIcon({ icon, color }: { icon: string; color: string }) {
   ) as ComponentProps<typeof Ionicons>["name"];
   return <Ionicons name={name} color={color} size={22} />;
 }
+// Retain the last successful snapshot on connection failure, but never reuse it across users or date ranges.
 export function useResource<T>(path: string | null) {
   const { revision, user } = useSession();
-  const [data, setData] = useState<T>();
-  const [error, setError] = useState<unknown>();
-  const [loading, setLoading] = useState(true);
   const [nonce, bump] = useState(0);
+  const userId = user?.id;
+  const identity = `${userId}:${path}`;
+  const [state, setState] = useState<{
+    identity: string;
+    data?: T;
+    error?: unknown;
+    loading: boolean;
+    confirmedAt?: Date;
+  }>({ identity, loading: true });
   const current = useRef(0);
   useFocusEffect(
     useCallback(() => {
-      const requestIdentity = `${user?.id}:${revision}:${nonce}:${path}`;
+      const refresh = `${revision}:${nonce}`;
       const seq = ++current.current;
       const controller = new AbortController();
-      setLoading(true);
-      setError(undefined);
-      if (!path) {
-        setLoading(false);
-        return;
-      }
+      setState((previous) => ({
+        ...(previous.identity === identity ? previous : { identity }),
+        loading: !!path,
+        error: undefined,
+      }));
+      if (!path) return;
       api<T>(path, { signal: controller.signal })
-        .then((value) => {
-          if (seq === current.current && requestIdentity) setData(value);
+        .then((data) => {
+          if (seq === current.current && refresh)
+            setState({
+              identity,
+              data,
+              loading: false,
+              confirmedAt: new Date(),
+            });
         })
-        .catch((e) => {
-          if (seq === current.current) setError(e);
-        })
-        .finally(() => {
-          if (seq === current.current) setLoading(false);
+        .catch((error) => {
+          if (seq === current.current)
+            setState((previous) => ({ ...previous, error, loading: false }));
         });
       return () => {
         ++current.current;
         controller.abort();
       };
-    }, [path, revision, nonce, user?.id]),
+    }, [identity, path, revision, nonce]),
   );
-  return { data, error, loading, retry: () => bump((x) => x + 1) };
+  return {
+    ...(state.identity === identity
+      ? state
+      : {
+          loading: !!path,
+          data: undefined,
+          error: undefined,
+          confirmedAt: undefined,
+        }),
+    retry: () => bump((x) => x + 1),
+  };
 }
 export function seoulDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
