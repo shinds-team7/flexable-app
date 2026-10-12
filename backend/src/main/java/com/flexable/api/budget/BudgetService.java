@@ -101,7 +101,8 @@ public class BudgetService {
 
 		BudgetCalculator.Input input = new BudgetCalculator.Input(s.getBalance(), s.getBalanceAt(), s.getPayday(),
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
-				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs);
+				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
+				!txs.isEmpty() || transactions.existsByUserId(userId));
 		return BudgetCalculator.compute(input, today, zone);
 	}
 

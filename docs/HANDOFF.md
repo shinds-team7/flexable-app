@@ -91,7 +91,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] 도메인 구매 → 서버 `.env`의 `API_DOMAIN`, `frontend/.env.production`, `eas.json`의 `EXPO_PUBLIC_API_URL` 변경 → 앱 재빌드
 - [ ] EC2 탄력적 IP 할당(지금은 자동 할당 IP라 인스턴스를 멈추면 바뀜 → DuckDNS 갱신 필요)
 - [ ] 문의 이메일을 팀 계정으로 교체: `frontend/src/service/config.ts`, `docs/play-store/*.md`, Play Console
-- [ ] API 요청(Codex): `GET /budget/today`에 주간 사용 가능액, 전체 거래 유무. 지금은 "이번 주 쓴 돈", "이번 정산 주기에 기록한 거래가 없어요"로 표시
+- [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [ ] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음)
 - [ ] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 rebase 전 원본이다. 원격과 PR은 `SXXNHU/service-frontend`를 쓴다.

@@ -129,6 +129,8 @@ class ApiFlowTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.cardUnpaid", is(0)))
 			.andExpect(jsonPath("$.fixedExpenses[0].id").isNumber());
+		mvc.perform(json(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.hasTransactions", is(false)));
 		mvc.perform(json(get("/api/v1/me"), token, null)).andExpect(jsonPath("$.onboarded", is(true)));
 
 		long food = categoryId(token, "EXPENSE", "식비");
@@ -154,7 +156,10 @@ class ApiFlowTest {
 		mvc.perform(json(get("/api/v1/budget/today"), token, null))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.todaySpent", is(8500)))
-			.andExpect(jsonPath("$.estimatedBalance", is(1000000 - 8500)));
+			.andExpect(jsonPath("$.estimatedBalance", is(1000000 - 8500)))
+			.andExpect(jsonPath("$.hasTransactions", is(true)))
+			.andExpect(jsonPath("$.weekDaysLeft").isNumber())
+			.andExpect(jsonPath("$.weekAvailable").isNumber());
 		mvc.perform(json(get("/api/v1/analysis/summary?from=" + today + "&to=" + today), token, null))
 			.andExpect(jsonPath("$.expenseTotal", is(8500)))
 			.andExpect(jsonPath("$.byCategory[0].ratio", is(1.0)))

@@ -53,7 +53,8 @@ class BudgetCalculatorTest {
 				List.of(450_000L), 300_000,
 				List.of(new BudgetCalculator.Tx(TxType.EXPENSE, 12_000, at("2026-10-13T12:30:00")),
 						new BudgetCalculator.Tx(TxType.EXPENSE, 58_000, at("2026-10-13T09:00:00")),
-						new BudgetCalculator.Tx(TxType.INCOME, 30_000, at("2026-10-13T13:00:00"))));
+						new BudgetCalculator.Tx(TxType.INCOME, 30_000, at("2026-10-13T13:00:00"))),
+				true);
 		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 13), SEOUL);
 
 		assertThat(r.daysLeft()).isEqualTo(12);
@@ -65,12 +66,29 @@ class BudgetCalculatorTest {
 		assertThat(r.todayAvailable()).isEqualTo(49_000 - 70_000 < 0 ? 0 : 49_000 - 70_000);
 		assertThat(r.shortage()).isEqualTo(70_000 - 49_000);
 		assertThat(r.cycleStart()).isEqualTo(LocalDate.of(2026, 9, 25));
+		// 10/13(화) ~ 10/18(일) 6일
+		assertThat(r.weekDaysLeft()).isEqualTo(6);
+		assertThat(r.weekAvailable()).isEqualTo(Math.max(0, r.dailyBudget() * 6 - 70_000));
+		assertThat(r.hasTransactions()).isTrue();
+	}
+
+	@Test
+	void weekStopsBeforePayday() {
+		// 10/22(목), 수입일 25일 → 이번 주는 10/24(토)까지 3일
+		var in = new BudgetCalculator.Input(300_000, at("2026-10-22T09:00:00"), 25, 0, List.of(), List.of(), 0,
+				List.of(), false);
+		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 22), SEOUL);
+		assertThat(r.daysLeft()).isEqualTo(3);
+		assertThat(r.weekDaysLeft()).isEqualTo(3);
+		assertThat(r.dailyBudget()).isEqualTo(100_000);
+		assertThat(r.weekAvailable()).isEqualTo(300_000);
+		assertThat(r.hasTransactions()).isFalse();
 	}
 
 	@Test
 	void negativeRemainingReportsShortage() {
 		var in = new BudgetCalculator.Input(100_000, at("2026-10-13T10:00:00"), 25, 50_000, List.of(20),
-				List.of(200_000L), 0, List.of());
+				List.of(200_000L), 0, List.of(), false);
 		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 13), SEOUL);
 		assertThat(r.remaining()).isEqualTo(-150_000);
 		assertThat(r.dailyBudget()).isZero();

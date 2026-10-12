@@ -126,7 +126,10 @@
   "todayAvailable": 24833,
   "shortage": 0,
   "weekSpent": 54000,
-  "cycleStart": "2026-09-25"
+  "weekDaysLeft": 6,
+  "weekAvailable": 208998,
+  "cycleStart": "2026-09-25",
+  "hasTransactions": true
 }
 ```
 
@@ -139,6 +142,9 @@
 - `dailyBudget` = max(0, `remaining` + `todaySpent`) ÷ `daysLeft`
 - `todayAvailable` = max(0, `dailyBudget` − `todaySpent`), `shortage` = `remaining` < 0이면 −`remaining`, 아니면 max(0, `todaySpent` − `dailyBudget`)
 - `weekSpent` = 이번 주(월~일) 지출 합, `cycleStart` = 직전 수입일
+- `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
+- `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈
+- `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
 

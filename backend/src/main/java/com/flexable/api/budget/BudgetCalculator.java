@@ -26,7 +26,7 @@ public final class BudgetCalculator {
 	}
 
 	public record Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
-			List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions) {
+			List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions) {
 	}
 
 	public static TodayResponse compute(Input in, LocalDate today, ZoneId zone) {
@@ -63,10 +63,13 @@ public final class BudgetCalculator {
 		long dailyBudget = Math.max(0, remaining + todaySpent) / daysLeft;
 		long todayAvailable = Math.max(0, dailyBudget - todaySpent);
 		long shortage = remaining < 0 ? -remaining : Math.max(0, todaySpent - dailyBudget);
+		LocalDate weekLast = weekEnd.isBefore(nextPayday) ? weekEnd : nextPayday.minusDays(1);
+		int weekDaysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, weekLast) + 1);
+		long weekAvailable = Math.max(0, dailyBudget * weekDaysLeft - todaySpent);
 
 		return new TodayResponse(today, nextPayday, daysLeft, estimated, reservedFixed, in.cardUnpaid(),
 				in.protectedTotal(), remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent,
-				cycleStart);
+				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions());
 	}
 
 	/** 그 달의 수입일(31 등 없는 날은 말일로). */
