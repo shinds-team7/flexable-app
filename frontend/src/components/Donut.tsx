@@ -26,31 +26,30 @@ export function Donut({
   const denom = Math.max(total, sum, 1);
   const gap = segments.length > 1 ? 2 : 0;
 
-  let offset = 0;
+  // 각 조각의 시작 위치(누적 길이)를 미리 계산한다
+  const arcs = segments.map((s, i) => {
+    const len = (s.value / denom) * c;
+    const start = segments.slice(0, i).reduce((a, x) => a + (x.value / denom) * c, 0);
+    return { color: s.color, dash: Math.max(0, len - gap), start };
+  });
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
         <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
-          {segments.map((s, i) => {
-            const len = (s.value / denom) * c;
-            const dash = Math.max(0, len - gap);
-            const el = (
-              <Circle
-                key={i}
-                cx={size / 2}
-                cy={size / 2}
-                r={r}
-                stroke={s.color}
-                strokeWidth={stroke}
-                fill="none"
-                strokeDasharray={`${dash} ${c - dash}`}
-                strokeDashoffset={-offset}
-              />
-            );
-            offset += len;
-            return el;
-          })}
+          {arcs.map((a, i) => (
+            <Circle
+              key={i}
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              stroke={a.color}
+              strokeWidth={stroke}
+              fill="none"
+              strokeDasharray={`${a.dash} ${c - a.dash}`}
+              strokeDashoffset={-a.start}
+            />
+          ))}
         </G>
       </Svg>
       {children}

@@ -61,6 +61,13 @@ export function useReducedMotion() {
   return reduced;
 }
 
+/** 컴포넌트 수명 동안 유지되는 Animated.Value.
+ *  RN의 useAnimatedValue는 react-native-web(0.21)에 없어 웹에서 쓸 수 없으므로 useState 지연 초기화로 만든다. */
+export function useAnimValue(initial: number) {
+  const [value] = useState(() => new Animated.Value(initial));
+  return value;
+}
+
 /** 숫자가 바뀔 때만(첫 렌더 제외) 짧게 굴러가는 금액 — 결제 반영 순간을 보여준다 */
 export function useRollingNumber(value: number) {
   const reduced = useReducedMotion();
@@ -255,12 +262,13 @@ export function Sheet({
 }) {
   const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
-  const p = useRef(new Animated.Value(0)).current;
+  // 열릴 때는 렌더 중에 바로 마운트하고, 닫힐 때는 애니메이션이 끝난 뒤 언마운트한다
+  if (visible && !mounted) setMounted(true);
+  const p = useAnimValue(0);
   const native = Platform.OS !== 'web';
 
   useEffect(() => {
     if (visible) {
-      setMounted(true);
       p.setValue(0);
       Animated.timing(p, {
         toValue: 1,

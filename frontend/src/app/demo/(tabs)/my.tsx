@@ -111,7 +111,7 @@ export default function My() {
           }}
         />
         <T size={12} color={colors.textMuted} style={{ marginTop: 10 }}>
-          상단 '홈' 탭을 누르면 선택한 화면으로 열려요
+          상단 ‘홈’ 탭을 누르면 선택한 화면으로 열려요
         </T>
       </Card>
 

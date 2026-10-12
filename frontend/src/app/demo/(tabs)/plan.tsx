@@ -27,25 +27,25 @@ export default function Plan() {
   const title = params.title ?? '';
   const [raw, setRaw] = useState(params.amount && params.amount !== '0' ? params.amount : '');
   // 예정 지출 등록 화면에서 "큰 지출"로 넘어온 경우 값 채우기
-  useEffect(() => {
+  const [prevAmountParam, setPrevAmountParam] = useState(params.amount);
+  if (params.amount !== prevAmountParam) {
+    setPrevAmountParam(params.amount);
     if (params.amount && params.amount !== '0') setRaw(params.amount);
-  }, [params.amount]);
+  }
   const amount = Number(raw.replace(/[^0-9]/g, '')) || 0;
 
   // 금액 입력이 멈추면 AI 분석 → 캘린더 노출 (Mock 지연)
   const [analyzed, setAnalyzed] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [prevAmount, setPrevAmount] = useState(amount);
+  if (amount !== prevAmount) {
+    setPrevAmount(amount);
+    if (amount < 10000) setAnalyzed(0);
+  }
+  // 분석 결과가 지금 입력한 금액을 아직 따라오지 못했으면 분석 중
+  const loading = amount >= 10000 && analyzed !== amount;
   useEffect(() => {
-    if (amount < 10000) {
-      setAnalyzed(0);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const t = setTimeout(() => {
-      setAnalyzed(amount);
-      setLoading(false);
-    }, 700);
+    if (amount < 10000) return;
+    const t = setTimeout(() => setAnalyzed(amount), 700);
     return () => clearTimeout(t);
   }, [amount]);
 
@@ -54,7 +54,12 @@ export default function Plan() {
     [analyzed, budgetInput, today],
   );
   const [selected, setSelected] = useState(recommended);
-  useEffect(() => setSelected(recommended), [recommended]);
+  // 추천 주가 바뀌면 선택도 추천 주로 되돌린다
+  const [prevRecommended, setPrevRecommended] = useState(recommended);
+  if (recommended.getTime() !== prevRecommended.getTime()) {
+    setPrevRecommended(recommended);
+    setSelected(recommended);
+  }
 
   const minWeek = startOfWeek(today);
   const canPrev = selected > minWeek;

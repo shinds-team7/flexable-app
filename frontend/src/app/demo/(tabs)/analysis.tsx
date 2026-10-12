@@ -1,7 +1,7 @@
 /** 3. 소비 패턴 분석 — 이번 주/이번 달 예산 사용 현황 도넛 + 카테고리별 사용 현황 */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AnalysisTabs } from '@/components/AnalysisTabs';
@@ -19,9 +19,12 @@ type Period = 'week' | 'month';
 export default function Analysis() {
   const params = useLocalSearchParams<{ period?: string }>();
   const [period, setPeriod] = useState<Period>(params.period === 'week' ? 'week' : 'month');
-  useEffect(() => {
+  // 다른 화면에서 기간을 지정해 다시 들어오면 그 기간으로 맞춘다
+  const [prevPeriodParam, setPrevPeriodParam] = useState(params.period);
+  if (params.period !== prevPeriodParam) {
+    setPrevPeriodParam(params.period);
     if (params.period === 'week' || params.period === 'month') setPeriod(params.period);
-  }, [params.period]);
+  }
 
   const { today, transactions, summary, income } = useStore();
 

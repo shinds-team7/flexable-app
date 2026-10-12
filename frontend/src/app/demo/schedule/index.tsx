@@ -1,7 +1,7 @@
 /** 예정 지출 목록 — 수정·삭제, 정산 필요 일정, 정산 완료 기록 */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ScheduleEditSheet } from '@/components/ScheduleEditSheet';
@@ -18,9 +18,12 @@ export default function ScheduleList() {
   const { today, scheduled, summary } = useStore();
   const params = useLocalSearchParams<{ edit?: string }>();
   const [editId, setEditId] = useState<string | null>(null);
-  useEffect(() => {
+  // 알림 등에서 edit 파라미터로 들어오면 해당 일정 수정 시트를 연다
+  const [prevEditParam, setPrevEditParam] = useState<string | undefined>(undefined);
+  if (params.edit !== prevEditParam) {
+    setPrevEditParam(params.edit);
     if (params.edit) setEditId(params.edit);
-  }, [params.edit]);
+  }
 
   const todayKey = toKey(today);
   const ceKey = toKey(summary.cycleEnd);
