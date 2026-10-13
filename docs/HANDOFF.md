@@ -2,6 +2,17 @@
 
 마지막 갱신 2026-10-14. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
+**저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
+
+## 0. 다음에 이어서 할 일 (2026-10-14 기준, 우선순위 순)
+
+1. [ ] 1차 피드백 반영 APK 실기기 확인(§4-2 체크리스트). 기존 앱을 지우고 설치한다. 오류 화면이 뜨면 캡처해서 원인 분석에 쓴다
+2. [ ] 팀원에게 새 APK 배포 → 2차 피드백 수집(노션)
+3. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
+4. [ ] Google 계정 복구 결과 확인 → §4-3에 따라 Play Console 진행
+5. [ ] Play 등록이 풀리면 production AAB 빌드·업로드
+
+최근 변경: PR #14(Expo `apduis-team` 연결), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
 
 ## 1. 지금 상태
 
@@ -9,10 +20,10 @@
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
 | 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (`/demo` 시연, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
-| 앱 서비스 화면 | 완료, 운영 API로 E2E 4개 통과 | `frontend/src/service/`, `frontend/src/app/` (상세는 `frontend/SERVICE_1_0_0_REPORT.md`) |
+| 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (상세는 `frontend/SERVICE_1_0_0_REPORT.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
-| Android 빌드 | preview APK 1회 빌드·실기기 테스트, 1차 피드백 반영(PR #15) 후 재빌드 예정 | §4-2 |
+| Android 빌드 | 1차 피드백 반영본 preview APK 빌드(10-14, `apduis-team`), 실기기 확인 대기 | §4-2 |
 | Play Console | 개발자 등록 중단 — 등록에 쓰던 Google 계정이 사용 중지되어 복구 결과 대기 | §4-3 |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
@@ -48,6 +59,8 @@ npx playwright test     # 로컬 백엔드(8080)와 웹(8081)을 먼저 띄운 �
 - 운영 웹 빌드는 `frontend/.env.production`(공개 API 주소)를 쓴다. 앱 빌드는 `eas.json` 프로필 env를 쓴다.
 - 운영 API의 CORS는 `https://project2-flex-sh.vercel.app`과 `http://localhost:8081`만 허용한다.
 - Windows Git Bash에서 `curl -d '한글'`은 깨져서 400이 난다. 한글 요청은 UTF-8 파일(`--data-binary @file.json`)로 보낸다.
+- **Windows에서 `npx expo install`로 패키지를 추가하면 `package-lock.json`에서 `node_modules/@emnapi/core`·`runtime` 항목이 빠질 수 있다.** 그대로 커밋하면 EAS(리눅스)의 `npm ci`가 실패한다(#9, #16). 커밋 전에 두 항목이 남아 있는지 확인한다.
+- Claude Code를 쓸 때: 권한 규칙은 PC마다 따로라 새 PC에서 다시 추가한다(`/permissions` → Allow: `Bash(gh pr merge:*)`, `Bash(ssh -i ~/.ssh/sh-flex.pem ubuntu@3.36.103.99:*)`, `Bash(scp -i ~/.ssh/sh-flex.pem:*)`, `Bash(bash backend/deploy/deploy.sh:*)`). Claude 셸에서는 `eas login`의 입력을 받을 수 없으니 `eas login --device --non-interactive`로 받은 링크를 브라우저에서 승인한다(몇 분 뒤 만료).
 
 ## 4. 남은 일 (순서대로)
 
@@ -68,6 +81,10 @@ npx eas-cli@latest build -p android --profile production
 
 - 처음 쓰던 Expo 계정은 Google 로그인 계정이 정지되어 쓸 수 없어 `apduis-team`으로 옮겼다. 서명 키가 새로 만들어지므로 예전 APK가 깔린 폰은 지우고 새로 설치한다(Play 업로드 전이라 출시 영향 없음).
 - 날짜·시간 선택기(`@react-native-community/datetimepicker`)는 네이티브 모듈이라 Expo Go가 아닌 빌드에서 확인한다.
+- 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다.
+- 빌드 목록·다운로드: https://expo.dev/accounts/apduis-team/projects/apdui-universe/builds
+
+1차 피드백 반영본에서 특히 확인할 것: 거래 수정·저장(예전에 앱이 꺼지던 문제, 원인 미확정 — 이제는 오류 화면이 뜬다), 거래 날짜 달력·시간 휠, 온보딩 '이전'·'취소'·'확인' 접기, 마이 → 홈 화면 → 캐릭터 홈, 수입일이 주말일 때 남은 날짜.
 
 실기기(APK)에서 확인할 것: 가입·로그인, 예산 설정 키보드·스크롤, 거래 입력 바텀시트, 글꼴 크게 설정, 앱 재시작 후 로그인 유지(SecureStore), `flexable://demo` 딥링크가 시작 화면으로 가는지, 계정 삭제.
 
@@ -91,6 +108,8 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
   - **새 PC나 사무실에서는 공인 IP가 달라 SSH가 막힌다.** EC2 → 보안 그룹 `flex-api-web` → 인바운드 22번 소스를 새 IP로 바꾼다.
 - RDS: `database-flex` (MySQL), DB `flexable`, 앱 계정 `flexable_app`. 퍼블릭 액세스 없음, EC2에서만 접근
 - 스키마 변경은 `backend/src/main/resources/db/migration/V{n}__*.sql` 추가(기존 파일 수정 금지)
+- 운영 DB 조회: EC2에 `mysql` 클라이언트가 있다. `/opt/flexable/.env`는 값에 `&`가 있어 `source`하면 깨진다 → `grep '^DB_URL=' .env | cut -d= -f2-`처럼 값만 읽고 `mysql --ssl-mode=REQUIRED -h <RDS 호스트> -u flexable_app flexable`로 접속(비밀번호는 `MYSQL_PWD` 환경 변수로).
+- 사용자 삭제는 앱의 `AccountDeletionService.deleteAll` 순서를 따른다: transactions → categories → fixed_expenses → fixed_expense_postings → protected_items → budget_settings → users(`transactions`가 `categories`를 연쇄 삭제 없이 참조).
 
 ## 6. 미뤄 둔 일
 
@@ -100,4 +119,9 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [ ] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음)
+- [ ] 거래 수정 중 앱 종료: 원인 미확정. 오류 화면 캡처를 받으면 분석
+- [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
+- [ ] 캐릭터 홈 단계가 "오늘 예산 사용률" 기준이다. 정산 주기 전체 기준으로 바꾸려면 `/budget/today`에 주기 예산·지출을 추가해야 한다
+- [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
+- [ ] 웹 개발 모드에서 원그래프·캐릭터 화면에 "Invalid DOM property transform…" 경고(기능 영향 없음)
 - [ ] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 rebase 전 원본이다. 원격과 PR은 `SXXNHU/service-frontend`를 쓴다.
