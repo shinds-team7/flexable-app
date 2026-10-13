@@ -14,7 +14,7 @@
 | 앱/게임 | 앱, 무료 |
 | 카테고리 | 금융 |
 | 개발자 표시명 | Limbo |
-| 연락처 이메일 | dofqls0127@gmail.com (TODO: 팀 Google 계정으로 교체) |
+| 연락처 이메일 | ucmnuniverse@gmail.com |
 | 개인정보처리방침 URL | https://project2-flex-sh.vercel.app/privacy |
 | 계정 삭제 URL | https://project2-flex-sh.vercel.app/delete-account |
 | API 서버 | https://flex-able-sh.duckdns.org (AWS 서울 리전) |
