@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "텅장관리",
-    "slug": "flexable",
+    "slug": "apdui-universe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +11,6 @@
     },
     "android": {
       "package": "com.flexable.app",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0046FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -38,6 +37,13 @@
         }
       ],
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "33b551a5-6eed-4ca7-8abc-f8fa5a83cecb"
+      }
+    },
+    "owner": "apduis-team"
   }
 }
