@@ -73,6 +73,35 @@ class BudgetCalculatorTest {
 	}
 
 	@Test
+	void postedFixedExpenseLeavesBalanceButNotDailySpending() {
+		// 10/15 월세 450,000이 오늘 0시에 자동 기록됨 → 잔액에서 빠지고, 남겨둘 고정지출·오늘 쓴 돈에는 없다
+		var in = new BudgetCalculator.Input(1_250_000, at("2026-10-13T10:00:00"), 25, 0, List.of(15),
+				List.of(450_000L), 0,
+				List.of(new BudgetCalculator.Tx(TxType.EXPENSE, 450_000, at("2026-10-15T00:00:00"), true),
+						new BudgetCalculator.Tx(TxType.EXPENSE, 10_000, at("2026-10-15T12:00:00"))),
+				true);
+		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 15), SEOUL);
+		assertThat(r.estimatedBalance()).isEqualTo(1_250_000 - 450_000 - 10_000);
+		assertThat(r.reservedFixed()).isZero();
+		assertThat(r.remaining()).isEqualTo(790_000);
+		assertThat(r.todaySpent()).isEqualTo(10_000);
+		assertThat(r.weekSpent()).isEqualTo(10_000);
+		assertThat(r.dailyBudget()).isEqualTo(800_000 / 10);
+	}
+
+	@Test
+	void fixedExpenseNoLongerComesBackAfterItsDay() {
+		// 고친 버그: 10/15이 지나면 남겨둘 고정지출에서 빠지면서 잔액에는 그대로 남아 쓸 수 있는 돈이 늘었다
+		var before = new BudgetCalculator.Input(1_000_000, at("2026-10-13T10:00:00"), 25, 0, List.of(15),
+				List.of(450_000L), 0, List.of(), false);
+		var after = new BudgetCalculator.Input(1_000_000, at("2026-10-13T10:00:00"), 25, 0, List.of(15),
+				List.of(450_000L), 0,
+				List.of(new BudgetCalculator.Tx(TxType.EXPENSE, 450_000, at("2026-10-15T00:00:00"), true)), true);
+		assertThat(BudgetCalculator.compute(before, LocalDate.of(2026, 10, 14), SEOUL).remaining()).isEqualTo(550_000);
+		assertThat(BudgetCalculator.compute(after, LocalDate.of(2026, 10, 16), SEOUL).remaining()).isEqualTo(550_000);
+	}
+
+	@Test
 	void weekStopsBeforePayday() {
 		// 10/22(목), 수입일 25일 → 이번 주는 10/24(토)까지 3일
 		var in = new BudgetCalculator.Input(300_000, at("2026-10-22T09:00:00"), 25, 0, List.of(), List.of(), 0,

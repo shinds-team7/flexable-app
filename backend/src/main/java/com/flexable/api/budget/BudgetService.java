@@ -31,17 +31,19 @@ public class BudgetService {
 	private final ProtectedItemRepository protectedItems;
 	private final TransactionRepository transactions;
 	private final UserRepository users;
+	private final FixedExpensePoster fixedPoster;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public BudgetService(SettingsRepository settings, FixedExpenseRepository fixed,
 			ProtectedItemRepository protectedItems, TransactionRepository transactions, UserRepository users,
-			Clock clock, AppProperties props) {
+			FixedExpensePoster fixedPoster, Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
 		this.protectedItems = protectedItems;
 		this.transactions = transactions;
 		this.users = users;
+		this.fixedPoster = fixedPoster;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -58,7 +60,10 @@ public class BudgetService {
 		if (balanceAt.isAfter(now.plus(5, ChronoUnit.MINUTES))) {
 			throw ApiException.invalid("balanceAt", "기준 시각은 지금보다 늦을 수 없어요");
 		}
-		BudgetSettings s = settings.findById(userId).orElseGet(() -> new BudgetSettings(userId));
+		// 기기 시계 오차로 조금 늦게 들어온 값은 지금으로 맞춘다(자정 직전이면 날짜가 넘어가므로).
+		balanceAt = balanceAt.isAfter(now) ? now : balanceAt;
+		// 고정지출 자동 기록(FixedExpensePoster)과 같은 순서로 설정 행을 먼저 잠근다.
+		BudgetSettings s = settings.findForUpdate(userId).orElseGet(() -> new BudgetSettings(userId));
 		s.apply(req.balance(), balanceAt, req.payday(), req.incomeAmount(),
 				req.cardUnpaid() == null ? 0 : req.cardUnpaid(), now);
 		settings.save(s);
@@ -84,10 +89,12 @@ public class BudgetService {
 		return toResponse(s, userId);
 	}
 
-	@Transactional(readOnly = true)
+	/** 날짜가 된 고정지출을 같은 트랜잭션에서 먼저 기록하고 계산한다(실패하면 고정지출이 빠진 금액 대신 오류). */
+	@Transactional
 	public TodayResponse today(long userId) {
-		BudgetSettings s = require(userId);
 		LocalDate today = LocalDate.now(clock.withZone(zone));
+		fixedPoster.postInTransaction(userId, today);
+		BudgetSettings s = require(userId);
 		List<FixedExpense> fixedList = fixed.findOrdered(userId);
 		long protectedTotal = protectedItems.findOrdered(userId).stream().mapToLong(ProtectedItem::getAmount).sum();
 
@@ -96,7 +103,7 @@ public class BudgetService {
 		Instant since = s.getBalanceAt().isBefore(weekStart) ? s.getBalanceAt() : weekStart;
 		List<BudgetCalculator.Tx> txs = transactions.findSince(userId, since)
 			.stream()
-			.map(t -> new BudgetCalculator.Tx(t.getType(), t.getAmount(), t.getOccurredAt()))
+			.map(t -> new BudgetCalculator.Tx(t.getType(), t.getAmount(), t.getOccurredAt(), t.isFromFixed()))
 			.toList();
 
 		BudgetCalculator.Input input = new BudgetCalculator.Input(s.getBalance(), s.getBalanceAt(), s.getPayday(),

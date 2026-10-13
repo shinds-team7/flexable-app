@@ -50,4 +50,4 @@ ssh -i ~/.ssh/sh-flex.pem ubuntu@3.36.103.99 'cd /opt/flexable && docker compose
 ```
 
 도메인 변경: 서버 `.env`의 `API_DOMAIN` 수정 → `docker compose up -d` (Caddy가 새 인증서 발급) → 앱의 `EXPO_PUBLIC_API_URL`을 바꿔 다시 빌드.
-DB 스키마 변경은 `src/main/resources/db/migration/V{n}__*.sql`를 추가한다(기존 파일 수정 금지).
+DB 스키마 변경은 `src/main/resources/db/migration/V{n}__*.sql`를 추가한다(기존 파일 수정 금지). 시각 값을 넣는 데이터 변경처럼 DB 세션 시간대에 기대면 안 되는 것은 `src/main/java/db/migration/V{n}__*.java`(Flyway Java 마이그레이션, 예: V3)로 쓴다.

@@ -45,6 +45,10 @@ public class Transaction {
 	@Column(name = "idempotency_key")
 	private String idempotencyKey;
 
+	/** 고정지출을 자동 기록한 거래. 오늘·이번 주 지출 합에서는 빠진다. */
+	@Column(name = "from_fixed", nullable = false)
+	private boolean fromFixed;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -66,6 +70,13 @@ public class Transaction {
 		this.idempotencyKey = idempotencyKey;
 		this.createdAt = now;
 		this.updatedAt = now;
+	}
+
+	public static Transaction fixedExpense(Long userId, Long categoryId, long amount, String title, String memo,
+			Instant occurredAt, Instant now) {
+		Transaction t = new Transaction(userId, categoryId, TxType.EXPENSE, amount, title, memo, occurredAt, null, now);
+		t.fromFixed = true;
+		return t;
 	}
 
 	public Long getId() {
@@ -104,12 +115,20 @@ public class Transaction {
 		return createdAt;
 	}
 
+	public boolean isFromFixed() {
+		return fromFixed;
+	}
+
 	public void update(TxType type, Long categoryId, Long amount, String title, String memo, boolean memoSet,
 			Instant occurredAt, Instant now) {
 		if (type != null) {
 			this.type = type;
 		}
 		if (categoryId != null) {
+			// 다른 카테고리로 옮기면 일반 지출로 본다.
+			if (!categoryId.equals(this.categoryId)) {
+				this.fromFixed = false;
+			}
 			this.categoryId = categoryId;
 		}
 		if (amount != null) {

@@ -28,6 +28,8 @@ export type Transaction = {
   memo: string | null;
   occurredAt: string;
   createdAt: string;
+  /** 날짜가 된 고정지출을 서버가 자동 기록한 거래 */
+  fromFixed: boolean;
 };
 export type BudgetSettings = {
   balance: number;

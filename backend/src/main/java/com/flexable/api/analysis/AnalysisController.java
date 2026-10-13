@@ -15,13 +15,13 @@ import java.util.stream.Collectors;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flexable.api.auth.CurrentUser;
+import com.flexable.api.budget.FixedExpensePoster;
 import com.flexable.api.category.Category;
 import com.flexable.api.category.CategoryRepository;
 import com.flexable.api.common.DateRange;
@@ -47,21 +47,24 @@ public class AnalysisController {
 
 	private final TransactionRepository transactions;
 	private final CategoryRepository categories;
+	private final FixedExpensePoster fixedPoster;
 	private final ZoneId zone;
 
 	public AnalysisController(TransactionRepository transactions, CategoryRepository categories,
-			AppProperties props) {
+			FixedExpensePoster fixedPoster, AppProperties props) {
 		this.transactions = transactions;
 		this.categories = categories;
+		this.fixedPoster = fixedPoster;
 		this.zone = props.zoneId();
 	}
 
+	// 고정지출 자동 기록을 먼저 커밋해야 조회에 보이므로 메서드 전체를 트랜잭션으로 묶지 않는다.
 	@GetMapping("/summary")
-	@Transactional(readOnly = true)
 	public SummaryResponse summary(@AuthenticationPrincipal Jwt jwt,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 		long userId = CurrentUser.id(jwt);
+		fixedPoster.postDue(userId);
 		DateRange range = DateRange.of(from, to);
 		List<Transaction> txs = transactions.findInRange(userId, range.startInstant(zone),
 				range.endInstantExclusive(zone));

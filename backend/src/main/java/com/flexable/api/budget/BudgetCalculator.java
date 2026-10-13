@@ -22,7 +22,12 @@ public final class BudgetCalculator {
 	private BudgetCalculator() {
 	}
 
-	public record Tx(TxType type, long amount, Instant occurredAt) {
+	/** fixed: 고정지출 자동 기록. 잔액에서는 빠지지만 오늘·이번 주 지출 합에는 넣지 않는다. */
+	public record Tx(TxType type, long amount, Instant occurredAt, boolean fixed) {
+
+		public Tx(TxType type, long amount, Instant occurredAt) {
+			this(type, amount, occurredAt, false);
+		}
 	}
 
 	public record Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
@@ -43,7 +48,7 @@ public final class BudgetCalculator {
 			if (t.occurredAt().isAfter(in.balanceAt())) {
 				estimated += t.type() == TxType.INCOME ? t.amount() : -t.amount();
 			}
-			if (t.type() == TxType.EXPENSE) {
+			if (t.type() == TxType.EXPENSE && !t.fixed()) {
 				LocalDate d = t.occurredAt().atZone(zone).toLocalDate();
 				if (d.equals(today)) {
 					todaySpent += t.amount();
@@ -54,9 +59,11 @@ public final class BudgetCalculator {
 			}
 		}
 
+		// 오늘까지 날짜가 된 고정지출은 거래로 기록되므로(FixedExpensePoster) 내일부터만 남겨 둔다.
 		long reservedFixed = 0;
 		for (int i = 0; i < in.fixedDays().size(); i++) {
-			reservedFixed += in.fixedAmounts().get(i) * occurrences(in.fixedDays().get(i), today, nextPayday);
+			reservedFixed += in.fixedAmounts().get(i)
+					* occurrences(in.fixedDays().get(i), today.plusDays(1), nextPayday);
 		}
 
 		long remaining = estimated - reservedFixed - in.cardUnpaid() - in.protectedTotal();
