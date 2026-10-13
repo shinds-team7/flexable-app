@@ -101,7 +101,7 @@
 |---|---|
 | `balance` | 0 이상 1조 미만. `balanceAt` 시점의 통장 잔액 |
 | `balanceAt` | 생략 시 서버 현재 시각. 이 시각 **이후** 거래만 잔액에 더하고 뺀다 |
-| `payday` | 1~31. 31은 "매달 말일"(달마다 말일로 맞춤) |
+| `payday` | 1~31. 31은 "매달 말일"(달마다 말일로 맞춤). 그날이 토·일이면 다음 월요일에 들어온 것으로 계산(공휴일은 반영 안 함) |
 | `incomeAmount`, `cardUnpaid` | 0 이상 |
 | `fixedExpenses[]` | 0~30개. `day` 1~31(31=말일), `amount` 1 이상 |
 | `protectedItems[]` | 0~30개. `amount` 1 이상 |
@@ -114,20 +114,20 @@
 ```json
 {
   "date": "2026-10-13",
-  "nextPayday": "2026-10-25",
-  "daysLeft": 12,
+  "nextPayday": "2026-10-26",
+  "daysLeft": 13,
   "estimatedBalance": 1180000,
   "reservedFixed": 450000,
   "cardUnpaid": 0,
   "protectedTotal": 300000,
   "remaining": 430000,
   "todaySpent": 12000,
-  "dailyBudget": 36833,
-  "todayAvailable": 24833,
+  "dailyBudget": 34000,
+  "todayAvailable": 22000,
   "shortage": 0,
   "weekSpent": 54000,
   "weekDaysLeft": 6,
-  "weekAvailable": 208998,
+  "weekAvailable": 192000,
   "cycleStart": "2026-09-25",
   "hasTransactions": true
 }
@@ -136,7 +136,7 @@
 계산(서버가 최종값, 원 단위 정수, 나눗셈은 내림):
 
 - `estimatedBalance` = `balance` + (`balanceAt` 이후 수입 합) − (`balanceAt` 이후 지출 합)
-- `nextPayday` = 오늘 이후(오늘 제외) 가장 가까운 수입일, `daysLeft` = 오늘부터 수입일 전날까지 날짜 수(오늘 포함, 최소 1)
+- `nextPayday` = 오늘 이후(오늘 제외) 가장 가까운 수입일(토·일이면 다음 월요일. 예: 25일이 일요일이면 26일), `daysLeft` = 오늘부터 수입일 전날까지 날짜 수(오늘 포함, 최소 1)
 - `reservedFixed` = 내일 ~ 수입일 전날 사이에 날짜가 오는 고정지출 합. 오늘까지 날짜가 된 고정지출은 지출 거래로 자동 기록되어 `estimatedBalance`에서 빠진다(아래 "고정지출 자동 기록")
 - `remaining` = `estimatedBalance` − `reservedFixed` − `cardUnpaid` − `protectedTotal`
 - `dailyBudget` = max(0, `remaining` + `todaySpent`) ÷ `daysLeft`

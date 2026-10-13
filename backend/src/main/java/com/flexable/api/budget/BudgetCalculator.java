@@ -84,18 +84,39 @@ public final class BudgetCalculator {
 		return ym.atDay(Math.min(payday, ym.lengthOfMonth()));
 	}
 
+	/** 그 달의 실제 수입일. 토·일이면 다음 월요일로 미룬다(공휴일은 반영하지 않음). 다음 달로 넘어갈 수 있다. */
+	static LocalDate incomeDayIn(YearMonth ym, int payday) {
+		LocalDate d = paydayIn(ym, payday);
+		return switch (d.getDayOfWeek()) {
+			case SATURDAY -> d.plusDays(2);
+			case SUNDAY -> d.plusDays(1);
+			default -> d;
+		};
+	}
+
 	/** 오늘 이후(오늘 제외) 가장 가까운 수입일 */
 	static LocalDate nextPayday(LocalDate today, int payday) {
+		// 지난달 수입일이 주말이라 이번 달로 밀렸을 수 있어서 앞뒤 달을 함께 본다
 		YearMonth ym = YearMonth.from(today);
-		LocalDate thisMonth = paydayIn(ym, payday);
-		return thisMonth.isAfter(today) ? thisMonth : paydayIn(ym.plusMonths(1), payday);
+		for (int i = -1; i <= 1; i++) {
+			LocalDate d = incomeDayIn(ym.plusMonths(i), payday);
+			if (d.isAfter(today)) {
+				return d;
+			}
+		}
+		return incomeDayIn(ym.plusMonths(2), payday);
 	}
 
 	/** 오늘 또는 그 이전의 가장 가까운 수입일(이번 정산 주기 시작) */
 	static LocalDate previousPayday(LocalDate today, int payday) {
 		YearMonth ym = YearMonth.from(today);
-		LocalDate thisMonth = paydayIn(ym, payday);
-		return thisMonth.isAfter(today) ? paydayIn(ym.minusMonths(1), payday) : thisMonth;
+		for (int i = 0; i >= -2; i--) {
+			LocalDate d = incomeDayIn(ym.plusMonths(i), payday);
+			if (!d.isAfter(today)) {
+				return d;
+			}
+		}
+		return incomeDayIn(ym.minusMonths(3), payday);
 	}
 
 	/** [from, toExclusive) 사이에 고정지출 날짜가 몇 번 오는지 */

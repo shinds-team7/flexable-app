@@ -22,17 +22,32 @@ class BudgetCalculatorTest {
 
 	@Test
 	void nextPaydayIsStrictlyAfterToday() {
-		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 10, 13), 25)).isEqualTo(LocalDate.of(2026, 10, 25));
-		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 10, 25), 25)).isEqualTo(LocalDate.of(2026, 11, 25));
-		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 25), 25)).isEqualTo(LocalDate.of(2026, 10, 25));
-		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 13), 25)).isEqualTo(LocalDate.of(2026, 9, 25));
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 10, 13), 23)).isEqualTo(LocalDate.of(2026, 10, 23));
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 10, 23), 23)).isEqualTo(LocalDate.of(2026, 11, 23));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 23), 23)).isEqualTo(LocalDate.of(2026, 10, 23));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 13), 23)).isEqualTo(LocalDate.of(2026, 9, 23));
 	}
 
 	@Test
 	void day31MeansMonthEnd() {
-		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2027, 2, 10), 31)).isEqualTo(LocalDate.of(2027, 2, 28));
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 3, 10), 31)).isEqualTo(LocalDate.of(2026, 3, 31));
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 4, 10), 31)).isEqualTo(LocalDate.of(2026, 4, 30));
 		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2028, 2, 28), 31)).isEqualTo(LocalDate.of(2028, 2, 29));
-		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 1, 31), 31)).isEqualTo(LocalDate.of(2026, 2, 28));
+	}
+
+	@Test
+	void weekendPaydayMovesToMonday() {
+		// 2026-10-25 is a Sunday
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 10, 13), 25)).isEqualTo(LocalDate.of(2026, 10, 26));
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 10, 25), 25)).isEqualTo(LocalDate.of(2026, 10, 26));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 25), 25)).isEqualTo(LocalDate.of(2026, 9, 25));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 26), 25)).isEqualTo(LocalDate.of(2026, 10, 26));
+		// 2026-02-28 is a Saturday, so month-end pay moves into March
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 2, 10), 31)).isEqualTo(LocalDate.of(2026, 3, 2));
+		// 2026-10-31 is a Saturday: on Nov 1 the October pay is still ahead
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 11, 1), 31)).isEqualTo(LocalDate.of(2026, 11, 2));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 11, 1), 31)).isEqualTo(LocalDate.of(2026, 9, 30));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 11, 3), 31)).isEqualTo(LocalDate.of(2026, 11, 2));
 	}
 
 	@Test
@@ -57,14 +72,14 @@ class BudgetCalculatorTest {
 				true);
 		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 13), SEOUL);
 
-		assertThat(r.daysLeft()).isEqualTo(12);
+		assertThat(r.daysLeft()).isEqualTo(13); // 10-25 is a Sunday, so pay comes on Monday 10-26
 		assertThat(r.estimatedBalance()).isEqualTo(1_250_000 - 12_000 + 30_000); // 09:00 지출은 잔액에 이미 반영
 		assertThat(r.reservedFixed()).isEqualTo(450_000);
 		assertThat(r.remaining()).isEqualTo(1_268_000 - 450_000 - 300_000);
 		assertThat(r.todaySpent()).isEqualTo(70_000);
-		assertThat(r.dailyBudget()).isEqualTo((518_000 + 70_000) / 12);
-		assertThat(r.todayAvailable()).isEqualTo(49_000 - 70_000 < 0 ? 0 : 49_000 - 70_000);
-		assertThat(r.shortage()).isEqualTo(70_000 - 49_000);
+		assertThat(r.dailyBudget()).isEqualTo((518_000 + 70_000) / 13);
+		assertThat(r.todayAvailable()).isEqualTo(0);
+		assertThat(r.shortage()).isEqualTo(70_000 - 588_000 / 13);
 		assertThat(r.cycleStart()).isEqualTo(LocalDate.of(2026, 9, 25));
 		// 10/13(화) ~ 10/18(일) 6일
 		assertThat(r.weekDaysLeft()).isEqualTo(6);
@@ -86,7 +101,7 @@ class BudgetCalculatorTest {
 		assertThat(r.remaining()).isEqualTo(790_000);
 		assertThat(r.todaySpent()).isEqualTo(10_000);
 		assertThat(r.weekSpent()).isEqualTo(10_000);
-		assertThat(r.dailyBudget()).isEqualTo(800_000 / 10);
+		assertThat(r.dailyBudget()).isEqualTo(800_000 / 11);
 	}
 
 	@Test
@@ -103,13 +118,13 @@ class BudgetCalculatorTest {
 
 	@Test
 	void weekStopsBeforePayday() {
-		// 10/22(목), 수입일 25일 → 이번 주는 10/24(토)까지 3일
-		var in = new BudgetCalculator.Input(300_000, at("2026-10-22T09:00:00"), 25, 0, List.of(), List.of(), 0,
+		// 10/21(수), 수입일 23일(금) → 이번 주는 10/22(목)까지 2일
+		var in = new BudgetCalculator.Input(300_000, at("2026-10-21T09:00:00"), 23, 0, List.of(), List.of(), 0,
 				List.of(), false);
-		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 22), SEOUL);
-		assertThat(r.daysLeft()).isEqualTo(3);
-		assertThat(r.weekDaysLeft()).isEqualTo(3);
-		assertThat(r.dailyBudget()).isEqualTo(100_000);
+		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 21), SEOUL);
+		assertThat(r.daysLeft()).isEqualTo(2);
+		assertThat(r.weekDaysLeft()).isEqualTo(2);
+		assertThat(r.dailyBudget()).isEqualTo(150_000);
 		assertThat(r.weekAvailable()).isEqualTo(300_000);
 		assertThat(r.hasTransactions()).isFalse();
 	}
