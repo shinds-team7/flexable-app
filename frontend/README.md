@@ -2,19 +2,20 @@
 
 Expo(React Native) + Expo Router 기반. **하나의 코드로 iOS / Android / Web** 을 동시에 빌드한다.
 시연(Mock, 버전 1.1.0)은 모두 `/demo` 아래에 있고, 데이터는 `src/data/mock.ts` 에서 오늘 날짜 기준으로 생성된다.
-실제 서비스(버전 1.0.0)는 `/` 이하에 별도로 만들며 현재는 준비 중 화면만 있다. 분리 설계는 [`docs/DESIGN_DEMO_SERVICE_SPLIT.md`](docs/DESIGN_DEMO_SERVICE_SPLIT.md).
+실제 서비스(버전 1.0.0)는 `/` 이하에 구현되어 있으며 자체 API로 회원가입·예산·거래·분석·계정 삭제를 제공한다. APK 빌드 완료 후 실기기 테스트 중이다. 현재 개발환경·빌드·출시 상태는 [`../docs/HANDOFF.md`](../docs/HANDOFF.md), 분리 설계는 [`docs/DESIGN_DEMO_SERVICE_SPLIT.md`](docs/DESIGN_DEMO_SERVICE_SPLIT.md)를 따른다.
 
-실제 Spring·FastAPI·SQLite 기반 서비스로 전환할 때의 코드 경계와 불변식은 [`docs/SERVICE_MIGRATION.md`](docs/SERVICE_MIGRATION.md)를 따른다.
+현재 백엔드는 `../backend/`의 Spring Boot·MySQL이며, 앱은 온라인 API를 사용한다. 기존 전환 설계는 [`docs/SERVICE_MIGRATION.md`](docs/SERVICE_MIGRATION.md)에 있다. 이 설계 문서의 FastAPI·SQLite는 현재 구현 상태를 뜻하지 않는다.
 
 ## 실행
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run web        # 브라우저 (http://localhost:8081)
 npm start          # Expo Go 앱으로 QR 스캔 → 실제 폰에서 확인
 npm run build:web  # 정적 웹 빌드 → dist/
 npm run typecheck
+npm run lint
 ```
 
 > 패키지 추가는 `npx expo install <pkg>` 로 (SDK 호환 버전 자동 선택)
@@ -66,7 +67,8 @@ npm run typecheck
 
 ```
 src/
-  app/          # 라우트 (파일 = 화면). index.tsx = 서비스(준비 중), demo/ = 시연 전체
+  app/          # 라우트 (파일 = 화면). 서비스 시작/인증/탭/공개 정책, demo/ = 시연 전체
+  service/      # 실제 서비스 화면·API 클라이언트·세션·설정
   demo/         # 시연 경로 helper(routes.ts)·시연 버전
   components/   # UI 컴포넌트 (ui.tsx 공통, Donut, WeekCalendar, AddScheduleModal ...)
   store/        # AppStore(전역 상태), budget.ts(예산 계산·AI 추천 Mock 로직)
