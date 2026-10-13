@@ -7,6 +7,7 @@ import { goBack } from "@/components/SubHeader";
 import { colors } from "@/theme";
 import { api } from "./api/client";
 import { CategorySheet } from "./CategorySheet";
+import { DateTimeField } from "./DateTimeField";
 import { useSession } from "./Session";
 import {
   CategoryIcon,
@@ -16,7 +17,7 @@ import {
   Loading,
   money,
   Page,
-  DateTimeField,
+  toSeoulInput,
   useResource,
   validTime,
 } from "./ui";
@@ -62,11 +63,7 @@ function Form({
   const [occurredAt, setOccurredAt] = useState(
     () => existing?.occurredAt ?? new Date().toISOString(),
   );
-  const [time, setTime] = useState(() =>
-    new Date(new Date(occurredAt).getTime() + 9 * 3600000)
-      .toISOString()
-      .slice(0, 16),
-  );
+  const [time, setTime] = useState(() => toSeoulInput(occurredAt));
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -243,9 +240,7 @@ function Form({
           onPress={() => {
             const now = new Date();
             setOccurredAt(now.toISOString());
-            setTime(
-              new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 16),
-            );
+            setTime(toSeoulInput(now.toISOString()));
           }}
         />
         <Field

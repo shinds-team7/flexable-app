@@ -19,6 +19,8 @@ export function OnboardingFrame({
   disabled,
   editMode,
   backFallback,
+  back = true,
+  onCancel,
 }: {
   step: number;
   total?: number;
@@ -32,13 +34,20 @@ export function OnboardingFrame({
   editMode?: boolean;
   /** 뒤로 갈 기록이 없을 때(웹 직접 진입) 이동할 경로 */
   backFallback: Href;
+  /** 하단 '이전' 버튼. 첫 단계는 위쪽 화살표로, 저장을 마친 단계는 false로 숨긴다 */
+  back?: boolean;
+  /** 이미 설정을 마친 사용자가 수정하다 그만둘 때: 오른쪽 위 '취소' */
+  onCancel?: () => void;
 }) {
+  const bottomBack = back && step > 1;
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.top}>
-        <Pressable accessibilityRole="button" accessibilityLabel="뒤로 가기" onPress={() => goBack(backFallback)} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
+        {back && !bottomBack && (
+          <Pressable accessibilityRole="button" accessibilityLabel="뒤로 가기" onPress={() => goBack(backFallback)} hitSlop={10}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </Pressable>
+        )}
         {editMode ? (
           <View style={{ flex: 1 }} />
         ) : (
@@ -50,6 +59,13 @@ export function OnboardingFrame({
               {step}/{total}
             </T>
           </>
+        )}
+        {onCancel && (
+          <Pressable accessibilityRole="button" accessibilityLabel="설정 취소" onPress={onCancel} hitSlop={10}>
+            <T size={15} weight="600" color={colors.textSub}>
+              취소
+            </T>
+          </Pressable>
         )}
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -63,8 +79,9 @@ export function OnboardingFrame({
         )}
         <View style={{ marginTop: 26, gap: 12 }}>{children}</View>
       </ScrollView>
-      <View style={styles.bottom}>
-        <Button label={editMode ? '저장' : (cta ?? '다음')} onPress={onNext} disabled={disabled} />
+      <View style={[styles.bottom, { flexDirection: 'row', gap: 10 }]}>
+        {bottomBack && <Button label="이전" variant="soft" onPress={() => goBack(backFallback)} disabled={disabled} style={{ flex: 1 }} />}
+        <Button label={editMode ? '저장' : (cta ?? '다음')} onPress={onNext} disabled={disabled} style={{ flex: 2 }} />
       </View>
     </View>
   );

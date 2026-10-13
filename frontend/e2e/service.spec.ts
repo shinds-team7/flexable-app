@@ -54,10 +54,10 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   });
   await signup(page, address);
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
-  await page.getByLabel("현재 잔액 (원)", { exact: true }).fill("1000000");
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   // A refresh must recover the in-progress draft, with no server write yet.
   await page.reload();
-  await expect(page.getByLabel("현재 잔액 (원)", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("생활비 잔액 (원)", { exact: true })).toHaveValue(
     "1,000,000",
   );
   expect(budgetWrites).toBe(0);
@@ -70,8 +70,8 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page
     .getByRole("button", { name: "+ 보호할 돈 추가", exact: true })
     .click();
-  await page.getByLabel("보호 항목 1 이름", { exact: true }).fill("비상금");
-  await page.getByLabel("보호 항목 1 금액 (원)", { exact: true }).fill("50000");
+  await page.getByLabel("이름", { exact: true }).fill("비상금");
+  await page.getByLabel("금액 (원)", { exact: true }).fill("50000");
   let droppedUserLookup = false;
   await page.route("**/api/v1/me", (route) => {
     if (route.request().method() === "GET" && !droppedUserLookup) {
@@ -198,7 +198,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     page.getByText("기록한 지출 1건", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("수입 50,000원", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "이번 정산 주기", exact: true }).click();
+  await page.getByRole("tab", { name: "이번 달", exact: true }).click();
   await expect(
     page.getByText("기록한 지출 1건", { exact: true }),
   ).toBeVisible();
@@ -309,7 +309,7 @@ test("re-entering the balance in settings does not subtract earlier spending aga
 }) => {
   await signup(page, email());
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
-  await page.getByLabel("현재 잔액 (원)", { exact: true }).fill("1000000");
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
@@ -340,7 +340,7 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   // The first onboarding screen stays mounted (hidden) in the web stack; roles skip hidden nodes.
   const balance = page.getByRole("textbox", {
-    name: "현재 잔액 (원)",
+    name: "생활비 잔액 (원)",
     exact: true,
   });
   await expect(balance).toHaveValue("1,000,000");

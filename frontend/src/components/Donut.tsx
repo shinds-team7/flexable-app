@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 
-type Seg = { value: number; color: string };
+/** label: 조각 위에 작게 쓰는 글자(예: '65%'). 좁은 조각은 비워 둔다 */
+type Seg = { value: number; color: string; label?: string };
 
 /** 도넛 차트. segments 합이 total보다 작으면 나머지는 trackColor로 표시(남은 예산). */
 export function Donut({
@@ -30,7 +31,7 @@ export function Donut({
   const arcs = segments.map((s, i) => {
     const len = (s.value / denom) * c;
     const start = segments.slice(0, i).reduce((a, x) => a + (x.value / denom) * c, 0);
-    return { color: s.color, dash: Math.max(0, len - gap), start };
+    return { color: s.color, dash: Math.max(0, len - gap), start, len, label: s.label };
   });
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
@@ -52,6 +53,29 @@ export function Donut({
           ))}
         </G>
       </Svg>
+      {arcs.map((a, i) => {
+        if (!a.label) return null;
+        // 조각 가운데 각도(12시 방향에서 시계 방향)로 링 위에 글자를 놓는다
+        const angle = ((a.start + a.len / 2) / c) * 2 * Math.PI - Math.PI / 2;
+        return (
+          <Text
+            key={`l${i}`}
+            style={{
+              position: 'absolute',
+              left: size / 2 + r * Math.cos(angle) - 20,
+              top: size / 2 + r * Math.sin(angle) - 8,
+              width: 40,
+              textAlign: 'center',
+              fontSize: 11,
+              lineHeight: 16,
+              fontWeight: '700',
+              color: '#fff',
+            }}
+          >
+            {a.label}
+          </Text>
+        );
+      })}
       {children}
     </View>
   );

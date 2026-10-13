@@ -24,7 +24,13 @@ export function AnalysisScreen() {
   const sunday = new Date(d.getTime() + (6 - day) * 86400000)
     .toISOString()
     .slice(0, 10);
-  const from = period === "week" ? monday : today.data?.cycleStart;
+  // "전체" covers the last 366 days, the longest range the API accepts.
+  const from =
+    period === "week"
+      ? monday
+      : period === "month"
+        ? date.slice(0, 8) + "01"
+        : new Date(d.getTime() - 365 * 86400000).toISOString().slice(0, 10);
   const to = period === "week" ? sunday : date;
   const result = useResource<Analysis>(
     from ? `/analysis/summary?from=${from}&to=${to}` : null,
@@ -35,14 +41,15 @@ export function AnalysisScreen() {
       <Segment
         items={[
           { key: "week", label: "이번 주" },
-          { key: "cycle", label: "이번 정산 주기" },
+          { key: "month", label: "이번 달" },
+          { key: "all", label: "전체" },
         ]}
         value={period}
         onChange={setPeriod}
       />
       <ErrorNotice error={today.error} retry={today.retry} />
       <ErrorNotice error={result.error} retry={result.retry} />
-      {(result.loading || !from) && <Loading />}
+      {result.loading && <Loading />}
       {s && !result.loading && (
         <>
           <Card style={{ alignItems: "center", gap: 12 }}>
@@ -57,6 +64,8 @@ export function AnalysisScreen() {
               segments={s.byCategory.map((c) => ({
                 value: c.amount,
                 color: c.color,
+                label:
+                  c.ratio >= 0.06 ? `${Math.round(c.ratio * 100)}%` : undefined,
               }))}
             >
               <T size={13}>사용 금액</T>
@@ -146,7 +155,9 @@ export function AnalysisScreen() {
                           }}
                         />
                       </View>
-                      <T size={12}>{(c.ratio * 100).toFixed(1)}%</T>
+                      <T size={12} color={colors.textMuted}>
+                        {money(c.amount)} / {money(s.expenseTotal)}
+                      </T>
                     </View>
                   </View>
                 </View>

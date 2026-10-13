@@ -56,17 +56,17 @@ export function TodayHeroView({
       </View>
 
       <T
-        size={44}
+        size={38}
         weight="800"
         color={colors.onBrand}
         num
-        style={{ marginTop: 6, lineHeight: 52 }}
+        style={{ marginTop: 6, lineHeight: 46 }}
         accessibilityLiveRegion="polite"
         accessibilityLabel={`오늘 쓸 수 있는 돈 ${won(Math.max(0, s.todayAvailable))}원`}
       >
         {won(shown)}
-        <T size={26} weight="700" color={colors.onBrand}>
-          원
+        <T size={22} weight="700" color={colors.onBrand}>
+          {" "}원
         </T>
       </T>
 

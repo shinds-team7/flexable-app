@@ -5,6 +5,7 @@ import { api } from "./api/client";
 import { CategoryIcon, ErrorNotice, Field } from "./ui";
 import { useSession } from "./Session";
 import type { Category, Kind } from "./types";
+import { colors } from "@/theme";
 const palette = [
   "#12B76A",
   "#F79009",
@@ -117,15 +118,18 @@ export function CategorySheet({
               aria-checked={i === icon}
               onPress={() => setIcon(i)}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: i === icon ? "#E8EEFF" : "#EEF1F6",
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                // Fill with the chosen color so the picked icon stands out from the rest.
+                backgroundColor: i === icon ? color : "#EEF1F6",
+                borderWidth: 2,
+                borderColor: i === icon ? colors.text : "transparent",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <CategoryIcon icon={i} color={color} />
+              <CategoryIcon icon={i} color={i === icon ? "#fff" : color} />
             </Pressable>
           ))}
         </View>

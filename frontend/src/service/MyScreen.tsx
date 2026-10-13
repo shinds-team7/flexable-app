@@ -1,9 +1,18 @@
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { Button, Card, ConfirmModal, Screen, T } from "@/components/ui";
+import {
+  Button,
+  Card,
+  ConfirmModal,
+  Screen,
+  Segment,
+  T,
+} from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { colors } from "@/theme";
 import { api } from "./api/client";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config";
+import { useHomeStyle } from "./homeStyle";
 import { useSession } from "./Session";
 import { ErrorNotice } from "./ui";
 export function MyScreen() {
@@ -13,6 +22,7 @@ export function MyScreen() {
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState<unknown>();
+  const [homeStyle, setHomeStyle] = useHomeStyle();
   const logout = async () => {
     if (lock.current) return;
     lock.current = true;
@@ -40,6 +50,20 @@ export function MyScreen() {
           내 계정
         </T>
         <T style={{ marginTop: 8 }}>{session.user?.email}</T>
+      </Card>
+      <Card style={{ gap: 10 }}>
+        <T weight="700">홈 화면</T>
+        <Segment
+          items={[
+            { key: "classic", label: "기본 홈" },
+            { key: "character", label: "캐릭터 홈" },
+          ]}
+          value={homeStyle}
+          onChange={setHomeStyle}
+        />
+        <T size={12} color={colors.textMuted}>
+          캐릭터 홈은 오늘 예산을 얼마나 지켰는지에 따라 캐릭터가 바뀌어요
+        </T>
       </Card>
       <Card style={{ gap: 4 }}>
         <Button

@@ -16,6 +16,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState<unknown>();
@@ -99,24 +100,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
         value={password}
         onChangeText={setPassword}
         secureTextEntry={!visible}
-        right={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={visible ? "비밀번호 숨기기" : "비밀번호 보기"}
-            onPress={() => setVisible((x) => !x)}
-            style={{
-              width: 44,
-              height: 44,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons
-              name={visible ? "eye-off-outline" : "eye-outline"}
-              size={22}
-            />
-          </Pressable>
-        }
+        right={<Eye visible={visible} onPress={() => setVisible((x) => !x)} />}
         autoCapitalize="none"
         autoComplete={signup ? "new-password" : "current-password"}
       />
@@ -130,7 +114,13 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
             label="비밀번호 확인"
             value={confirm}
             onChangeText={setConfirm}
-            secureTextEntry={!visible}
+            secureTextEntry={!confirmVisible}
+            right={
+              <Eye
+                visible={confirmVisible}
+                onPress={() => setConfirmVisible((x) => !x)}
+              />
+            }
           />
           {confirm && confirm !== password && <T>비밀번호가 서로 달라요</T>}
           {(
@@ -200,5 +190,22 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
         </>
       )}
     </Page>
+  );
+}
+function Eye({ visible, onPress }: { visible: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={visible ? "비밀번호 숨기기" : "비밀번호 보기"}
+      onPress={onPress}
+      style={{
+        width: 44,
+        height: 44,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Ionicons name={visible ? "eye-off-outline" : "eye-outline"} size={22} />
+    </Pressable>
   );
 }

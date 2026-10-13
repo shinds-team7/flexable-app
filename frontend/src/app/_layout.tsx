@@ -8,6 +8,8 @@ import { BudgetDraftProvider } from "@/service/BudgetDraft";
 import { SessionProvider } from "@/service/Session";
 import { colors } from "@/theme";
 
+export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
+
 /** 공통 틀(안전영역·폰 프레임·토스트)만 둔다. 시연 Mock 상태는 demo/_layout에서만 주입한다. */
 export default function RootLayout() {
   return (

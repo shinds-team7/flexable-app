@@ -1,21 +1,18 @@
 import { router } from "expo-router";
-import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { useRef, useState, type ReactNode } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { OnboardingFrame } from "@/components/OnboardingFrame";
 import { Button, Card, T } from "@/components/ui";
 import { useBudgetDraft } from "./BudgetDraft";
 import { api } from "./api/client";
 import { useSession } from "./Session";
 import {
-  DateTimeField,
   ErrorNotice,
   Field,
   Guard,
   Loading,
   MoneyField,
   money,
-  seoulTime,
-  validTime,
   useResource,
 } from "./ui";
 import type { Today } from "./types";
@@ -48,7 +45,8 @@ function Content({ step }: { step: Step }) {
   const lock = useRef(false);
   const saved = useRef(false);
   const [error, setError] = useState<unknown>();
-  const [clock, setClock] = useState<string>();
+  // Only one fixed/protected item is expanded at a time; "확인" folds it into a summary row.
+  const [open, setOpen] = useState<number | null>(null);
   if (!state.draft)
     return state.error ? <ErrorNotice error={state.error} /> : <Loading />;
   const { value: v, editing } = state.draft;
@@ -80,10 +78,6 @@ function Content({ step }: { step: Step }) {
       }
       return;
     }
-    if (step === "balance" && clock !== undefined && !validTime(clock)) {
-      setError("기준 날짜와 시간을 다시 확인해 주세요");
-      return;
-    }
     const amount =
       step === "balance"
         ? v.balance
@@ -106,18 +100,7 @@ function Content({ step }: { step: Step }) {
       setError("수입일은 1~31일로 입력해 주세요");
       return;
     }
-    if (
-      step === "fixed" &&
-      v.fixedExpenses.some(
-        (x) =>
-          !x.name.trim() ||
-          x.amount < 1 ||
-          x.amount >= 1e12 ||
-          !Number.isInteger(x.day) ||
-          x.day < 1 ||
-          x.day > 31,
-      )
-    ) {
+    if (step === "fixed" && v.fixedExpenses.some((x) => !fixedValid(x))) {
       setError("고정지출의 이름, 금액, 날짜를 확인해 주세요");
       return;
     }
@@ -159,7 +142,7 @@ function Content({ step }: { step: Step }) {
     index: session.user?.onboarded
       ? "예산을 다시 맞춰요"
       : "오늘 쓸 수 있는 돈을 알아볼까요?",
-    balance: "지금 통장에 얼마 있나요?",
+    balance: "생활비로 쓸 수 있는 돈이 얼마 있나요?",
     income: "다음 수입은 언제 들어오나요?",
     fixed: "매달 꼭 나가는 돈이 있나요?",
     card: "아직 내지 않은 카드값이 있나요?",
@@ -168,10 +151,11 @@ function Content({ step }: { step: Step }) {
   const subtitle = {
     index:
       "입력한 정보로 오늘 쓸 수 있는 돈을 계산해요. 실제 은행 잔액과 다를 수 있어요",
-    balance: "은행 앱에서 확인한 금액을 그대로 입력하면 돼요",
+    balance:
+      "생활비 통장의 지금 잔액을 적어 주세요. 저축이나 비상금은 빼거나, 뒤에서 '지킬 돈'으로 넣으면 돼요",
     income: "예정 수입액은 지금 잔액에 더하지 않아요",
     fixed: "없으면 다음으로 넘어가도 돼요",
-    card: "이미 사용했지만 아직 결제되지 않은 금액을 적어 주세요",
+    card: "이미 썼지만 아직 결제되지 않은 금액이에요. 없으면 비워 두고 넘어가도 돼요",
     protect: "비상금이나 저축처럼 따로 남겨둘 돈이에요",
   }[step];
   return (
@@ -185,6 +169,14 @@ function Content({ step }: { step: Step }) {
         title={title}
         subtitle={subtitle}
         backFallback={editing ? "/my" : "/"}
+        onCancel={
+          editing
+            ? async () => {
+                await state.reset();
+                router.dismissTo("/my");
+              }
+            : undefined
+        }
         cta={
           busy
             ? "저장 중…"
@@ -202,43 +194,15 @@ function Content({ step }: { step: Step }) {
         {step === "balance" && (
           <>
             <MoneyField
-              label="현재 잔액 (원)"
+              label="생활비 잔액 (원)"
+              placeholder="예: 850,000"
               value={v.balance}
               onChange={(balance) =>
                 // A new balance is as of now. Keeping the old balanceAt would subtract
-                // transactions already reflected in it a second time. Keep a time the user picked.
-                set({
-                  ...v,
-                  balance,
-                  balanceAt: clock ? v.balanceAt : new Date().toISOString(),
-                })
+                // transactions already reflected in it a second time.
+                set({ ...v, balance, balanceAt: new Date().toISOString() })
               }
             />
-            <DateTimeField
-              label="잔액 기준"
-              value={
-                clock ??
-                new Date(new Date(v.balanceAt).getTime() + 9 * 3600000)
-                  .toISOString()
-                  .slice(0, 16)
-              }
-              onChange={(s) => {
-                setClock(s);
-                if (validTime(s)) set({ ...v, balanceAt: s + ":00+09:00" });
-              }}
-            />
-            <Button
-              label="지금으로 맞추기"
-              variant="soft"
-              onPress={() => {
-                const t = seoulTime();
-                setClock(t);
-                set({ ...v, balanceAt: t + ":00+09:00" });
-              }}
-            />
-            <T size={13}>
-              기준 시각 이전 거래는 잔액에 이미 반영된 것으로 봐요
-            </T>
             {v.balance === 0 && (
               <T color={colors.warn}>
                 잔액이 0원이면 오늘 쓸 수 있는 돈도 0원이에요
@@ -274,142 +238,152 @@ function Content({ step }: { step: Step }) {
         )}
         {step === "fixed" && (
           <>
-            {v.fixedExpenses.map((x, i) => (
-              <Card key={i} style={{ gap: 12 }}>
-                <Field
-                  label={`고정지출 ${i + 1} 이름`}
-                  maxLength={40}
-                  value={x.name}
-                  onChangeText={(name) =>
-                    set({
-                      ...v,
-                      fixedExpenses: v.fixedExpenses.map((a, j) =>
-                        j === i ? { ...a, name } : a,
-                      ),
-                    })
-                  }
-                />
-                <MoneyField
-                  label={`고정지출 ${i + 1} 금액 (원)`}
-                  value={x.amount}
-                  onChange={(amount) =>
-                    set({
-                      ...v,
-                      fixedExpenses: v.fixedExpenses.map((a, j) =>
-                        j === i ? { ...a, amount } : a,
-                      ),
-                    })
-                  }
-                />
-                <Field
-                  label={`고정지출 ${i + 1} 날짜 (31 = 말일)`}
-                  keyboardType="number-pad"
-                  value={String(x.day || "")}
-                  onChangeText={(s) =>
-                    set({
-                      ...v,
-                      fixedExpenses: v.fixedExpenses.map((a, j) =>
-                        j === i
-                          ? {
-                              ...a,
-                              day: Number(s.replace(/[^0-9]/g, "").slice(0, 2)),
-                            }
-                          : a,
-                      ),
-                    })
-                  }
-                />
-                <Button
-                  label="항목 지우기"
-                  variant="ghost"
-                  onPress={() =>
+            {v.fixedExpenses.map((x, i) => {
+              const update = (patch: Partial<typeof x>) =>
+                set({
+                  ...v,
+                  fixedExpenses: v.fixedExpenses.map((a, j) =>
+                    j === i ? { ...a, ...patch } : a,
+                  ),
+                });
+              return (
+                <ItemCard
+                  key={i}
+                  open={open === i}
+                  summary={`${x.name} · ${money(x.amount)}원 · 매달 ${x.day === 31 ? "말일" : `${x.day}일`}`}
+                  onEdit={() => setOpen(i)}
+                  onConfirm={() => {
+                    if (!fixedValid(x))
+                      return setError(
+                        "고정지출의 이름, 금액, 날짜를 확인해 주세요",
+                      );
+                    setError(undefined);
+                    setOpen(null);
+                  }}
+                  onRemove={() => {
+                    setOpen(null);
                     set({
                       ...v,
                       fixedExpenses: v.fixedExpenses.filter((_, j) => j !== i),
-                    })
-                  }
-                />
-              </Card>
-            ))}
+                    });
+                  }}
+                >
+                  <Field
+                    label="이름"
+                    placeholder="예: 월세"
+                    maxLength={40}
+                    value={x.name}
+                    onChangeText={(name) => update({ name })}
+                  />
+                  <MoneyField
+                    label="금액 (원)"
+                    placeholder="예: 700,000"
+                    value={x.amount}
+                    onChange={(amount) => update({ amount })}
+                  />
+                  <Field
+                    label="매달 나가는 날 (31 = 말일)"
+                    placeholder="예: 25"
+                    keyboardType="number-pad"
+                    value={String(x.day || "")}
+                    onChangeText={(s) =>
+                      update({
+                        day: Number(s.replace(/[^0-9]/g, "").slice(0, 2)),
+                      })
+                    }
+                  />
+                </ItemCard>
+              );
+            })}
             <Button
               label="+ 고정지출 추가"
               variant="soft"
-              disabled={v.fixedExpenses.length >= 30}
-              onPress={() =>
+              disabled={v.fixedExpenses.length >= 30 || open !== null}
+              onPress={() => {
+                setOpen(v.fixedExpenses.length);
                 set({
                   ...v,
                   fixedExpenses: [
                     ...v.fixedExpenses,
-                    { name: "", amount: 0, day: 1 },
+                    { name: "", amount: 0, day: 0 },
                   ],
-                })
-              }
+                });
+              }}
             />
           </>
         )}
         {step === "card" && (
           <MoneyField
             label="카드 미결제액 (원)"
+            placeholder="없으면 비워 두세요"
             value={v.cardUnpaid}
             onChange={(cardUnpaid) => set({ ...v, cardUnpaid })}
           />
         )}
         {step === "protect" && (
           <>
-            {v.protectedItems.map((x, i) => (
-              <Card key={i} style={{ gap: 12 }}>
-                <Field
-                  label={`보호 항목 ${i + 1} 이름`}
-                  maxLength={40}
-                  value={x.name}
-                  onChangeText={(name) =>
-                    set({
-                      ...v,
-                      protectedItems: v.protectedItems.map((a, j) =>
-                        j === i ? { ...a, name } : a,
-                      ),
-                    })
-                  }
-                />
-                <MoneyField
-                  label={`보호 항목 ${i + 1} 금액 (원)`}
-                  value={x.amount}
-                  onChange={(amount) =>
-                    set({
-                      ...v,
-                      protectedItems: v.protectedItems.map((a, j) =>
-                        j === i ? { ...a, amount } : a,
-                      ),
-                    })
-                  }
-                />
-                <Button
-                  label="항목 지우기"
-                  variant="ghost"
-                  onPress={() =>
+            {v.protectedItems.map((x, i) => {
+              const update = (patch: Partial<typeof x>) =>
+                set({
+                  ...v,
+                  protectedItems: v.protectedItems.map((a, j) =>
+                    j === i ? { ...a, ...patch } : a,
+                  ),
+                });
+              return (
+                <ItemCard
+                  key={i}
+                  open={open === i}
+                  summary={`${x.name} · ${money(x.amount)}원`}
+                  onEdit={() => setOpen(i)}
+                  onConfirm={() => {
+                    if (!x.name.trim() || x.amount < 1 || x.amount >= 1e12)
+                      return setError(
+                        "보호할 항목의 이름과 금액을 확인해 주세요",
+                      );
+                    setError(undefined);
+                    setOpen(null);
+                  }}
+                  onRemove={() => {
+                    setOpen(null);
                     set({
                       ...v,
                       protectedItems: v.protectedItems.filter(
                         (_, j) => j !== i,
                       ),
-                    })
-                  }
-                />
-              </Card>
-            ))}
+                    });
+                  }}
+                >
+                  <Field
+                    label="이름"
+                    placeholder="예: 비상금"
+                    maxLength={40}
+                    value={x.name}
+                    onChangeText={(name) => update({ name })}
+                  />
+                  <MoneyField
+                    label="금액 (원)"
+                    placeholder="예: 300,000"
+                    value={x.amount}
+                    onChange={(amount) => update({ amount })}
+                  />
+                </ItemCard>
+              );
+            })}
             <Button
               label="+ 보호할 돈 추가"
               variant="soft"
-              disabled={v.protectedItems.length >= 30}
-              onPress={() =>
+              disabled={v.protectedItems.length >= 30 || open !== null}
+              onPress={() => {
+                setOpen(v.protectedItems.length);
                 set({
                   ...v,
                   protectedItems: [
                     ...v.protectedItems,
                     { name: "", amount: 0 },
                   ],
-                })
-              }
+                });
+              }}
             />
           </>
         )}
@@ -427,6 +401,7 @@ function Done() {
       title="오늘의 예산을 준비했어요"
       subtitle="입력한 잔액·기록 기준 추정"
       backFallback="/"
+      back={false}
       cta="홈으로"
       onNext={() => router.replace("/")}
     >
@@ -451,5 +426,75 @@ function Done() {
         )
       )}
     </OnboardingFrame>
+  );
+}
+function fixedValid(x: { name: string; amount: number; day: number }) {
+  return (
+    !!x.name.trim() &&
+    x.amount >= 1 &&
+    x.amount < 1e12 &&
+    Number.isInteger(x.day) &&
+    x.day >= 1 &&
+    x.day <= 31
+  );
+}
+function ItemCard({
+  open,
+  summary,
+  onEdit,
+  onConfirm,
+  onRemove,
+  children,
+}: {
+  open: boolean;
+  summary: string;
+  onEdit: () => void;
+  onConfirm: () => void;
+  onRemove: () => void;
+  children: ReactNode;
+}) {
+  if (!open)
+    return (
+      <Card
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          paddingVertical: 12,
+        }}
+      >
+        <T weight="600" style={{ flex: 1 }} numberOfLines={1}>
+          {summary}
+        </T>
+        <Pressable accessibilityRole="button" onPress={onEdit} hitSlop={8}>
+          <T color={colors.brandDark} weight="600">
+            수정
+          </T>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={onRemove} hitSlop={8}>
+          <T color={colors.textMuted} weight="600">
+            삭제
+          </T>
+        </Pressable>
+      </Card>
+    );
+  return (
+    <Card style={{ gap: 12 }}>
+      {children}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <Button
+          label="지우기"
+          variant="ghost"
+          onPress={onRemove}
+          style={{ flex: 1 }}
+        />
+        <Button
+          label="확인"
+          variant="soft"
+          onPress={onConfirm}
+          style={{ flex: 2 }}
+        />
+      </View>
+    </Card>
   );
 }
