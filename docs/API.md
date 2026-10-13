@@ -137,11 +137,11 @@
 
 - `estimatedBalance` = `balance` + (`balanceAt` 이후 수입 합) − (`balanceAt` 이후 지출 합)
 - `nextPayday` = 오늘 이후(오늘 제외) 가장 가까운 수입일, `daysLeft` = 오늘부터 수입일 전날까지 날짜 수(오늘 포함, 최소 1)
-- `reservedFixed` = 오늘 ~ 수입일 전날 사이에 날짜가 오는 고정지출 합(지난 날짜는 이미 나간 것으로 봄)
+- `reservedFixed` = 내일 ~ 수입일 전날 사이에 날짜가 오는 고정지출 합. 오늘까지 날짜가 된 고정지출은 지출 거래로 자동 기록되어 `estimatedBalance`에서 빠진다(아래 "고정지출 자동 기록")
 - `remaining` = `estimatedBalance` − `reservedFixed` − `cardUnpaid` − `protectedTotal`
 - `dailyBudget` = max(0, `remaining` + `todaySpent`) ÷ `daysLeft`
 - `todayAvailable` = max(0, `dailyBudget` − `todaySpent`), `shortage` = `remaining` < 0이면 −`remaining`, 아니면 max(0, `todaySpent` − `dailyBudget`)
-- `weekSpent` = 이번 주(월~일) 지출 합, `cycleStart` = 직전 수입일
+- `todaySpent`, `weekSpent` = 오늘 / 이번 주(월~일) 지출 합. 고정지출 자동 기록(`fromFixed`)은 넣지 않는다. `cycleStart` = 직전 수입일
 - `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
 - `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈
 - `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
@@ -182,9 +182,18 @@
   "title": "김밥천국",
   "memo": null,
   "occurredAt": "2026-10-13T12:32:00+09:00",
-  "createdAt": "2026-10-13T12:33:10+09:00"
+  "createdAt": "2026-10-13T12:33:10+09:00",
+  "fromFixed": false
 }
 ```
+
+고정지출 자동 기록: `GET /budget/today`, `GET /transactions`, `GET /analysis/summary`를 부르면 먼저 잔액 기준일(`balanceAt`의 날짜) ~ 오늘 사이에 날짜가 된 고정지출을 지출 거래로 만든다.
+
+- 카테고리 기본 "고정지출"(이름을 바꿨으면 아이콘 `repeat`인 기본, 없으면 "기타"), `title` = 고정지출 이름, `memo` = "고정지출 자동 기록", `fromFixed` = true, `occurredAt` = 그 날짜 0시(잔액 기준일 당일이면 기준 시각 직후)
+- 날짜·항목(일자·이름·순번)마다 한 번만 만든다. 사용자가 거래를 지우거나 설정을 다시 저장해도 같은 날짜는 다시 만들지 않는다
+- 같은 날 같은 이름·금액의 지출을 이미 직접 기록했으면 만들지 않는다(직접 기록 한 건이 고정지출 한 건을 대신한다)
+- 이 기능 도입 전에 예산을 설정한 사용자는 도입 시점 이후 날짜부터 기록한다(지난 날짜를 소급해 빼지 않는다)
+- 일반 거래처럼 수정·삭제할 수 있다. 다른 카테고리로 옮기면 `fromFixed`가 false가 되어 일반 지출로 센다
 
 | 요청 | 설명 |
 |---|---|

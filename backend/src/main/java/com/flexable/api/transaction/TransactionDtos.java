@@ -59,11 +59,12 @@ public final class TransactionDtos {
 	}
 
 	public record TransactionResponse(Long id, TxType type, long amount, Long categoryId, CategoryRef category,
-			String title, String memo, OffsetDateTime occurredAt, OffsetDateTime createdAt) {
+			String title, String memo, OffsetDateTime occurredAt, OffsetDateTime createdAt, boolean fromFixed) {
 
 		static TransactionResponse of(Transaction t, CategoryRef category, ZoneId zone) {
 			return new TransactionResponse(t.getId(), t.getType(), t.getAmount(), t.getCategoryId(), category,
-					t.getTitle(), t.getMemo(), Times.at(t.getOccurredAt(), zone), Times.at(t.getCreatedAt(), zone));
+					t.getTitle(), t.getMemo(), Times.at(t.getOccurredAt(), zone), Times.at(t.getCreatedAt(), zone),
+					t.isFromFixed());
 		}
 	}
 

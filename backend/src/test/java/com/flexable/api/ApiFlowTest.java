@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
 
@@ -32,7 +33,17 @@ class ApiFlowTest {
 	@Autowired
 	MockMvc mvc;
 
-	private final String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
+	@Autowired
+	org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
+	private final LocalDate todayDate = LocalDate.now(SEOUL);
+
+	private final String today = todayDate.toString();
+
+	/** 오늘이 아닌 날짜(1~28). 오늘 날짜 고정지출은 자동 기록되므로 거래 수를 세는 테스트에서 피한다. */
+	private final int notToday = todayDate.getDayOfMonth() % 28 + 1;
 
 	private MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder b, String token, String body) {
 		if (token != null) {
@@ -123,9 +134,9 @@ class ApiFlowTest {
 
 		mvc.perform(json(put("/api/v1/budget/settings"), token, """
 				{"balance":1000000,"payday":25,"incomeAmount":2400000,
-				 "fixedExpenses":[{"name":"월세","amount":450000,"day":1}],
+				 "fixedExpenses":[{"name":"월세","amount":450000,"day":%d}],
 				 "protectedItems":[{"name":"비상금","amount":300000}]}
-				"""))
+				""".formatted(notToday)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.cardUnpaid", is(0)))
 			.andExpect(jsonPath("$.fixedExpenses[0].id").isNumber());
@@ -201,6 +212,100 @@ class ApiFlowTest {
 		mvc.perform(json(post("/api/v1/auth/login"), null, "{\"email\":\"flow@example.com\",\"password\":\"abcd1234\"}"))
 			.andExpect(status().isUnauthorized());
 		signup("flow@example.com");
+	}
+
+	@Test
+	void fixedExpensesArePostedAsTransactions() throws Exception {
+		String token = signup("fixed@example.com");
+		LocalDate from = todayDate.minusDays(40);
+		String range = "?from=" + from + "&to=" + today;
+		// 40일 전 잔액, 오늘 날짜 월세 → 지난달과 오늘 두 번 나갔다
+		String settings = """
+				{"balance":1000000,"balanceAt":"%s","payday":25,"incomeAmount":2400000,
+				 "fixedExpenses":[{"name":"월세","amount":450000,"day":%d}]}
+				""".formatted(OffsetDateTime.now(SEOUL).minusDays(40), todayDate.getDayOfMonth());
+		mvc.perform(json(put("/api/v1/budget/settings"), token, settings)).andExpect(status().isOk());
+
+		MvcResult list = mvc.perform(json(get("/api/v1/transactions" + range), token, null))
+			.andExpect(jsonPath("$.items", hasSize(2)))
+			.andExpect(jsonPath("$.items[0].title", is("월세")))
+			.andExpect(jsonPath("$.items[0].type", is("EXPENSE")))
+			.andExpect(jsonPath("$.items[0].amount", is(450000)))
+			.andExpect(jsonPath("$.items[0].category.name", is("고정지출")))
+			.andExpect(jsonPath("$.items[0].fromFixed", is(true)))
+			.andExpect(jsonPath("$.items[0].memo", is("고정지출 자동 기록")))
+			.andReturn();
+		mvc.perform(json(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance", is(1000000 - 900000)))
+			.andExpect(jsonPath("$.reservedFixed", is(0)))
+			.andExpect(jsonPath("$.todaySpent", is(0)))
+			.andExpect(jsonPath("$.hasTransactions", is(true)));
+		mvc.perform(json(get("/api/v1/analysis/summary" + range), token, null))
+			.andExpect(jsonPath("$.expenseTotal", is(900000)))
+			.andExpect(jsonPath("$.expenseCount", is(2)));
+
+		// 다시 조회해도, 지운 뒤에도, 설정을 다시 저장해도 같은 날짜는 다시 만들지 않는다
+		int older = JsonPath.read(body(list), "$.items[1].id");
+		mvc.perform(json(delete("/api/v1/transactions/" + older), token, null)).andExpect(status().isNoContent());
+		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(1)));
+		mvc.perform(json(put("/api/v1/budget/settings"), token, """
+				{"balance":550000,"payday":25,"incomeAmount":2400000,
+				 "fixedExpenses":[{"name":"월세","amount":450000,"day":%d}]}
+				""".formatted(todayDate.getDayOfMonth()))).andExpect(status().isOk());
+		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(1)));
+	}
+
+	@Test
+	void fixedExpensePostingEdgeCases() throws Exception {
+		String token = signup("fixed-edge@example.com");
+		int day = todayDate.getDayOfMonth();
+		String range = "?from=" + todayDate.minusDays(40) + "&to=" + today;
+		OffsetDateTime balanceAt = OffsetDateTime.now(SEOUL).minusDays(40);
+		String rent = "{\"name\":\"월세\",\"amount\":450000,\"day\":" + day + "}";
+		String settings = """
+				{"balance":2000000,"balanceAt":"%s","payday":25,"incomeAmount":2400000,
+				 "fixedExpenses":[%s,{"name":"Netflix","amount":17000,"day":%d},{"name":"netflix","amount":17000,"day":%d}]}
+				""";
+		// 같은 이름 두 개, 대소문자만 다른 이름 두 개 — 모두 따로 기록된다
+		mvc.perform(json(put("/api/v1/budget/settings"), token, settings.formatted(balanceAt, rent + "," + rent, day, day)))
+			.andExpect(status().isOk());
+		// 오늘 월세 하나는 직접 기록해 둠 → 자동 기록은 오늘 월세 한 건만 대신한다
+		mvc.perform(json(post("/api/v1/transactions"), token, "{\"type\":\"EXPENSE\",\"amount\":450000,\"categoryId\":"
+				+ categoryId(token, "EXPENSE", "식비") + ",\"title\":\"월세\"}"))
+			.andExpect(status().isCreated());
+
+		MvcResult list = mvc.perform(json(get("/api/v1/transactions" + range), token, null))
+			.andExpect(jsonPath("$.items", hasSize(8)))
+			.andExpect(jsonPath("$.items[?(@.fromFixed == true)]", hasSize(7)))
+			.andReturn();
+
+		// 자동 기록을 다른 카테고리로 옮기면 일반 지출이 된다
+		int auto = JsonPath.<net.minidev.json.JSONArray>read(body(list), "$.items[?(@.fromFixed == true)].id")
+			.stream()
+			.map(Number.class::cast)
+			.findFirst()
+			.orElseThrow()
+			.intValue();
+		mvc.perform(json(patch("/api/v1/transactions/" + auto), token,
+				"{\"categoryId\":" + categoryId(token, "EXPENSE", "식비") + "}"))
+			.andExpect(jsonPath("$.fromFixed", is(false)));
+
+		// 같은 월세를 하나 더 추가해 다시 저장 → 새 항목은 두 날짜 모두 기록된다.
+		// 이미 쓴 직접 기록과, 다른 카테고리로 옮긴 자동 기록은 새 항목을 대신하지 않는다.
+		mvc.perform(json(put("/api/v1/budget/settings"), token,
+				settings.formatted(balanceAt, rent + "," + rent + "," + rent, day, day)))
+			.andExpect(status().isOk());
+		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(10)));
+
+		// 자동 기록 도입 전에 설정한 사용자: 도입 이후 날짜만 기록한다
+		String old = signup("fixed-old@example.com");
+		mvc.perform(json(put("/api/v1/budget/settings"), old, """
+				{"balance":1000000,"balanceAt":"%s","payday":25,"incomeAmount":2400000,
+				 "fixedExpenses":[{"name":"월세","amount":450000,"day":%d}]}
+				""".formatted(OffsetDateTime.now(SEOUL).minusDays(40), day))).andExpect(status().isOk());
+		jdbc.update("update budget_settings set fixed_posting_since = ? where user_id = (select id from users where email = ?)",
+				java.time.LocalDateTime.now(java.time.ZoneOffset.UTC), "fixed-old@example.com"); // 저장은 UTC
+		mvc.perform(json(get("/api/v1/transactions" + range), old, null)).andExpect(jsonPath("$.items", hasSize(1)));
 	}
 
 	@Test

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flexable.api.auth.CurrentUser;
+import com.flexable.api.budget.FixedExpensePoster;
 import com.flexable.api.common.TxType;
 import com.flexable.api.transaction.TransactionDtos.CreateRequest;
 import com.flexable.api.transaction.TransactionDtos.ListResponse;
@@ -33,9 +34,11 @@ import jakarta.validation.Valid;
 public class TransactionController {
 
 	private final TransactionService service;
+	private final FixedExpensePoster fixedPoster;
 
-	public TransactionController(TransactionService service) {
+	public TransactionController(TransactionService service, FixedExpensePoster fixedPoster) {
 		this.service = service;
+		this.fixedPoster = fixedPoster;
 	}
 
 	@GetMapping
@@ -43,6 +46,7 @@ public class TransactionController {
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
 			@RequestParam(required = false) TxType type, @RequestParam(required = false) Long categoryId) {
+		fixedPoster.postDue(CurrentUser.id(jwt));
 		return new ListResponse(service.list(CurrentUser.id(jwt), from, to, type, categoryId));
 	}
 
