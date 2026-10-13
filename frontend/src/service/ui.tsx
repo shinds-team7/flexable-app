@@ -79,47 +79,24 @@ export function Field({
     </View>
   );
 }
-export function DateTimeField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [date = "", time = ""] = value.split("T");
-  return (
-    <View style={{ gap: 12 }}>
-      <Field
-        label={`${label} 날짜 (년-월-일)`}
-        value={date}
-        placeholder="예: 2026-10-13"
-        onChangeText={(next) => onChange(`${next}T${time}`)}
-      />
-      <Field
-        label={`${label} 시간 (시:분, 한국 시간)`}
-        value={time}
-        placeholder="예: 14:30"
-        onChangeText={(next) => onChange(`${date}T${next}`)}
-      />
-    </View>
-  );
-}
+// 0 shows as an empty field so the placeholder example stays visible.
 export function MoneyField({
   label,
   value,
   onChange,
+  placeholder = "0",
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
+  placeholder?: string;
 }) {
   return (
     <Field
       label={label}
       keyboardType="number-pad"
-      value={money(value)}
+      placeholder={placeholder}
+      value={value ? money(value) : ""}
       onChangeText={(s) => onChange(Number(digits(s)))}
     />
   );
@@ -251,6 +228,17 @@ export function seoulDate() {
 }
 export function seoulTime() {
   return new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 16);
+}
+// The server sends microseconds (".123456+09:00"). Trim to milliseconds so every engine parses it.
+export function parseTime(iso: string) {
+  return new Date(iso.replace(/(\.\d{3})\d+/, "$1"));
+}
+// "YYYY-MM-DDTHH:mm" in Seoul time. Falls back to now so a bad value can't crash a screen.
+export function toSeoulInput(iso: string) {
+  const ms = parseTime(iso).getTime();
+  return Number.isNaN(ms)
+    ? seoulTime()
+    : new Date(ms + 9 * 3600000).toISOString().slice(0, 16);
 }
 export function validTime(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return false;

@@ -7,3 +7,4 @@ export default function Layout() {
     </Guard>
   );
 }
+export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";

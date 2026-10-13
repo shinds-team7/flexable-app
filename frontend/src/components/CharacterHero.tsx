@@ -3,7 +3,7 @@
  * 좌우 < > 버튼은 시연용(희미하게 표시) — 누르면 레벨이 바뀐다.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import type { BudgetSummary } from '@/store/budget';
@@ -14,7 +14,7 @@ import { TodayHeroCard } from './HomeContent';
 import { TierBadge } from './TierBadge';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
-type Level = 1 | 2 | 3 | 4 | 5;
+export type Level = 1 | 2 | 3 | 4 | 5;
 
 /** 레벨별 캐릭터 (원본: status-1 광부 · status-4 츄리닝 · status-5 직장인 · status-2 플렉스 · status-3 왕) */
 const LEVELS: Record<Level, { img: ImageSourcePropType; name: string; msg: string; bg: string; accent: string }> = {
@@ -78,6 +78,15 @@ export function CharacterHero() {
     setPrevAuto(auto);
     setLevel(auto);
   }
+  return (
+    <CharacterStage level={level} onChange={setLevel}>
+      <TodayHeroCard />
+    </CharacterStage>
+  );
+}
+
+/** 캐릭터 + 말풍선 + 단계 점 + 아래 오늘 카드. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
+export function CharacterStage({ level, onChange, children }: { level: Level; onChange?: (level: Level) => void; children: ReactNode }) {
 
   // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
   const scale = useAnimValue(1);
@@ -92,8 +101,8 @@ export function CharacterHero() {
   };
   const change = (d: -1 | 1) => {
     const next = Math.min(5, Math.max(1, level + d)) as Level;
-    if (next === level) return;
-    setLevel(next);
+    if (next === level || !onChange) return;
+    onChange(next);
     bump(d);
   };
 
@@ -118,13 +127,13 @@ export function CharacterHero() {
       </View>
 
       <View style={styles.stage}>
-        <Pressable accessibilityRole="button" accessibilityLabel="이전 단계 캐릭터" accessibilityElementsHidden={level === 1} importantForAccessibility={level === 1 ? 'no-hide-descendants' : 'auto'} onPress={() => change(-1)} disabled={level === 1} hitSlop={12} style={[styles.arrow, level === 1 && { opacity: 0 }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="이전 단계 캐릭터" accessibilityElementsHidden={level === 1 || !onChange} importantForAccessibility={level === 1 || !onChange ? 'no-hide-descendants' : 'auto'} onPress={() => change(-1)} disabled={level === 1 || !onChange} hitSlop={12} style={[styles.arrow, (level === 1 || !onChange) && { opacity: 0 }]}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
         <Animated.View style={{ transform: [{ translateX: shift }, { scale }] }}>
           <Image source={L.img} style={styles.char} resizeMode="contain" />
         </Animated.View>
-        <Pressable accessibilityRole="button" accessibilityLabel="다음 단계 캐릭터" accessibilityElementsHidden={level === 5} importantForAccessibility={level === 5 ? 'no-hide-descendants' : 'auto'} onPress={() => change(1)} disabled={level === 5} hitSlop={12} style={[styles.arrow, level === 5 && { opacity: 0 }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="다음 단계 캐릭터" accessibilityElementsHidden={level === 5 || !onChange} importantForAccessibility={level === 5 || !onChange ? 'no-hide-descendants' : 'auto'} onPress={() => change(1)} disabled={level === 5 || !onChange} hitSlop={12} style={[styles.arrow, (level === 5 || !onChange) && { opacity: 0 }]}>
           <Ionicons name="chevron-forward" size={22} color={colors.text} />
         </Pressable>
       </View>
@@ -136,9 +145,7 @@ export function CharacterHero() {
       </View>
 
       {/* 오늘 쓸 수 있는 돈 — 기존 홈과 같은 파란 카드 */}
-      <View style={styles.heroSlot}>
-        <TodayHeroCard />
-      </View>
+      <View style={styles.heroSlot}>{children}</View>
     </View>
   );
 }

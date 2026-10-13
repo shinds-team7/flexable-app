@@ -2,38 +2,48 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
+import { CharacterStage, type Level } from "@/components/CharacterHero";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors } from "@/theme";
+import { useHomeStyle } from "./homeStyle";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
 import type { Today } from "./types";
 export function HomeScreen() {
   const result = useResource<Today>("/budget/today");
   const [basis, setBasis] = useState(false);
+  const [style] = useHomeStyle();
   const s = result.data;
+  const hero = s && (
+    <TodayHeroView
+      today={new Date(s.date + "T12:00:00")}
+      summary={{
+        todayAvailable: s.todayAvailable,
+        cycleStart: new Date(s.cycleStart + "T12:00:00"),
+        cycleEnd: new Date(
+          new Date(s.nextPayday + "T12:00:00").getTime() - 86400000,
+        ),
+        daysLeft: s.daysLeft,
+        dailyLimit: s.dailyBudget,
+        todayWeight: 100,
+        todaySpent: s.todaySpent,
+        todayPlanned: [],
+      }}
+      caption="입력한 잔액·기록 기준 추정"
+      footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
+      onDetails={() => setBasis(true)}
+    />
+  );
   return (
     <Screen>
       {result.loading && !s && <Loading />}
       <ErrorNotice error={result.error} retry={result.retry} />
       {s && (
         <>
-          <TodayHeroView
-            today={new Date(s.date + "T12:00:00")}
-            summary={{
-              todayAvailable: s.todayAvailable,
-              cycleStart: new Date(s.cycleStart + "T12:00:00"),
-              cycleEnd: new Date(
-                new Date(s.nextPayday + "T12:00:00").getTime() - 86400000,
-              ),
-              daysLeft: s.daysLeft,
-              dailyLimit: s.dailyBudget,
-              todayWeight: 100,
-              todaySpent: s.todaySpent,
-              todayPlanned: [],
-            }}
-            caption="입력한 잔액·기록 기준 추정"
-            footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
-            onDetails={() => setBasis(true)}
-          />
+          {style === "character" ? (
+            <CharacterStage level={levelOf(s)}>{hero}</CharacterStage>
+          ) : (
+            hero
+          )}
           {s.shortage > 0 && (
             <Card style={{ backgroundColor: colors.dangerSoft }}>
               <T color={colors.danger} weight="700">
@@ -132,4 +142,13 @@ export function HomeScreen() {
       )}
     </Screen>
   );
+}
+// Character level from today's budget only; the service API has no cycle-pace numbers yet.
+function levelOf(s: Today): Level {
+  if (s.remaining < 0) return 1;
+  if (s.shortage > 0) return 2;
+  const used = s.dailyBudget > 0 ? s.todaySpent / s.dailyBudget : 0;
+  if (used > 0.7) return 3;
+  if (used > 0.3) return 4;
+  return 5;
 }

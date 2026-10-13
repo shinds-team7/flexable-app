@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
@@ -8,6 +9,7 @@ import {
   Loading,
   money,
   seoulDate,
+  toSeoulInput,
   useResource,
 } from "./ui";
 import type { Transaction } from "./types";
@@ -31,16 +33,14 @@ export function TransactionsScreen() {
   items
     .filter((t) => filter === "ALL" || t.type === filter)
     .forEach((t) => {
-      const d = new Date(new Date(t.occurredAt).getTime() + 9 * 3600000)
-        .toISOString()
-        .slice(0, 10);
+      const d = toSeoulInput(t.occurredAt).slice(0, 10);
       groups.set(d, [...(groups.get(d) ?? []), t]);
     });
   const total = (type: string) =>
     items.filter((x) => x.type === type).reduce((a, x) => a + x.amount, 0);
   return (
     <Screen>
-      <Card>
+      <Card style={{ paddingTop: 8, gap: 8 }}>
         <View
           style={{
             flexDirection: "row",
@@ -48,19 +48,11 @@ export function TransactionsScreen() {
             justifyContent: "space-between",
           }}
         >
-          <Button
-            label="이전 달"
-            variant="ghost"
-            onPress={() => setOffset((x) => x - 1)}
-          />
+          <MonthStep step={-1} onPress={() => setOffset((x) => x - 1)} />
           <T weight="800">
             {month.getUTCFullYear()}년 {month.getUTCMonth() + 1}월
           </T>
-          <Button
-            label="다음 달"
-            variant="ghost"
-            onPress={() => setOffset((x) => x + 1)}
-          />
+          <MonthStep step={1} onPress={() => setOffset((x) => x + 1)} />
         </View>
         <View
           style={{
@@ -104,8 +96,17 @@ export function TransactionsScreen() {
                 거래내역이 없어요
               </T>
             )}
-            {[...groups].map(([date, list]) => (
-              <View key={date}>
+            {[...groups].map(([date, list], i) => (
+              <View
+                key={date}
+                style={
+                  i > 0 && {
+                    borderTopWidth: 1,
+                    borderTopColor: colors.line,
+                    marginTop: 6,
+                  }
+                }
+              >
                 <T
                   size={13}
                   weight="700"
@@ -146,12 +147,8 @@ export function TransactionsScreen() {
                         {t.title}
                       </T>
                       <T size={12} color={colors.textMuted}>
-                        {new Date(t.occurredAt).toLocaleTimeString("ko-KR", {
-                          timeZone: "Asia/Seoul",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        · {t.category.name}
+                        {toSeoulInput(t.occurredAt).slice(11, 16)} ·{" "}
+                        {t.category.name}
                       </T>
                     </View>
                     <T
@@ -179,5 +176,27 @@ export function TransactionsScreen() {
         }
       />
     </Screen>
+  );
+}
+function MonthStep({ step, onPress }: { step: -1 | 1; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={step < 0 ? "이전 달" : "다음 달"}
+      onPress={onPress}
+      hitSlop={6}
+      style={{
+        width: 44,
+        height: 44,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Ionicons
+        name={step < 0 ? "chevron-back" : "chevron-forward"}
+        size={22}
+        color={colors.brandDark}
+      />
+    </Pressable>
   );
 }
