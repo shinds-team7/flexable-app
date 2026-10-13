@@ -159,10 +159,27 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   ).toBeVisible();
   await page.getByRole("tab", { name: "내역", exact: true }).click();
   await expect(page.getByText("테스트 점심", { exact: true })).toBeVisible();
+  // Adding from the 전체 filter keeps the expense default.
+  await expect(
+    page.getByRole("tab", { name: "전체", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await page
     .getByRole("button", { name: "+ 거래 직접 기록", exact: true })
     .click();
+  await expect(
+    page.getByRole("tab", { name: "지출", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+  await expect(page).toHaveURL(/\/transactions$/);
+  // Adding from the 수입 filter must open (and save) as income without touching the form's segment.
   await page.getByRole("tab", { name: "수입", exact: true }).click();
+  await page
+    .getByRole("button", { name: "+ 거래 직접 기록", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/transactions\/new\?type=INCOME$/);
+  await expect(
+    page.getByRole("tab", { name: "수입", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await page.getByLabel("금액 (원)", { exact: true }).fill("50000");
   await page.getByRole("radio", { name: "급여", exact: true }).click();
   await page
@@ -171,6 +188,11 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(page.getByText("테스트 수입", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("button", { name: /테스트 수입, 50,000원, 상세 보기/ })
+      .getByText("+50,000원", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("tab", { name: "분석", exact: true }).click();
   await expect(
     page.getByText("기록한 지출 1건", { exact: true }),
@@ -181,6 +203,8 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     page.getByText("기록한 지출 1건", { exact: true }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "내역", exact: true }).click();
+  // The list is still filtered to 수입 from the step above.
+  await page.getByRole("tab", { name: "전체", exact: true }).click();
   await page.getByRole("button", { name: /테스트 점심, .*상세 보기/ }).click();
   await page.getByLabel("금액 (원)", { exact: true }).fill("7000");
   await page
