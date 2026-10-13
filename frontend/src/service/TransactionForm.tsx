@@ -21,7 +21,13 @@ import {
   validTime,
 } from "./ui";
 import type { Category, Kind, Transaction } from "./types";
-export function TransactionForm({ id }: { id?: string }) {
+export function TransactionForm({
+  id,
+  initialType,
+}: {
+  id?: string;
+  initialType?: Kind;
+}) {
   const loaded = useResource<Transaction>(id ? `/transactions/${id}` : null);
   if (id && loaded.loading && !loaded.data) return <Loading />;
   if (id && loaded.error)
@@ -30,12 +36,22 @@ export function TransactionForm({ id }: { id?: string }) {
         <ErrorNotice error={loaded.error} retry={loaded.retry} />
       </Page>
     );
-  return <Form key={id ?? "new"} existing={loaded.data} />;
+  return (
+    <Form key={id ?? "new"} existing={loaded.data} initialType={initialType} />
+  );
 }
-function Form({ existing }: { existing?: Transaction }) {
+function Form({
+  existing,
+  initialType,
+}: {
+  existing?: Transaction;
+  initialType?: Kind;
+}) {
   const session = useSession();
   const toast = useToast();
-  const [type, setType] = useState<Kind>(existing?.type ?? "EXPENSE");
+  const [type, setType] = useState<Kind>(
+    existing?.type ?? initialType ?? "EXPENSE",
+  );
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
   const [categoryId, setCategoryId] = useState<number | null>(
     existing?.categoryId ?? null,
