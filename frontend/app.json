@@ -37,6 +37,13 @@
           "faceIDPermission": false
         }
       ]
-    ]
+    ],
+    "owner": "ucmnuniverse-developer",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fb9b50f5-3e92-4eb3-8cea-1c1a149b23ef"
+      }
+    }
   }
 }
