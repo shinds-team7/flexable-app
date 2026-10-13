@@ -204,7 +204,15 @@ function Content({ step }: { step: Step }) {
             <MoneyField
               label="현재 잔액 (원)"
               value={v.balance}
-              onChange={(balance) => set({ ...v, balance })}
+              onChange={(balance) =>
+                // A new balance is as of now. Keeping the old balanceAt would subtract
+                // transactions already reflected in it a second time. Keep a time the user picked.
+                set({
+                  ...v,
+                  balance,
+                  balanceAt: clock ? v.balanceAt : new Date().toISOString(),
+                })
+              }
             />
             <DateTimeField
               label="잔액 기준"

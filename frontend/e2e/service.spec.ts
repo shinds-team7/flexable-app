@@ -304,6 +304,54 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   });
 });
 
+test("re-entering the balance in settings does not subtract earlier spending again", async ({
+  page,
+}) => {
+  await signup(page, email());
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await page.getByLabel("현재 잔액 (원)", { exact: true }).fill("1000000");
+  for (let i = 0; i < 4; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await page.getByRole("button", { name: "홈으로", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  const auth = await token(page);
+  const categories = await (
+    await page.request.get(`${apiBase}/categories?type=EXPENSE`, {
+      headers: { Authorization: `Bearer ${auth}` },
+    })
+  ).json();
+  const spent = await page.request.post(`${apiBase}/transactions`, {
+    headers: { Authorization: `Bearer ${auth}` },
+    data: {
+      type: "EXPENSE",
+      amount: 100000,
+      categoryId: categories[0].id,
+      title: "장보기",
+    },
+  });
+  expect(spent.status()).toBe(201);
+  expect((await snapshot(page, "/budget/today")).estimatedBalance).toBe(900000);
+  // The bank now shows 900,000. Re-enter only the balance, without touching the time.
+  await page.getByRole("tab", { name: "마이", exact: true }).click();
+  await page
+    .getByRole("button", { name: "예산 설정 수정", exact: true })
+    .click();
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  // The first onboarding screen stays mounted (hidden) in the web stack; roles skip hidden nodes.
+  const balance = page.getByRole("textbox", {
+    name: "현재 잔액 (원)",
+    exact: true,
+  });
+  await expect(balance).toHaveValue("1,000,000");
+  await balance.fill("900000");
+  for (let i = 0; i < 4; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/done$/);
+  expect((await snapshot(page, "/budget/today")).estimatedBalance).toBe(900000);
+});
+
 test("public deletion without budget setup and offline failure preserves credentials", async ({
   page,
 }) => {
