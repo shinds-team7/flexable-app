@@ -170,7 +170,13 @@ export function TransactionsScreen() {
       )}
       <Button
         label="+ 거래 직접 기록"
-        onPress={() => router.push("/transactions/new")}
+        onPress={() =>
+          router.push(
+            filter === "INCOME"
+              ? "/transactions/new?type=INCOME"
+              : "/transactions/new",
+          )
+        }
       />
     </Screen>
   );
