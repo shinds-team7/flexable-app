@@ -231,9 +231,6 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
           ]}
         />
       </View>
-      <T size={12} color={colors.textSub} style={{ textAlign: 'center' }}>
-        {label}
-      </T>
     </View>
   );
 }
