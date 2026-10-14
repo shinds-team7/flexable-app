@@ -181,7 +181,7 @@ export function CharacterStage({ level, coins, gauge, message, onChange, childre
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
         <Animated.View style={{ transform: [{ translateX: shift }, { scale }] }}>
-          <Image source={L.img[coins - 1]} style={styles.char} resizeMode="contain" />
+          <Image source={L.img[coins - 1]} style={styles.char} resizeMode="contain" accessible accessibilityRole="image" accessibilityLabel={`Lv.${level} 캐릭터, 오늘 예산 동전 ${coins}/4단계`} />
         </Animated.View>
         <Pressable accessibilityRole="button" accessibilityLabel="다음 단계 캐릭터" accessibilityElementsHidden={level === 5 || !onChange} importantForAccessibility={level === 5 || !onChange ? 'no-hide-descendants' : 'auto'} onPress={() => change(1)} disabled={level === 5 || !onChange} hitSlop={12} style={[styles.arrow, (level === 5 || !onChange) && { opacity: 0 }]}>
           <Ionicons name="chevron-forward" size={22} color={colors.text} />
