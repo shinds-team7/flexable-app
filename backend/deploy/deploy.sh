@@ -9,11 +9,12 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 scp -i "$KEY" "$DIR/../build/libs/app.jar" "$DIR/Dockerfile" "$DIR/docker-compose.yml" "$DIR/Caddyfile" \
   "$DIR/.env.example" "$DIR/setup-db.sh" "$HOST:/opt/flexable/"
 # 루트 디스크가 6.7GB라 빌드 캐시가 쌓이면 다음 빌드가 no space left로 실패한다(apt-get update exit 100으로 보임).
-# 배포마다 빌드 캐시와 이전 이미지를 지우고, 마지막에 디스크 사용량을 보여 준다.
+# 빌드 전에 캐시를 지워 이미 디스크가 찬 상태에서도 다시 실행하면 복구되게 하고, 빌드 뒤 이전 이미지·새 캐시를 지운다.
 ssh -i "$KEY" "$HOST" 'set -e; cd /opt/flexable && chmod +x setup-db.sh
 if ! { test -s .env && grep -q "^DB_PASSWORD=." .env; }; then
   echo ".env가 비어 있습니다. 먼저 /opt/flexable/setup-db.sh 를 실행하세요." >&2; exit 1
 fi
+docker builder prune -af >/dev/null
 docker compose up -d --build
 docker image prune -f >/dev/null
 docker builder prune -af >/dev/null
