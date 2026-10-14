@@ -89,7 +89,7 @@ npx eas-cli@latest build -p android --profile production
 
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
 
-현재 검증 대상은 Play 내부 테스트 앱이다. EAS 조회로 versionCode 5의 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`, PR #19 포함을 확인했다. 2026-10-14에 최신 main `1c0028e`(PR #23·#25 저장 버그 수정, PR #26 캐릭터 홈 변경)를 `ucmnuniverse` 계정으로 게시했다. 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). 타입 검사·린트·Android 번들 생성·EAS 게시 확인 완료. 실기기 수신·저장 동작 검증은 아직 남아 있다.
+현재 검증 대상은 Play 내부 테스트 앱이다. EAS 조회로 versionCode 5의 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`, PR #19 포함을 확인했다. 2026-10-14에 최신 main `1c0028e`(PR #23·#25 저장 버그 수정, PR #26 캐릭터 홈 변경)를 `ucmnuniverse` 계정으로 게시했다. 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). 같은 커밋을 preview 그룹 `0fa8cf03`에서 승격해 production 그룹 [bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601)로도 게시했다(코드 동일, 이것이 최신). 문제가 생기면 그 이전 그룹 `712cddcc-d991-4663-b09e-10220eb8c9b8`(개인정보처리방침 반영본)을 production에 다시 게시해 되돌린다. 타입 검사·린트·Android 번들 생성·EAS 게시 확인 완료. 실기기 수신·저장 동작 검증은 아직 남아 있다.
 
 ```bash
 cd frontend
@@ -99,7 +99,9 @@ npx eas-cli@latest whoami
 npx eas-cli@latest update --channel production --environment production --platform android --message "변경 내용" --non-interactive
 ```
 
-- preview APK로 별도 검증할 때는 `npm run update:preview`를 사용한다. 같은 번들의 production 승격(`npm run update:promote`)은 preview·production 환경변수가 같을 때만 사용한다.
+- preview APK로 먼저 검증할 때는 `npm run update:preview -- --message "변경 내용" --non-interactive`로 올린다. 결과의 `Update group ID`를 받아 같은 번들을 production으로 승격한다: `npm run update:promote -- <preview 그룹 ID> --message "변경 내용"`. 승격은 preview·production 환경변수가 같을 때만 쓴다(`npx eas-cli@latest env:list --environment preview`/`production`, `env:list`에는 `--non-interactive`가 없다).
+- `update:republish`는 non-interactive 모드에서 `--channel`로 고를 수 없고 `--group`만 받는다. 그래서 `update:promote` 스크립트는 그룹 ID를 인자로 받는다.
+- Claude Code auto mode는 production 게시(`update`·`update:republish`를 production으로)를 운영 배포로 보고 막는다. 사용자가 프롬프트에 `! <명령>`으로 직접 실행한다. 이때 셸 위치는 Claude 세션의 현재 폴더(대개 `frontend/`)라 `cd frontend`를 붙이면 실패할 수 있다.
 - `runtimeVersion`은 `appVersion` 정책이다. 네이티브가 바뀌는 변경(네이티브 패키지 추가·업그레이드, `app.json`의 권한·플러그인·아이콘, Expo SDK 업그레이드)은 원격 업데이트로 보낼 수 없다. 이때는 `app.json`의 `version`을 올리고(예: 1.0.0 → 1.0.1) 새로 빌드한다. 버전을 안 올리고 원격 업데이트로 보내면 예전 빌드에서 앱이 꺼질 수 있다.
 - 승격은 preview에서 만든 번들을 그대로 쓰므로 preview·production 환경변수가 같아야 한다. 다르면 `npx eas-cli@latest update --channel production --environment production`으로 따로 올린다.
 - 잘못 올렸으면 이전 업데이트를 같은 채널에 다시 게시해서 되돌린다(`npx eas-cli@latest update:republish --group <이전 그룹 ID>`). 그룹 ID는 `npx eas-cli@latest update:list --branch production`에서 확인한다.

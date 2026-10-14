@@ -68,6 +68,7 @@ Play 내부 테스트 versionCode 5 AAB에 내장된 코드는 수정 전 코드
 - versionCode 5 AAB는 수정 커밋(`25381c4`, 10-14 17:26)보다 먼저 빌드·업로드됐다. 업로드 기록이 그 수정 커밋에 함께 들어가 있다.
 - 2026-10-14 최신 main `1c0028e`를 `ucmnuniverse` 계정으로 `production` 채널·환경, Android 런타임 `1.0.0`에 게시했다. PR #23·#25 수정과 PR #26 캐릭터 홈 변경을 포함한다.
 - 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). Android 업데이트 ID: `01a13a58-4491-7ad8-b978-efb504cdf459`.
+- 같은 커밋을 preview 그룹 `0fa8cf03`에서 production으로 승격해 [bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601)로 다시 게시했다(코드 동일, production 최신). preview APK도 같은 번들을 받는다.
 
 네이티브 변경이 없어 새 AAB 대신 원격 업데이트로 게시했다. 테스터는 인터넷이 연결된 상태에서 앱을 실행해 업데이트 다운로드 시간을 준 뒤, 앱을 완전히 종료하고 다시 실행한다. 그 후 아래 저장 동작을 검증한다.
 
