@@ -107,8 +107,8 @@ export function CharacterHero() {
   );
 }
 
-/** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
-export function CharacterStage({ level, gauge, onChange, children }: { level: Level; gauge: PaceStatus; onChange?: (level: Level) => void; children: ReactNode }) {
+/** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. message 가 없으면 단계별 기본 말(시연용, 지금 소비 상태 기준)을 쓴다. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
+export function CharacterStage({ level, gauge, message, onChange, children }: { level: Level; gauge: PaceStatus; message?: string; onChange?: (level: Level) => void; children: ReactNode }) {
 
   // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
   const scale = useAnimValue(1);
@@ -137,7 +137,7 @@ export function CharacterStage({ level, gauge, onChange, children }: { level: Le
 
       <View style={styles.bubble}>
         <T size={14} weight="600" numberOfLines={1} style={{ textAlign: 'center', lineHeight: 20 }}>
-          {L.msg}
+          {message ?? L.msg}
         </T>
         <View style={styles.tail} />
       </View>
