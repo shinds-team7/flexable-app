@@ -170,7 +170,10 @@ class ApiFlowTest {
 			.andExpect(jsonPath("$.estimatedBalance", is(1000000 - 8500)))
 			.andExpect(jsonPath("$.hasTransactions", is(true)))
 			.andExpect(jsonPath("$.weekDaysLeft").isNumber())
-			.andExpect(jsonPath("$.weekAvailable").isNumber());
+			.andExpect(jsonPath("$.weekAvailable").isNumber())
+			// 하루 예산을 처음 기록한 날이라 캐릭터는 Lv.1 0%에서 시작(같은 날 다시 불러도 행이 겹치지 않음)
+			.andExpect(jsonPath("$.characterPoints", is(0)))
+			.andExpect(jsonPath("$.characterDelta", is(0)));
 		mvc.perform(json(get("/api/v1/analysis/summary?from=" + today + "&to=" + today), token, null))
 			.andExpect(jsonPath("$.expenseTotal", is(8500)))
 			.andExpect(jsonPath("$.byCategory[0].ratio", is(1.0)))

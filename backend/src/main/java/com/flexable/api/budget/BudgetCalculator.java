@@ -40,12 +40,10 @@ public final class BudgetCalculator {
 		int daysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, nextPayday));
 		LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 		LocalDate weekEnd = weekStart.plusDays(6);
-		LocalDate paceFrom = paceFrom(cycleStart, in.balanceAt(), zone);
 
 		long estimated = in.balance();
 		long todaySpent = 0;
 		long weekSpent = 0;
-		long paceSpent = 0;
 		for (Tx t : in.transactions()) {
 			if (t.occurredAt().isAfter(in.balanceAt())) {
 				estimated += t.type() == TxType.INCOME ? t.amount() : -t.amount();
@@ -57,9 +55,6 @@ public final class BudgetCalculator {
 				}
 				if (!d.isBefore(weekStart) && !d.isAfter(weekEnd)) {
 					weekSpent += t.amount();
-				}
-				if (!d.isBefore(paceFrom) && !d.isAfter(today)) {
-					paceSpent += t.amount();
 				}
 			}
 		}
@@ -78,18 +73,10 @@ public final class BudgetCalculator {
 		LocalDate weekLast = weekEnd.isBefore(nextPayday) ? weekEnd : nextPayday.minusDays(1);
 		int weekDaysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, weekLast) + 1);
 		long weekAvailable = Math.max(0, dailyBudget * weekDaysLeft - todaySpent);
-		// 소비 속도 기준 예산: 지금 남은 생활비 + paceFrom 이후 이미 쓴 돈 = paceFrom 시점에 쓸 수 있던 돈
-		long paceBudget = Math.max(0, remaining) + paceSpent;
 
 		return new TodayResponse(today, nextPayday, daysLeft, estimated, reservedFixed, in.cardUnpaid(),
 				in.protectedTotal(), remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent,
-				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions(), paceFrom, paceSpent, paceBudget);
-	}
-
-	/** 소비 속도를 재기 시작하는 날: 주기 시작일, 잔액을 그 뒤에 입력했으면 잔액 입력일(그 전 지출은 기록이 없을 수 있다) */
-	static LocalDate paceFrom(LocalDate cycleStart, Instant balanceAt, ZoneId zone) {
-		LocalDate balanceDay = balanceAt.atZone(zone).toLocalDate();
-		return balanceDay.isAfter(cycleStart) ? balanceDay : cycleStart;
+				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions(), 0, 0);
 	}
 
 	/** 그 달의 수입일(31 등 없는 날은 말일로). */

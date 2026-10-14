@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
   CharacterStage,
-  paceStatus,
+  pointsStatus,
   type PaceStatus,
 } from "@/components/CharacterHero";
 import { TodayHeroView } from "@/components/TodayHeroView";
@@ -151,20 +151,23 @@ export function HomeScreen() {
     </Screen>
   );
 }
-const dayNumber = (key: string) => Date.parse(key + "T00:00:00Z") / 86400000;
-// Pace = spent since paceFrom ÷ the share of paceBudget those days were meant to use.
-// Older servers lack the pace fields, so fall back to today's spending against today's budget.
+// Mirrors the server rule in docs/API.md: a kept day adds 15 points, an overspent day takes 50.
+const UP = 15;
+const DOWN = 50;
 function statusOf(s: Today): PaceStatus {
-  const short = s.remaining < 0;
-  if (s.paceFrom == null || s.paceSpent == null || s.paceBudget == null) {
-    return paceStatus(
-      s.dailyBudget > 0 ? s.todaySpent / s.dailyBudget : 1,
-      short,
-    );
-  }
-  const from = dayNumber(s.paceFrom);
-  const total = Math.max(1, dayNumber(s.nextPayday) - from);
-  const elapsed = Math.min(total, dayNumber(s.date) - from + 1);
-  const expected = (s.paceBudget * elapsed) / total;
-  return paceStatus(expected > 0 ? s.paceSpent / expected : 1, short);
+  const points = s.characterPoints ?? 0;
+  const delta = s.characterDelta ?? 0;
+  const yesterday =
+    delta > 0
+      ? `어제 지켜서 +${delta}%`
+      : delta < 0
+        ? `어제 넘어서 ${delta}%`
+        : null;
+  const today =
+    s.todaySpent <= s.dailyBudget
+      ? points >= 400
+        ? "오늘도 지키면 최고 단계 유지"
+        : `오늘 지키면 내일 +${UP}%`
+      : `오늘 예산을 넘어서 내일 -${DOWN}%`;
+  return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
 }

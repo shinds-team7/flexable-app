@@ -1,6 +1,7 @@
 /**
  * 캐릭터 홈 상단 — 예산을 잘 지킬수록 부자 캐릭터(Lv.5 다이아), 못 지킬수록 Lv.1(돌)로 강등.
- * 단계는 이번 주기 소비 속도(쓴 돈 ÷ 같은 기간 예산)로 정하고, 아래 게이지로 승급·하락까지 얼마나 남았는지 보여준다.
+ * 아래 게이지로 승급·하락까지 얼마나 남았는지 보여준다. 실서비스는 서버 점수(하루 예산을 지키면 +15, 넘기면 −50),
+ * 시연은 이번 주기 소비 속도(쓴 돈 ÷ 같은 기간 예산)로 단계를 정한다.
  * 좌우 < > 버튼은 시연용(희미하게 표시) — 누르면 레벨이 바뀐다.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -61,7 +62,7 @@ const BANDS: Record<Level, [number, number]> = {
 
 export type PaceStatus = { level: Level; progress: number; label: string };
 
-/** 소비 속도 → 단계와 게이지(0 = 곧 하락, 1 = 곧 승급). short 면 생활비가 모자란 상태라 Lv.1 */
+/** 소비 속도 → 단계와 게이지(0 = 곧 하락, 1 = 곧 승급). short 면 생활비가 모자란 상태라 Lv.1. 시연 캐릭터 홈용 */
 export function paceStatus(pace: number, short: boolean): PaceStatus {
   if (short) return { level: 1, progress: 0, label: '남은 생활비가 모자라요' };
   const level: Level = pace <= 0.8 ? 5 : pace <= 0.95 ? 4 : pace <= 1.05 ? 3 : pace <= 1.2 ? 2 : 1;
@@ -70,6 +71,13 @@ export function paceStatus(pace: number, short: boolean): PaceStatus {
   const diff = Math.round((1 - pace) * 100);
   const label = diff > 0 ? `이번 주기 예산보다 ${diff}% 덜 쓰는 중` : diff < 0 ? `이번 주기 예산보다 ${-diff}% 더 쓰는 중` : '이번 주기 예산만큼 쓰는 중';
   return { level, progress, label };
+}
+
+/** 서버 캐릭터 점수(0~400, 100점이 한 단계) → 단계와 게이지. 실서비스용 */
+export function pointsStatus(points: number, label: string): PaceStatus {
+  const p = Math.min(400, Math.max(0, points));
+  const level = Math.min(5, Math.floor(p / 100) + 1) as Level;
+  return { level, progress: level === 5 ? 1 : (p % 100) / 100, label };
 }
 
 /** 이번 주기 소비 속도로 단계 계산: 지금까지 쓴 돈 ÷ (같은 기간 예산) */
@@ -151,7 +159,7 @@ export function CharacterStage({ level, gauge, onChange, children }: { level: Le
   );
 }
 
-/** 지금 단계 안에서 하락(왼쪽) ~ 승급(오른쪽) 사이 어디쯤인지. 날짜가 지나고 지출이 쌓이면서 매일 움직인다 */
+/** 지금 단계 안에서 하락(왼쪽) ~ 승급(오른쪽) 사이 어디쯤인지 */
 function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
   const { level, progress, label } = status;
   const top = level === 5;
@@ -167,7 +175,7 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
       style={styles.gauge}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={top ? `최고 단계, ${label}` : `승급까지 ${pct}%, ${label}`}
+      accessibilityLabel={top ? `최고 단계, ${label}` : `Lv.${level} 승급 게이지 ${pct}%, ${label}`}
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
       <View style={styles.gaugeHead}>
@@ -175,7 +183,7 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
           {level === 1 ? 'Lv.1' : `▼ Lv.${level - 1}`}
         </T>
         <T size={13} weight="800" color={accent}>
-          {top ? '최고 단계' : `승급까지 ${pct}%`}
+          {top ? '최고 단계' : `Lv.${level} ${pct}%`}
         </T>
         <T size={12} weight="600" color={colors.textMuted}>
           {top ? 'Lv.5' : `Lv.${level + 1} ▲`}

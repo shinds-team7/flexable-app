@@ -3,6 +3,7 @@ package com.flexable.api.user;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.flexable.api.budget.DailyBudgetRepository;
 import com.flexable.api.budget.FixedExpensePostingRepository;
 import com.flexable.api.budget.FixedExpenseRepository;
 import com.flexable.api.budget.ProtectedItemRepository;
@@ -20,17 +21,20 @@ public class AccountDeletionService {
 	private final FixedExpensePostingRepository fixedPostings;
 	private final ProtectedItemRepository protectedItems;
 	private final SettingsRepository settings;
+	private final DailyBudgetRepository dailyBudgets;
 	private final UserRepository users;
 
 	public AccountDeletionService(TransactionRepository transactions, CategoryRepository categories,
 			FixedExpenseRepository fixed, FixedExpensePostingRepository fixedPostings,
-			ProtectedItemRepository protectedItems, SettingsRepository settings, UserRepository users) {
+			ProtectedItemRepository protectedItems, SettingsRepository settings, DailyBudgetRepository dailyBudgets,
+			UserRepository users) {
 		this.transactions = transactions;
 		this.categories = categories;
 		this.fixed = fixed;
 		this.fixedPostings = fixedPostings;
 		this.protectedItems = protectedItems;
 		this.settings = settings;
+		this.dailyBudgets = dailyBudgets;
 		this.users = users;
 	}
 
@@ -44,6 +48,7 @@ public class AccountDeletionService {
 		fixedPostings.deleteByUserId(userId);
 		protectedItems.deleteByUserId(userId);
 		settings.deleteByUserId(userId);
+		dailyBudgets.deleteByUserId(userId);
 		users.deleteById(userId);
 	}
 }
