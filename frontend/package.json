@@ -40,7 +40,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "update:preview": "npx eas-cli@latest update --channel preview --environment preview --platform android",
-    "update:promote": "npx eas-cli@latest update:republish --channel preview --destination-channel production --platform android"
+    "update:promote": "npx eas-cli@latest update:republish --destination-channel production --platform android --non-interactive --group"
   },
   "private": true
 }
