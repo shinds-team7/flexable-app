@@ -6,13 +6,13 @@
 
 ## 0. 다음에 이어서 할 일 (2026-10-14 기준, 우선순위 순)
 
-1. [ ] 1차 피드백 반영 APK 실기기 확인(§4-2 체크리스트). 기존 앱을 지우고 설치한다. 오류 화면이 뜨면 캡처해서 원인 분석에 쓴다
+1. [ ] 거래 수정 저장 후 빈 화면 버그 해결(`docs/bug-transaction-edit-blank-screen.md`) → 원격 업데이트로 실기기 확인
 2. [ ] 팀원에게 새 APK 배포 → 2차 피드백 수집(노션)
 3. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
 4. [ ] Google 계정 복구됨(10-14) → §4-3에 따라 Play Console 진행
 5. [ ] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드
 
-최근 변경: PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), PR #14(Expo `apduis-team` 연결, #18로 대체), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
+최근 변경: PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), PR #14(Expo `apduis-team` 연결, #18로 대체), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
 
 ## 1. 지금 상태
 
@@ -102,7 +102,7 @@ npm run update:promote -- --message "거래 수정 저장 오류 수정"
 - 잘못 올렸으면 이전 업데이트를 같은 채널에 다시 게시해서 되돌린다(`npx eas-cli@latest update:republish --group <이전 그룹 ID>`). 그룹 ID는 `npx eas-cli@latest update:list --branch production`에서 확인한다.
 - `expo-updates`가 없는 예전 빌드(10-14 이전 APK·AAB)는 원격 업데이트를 받지 않는다.
 
-1차 피드백 반영본에서 특히 확인할 것: 거래 수정·저장(예전에 앱이 꺼지던 문제, 원인 미확정 — 이제는 오류 화면이 뜬다), 거래 날짜 달력·시간 휠, 온보딩 '이전'·'취소'·'확인' 접기, 마이 → 홈 화면 → 캐릭터 홈, 수입일이 주말일 때 남은 날짜.
+1차 피드백 반영본에서 특히 확인할 것: 거래 수정·저장(예전에 앱이 꺼지던 문제 — 빌드 4에서는 빈 화면이 뜨고 뒤로가기 시 종료, `docs/bug-transaction-edit-blank-screen.md`), 거래 날짜 달력·시간 휠, 온보딩 '이전'·'취소'·'확인' 접기, 마이 → 홈 화면 → 캐릭터 홈, 수입일이 주말일 때 남은 날짜.
 
 실기기(APK)에서 확인할 것: 가입·로그인, 예산 설정 키보드·스크롤, 거래 입력 바텀시트, 글꼴 크게 설정, 앱 재시작 후 로그인 유지(SecureStore), `flexable://demo` 딥링크가 시작 화면으로 가는지, 계정 삭제.
 
@@ -136,7 +136,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [x] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 2026-10-14 보관 기간 7일로 설정, 리전 간 복제 없음, 수동 스냅샷 없음, AWS Backup 미사용 확인
-- [ ] 거래 수정 중 앱 종료: 원인 미확정. 오류 화면 캡처를 받으면 분석
+- [ ] 거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(빌드 4에서도 남음): 원인 미확정. 증상·가설·재현 방법은 `docs/bug-transaction-edit-blank-screen.md`
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
 - [ ] 캐릭터 홈 단계가 "오늘 예산 사용률" 기준이다. 정산 주기 전체 기준으로 바꾸려면 `/budget/today`에 주기 예산·지출을 추가해야 한다
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
