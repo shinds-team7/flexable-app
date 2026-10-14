@@ -12,7 +12,7 @@
 4. [ ] Google 계정 복구됨(10-14) → §4-3에 따라 Play Console 진행
 5. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
 
-최근 변경: PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), PR #14(Expo `apduis-team` 연결, #18로 대체), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
+최근 변경: PR #23·#25(수입 저장·거래 수정 저장 후 빈 화면 수정, 이슈 #24), #26(캐릭터 홈 하단 탭바·배치), #27(원격 업데이트 절차) — 10-14 `production` 원격 업데이트로 Play 내부 테스트 앱에 게시. PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), PR #14(Expo `apduis-team` 연결, #18로 대체), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
 
 ## 1. 지금 상태
 
@@ -141,7 +141,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [x] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 2026-10-14 보관 기간 7일로 설정, 리전 간 복제 없음, 수동 스냅샷 없음, AWS Backup 미사용 확인
-- [ ] 거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(빌드 4에서도 남음): 수정 완료, 실기기 확인 대기. 원인·검증은 `docs/bug-transaction-edit-blank-screen.md`
+- [ ] 수입 저장·거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(이슈 #24): PR #23·#25로 수정, `production` 원격 업데이트 게시 완료, 실기기 확인 대기. 원인·재발 방지 규칙·검증 체크리스트는 `docs/bug-transaction-edit-blank-screen.md`
 - [ ] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): `expo-build-properties` 플러그인으로 `android.enableMinifyInReleaseBuilds: true` 설정 → EAS 빌드 결과물의 `mapping.txt`를 Play에 업로드. 켜면 리플렉션 쓰는 네이티브 모듈이 release에서만 깨질 수 있으니 preview 빌드로 먼저 확인
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
 - [ ] 캐릭터 홈 단계가 "오늘 예산 사용률" 기준이다. 정산 주기 전체 기준으로 바꾸려면 `/budget/today`에 주기 예산·지출을 추가해야 한다
