@@ -11,44 +11,38 @@ import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
 import { diffDays } from '@/utils/date';
 import { TodayHeroCard } from './HomeContent';
-import { TierBadge } from './TierBadge';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5;
 
 /** 레벨별 캐릭터 (원본: status-1 광부 · status-4 츄리닝 · status-5 직장인 · status-2 플렉스 · status-3 왕) */
-const LEVELS: Record<Level, { img: ImageSourcePropType; name: string; msg: string; bg: string; accent: string }> = {
+const LEVELS: Record<Level, { img: ImageSourcePropType; msg: string; bg: string; accent: string }> = {
   1: {
     img: require('../../assets/characters/lv1.png'),
-    name: '광부냥',
     msg: '예산 초과! 오늘은 한도 안에서만 써요',
     bg: '#EEF2FA',
     accent: '#667085',
   },
   2: {
     img: require('../../assets/characters/lv2.png'),
-    name: '백수냥',
     msg: '이번 주 빠듯해요. 카페 한 번만 줄여요',
     bg: '#EEF2FA',
     accent: '#8A6A3B',
   },
   3: {
     img: require('../../assets/characters/lv3.png'),
-    name: '직장냥',
     msg: '잘 버티는 중! 오늘 한도만 지키면 돼요',
     bg: '#EEF2FA',
     accent: '#1D3A8A',
   },
   4: {
     img: require('../../assets/characters/lv4.png'),
-    name: '플렉스냥',
     msg: '예산을 잘 지키고 있어요. 이 정도면 플렉스 가능!',
     bg: '#EEF2FA',
     accent: '#A11D2B',
   },
   5: {
     img: require('../../assets/characters/lv5.png'),
-    name: '킹냥',
     msg: '완벽해요! 예산 관리의 왕이에요',
     bg: '#EEF2FA',
     accent: '#B7791F',
@@ -85,7 +79,7 @@ export function CharacterHero() {
   );
 }
 
-/** 캐릭터 + 말풍선 + 단계 점 + 아래 오늘 카드. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
+/** 위 오늘 카드 + 아래 캐릭터·말풍선·단계 점. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
 export function CharacterStage({ level, onChange, children }: { level: Level; onChange?: (level: Level) => void; children: ReactNode }) {
 
   // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
@@ -110,14 +104,8 @@ export function CharacterStage({ level, onChange, children }: { level: Level; on
 
   return (
     <View style={[styles.wrap, { backgroundColor: L.bg }]}>
-      <View style={styles.badgeRow}>
-        <TierBadge tier={level} />
-        <View>
-          <T size={15} weight="800" color={L.accent}>
-            {L.name}
-          </T>
-        </View>
-      </View>
+      {/* 오늘 쓸 수 있는 돈 — 기존 홈과 같은 파란 카드를 맨 위에 */}
+      <View style={styles.heroSlot}>{children}</View>
 
       <View style={styles.bubble}>
         <T size={14} weight="600" numberOfLines={1} style={{ textAlign: 'center', lineHeight: 20 }}>
@@ -143,9 +131,6 @@ export function CharacterStage({ level, onChange, children }: { level: Level; on
           <View key={n} style={[styles.dot, n <= level && { backgroundColor: L.accent }]} />
         ))}
       </View>
-
-      {/* 오늘 쓸 수 있는 돈 — 기존 홈과 같은 파란 카드 */}
-      <View style={styles.heroSlot}>{children}</View>
     </View>
   );
 }
@@ -156,14 +141,13 @@ const styles = StyleSheet.create({
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: -12,
-    paddingTop: 22,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 16,
     alignItems: 'center',
   },
-  heroSlot: { alignSelf: 'stretch', marginTop: 14 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bubble: { marginTop: 12, backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 10, maxWidth: 360 },
+  heroSlot: { alignSelf: 'stretch' },
+  bubble: { marginTop: 18, backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 10, maxWidth: 360 },
   tail: {
     position: 'absolute',
     bottom: -7,
