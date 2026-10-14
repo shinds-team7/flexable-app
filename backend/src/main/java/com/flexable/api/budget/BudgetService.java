@@ -98,9 +98,14 @@ public class BudgetService {
 		List<FixedExpense> fixedList = fixed.findOrdered(userId);
 		long protectedTotal = protectedItems.findOrdered(userId).stream().mapToLong(ProtectedItem::getAmount).sum();
 
-		// 잔액 기준 시각 이후 거래 + 이번 주 거래가 필요하다.
+		// 잔액 기준 시각 이후 거래 + 이번 주 거래 + 소비 속도 구간(paceFrom~오늘) 거래가 필요하다.
 		Instant weekStart = today.minusDays(today.getDayOfWeek().getValue() - 1L).atStartOfDay(zone).toInstant();
+		Instant paceStart = BudgetCalculator
+			.paceFrom(BudgetCalculator.previousPayday(today, s.getPayday()), s.getBalanceAt(), zone)
+			.atStartOfDay(zone)
+			.toInstant();
 		Instant since = s.getBalanceAt().isBefore(weekStart) ? s.getBalanceAt() : weekStart;
+		since = paceStart.isBefore(since) ? paceStart : since;
 		List<BudgetCalculator.Tx> txs = transactions.findSince(userId, since)
 			.stream()
 			.map(t -> new BudgetCalculator.Tx(t.getType(), t.getAmount(), t.getOccurredAt(), t.isFromFixed()))

@@ -129,7 +129,10 @@
   "weekDaysLeft": 6,
   "weekAvailable": 192000,
   "cycleStart": "2026-09-25",
-  "hasTransactions": true
+  "hasTransactions": true,
+  "paceFrom": "2026-09-25",
+  "paceSpent": 410000,
+  "paceBudget": 840000
 }
 ```
 
@@ -145,6 +148,7 @@
 - `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
 - `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈
 - `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
+- 소비 속도(캐릭터 단계·게이지용): `paceFrom` = `cycleStart`와 잔액 기준일(`balanceAt`의 날짜) 중 늦은 날(그 전 지출은 기록이 없을 수 있어서). `paceSpent` = `paceFrom` ~ 오늘 지출 합(고정지출 자동 기록 제외). `paceBudget` = max(0, `remaining`) + `paceSpent` — `paceFrom` 시점에 쓸 수 있던 생활비. 앱은 `paceSpent` ÷ (`paceBudget` × 지난 날수 ÷ 전체 날수)로 속도를 잰다(날수는 `paceFrom`부터, 오늘 포함 / 수입일 전날까지)
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
 

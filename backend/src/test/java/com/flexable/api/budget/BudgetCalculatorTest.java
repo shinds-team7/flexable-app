@@ -139,4 +139,43 @@ class BudgetCalculatorTest {
 		assertThat(r.todayAvailable()).isZero();
 		assertThat(r.shortage()).isEqualTo(150_000);
 	}
+	@Test
+	void paceCountsFromCycleStartWhenBalanceIsOlder() {
+		// 잔액 9/20 입력, 수입일 25일(9/25 금) → 이번 주기 9/25부터. 9/24 지출은 지난 주기라 빠진다
+		var in = new BudgetCalculator.Input(1_000_000, at("2026-09-20T09:00:00"), 25, 0, List.of(), List.of(), 0,
+				List.of(new BudgetCalculator.Tx(TxType.EXPENSE, 30_000, at("2026-09-24T12:00:00")),
+						new BudgetCalculator.Tx(TxType.EXPENSE, 40_000, at("2026-10-01T12:00:00")),
+						new BudgetCalculator.Tx(TxType.EXPENSE, 100_000, at("2026-10-02T00:00:00"), true),
+						new BudgetCalculator.Tx(TxType.EXPENSE, 20_000, at("2026-10-13T12:00:00"))),
+				true);
+		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 13), SEOUL);
+		assertThat(r.paceFrom()).isEqualTo(LocalDate.of(2026, 9, 25));
+		assertThat(r.paceSpent()).isEqualTo(60_000); // 고정지출 자동 기록은 넣지 않는다
+		assertThat(r.paceBudget()).isEqualTo(r.remaining() + 60_000);
+	}
+
+	@Test
+	void paceStartsOnBalanceDayWhenEnteredMidCycle() {
+		// 10/13 10:00 잔액 입력 → 그 전 날짜 지출은 기록이 없을 수 있어 10/13부터 잰다. 같은 날 09:00 지출은 잔액에 이미 반영
+		var in = new BudgetCalculator.Input(500_000, at("2026-10-13T10:00:00"), 25, 0, List.of(), List.of(), 0,
+				List.of(new BudgetCalculator.Tx(TxType.EXPENSE, 50_000, at("2026-10-10T12:00:00")),
+						new BudgetCalculator.Tx(TxType.EXPENSE, 8_000, at("2026-10-13T09:00:00")),
+						new BudgetCalculator.Tx(TxType.EXPENSE, 12_000, at("2026-10-14T12:00:00"))),
+				true);
+		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 14), SEOUL);
+		assertThat(r.paceFrom()).isEqualTo(LocalDate.of(2026, 10, 13));
+		assertThat(r.paceSpent()).isEqualTo(20_000);
+		assertThat(r.remaining()).isEqualTo(488_000);
+		assertThat(r.paceBudget()).isEqualTo(508_000); // 10/13 0시에 쓸 수 있던 돈 = 잔액 + 그날 입력 전 지출
+	}
+
+	@Test
+	void paceBudgetIgnoresShortage() {
+		var in = new BudgetCalculator.Input(100_000, at("2026-10-13T10:00:00"), 25, 50_000, List.of(20),
+				List.of(200_000L), 0, List.of(new BudgetCalculator.Tx(TxType.EXPENSE, 5_000, at("2026-10-13T12:00:00"))),
+				true);
+		TodayResponse r = BudgetCalculator.compute(in, LocalDate.of(2026, 10, 13), SEOUL);
+		assertThat(r.remaining()).isNegative();
+		assertThat(r.paceBudget()).isEqualTo(5_000);
+	}
 }

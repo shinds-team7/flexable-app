@@ -58,6 +58,10 @@ export type Today = {
   weekAvailable: number;
   cycleStart: string;
   hasTransactions: boolean;
+  // Absent on servers deployed before the pace fields existed.
+  paceFrom?: string;
+  paceSpent?: number;
+  paceBudget?: number;
 };
 export type Analysis = {
   from: string;

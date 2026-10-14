@@ -49,6 +49,6 @@ public final class BudgetDtos {
 	public record TodayResponse(LocalDate date, LocalDate nextPayday, int daysLeft, long estimatedBalance,
 			long reservedFixed, long cardUnpaid, long protectedTotal, long remaining, long todaySpent,
 			long dailyBudget, long todayAvailable, long shortage, long weekSpent, int weekDaysLeft, long weekAvailable,
-			LocalDate cycleStart, boolean hasTransactions) {
+			LocalDate cycleStart, boolean hasTransactions, LocalDate paceFrom, long paceSpent, long paceBudget) {
 	}
 }

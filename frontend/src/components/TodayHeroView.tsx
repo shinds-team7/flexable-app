@@ -22,6 +22,7 @@ export function TodayHeroView({
   onDetails,
   caption,
   footerCaption,
+  showCycle = true,
 }: {
   today: Date;
   summary: HeroSummary;
@@ -32,8 +33,11 @@ export function TodayHeroView({
     time: string;
   }[];
   onDetails: () => void;
-  caption?: string;
+  /** null 이면 금액 아래 설명 줄을 숨긴다(초과했을 때 안내는 그대로) */
+  caption?: string | null;
   footerCaption?: string;
+  /** false 면 급여 주기 줄(칸·급여일·다음 수입일까지)을 숨긴다 */
+  showCycle?: boolean;
 }) {
   const lastPay = transactions.find(
     (t) => t.date === toKey(today) && t.amount < 0,
@@ -66,7 +70,8 @@ export function TodayHeroView({
       >
         {won(shown)}
         <T size={22} weight="700" color={colors.onBrand}>
-          {" "}원
+          {" "}
+          원
         </T>
       </T>
 
@@ -75,39 +80,41 @@ export function TodayHeroView({
           오늘 {won(-s.todayAvailable)}원 넘게 썼어요. 남은 {s.daysLeft - 1}일에
           나눠서 반영할게요
         </T>
-      ) : (
+      ) : caption === null ? null : (
         <T size={13} color={colors.onBrandSub} style={{ marginTop: 2 }} num>
           {caption ??
             `${DOW[today.getDay()]}요일 기준 ${won(s.dailyLimit)}원(${s.todayWeight}%) 중 ${won(s.todaySpent)}원 썼어요`}
         </T>
       )}
       {/* 급여 주기 스트립 */}
-      <View
-        style={styles.cycle}
-        accessible
-        accessibilityLabel={`급여 주기 ${totalDays}일 중 ${todayIdx + 1}일째, 다음 수입일까지 ${s.daysLeft}일`}
-      >
-        <View style={styles.ticks}>
-          {Array.from({ length: totalDays }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.tick,
-                i < todayIdx && styles.tickPast,
-                i === todayIdx && styles.tickToday,
-              ]}
-            />
-          ))}
+      {showCycle && (
+        <View
+          style={styles.cycle}
+          accessible
+          accessibilityLabel={`급여 주기 ${totalDays}일 중 ${todayIdx + 1}일째, 다음 수입일까지 ${s.daysLeft}일`}
+        >
+          <View style={styles.ticks}>
+            {Array.from({ length: totalDays }, (_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.tick,
+                  i < todayIdx && styles.tickPast,
+                  i === todayIdx && styles.tickToday,
+                ]}
+              />
+            ))}
+          </View>
+          <View style={styles.rowBetween}>
+            <T size={12} color={colors.onBrandSub} num>
+              {md(s.cycleStart)} 급여
+            </T>
+            <T size={12} weight="700" color={colors.onBrand} num>
+              다음 수입일까지 {s.daysLeft}일
+            </T>
+          </View>
         </View>
-        <View style={styles.rowBetween}>
-          <T size={12} color={colors.onBrandSub} num>
-            {md(s.cycleStart)} 급여
-          </T>
-          <T size={12} weight="700" color={colors.onBrand} num>
-            다음 수입일까지 {s.daysLeft}일
-          </T>
-        </View>
-      </View>
+      )}
 
       {s.todayPlanned.length > 0 && (
         <View style={styles.heroPlan}>
