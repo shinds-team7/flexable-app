@@ -55,14 +55,15 @@ export function MyScreen() {
         <T weight="700">홈 화면</T>
         <Segment
           items={[
-            { key: "classic", label: "기본 홈" },
             { key: "character", label: "캐릭터 홈" },
+            { key: "classic", label: "기본 홈" },
           ]}
           value={homeStyle}
           onChange={setHomeStyle}
         />
         <T size={12} color={colors.textMuted}>
-          캐릭터 홈은 오늘 예산을 얼마나 지켰는지에 따라 캐릭터가 바뀌어요
+          예산을 지킨 날이 쌓일수록 캐릭터가 올라가요. 기본 홈은 캐릭터 없이
+          보여줘요
         </T>
       </Card>
       <Card style={{ gap: 4 }}>

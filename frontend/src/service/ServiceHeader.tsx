@@ -30,15 +30,15 @@ const tabs = [
     match: (p: string) => p === "/my",
   },
 ];
-// The character home moves the tabs to an icon bar at the bottom; the classic home keeps them in the header.
-export function ServiceHeader({ showTabs = true }: { showTabs?: boolean }) {
+// Tabs live in the bottom icon bar for every home style; the header keeps only the logo row.
+export function ServiceHeader() {
   const pathname = usePathname();
   return (
     <AppHeaderView
       tabs={tabs}
       pathname={pathname}
       homeHref="/home"
-      showTabs={showTabs}
+      showTabs={false}
     />
   );
 }
