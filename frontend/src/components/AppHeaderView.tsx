@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, type Href } from "expo-router";
+import type { ComponentProps } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
 import { T } from "./ui";
@@ -17,12 +18,15 @@ export function AppHeaderView({
   homeHref,
   pendingCount = 0,
   onNotifications,
+  showTabs = true,
 }: {
   tabs: { href: Href; label: string; match: (p: string) => boolean }[];
   pathname: string;
   homeHref: Href;
   pendingCount?: number;
   onNotifications?: () => void;
+  /** false 면 로고 줄만 그리고 탭은 BottomTabBar 에 맡긴다 */
+  showTabs?: boolean;
 }) {
   return (
     <View style={styles.wrap}>
@@ -67,35 +71,78 @@ export function AppHeaderView({
           </Pressable>
         )}
       </View>
-      <View style={styles.nav} accessibilityRole="tablist">
-        {tabs.map((t) => {
-          const on = t.match(pathname);
-          return (
-            <Pressable
-              key={t.label}
-              style={styles.tab}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              onPress={() => router.navigate(t.href)}
-            >
-              <T
-                size={15}
-                weight={on ? "700" : "500"}
-                color={on ? colors.text : colors.textMuted}
-                numberOfLines={1}
+      {showTabs && (
+        <View style={styles.nav} accessibilityRole="tablist">
+          {tabs.map((t) => {
+            const on = t.match(pathname);
+            return (
+              <Pressable
+                key={t.label}
+                style={styles.tab}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => router.navigate(t.href)}
               >
-                {t.label}
-              </T>
-              <View
-                style={[
-                  styles.indicator,
-                  on && { backgroundColor: colors.brand },
-                ]}
-              />
-            </Pressable>
-          );
-        })}
-      </View>
+                <T
+                  size={15}
+                  weight={on ? "700" : "500"}
+                  color={on ? colors.text : colors.textMuted}
+                  numberOfLines={1}
+                >
+                  {t.label}
+                </T>
+                <View
+                  style={[
+                    styles.indicator,
+                    on && { backgroundColor: colors.brand },
+                  ]}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+type IconName = ComponentProps<typeof Ionicons>["name"];
+
+/** 하단 아이콘 탭바 — 글자 대신 아이콘만 보이고, 라벨은 스크린리더용으로 남긴다 */
+export function BottomTabBar({
+  tabs,
+  pathname,
+}: {
+  tabs: {
+    href: Href;
+    label: string;
+    icon: IconName;
+    activeIcon: IconName;
+    match: (p: string) => boolean;
+  }[];
+  pathname: string;
+}) {
+  return (
+    <View style={styles.bottom} accessibilityRole="tablist">
+      {tabs.map((t) => {
+        const on = t.match(pathname);
+        return (
+          <Pressable
+            key={t.label}
+            style={styles.bottomTab}
+            accessibilityRole="tab"
+            accessibilityLabel={t.label}
+            accessibilityState={{ selected: on }}
+            onPress={() => router.navigate(t.href)}
+          >
+            <Ionicons
+              name={on ? t.activeIcon : t.icon}
+              size={26}
+              color={on ? colors.brand : colors.textMuted}
+            />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -141,5 +188,18 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: 9,
     backgroundColor: "transparent",
+  },
+  bottom: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingHorizontal: 8,
+  },
+  bottomTab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
   },
 });
