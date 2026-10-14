@@ -135,7 +135,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] 문의 이메일을 팀 계정으로 교체: `frontend/src/service/config.ts`, `docs/play-store/*.md`, Play Console
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
-- [ ] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음)
+- [ ] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 수동 스냅샷·AWS Backup 계획에 사용자 데이터가 남지 않는지도 확인
 - [ ] 거래 수정 중 앱 종료: 원인 미확정. 오류 화면 캡처를 받으면 분석
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
 - [ ] 캐릭터 홈 단계가 "오늘 예산 사용률" 기준이다. 정산 주기 전체 기준으로 바꾸려면 `/budget/today`에 주기 예산·지출을 추가해야 한다
