@@ -81,6 +81,12 @@ function Form({
       (c) => c.type === type && !categories.data?.some((x) => x.id === c.id),
     ),
   ];
+  // Unlock only on failure: on success the screen is popping, and re-rendering it mid-transition
+  // (busy → false) is what left Android on a blank native window.
+  const unlock = () => {
+    lock.current = false;
+    setBusy(false);
+  };
   const done = (message: string) => {
     session.invalidate();
     toast(message);
@@ -142,9 +148,7 @@ function Form({
         pending.current = null;
         setUncertain(false);
       }
-    } finally {
-      lock.current = false;
-      setBusy(false);
+      unlock();
     }
   };
   const remove = async () => {
@@ -159,9 +163,7 @@ function Form({
       done("거래를 삭제했어요");
     } catch (e) {
       setError(e);
-    } finally {
-      lock.current = false;
-      setBusy(false);
+      unlock();
     }
   };
   return (
