@@ -9,10 +9,10 @@
 1. [ ] 1차 피드백 반영 APK 실기기 확인(§4-2 체크리스트). 기존 앱을 지우고 설치한다. 오류 화면이 뜨면 캡처해서 원인 분석에 쓴다
 2. [ ] 팀원에게 새 APK 배포 → 2차 피드백 수집(노션)
 3. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
-4. [ ] Google 계정 복구 결과 확인 → §4-3에 따라 Play Console 진행
-5. [ ] Play 등록이 풀리면 production AAB 빌드·업로드
+4. [ ] Google 계정 복구됨(10-14) → §4-3에 따라 Play Console 진행
+5. [ ] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드
 
-최근 변경: PR #14(Expo `apduis-team` 연결), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
+최근 변경: PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), PR #14(Expo `apduis-team` 연결, #18로 대체), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
 
 ## 1. 지금 상태
 
@@ -23,8 +23,8 @@
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (상세는 `frontend/SERVICE_1_0_0_REPORT.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
-| Android 빌드 | 1차 피드백 반영본 preview APK 빌드(10-14, `apduis-team`), 실기기 확인 대기 | §4-2 |
-| Play Console | 개발자 등록 중단 — 등록에 쓰던 Google 계정이 사용 중지되어 복구 결과 대기 | §4-3 |
+| Android 빌드 | 원래 Expo 프로젝트(`ucmnuniverse-developer/flexable`)로 복귀, production AAB 빌드(10-14) | §4-2 |
+| Play Console | 등록에 쓰던 Google 계정 복구됨(10-14) → 등록·앱 만들기 진행 | §4-3 |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
 
@@ -34,7 +34,7 @@
 | RDS 마스터(admin) 비밀번호 | 담당자가 보관 | 평소에는 필요 없음(앱은 `flexable_app` 계정 사용) |
 | 서버 비밀값(DB 앱 비밀번호, JWT 비밀키) | EC2 `/opt/flexable/.env`에만 있음 | 옮길 필요 없음. **JWT_SECRET을 바꾸면 모든 사용자가 로그아웃됨** |
 | 심사용 계정 비밀번호 | 2026-10-13 대화로 전달 | 팀 비밀번호 보관함에 저장 → Play Console 앱 액세스에 입력 |
-| Expo 계정 | 조직 `apduis-team`(Owner 계정 `apdui`), 프로젝트 `33b551a5-6eed-4ca7-8abc-f8fa5a83cecb` | `npx eas-cli@latest login` (Claude 셸에서는 `login --device --non-interactive`로 링크 승인) |
+| Expo 계정 | 조직 `ucmnuniverse-developer`(Owner 계정 `ucmnuniverse`), 프로젝트 `fb9b50f5-3e92-4eb3-8cea-1c1a149b23ef` | `npx eas-cli@latest login` (Claude 셸에서는 `login --device --non-interactive`로 링크 승인) |
 | Play Console 개발자 계정 | — | 개인/조직 여부에 따라 14일 테스트 조건이 다름(`docs/play-store/README.md` §1) |
 | DuckDNS 계정 | 담당자 계정(`flex-able-sh`) | IP가 바뀌면 여기서 갱신 |
 
@@ -72,25 +72,24 @@ Play Console에 URL을 넣기 전에 아래 주소가 로그인 없이 열리는
 
 ```bash
 cd frontend
-npx eas-cli@latest login         # app.json에 owner·projectId가 이미 있다(PR #14)
+npx eas-cli@latest login         # app.json에 owner·projectId가 이미 있다(PR #18)
 # 1) 실기기 확인용 APK
 npx eas-cli@latest build -p android --profile preview
 # 2) Play 업로드용 AAB (versionCode 원격 자동 증가, Play 앱 서명 사용)
 npx eas-cli@latest build -p android --profile production
 ```
 
-- 처음 쓰던 Expo 계정은 Google 로그인 계정이 정지되어 쓸 수 없어 `apduis-team`으로 옮겼다. 서명 키가 새로 만들어지므로 예전 APK가 깔린 폰은 지우고 새로 설치한다(Play 업로드 전이라 출시 영향 없음).
+- 10-13~14에 잠시 `apduis-team`으로 옮겼다가(PR #14) 원래 계정이 복구되어 `ucmnuniverse-developer/flexable`로 되돌렸다(PR #18). 서명 키가 프로젝트마다 달라서 `apduis-team` APK가 깔린 폰은 지우고 새로 설치한다. Play 업로드 키는 `ucmnuniverse-developer` 프로젝트의 키스토어(10-13 생성)다.
 - 날짜·시간 선택기(`@react-native-community/datetimepicker`)는 네이티브 모듈이라 Expo Go가 아닌 빌드에서 확인한다.
 - 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다.
-- 빌드 목록·다운로드: https://expo.dev/accounts/apduis-team/projects/apdui-universe/builds
+- 빌드 목록·다운로드: https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/builds
 
 1차 피드백 반영본에서 특히 확인할 것: 거래 수정·저장(예전에 앱이 꺼지던 문제, 원인 미확정 — 이제는 오류 화면이 뜬다), 거래 날짜 달력·시간 휠, 온보딩 '이전'·'취소'·'확인' 접기, 마이 → 홈 화면 → 캐릭터 홈, 수입일이 주말일 때 남은 날짜.
 
 실기기(APK)에서 확인할 것: 가입·로그인, 예산 설정 키보드·스크롤, 거래 입력 바텀시트, 글꼴 크게 설정, 앱 재시작 후 로그인 유지(SecureStore), `flexable://demo` 딥링크가 시작 화면으로 가는지, 계정 삭제.
 
 ### 4-3. Play Console
-- 등록비를 낸 Google 계정이 사용 중지되어 복구 이의신청 결과를 기다린다. 복구되면 그 계정으로 등록(본인·주소 확인, 전화번호 인증)을 이어 간다. 등록비는 계정에 묶여 있어 다른 계정으로 옮길 수 없다.
-- 거절되면 다른 Google 계정으로 새로 등록해야 한다(등록비 재결제). 결과가 나오기 전에는 새 개발자 계정을 만들지 않는다.
+- 등록비를 낸 Google 계정이 복구되었다(10-14). 그 계정으로 등록(본인·주소 확인, 전화번호 인증)을 이어 간다.
 - 연락처 이메일은 앱·정책 문서와 같은 주소로 맞춘다(`frontend/src/service/config.ts`).
 
 `docs/play-store/README.md` 순서대로 진행: 앱 만들기 → 앱 콘텐츠 → 스토어 등록정보(그래픽·스크린샷은 `docs/play-store/`) → 비공개 테스트 트랙 → AAB 업로드 → 테스터 12명 이상(여유 있게 14~15명) → 검토 → 옵트인 링크 배포 → 14일 유지 → 프로덕션 액세스 신청.

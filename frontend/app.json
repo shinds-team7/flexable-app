@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "텅장관리",
-    "slug": "apdui-universe",
+    "slug": "flexable",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -41,9 +41,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "33b551a5-6eed-4ca7-8abc-f8fa5a83cecb"
+        "projectId": "fb9b50f5-3e92-4eb3-8cea-1c1a149b23ef"
       }
     },
-    "owner": "apduis-team"
+    "owner": "ucmnuniverse-developer"
   }
 }
