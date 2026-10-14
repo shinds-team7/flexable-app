@@ -143,6 +143,8 @@ expo-updates를 빼면 위 두 항목(기기 ID, 비정상 종료 로그)과 개
 ### 3.8 기타
 - 정부 앱: 아니요 / 건강 앱: 아니요 / 뉴스 앱: 아니요
 - 권한: 인터넷 외 위험 권한 없음(알림 접근·SMS·위치·연락처 요청 없음)
+  - versionCode 6부터 선언 권한: `INTERNET`, `ACCESS_NETWORK_STATE`, `com.android.vending.CHECK_LICENSE`, `com.flexable.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`(AndroidX 내부용). Expo 기본값·라이브러리가 넣던 저장소 읽기·쓰기, `SYSTEM_ALERT_WINDOW`, `USE_BIOMETRIC`·`USE_FINGERPRINT`, `VIBRATE`는 `app.json`의 `android.blockedPermissions`로 뺐다(이슈 #35). versionCode 5에는 남아 있다
+  - 권한을 추가·제거하면 네이티브 변경이라 새 빌드가 필요하다. 확인은 Play Console → App Bundle 탐색기 → 버전 → 세부정보 → 권한
 
 ## 4. 심사용 계정
 운영 서버에 생성 완료(2026-10-13): `play.review@flexable.app`. 수입일 25일, 고정지출 3건, 카드 미결제액, 비상금, 최근 20일 지출 41건·수입 1건, 사용자 카테고리 "데이트".
