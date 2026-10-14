@@ -217,7 +217,7 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
           {level === 1 ? 'Lv.1' : `▼ Lv.${level - 1}`}
         </T>
         <T size={13} weight="800" color={accent}>
-          {top ? '최고 단계' : `Lv.${level} ${pct}%`}
+          {top ? '최고 단계' : `${pct}%`}
         </T>
         <T size={12} weight="600" color={colors.textMuted}>
           {top ? 'Lv.5' : `Lv.${level + 1} ▲`}
