@@ -1,6 +1,6 @@
 # 버그: 저장 후 빈 화면 → 뒤로가기 시 앱 종료 (수입 저장 · 거래 수정)
 
-정리 2026-10-14. 원인은 확인했고 코드는 고쳤다. **Play 내부 테스트 앱에는 아직 반영되지 않았다**(아래 "Play 앱에서 아직 나는 이유").
+정리 2026-10-14. PR #23·#25 수정분을 **production 원격 업데이트로 게시했다. Play 내부 테스트 실기기 수신·동작 검증은 대기 중이다**(아래 "Play 앱 반영 상태").
 다른 화면을 만들 때 같은 일을 막으려면 맨 아래 "재발 방지 규칙"을 본다.
 
 ## 증상
@@ -57,20 +57,21 @@ View already has a parent: [1164]   (SurfaceMountingManager.addViewAt)
 `frontend/src/service/TransactionForm.tsx`
 
 1. 입력 묶음 View에 `collapsable={false}`(PR #23, `25381c4`). 항상 네이티브 뷰로 남으니 `busy`가 바뀌어도 prop만 바뀌고 재배치가 없다.
-2. 저장·삭제가 **성공하면 `busy`/잠금을 풀지 않는다**(이 브랜치). `finally`를 없애고 실패(`catch`)에서만 `unlock()`한다. 성공하면 화면이 곧 사라지므로 풀 필요가 없다. 풀지 않으니 전환 중 다시 렌더할 일도 없고, 전환 도중 저장 버튼을 또 누르는 일도 막힌다.
+2. 저장·삭제가 **성공하면 `busy`/잠금을 풀지 않는다**(PR #25, `8416c69`). `finally`를 없애고 실패(`catch`)에서만 `unlock()`한다. 성공하면 화면이 곧 사라지므로 풀 필요가 없다. 풀지 않으니 전환 중 다시 렌더할 일도 없고, 전환 도중 저장 버튼을 또 누르는 일도 막힌다.
 
 웹은 `collapsable`을 무시하고, 성공 시 화면이 바로 바뀌므로 동작 차이가 없다.
 
-## Play 앱에서 아직 나는 이유
+## Play 앱 반영 상태
 
-Play 내부 테스트 앱은 **수정 전 코드**다.
+Play 내부 테스트 versionCode 5 AAB에 내장된 코드는 수정 전 코드다. EAS 조회로 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`을 확인했다. 해당 커밋은 `expo-updates`를 추가한 PR #19를 포함한다.
 
 - versionCode 5 AAB는 수정 커밋(`25381c4`, 10-14 17:26)보다 먼저 빌드·업로드됐다. 업로드 기록이 그 수정 커밋에 함께 들어가 있다.
-- 수정은 아직 `production` 채널에 원격 업데이트로 게시되지 않았다(HANDOFF §0-1: "원격 업데이트로 실기기 확인" 남음).
+- 2026-10-14 최신 main `1c0028e`를 `ucmnuniverse` 계정으로 `production` 채널·환경, Android 런타임 `1.0.0`에 게시했다. PR #23·#25 수정과 PR #26 캐릭터 홈 변경을 포함한다.
+- 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). Android 업데이트 ID: `01a13a58-4491-7ad8-b978-efb504cdf459`.
 
-→ 이 수정이 Play 앱에 닿으려면 `production` 채널에 원격 업데이트를 올려야 한다(HANDOFF §4-2). 네이티브 변경이 없으므로 새 AAB는 필요 없다. 앱은 실행할 때 업데이트를 받고, **다음 실행부터** 적용한다. 테스터에게 "앱을 완전히 껐다가 두 번 실행"하도록 안내한다.
+네이티브 변경이 없어 새 AAB 대신 원격 업데이트로 게시했다. 테스터는 인터넷이 연결된 상태에서 앱을 실행해 업데이트 다운로드 시간을 준 뒤, 앱을 완전히 종료하고 다시 실행한다. 그 후 아래 저장 동작을 검증한다.
 
-> 확인 필요: versionCode 5의 빌드 커밋·`runtimeVersion`(1.0.0)·채널(`production`)은 EAS 빌드 목록에서 확인한다(`npx eas-cli@latest build:list --platform android`). `expo-updates`가 들어간 빌드여야(PR #19 이후) 원격 업데이트를 받는다.
+게시 전 타입 검사·린트 및 Android 번들 생성은 통과했고, 게시 후 `eas update:view`로 업데이트 그룹과 런타임을 재확인했다. 실기기 수신·동작 성공 여부는 아직 확인하지 않았다.
 
 ## 검증
 

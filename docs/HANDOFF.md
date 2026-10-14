@@ -6,7 +6,7 @@
 
 ## 0. 다음에 이어서 할 일 (2026-10-14 기준, 우선순위 순)
 
-1. [ ] 거래 수정 저장 후 빈 화면 버그: 원인(Fabric 뷰 재배치) 확인·수정, 에뮬레이터 검증 완료(10-14, `docs/bug-transaction-edit-blank-screen.md`) → 원격 업데이트로 실기기 확인
+1. [ ] 거래 수정·수입 저장 후 빈 화면 버그: PR #23·#25 머지, 10-14 `production` 원격 업데이트 게시 완료 → Play 내부 테스트 실기기 검증 대기(`docs/bug-transaction-edit-blank-screen.md`)
 2. [ ] 팀원에게 새 APK 배포 → 2차 피드백 수집(노션)
 3. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
 4. [ ] Google 계정 복구됨(10-14) → §4-3에 따라 Play Console 진행
@@ -89,14 +89,17 @@ npx eas-cli@latest build -p android --profile production
 
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
 
+현재 검증 대상은 Play 내부 테스트 앱이다. EAS 조회로 versionCode 5의 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`, PR #19 포함을 확인했다. 2026-10-14에 최신 main `1c0028e`(PR #23·#25 저장 버그 수정, PR #26 캐릭터 홈 변경)를 `ucmnuniverse` 계정으로 게시했다. 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). 타입 검사·린트·Android 번들 생성·EAS 게시 확인 완료. 실기기 수신·저장 동작 검증은 아직 남아 있다.
+
 ```bash
 cd frontend
-# 1) preview 채널에 올려 preview APK로 확인 (main을 최신으로 받은 뒤)
-npm run update:preview -- --message "거래 수정 저장 오류 수정"
-# 2) 확인이 끝나면 같은 번들을 production으로 승격 (새로 번들링하지 않음)
-npm run update:promote -- --message "거래 수정 저장 오류 수정"
+# 로그인 계정 ucmnuniverse 및 최신 main, 대상 빌드·런타임을 먼저 확인
+npx eas-cli@latest whoami
+# Play 내부 테스트 앱은 production 채널을 사용
+npx eas-cli@latest update --channel production --environment production --platform android --message "변경 내용" --non-interactive
 ```
 
+- preview APK로 별도 검증할 때는 `npm run update:preview`를 사용한다. 같은 번들의 production 승격(`npm run update:promote`)은 preview·production 환경변수가 같을 때만 사용한다.
 - `runtimeVersion`은 `appVersion` 정책이다. 네이티브가 바뀌는 변경(네이티브 패키지 추가·업그레이드, `app.json`의 권한·플러그인·아이콘, Expo SDK 업그레이드)은 원격 업데이트로 보낼 수 없다. 이때는 `app.json`의 `version`을 올리고(예: 1.0.0 → 1.0.1) 새로 빌드한다. 버전을 안 올리고 원격 업데이트로 보내면 예전 빌드에서 앱이 꺼질 수 있다.
 - 승격은 preview에서 만든 번들을 그대로 쓰므로 preview·production 환경변수가 같아야 한다. 다르면 `npx eas-cli@latest update --channel production --environment production`으로 따로 올린다.
 - 잘못 올렸으면 이전 업데이트를 같은 채널에 다시 게시해서 되돌린다(`npx eas-cli@latest update:republish --group <이전 그룹 ID>`). 그룹 ID는 `npx eas-cli@latest update:list --branch production`에서 확인한다.
