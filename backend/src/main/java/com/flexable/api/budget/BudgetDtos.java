@@ -49,6 +49,12 @@ public final class BudgetDtos {
 	public record TodayResponse(LocalDate date, LocalDate nextPayday, int daysLeft, long estimatedBalance,
 			long reservedFixed, long cardUnpaid, long protectedTotal, long remaining, long todaySpent,
 			long dailyBudget, long todayAvailable, long shortage, long weekSpent, int weekDaysLeft, long weekAvailable,
-			LocalDate cycleStart, boolean hasTransactions) {
+			LocalDate cycleStart, boolean hasTransactions, int characterPoints, int characterDelta) {
+
+		TodayResponse withCharacter(CharacterScore.Result c) {
+			return new TodayResponse(date, nextPayday, daysLeft, estimatedBalance, reservedFixed, cardUnpaid,
+					protectedTotal, remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent, weekDaysLeft,
+					weekAvailable, cycleStart, hasTransactions, c.points(), c.delta());
+		}
 	}
 }

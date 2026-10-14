@@ -129,7 +129,9 @@
   "weekDaysLeft": 6,
   "weekAvailable": 192000,
   "cycleStart": "2026-09-25",
-  "hasTransactions": true
+  "hasTransactions": true,
+  "characterPoints": 130,
+  "characterDelta": 15
 }
 ```
 
@@ -145,6 +147,10 @@
 - `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
 - `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈
 - `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
+- 캐릭터 단계 점수(`characterPoints`, 0~400, 100점이 한 단계: 0~99 Lv.1 … 400 Lv.5):
+  - 이 요청마다 오늘의 `dailyBudget`을 날짜별로 저장한다(`daily_budgets`, 같은 날은 덮어씀 → 그날 마지막 값).
+  - 처음 저장한 날 0점(Lv.1 0%)에서 시작해 그날부터 **어제까지** 하루씩 반영한다. 그날 지출 합(고정지출 자동 기록 제외)이 그날 하루 예산 이하면 +15, 넘으면 −50(0~400으로 자름). 저장이 없는 날(앱을 안 연 날)은 그 전 마지막 하루 예산으로 판단한다. 오늘은 내일 반영한다.
+  - `characterDelta` = 어제 하루의 점수 변화(반영한 날이 없으면 0)
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
 

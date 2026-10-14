@@ -76,7 +76,7 @@ public final class BudgetCalculator {
 
 		return new TodayResponse(today, nextPayday, daysLeft, estimated, reservedFixed, in.cardUnpaid(),
 				in.protectedTotal(), remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent,
-				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions());
+				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions(), 0, 0);
 	}
 
 	/** 그 달의 수입일(31 등 없는 날은 말일로). */

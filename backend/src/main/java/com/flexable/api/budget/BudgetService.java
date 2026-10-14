@@ -6,7 +6,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +23,7 @@ import com.flexable.api.budget.BudgetDtos.TodayResponse;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
+import com.flexable.api.common.TxType;
 import com.flexable.api.config.AppProperties;
 import com.flexable.api.transaction.TransactionRepository;
 import com.flexable.api.user.UserRepository;
@@ -32,18 +37,20 @@ public class BudgetService {
 	private final TransactionRepository transactions;
 	private final UserRepository users;
 	private final FixedExpensePoster fixedPoster;
+	private final DailyBudgetRepository dailyBudgets;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public BudgetService(SettingsRepository settings, FixedExpenseRepository fixed,
 			ProtectedItemRepository protectedItems, TransactionRepository transactions, UserRepository users,
-			FixedExpensePoster fixedPoster, Clock clock, AppProperties props) {
+			FixedExpensePoster fixedPoster, DailyBudgetRepository dailyBudgets, Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
 		this.protectedItems = protectedItems;
 		this.transactions = transactions;
 		this.users = users;
 		this.fixedPoster = fixedPoster;
+		this.dailyBudgets = dailyBudgets;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -110,7 +117,25 @@ public class BudgetService {
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
 				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
 				!txs.isEmpty() || transactions.existsByUserId(userId));
-		return BudgetCalculator.compute(input, today, zone);
+		TodayResponse r = BudgetCalculator.compute(input, today, zone);
+		dailyBudgets.upsert(userId, today, r.dailyBudget());
+		return r.withCharacter(characterScore(userId, today));
+	}
+
+	/** 하루 예산을 처음 기록한 날부터 어제까지 그날 예산을 지켰는지로 캐릭터 점수를 낸다. */
+	private CharacterScore.Result characterScore(long userId, LocalDate today) {
+		NavigableMap<LocalDate, Long> budgets = new TreeMap<>();
+		dailyBudgets.findOrdered(userId).forEach(d -> budgets.put(d.getDate(), d.getDailyBudget()));
+		if (budgets.isEmpty()) {
+			return new CharacterScore.Result(0, 0);
+		}
+		Map<LocalDate, Long> spent = new HashMap<>();
+		for (var t : transactions.findSince(userId, budgets.firstKey().atStartOfDay(zone).toInstant())) {
+			if (t.getType() == TxType.EXPENSE && !t.isFromFixed()) {
+				spent.merge(t.getOccurredAt().atZone(zone).toLocalDate(), t.getAmount(), Long::sum);
+			}
+		}
+		return CharacterScore.compute(budgets, spent, today);
 	}
 
 	private BudgetSettings require(long userId) {

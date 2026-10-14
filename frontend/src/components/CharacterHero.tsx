@@ -1,9 +1,11 @@
 /**
  * 캐릭터 홈 상단 — 예산을 잘 지킬수록 부자 캐릭터(Lv.5 다이아), 못 지킬수록 Lv.1(돌)로 강등.
+ * 아래 게이지로 승급·하락까지 얼마나 남았는지 보여준다. 실서비스는 서버 점수(하루 예산을 지키면 +15, 넘기면 −50),
+ * 시연은 이번 주기 소비 속도(쓴 돈 ÷ 같은 기간 예산)로 단계를 정한다.
  * 좌우 < > 버튼은 시연용(희미하게 표시) — 누르면 레벨이 바뀐다.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import type { BudgetSummary } from '@/store/budget';
@@ -49,22 +51,48 @@ const LEVELS: Record<Level, { img: ImageSourcePropType; msg: string; bg: string;
   },
 };
 
-/** 이번 주기 소비 속도로 레벨 계산: 지금까지 쓴 돈 ÷ (같은 기간 예산) */
-export function levelFromBudget(s: BudgetSummary, today: Date): Level {
+/** 단계별 소비 속도 구간 [승급 쪽 경계, 하락 쪽 경계]. 속도 = 쓴 돈 ÷ 같은 기간 예산(1이면 예산만큼) */
+const BANDS: Record<Level, [number, number]> = {
+  5: [0, 0.8],
+  4: [0.8, 0.95],
+  3: [0.95, 1.05],
+  2: [1.05, 1.2],
+  1: [1.2, 1.5],
+};
+
+export type PaceStatus = { level: Level; progress: number; label: string };
+
+/** 소비 속도 → 단계와 게이지(0 = 곧 하락, 1 = 곧 승급). short 면 생활비가 모자란 상태라 Lv.1. 시연 캐릭터 홈용 */
+export function paceStatus(pace: number, short: boolean): PaceStatus {
+  if (short) return { level: 1, progress: 0, label: '남은 생활비가 모자라요' };
+  const level: Level = pace <= 0.8 ? 5 : pace <= 0.95 ? 4 : pace <= 1.05 ? 3 : pace <= 1.2 ? 2 : 1;
+  const [lo, hi] = BANDS[level];
+  const progress = level === 5 ? 1 : Math.min(1, Math.max(0, (hi - pace) / (hi - lo)));
+  const diff = Math.round((1 - pace) * 100);
+  const label = diff > 0 ? `이번 주기 예산보다 ${diff}% 덜 쓰는 중` : diff < 0 ? `이번 주기 예산보다 ${-diff}% 더 쓰는 중` : '이번 주기 예산만큼 쓰는 중';
+  return { level, progress, label };
+}
+
+/** 서버 캐릭터 점수(0~400, 100점이 한 단계) → 단계와 게이지. 실서비스용 */
+export function pointsStatus(points: number, label: string): PaceStatus {
+  const p = Math.min(400, Math.max(0, points));
+  const level = Math.min(5, Math.floor(p / 100) + 1) as Level;
+  return { level, progress: level === 5 ? 1 : (p % 100) / 100, label };
+}
+
+/** 이번 주기 소비 속도로 단계 계산: 지금까지 쓴 돈 ÷ (같은 기간 예산) */
+export function statusFromBudget(s: BudgetSummary, today: Date): PaceStatus {
   const total = diffDays(s.cycleEnd, s.cycleStart) + 1;
   const elapsed = diffDays(today, s.cycleStart) + 1;
   const expected = (s.cycleBudget * elapsed) / total;
   const pace = expected > 0 ? s.cycleSpent / expected : 1;
-  if (s.shortage > 0 || pace > 1.2) return 1;
-  if (pace > 1.05) return 2;
-  if (pace > 0.95) return 3;
-  if (pace > 0.8) return 4;
-  return 5;
+  return paceStatus(pace, s.shortage > 0);
 }
 
 export function CharacterHero() {
   const { summary: s, today } = useStore();
-  const auto = levelFromBudget(s, today);
+  const status = statusFromBudget(s, today);
+  const auto = status.level;
   const [level, setLevel] = useState<Level>(auto);
   // 예산 상태가 바뀌면 시연용으로 바꾼 레벨을 자동 레벨로 되돌린다
   const [prevAuto, setPrevAuto] = useState(auto);
@@ -73,14 +101,14 @@ export function CharacterHero() {
     setLevel(auto);
   }
   return (
-    <CharacterStage level={level} onChange={setLevel}>
+    <CharacterStage level={level} onChange={setLevel} gauge={level === auto ? status : { level, progress: 0.5, label: '시연용으로 단계를 바꿨어요' }}>
       <TodayHeroCard />
     </CharacterStage>
   );
 }
 
-/** 위 오늘 카드 + 아래 캐릭터·말풍선·단계 점. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
-export function CharacterStage({ level, onChange, children }: { level: Level; onChange?: (level: Level) => void; children: ReactNode }) {
+/** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. message 가 없으면 단계별 기본 말(시연용, 지금 소비 상태 기준)을 쓴다. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
+export function CharacterStage({ level, gauge, message, onChange, children }: { level: Level; gauge: PaceStatus; message?: string; onChange?: (level: Level) => void; children: ReactNode }) {
 
   // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
   const scale = useAnimValue(1);
@@ -109,7 +137,7 @@ export function CharacterStage({ level, onChange, children }: { level: Level; on
 
       <View style={styles.bubble}>
         <T size={14} weight="600" numberOfLines={1} style={{ textAlign: 'center', lineHeight: 20 }}>
-          {L.msg}
+          {message ?? L.msg}
         </T>
         <View style={styles.tail} />
       </View>
@@ -126,11 +154,52 @@ export function CharacterStage({ level, onChange, children }: { level: Level; on
         </Pressable>
       </View>
 
-      <View style={styles.dots}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <View key={n} style={[styles.dot, n <= level && { backgroundColor: L.accent }]} />
-        ))}
+      <Gauge status={gauge} accent={L.accent} />
+    </View>
+  );
+}
+
+/** 지금 단계 안에서 하락(왼쪽) ~ 승급(오른쪽) 사이 어디쯤인지 */
+function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
+  const { level, progress, label } = status;
+  const top = level === 5;
+  const fill = useAnimValue(progress);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (reduced) fill.setValue(progress);
+    else Animated.timing(fill, { toValue: progress, duration: 600, useNativeDriver: false }).start();
+  }, [progress, reduced, fill]);
+  const pct = Math.round(progress * 100);
+  return (
+    <View
+      style={styles.gauge}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={top ? `최고 단계, ${label}` : `Lv.${level} 승급 게이지 ${pct}%, ${label}`}
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+    >
+      <View style={styles.gaugeHead}>
+        <T size={12} weight="600" color={colors.textMuted}>
+          {level === 1 ? 'Lv.1' : `▼ Lv.${level - 1}`}
+        </T>
+        <T size={13} weight="800" color={accent}>
+          {top ? '최고 단계' : `Lv.${level} ${pct}%`}
+        </T>
+        <T size={12} weight="600" color={colors.textMuted}>
+          {top ? 'Lv.5' : `Lv.${level + 1} ▲`}
+        </T>
       </View>
+      <View style={styles.track}>
+        <Animated.View
+          style={[
+            styles.bar,
+            { backgroundColor: accent, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+          ]}
+        />
+      </View>
+      <T size={12} color={colors.textSub} style={{ textAlign: 'center' }}>
+        {label}
+      </T>
     </View>
   );
 }
@@ -161,6 +230,8 @@ const styles = StyleSheet.create({
   stage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4, alignSelf: 'stretch' },
   arrow: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', opacity: 0.22 },
   char: { width: 220, height: 220 },
-  dots: { flexDirection: 'row', gap: 6, marginTop: 2 },
-  dot: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.1)' },
+  gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
+  gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  track: { height: 10, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.08)', overflow: 'hidden' },
+  bar: { height: '100%', borderRadius: 5 },
 });

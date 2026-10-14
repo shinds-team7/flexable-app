@@ -144,7 +144,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] 수입 저장·거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(이슈 #24): PR #23·#25로 수정, `production` 원격 업데이트 게시 완료, 실기기 확인 대기. 원인·재발 방지 규칙·검증 체크리스트는 `docs/bug-transaction-edit-blank-screen.md`
 - [ ] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): `expo-build-properties` 플러그인으로 `android.enableMinifyInReleaseBuilds: true` 설정 → EAS 빌드 결과물의 `mapping.txt`를 Play에 업로드. 켜면 리플렉션 쓰는 네이티브 모듈이 release에서만 깨질 수 있으니 preview 빌드로 먼저 확인
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
-- [ ] 캐릭터 홈 단계가 "오늘 예산 사용률" 기준이다. 정산 주기 전체 기준으로 바꾸려면 `/budget/today`에 주기 예산·지출을 추가해야 한다
+- [x] 캐릭터 홈 단계를 하루 단위 점수로 변경(이슈 #29, PR #30): 처음 쓴 날 광부 0%에서 시작, 예산을 지킨 날 +15·넘긴 날 −50(100점이 한 단계). 날짜별 하루 예산은 `daily_budgets`(V4)에 저장. 규칙은 `docs/API.md` "GET /budget/today"
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
 - [ ] 웹 개발 모드에서 원그래프·캐릭터 화면에 "Invalid DOM property transform…" 경고(기능 영향 없음)
 - [ ] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 rebase 전 원본이다. 원격과 PR은 `SXXNHU/service-frontend`를 쓴다.

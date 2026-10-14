@@ -58,6 +58,9 @@ export type Today = {
   weekAvailable: number;
   cycleStart: string;
   hasTransactions: boolean;
+  // Absent on servers deployed before the character score existed.
+  characterPoints?: number;
+  characterDelta?: number;
 };
 export type Analysis = {
   from: string;
