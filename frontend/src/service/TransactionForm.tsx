@@ -166,7 +166,10 @@ function Form({
   };
   return (
     <Page title={existing ? "거래 상세" : "거래 직접 기록"}>
+      {/* Keep a real native view: toggling pointerEvents would otherwise flatten/unflatten it and
+          reparent the fields while the screen pops, which crashed Android (addViewAt: already has a parent). */}
       <View
+        collapsable={false}
         pointerEvents={busy || uncertain ? "none" : "auto"}
         style={{ gap: 12 }}
       >
