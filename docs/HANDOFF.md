@@ -125,6 +125,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 ```
 
 - 코드 변경 배포: 로컬에서 `backend/deploy/deploy.sh` (jar 빌드 → 업로드 → 재기동)
+- **EC2 루트 디스크가 6.7GB뿐이다.** Docker 빌드 캐시가 쌓이면 배포 빌드가 `apt-get update`(exit 100)에서 실패하는데 실제 원인은 디스크 부족이다(10-15 발생, 이슈 #31). `deploy.sh`가 배포마다 빌드 캐시·이전 이미지를 지우고 마지막에 `df` 결과를 보여 준다. 사용량이 90%를 넘으면 `docker system df`로 확인하고, 계속 부족하면 EBS 볼륨을 늘린다
 - 구성: `backend/deploy/` (Docker Compose: api + Caddy 자동 HTTPS), 절차는 `backend/README.md`
 - EC2: Ubuntu 26.04, t3.micro, swap 2GB. 보안 그룹 `flex-api-web`(22는 관리자 IP만, 80, 443) + `ec2-rds-1`
   - **새 PC나 사무실에서는 공인 IP가 달라 SSH가 막힌다.** EC2 → 보안 그룹 `flex-api-web` → 인바운드 22번 소스를 새 IP로 바꾼다.
