@@ -4,6 +4,7 @@ import { View } from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
   CharacterStage,
+  coinStage,
   pointsStatus,
   type Level,
   type PaceStatus,
@@ -49,6 +50,7 @@ export function HomeScreen() {
           {style === "character" ? (
             <CharacterStage
               level={status.level}
+              coins={coinStage(s.todayAvailable, s.dailyBudget)}
               gauge={status}
               message={messageOf(s, status.level)}
             >

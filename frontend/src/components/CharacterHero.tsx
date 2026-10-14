@@ -17,34 +17,59 @@ import { T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5;
 
-/** 레벨별 캐릭터 (원본: status-1 광부 · status-4 츄리닝 · status-5 직장인 · status-2 플렉스 · status-3 왕) */
-const LEVELS: Record<Level, { img: ImageSourcePropType; msg: string; bg: string; accent: string }> = {
+/** 레벨별 캐릭터(광부 → 왕). img 는 뒤에 쌓인 동전이 적은 순 4장 — 오늘 남은 돈만큼 고른다(coinStage) */
+const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: string; accent: string }> = {
   1: {
-    img: require('../../assets/characters/lv1.png'),
+    img: [
+      require('../../assets/characters/lv1-1.png'),
+      require('../../assets/characters/lv1-2.png'),
+      require('../../assets/characters/lv1-3.png'),
+      require('../../assets/characters/lv1-4.png'),
+    ],
     msg: '예산 초과! 오늘은 한도 안에서만 써요',
     bg: '#EEF2FA',
     accent: '#667085',
   },
   2: {
-    img: require('../../assets/characters/lv2.png'),
+    img: [
+      require('../../assets/characters/lv2-1.png'),
+      require('../../assets/characters/lv2-2.png'),
+      require('../../assets/characters/lv2-3.png'),
+      require('../../assets/characters/lv2-4.png'),
+    ],
     msg: '이번 주 빠듯해요. 카페 한 번만 줄여요',
     bg: '#EEF2FA',
     accent: '#8A6A3B',
   },
   3: {
-    img: require('../../assets/characters/lv3.png'),
+    img: [
+      require('../../assets/characters/lv3-1.png'),
+      require('../../assets/characters/lv3-2.png'),
+      require('../../assets/characters/lv3-3.png'),
+      require('../../assets/characters/lv3-4.png'),
+    ],
     msg: '잘 버티는 중! 오늘 한도만 지키면 돼요',
     bg: '#EEF2FA',
     accent: '#1D3A8A',
   },
   4: {
-    img: require('../../assets/characters/lv4.png'),
+    img: [
+      require('../../assets/characters/lv4-1.png'),
+      require('../../assets/characters/lv4-2.png'),
+      require('../../assets/characters/lv4-3.png'),
+      require('../../assets/characters/lv4-4.png'),
+    ],
     msg: '예산을 잘 지키고 있어요. 이 정도면 플렉스 가능!',
     bg: '#EEF2FA',
     accent: '#A11D2B',
   },
   5: {
-    img: require('../../assets/characters/lv5.png'),
+    img: [
+      require('../../assets/characters/lv5-1.png'),
+      require('../../assets/characters/lv5-2.png'),
+      require('../../assets/characters/lv5-3.png'),
+      require('../../assets/characters/lv5-4.png'),
+    ],
     msg: '완벽해요! 예산 관리의 왕이에요',
     bg: '#EEF2FA',
     accent: '#B7791F',
@@ -61,6 +86,15 @@ const BANDS: Record<Level, [number, number]> = {
 };
 
 export type PaceStatus = { level: Level; progress: number; label: string };
+
+/** 캐릭터 뒤 동전 더미 단계(1 = 거의 없음, 4 = 가득) */
+export type CoinStage = 1 | 2 | 3 | 4;
+
+/** 오늘 남은 돈 ÷ 하루 예산 → 동전 단계. 아침엔 가득, 쓸수록 줄어든다(70% · 40% · 10% 경계) */
+export function coinStage(todayAvailable: number, dailyBudget: number): CoinStage {
+  const ratio = dailyBudget > 0 ? todayAvailable / dailyBudget : 0;
+  return ratio > 0.7 ? 4 : ratio > 0.4 ? 3 : ratio > 0.1 ? 2 : 1;
+}
 
 /** 소비 속도 → 단계와 게이지(0 = 곧 하락, 1 = 곧 승급). short 면 생활비가 모자란 상태라 Lv.1. 시연 캐릭터 홈용 */
 export function paceStatus(pace: number, short: boolean): PaceStatus {
@@ -101,14 +135,14 @@ export function CharacterHero() {
     setLevel(auto);
   }
   return (
-    <CharacterStage level={level} onChange={setLevel} gauge={level === auto ? status : { level, progress: 0.5, label: '시연용으로 단계를 바꿨어요' }}>
+    <CharacterStage level={level} coins={coinStage(s.todayAvailable, s.dailyLimit)} onChange={setLevel} gauge={level === auto ? status : { level, progress: 0.5, label: '시연용으로 단계를 바꿨어요' }}>
       <TodayHeroCard />
     </CharacterStage>
   );
 }
 
-/** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. message 가 없으면 단계별 기본 말(시연용, 지금 소비 상태 기준)을 쓴다. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
-export function CharacterStage({ level, gauge, message, onChange, children }: { level: Level; gauge: PaceStatus; message?: string; onChange?: (level: Level) => void; children: ReactNode }) {
+/** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. coins 는 캐릭터 뒤 동전 더미 단계. message 가 없으면 단계별 기본 말(시연용, 지금 소비 상태 기준)을 쓴다. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
+export function CharacterStage({ level, coins, gauge, message, onChange, children }: { level: Level; coins: CoinStage; gauge: PaceStatus; message?: string; onChange?: (level: Level) => void; children: ReactNode }) {
 
   // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
   const scale = useAnimValue(1);
@@ -147,7 +181,7 @@ export function CharacterStage({ level, gauge, message, onChange, children }: { 
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
         <Animated.View style={{ transform: [{ translateX: shift }, { scale }] }}>
-          <Image source={L.img} style={styles.char} resizeMode="contain" />
+          <Image source={L.img[coins - 1]} style={styles.char} resizeMode="contain" />
         </Animated.View>
         <Pressable accessibilityRole="button" accessibilityLabel="다음 단계 캐릭터" accessibilityElementsHidden={level === 5 || !onChange} importantForAccessibility={level === 5 || !onChange ? 'no-hide-descendants' : 'auto'} onPress={() => change(1)} disabled={level === 5 || !onChange} hitSlop={12} style={[styles.arrow, (level === 5 || !onChange) && { opacity: 0 }]}>
           <Ionicons name="chevron-forward" size={22} color={colors.text} />
