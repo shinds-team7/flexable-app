@@ -14,6 +14,7 @@
     "expo-router": "~57.0.25",
     "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
+    "expo-updates": "~57.0.26",
     "react": "19.2.3",
     "react-dom": "^19.2.3",
     "react-native": "0.86.3",
@@ -37,7 +38,9 @@
     "web": "expo start --web",
     "build:web": "expo export -p web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "update:preview": "npx eas-cli@latest update --channel preview --environment preview --platform android",
+    "update:promote": "npx eas-cli@latest update:republish --channel preview --destination-channel production --platform android"
   },
   "private": true
 }

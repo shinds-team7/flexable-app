@@ -9,27 +9,25 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "environment": "development",
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://flex-able-sh.duckdns.org",
-        "EXPO_PUBLIC_ENABLE_DEMO": "false"
-      }
+      "environment": "preview",
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://flex-able-sh.duckdns.org",
-        "EXPO_PUBLIC_ENABLE_DEMO": "false"
-      }
+      "environment": "production",
+      "channel": "production"
     }
   },
   "submit": {
