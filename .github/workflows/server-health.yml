@@ -1,0 +1,117 @@
+# 운영 서버를 15분마다 밖에서 확인한다. 실패하면 이슈를 하나 열고(이미 열려 있으면 그대로 둔다), 정상으로 돌아오면 닫는다.
+# 공개 저장소는 60일 동안 커밋이 없으면 예약 실행이 꺼진다 → Actions 탭에서 다시 켠다(HANDOFF §5).
+name: 서버 상태 감시
+
+on:
+  schedule:
+    # 정각 근처는 GitHub 예약 실행이 몰려 늦어지므로 비켜 간다(UTC 기준, 15분 간격).
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+  # 이 파일을 고친 PR에서는 확인만 하고 이슈는 건드리지 않는다.
+  pull_request:
+    paths:
+      - .github/workflows/server-health.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: server-health
+  cancel-in-progress: false
+
+env:
+  API: https://flex-able-sh.duckdns.org
+  WEB: https://project2-flex-sh.vercel.app
+  ISSUE_TITLE: "[서버 감시] 운영 서버 확인 실패"
+  CERT_MIN_DAYS: 10
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 확인
+        id: probe
+        run: |
+          set -uo pipefail
+          problems=""
+
+          # 200이 아니면 problems에 한 줄 추가한다. 일시적인 오류(연결 실패, 502·503 등)는 10초 간격으로 3번 더 시도한다.
+          check() {
+            local name=$1 url=$2 code detail down
+            code=$(curl -sS -o body.txt -w '%{http_code}' --max-time 10 \
+              --retry 3 --retry-delay 10 --retry-all-errors "$url" 2>curl.txt) || true
+            if [ "$code" = 200 ]; then echo "정상  $name"; return; fi
+            if [ "$code" = 000 ]; then
+              detail="연결 실패: $(tail -n 1 curl.txt)"
+            else
+              detail="HTTP $code"
+              # Spring 헬스 응답이면 DOWN인 항목(db, diskSpace 등)을 붙인다.
+              down=$(jq -r '[(.components // {}) | to_entries[] | select(.value.status != "UP") | .key] | join(", ")' body.txt 2>/dev/null) || true
+              [ -n "$down" ] && detail="$detail, DOWN: $down"
+            fi
+            echo "실패  $name — $detail"
+            problems+="- $name \`$url\` — $detail"$'\n'
+          }
+
+          # API 앱·DB(RDS)·디스크를 함께 본다. 하나라도 DOWN이면 503.
+          check "API" "$API/actuator/health"
+          # Play에 등록한 개인정보처리방침 주소
+          check "웹" "$WEB/privacy"
+
+          # Caddy가 인증서를 자동 갱신하지 못하면 만료 전에 알린다.
+          host=${API#https://}
+          end=$(echo | timeout 20 openssl s_client -servername "$host" -connect "$host:443" 2>/dev/null \
+            | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2) || true
+          if [ -n "$end" ]; then
+            days=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))
+            echo "인증서 만료까지 ${days}일 ($end)"
+            if [ "$days" -lt "$CERT_MIN_DAYS" ]; then
+              problems+="- HTTPS 인증서가 ${days}일 뒤 만료 — Caddy 자동 갱신 실패 의심"$'\n'
+            fi
+          fi
+
+          printf '%s' "$problems" > problems.md
+          if [ -z "$problems" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+          {
+            echo "### $(TZ=Asia/Seoul date '+%F %H:%M KST') 서버 상태"
+            if [ -z "$problems" ]; then echo "모두 정상"; else cat problems.md; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 이슈 열기·닫기
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OK: ${{ steps.probe.outputs.ok }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --state open --limit 200 --json number,title \
+            --jq 'map(select(.title == env.ISSUE_TITLE)) | .[0].number // empty')
+          now=$(TZ=Asia/Seoul date '+%F %H:%M KST')
+          if [ "$OK" = true ]; then
+            if [ -n "$open" ]; then gh issue close "$open" --comment "$now 정상으로 돌아온 것을 확인했어요. $RUN_URL"; fi
+          elif [ -z "$open" ]; then
+            gh issue create --title "$ISSUE_TITLE" --body-file - <<EOF
+          $now 운영 서버 확인에 실패했어요. 15분마다 다시 확인하고, 정상으로 돌아오면 이 이슈를 자동으로 닫아요.
+
+          $(cat problems.md)
+
+          실행 기록: $RUN_URL
+
+          **확인 순서** (자세한 명령은 \`docs/HANDOFF.md\` §5)
+          1. 연결 실패: EC2가 꺼졌거나 공인 IP가 바뀌었을 수 있다. AWS 콘솔에서 인스턴스 상태·IP를 보고, IP가 바뀌었으면 DuckDNS를 갱신한다.
+          2. HTTP 502: Caddy는 살아 있고 API 컨테이너가 죽었다. 서버에서 \`docker compose ps\`, \`docker compose logs api --tail 100\`.
+          3. DOWN: db → RDS 상태와 보안 그룹. DOWN: diskSpace → \`df -h /\`, \`docker system df\`, 필요하면 \`docker builder prune -af\`.
+          4. 인증서 만료 임박: \`docker compose logs caddy\`.
+          EOF
+          fi
+
+      - name: 결과
+        if: steps.probe.outputs.ok != 'true'
+        run: |
+          echo "::error::운영 서버 확인 실패"
+          cat problems.md
+          exit 1
