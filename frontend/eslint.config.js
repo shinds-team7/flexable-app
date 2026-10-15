@@ -9,7 +9,7 @@ module.exports = defineConfig([
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/demo/**", "src/app/demo/**"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [{ group: ["@/demo", "@/demo/*"], message: "서비스·공통 코드는 시연 코드(src/demo)를 import하지 않습니다." }] }],
+      "no-restricted-imports": ["error", { patterns: [{ regex: "^(@/(app/)?demo|(\.\.?/)+(app/)?demo)(/|$)", message: "서비스·공통 코드는 시연 코드(src/demo)를 import하지 않습니다." }] }],
     },
   },
   {
