@@ -8,13 +8,13 @@
 | 항목 | 값 |
 |---|---|
 | 앱 이름 | 텅장관리 - 오늘 쓸 수 있는 돈 |
-| 패키지명 | `com.flexable.app` (한 번 올리면 바꿀 수 없음) |
+| 패키지명 | `com.flexable.app` (수정불가) |
 | 버전 | 1.0.0 (versionCode는 EAS 원격 자동 증가) |
 | 기본 언어 | 한국어(ko-KR) |
 | 앱/게임 | 앱, 무료 |
 | 카테고리 | 금융 |
-| 개발자 표시명 | Limbo |
-| 연락처 이메일 | TODO: 개발자 계정 확정 후 결정. 앱·정책 문서는 `dofqls0127@gmail.com` |
+| 개발자 표시명 | ucmnuniverse |
+| 연락처 이메일 | ucmnuniverse@gmail.com |
 | 개인정보처리방침 URL | https://project2-flex-sh.vercel.app/privacy |
 | 계정 삭제 URL | https://project2-flex-sh.vercel.app/delete-account |
 | API 서버 | https://flex-able-sh.duckdns.org (AWS 서울 리전) |
@@ -97,7 +97,7 @@ URL: https://project2-flex-sh.vercel.app/privacy — 원문은 [`privacy-policy.
 |---|---|
 | 이름 | 심사용 계정 |
 | 사용자 이름 | `play.review@flexable.app` |
-| 비밀번호 | 저장소에 두지 않음. 팀 비밀번호 보관함 참고 |
+| 비밀번호 | 팀 비밀번호 보관함 참고 |
 | 기타 안내 | 이메일 인증·2단계 인증 없음. 로그인하면 초기 예산과 예시 거래가 입력되어 있습니다. 계정을 삭제하면 다시 만들어야 하니 삭제 기능은 별도 계정으로 확인해 주세요(회원가입 가능). |
 
 ### 3.4 콘텐츠 등급 (IARC 설문)
@@ -160,12 +160,12 @@ Google Play 정식 출시 전에 14일 동안 테스트가 필요해요.
 
 1) 이 메일 주소(Google 계정)로 테스터 등록을 해뒀어요: (본인 Gmail)
 2) 아래 링크를 Android 폰에서 열고 [테스터 되기]를 눌러주세요
-   (TODO: 옵트인 링크)
+   https://play.google.com/store/apps/details?id=com.flexable.app
 3) 이어서 나오는 Play 스토어 링크에서 설치
 4) 이메일로 가입 → 잔액·월급날 입력 → 지출 몇 건 기록해 보기
 
 · 실제 은행과 연결하지 않아요. 입력한 금액으로만 계산해요.
-· 불편한 점이나 오류는 (TODO: 피드백 채널)로 알려주세요.
+· 불편한 점이나 오류는 ucmnuniverse@gmail.com로 알려주세요.
 · 14일 뒤에는 지우셔도 괜찮아요. 앱 [마이 → 계정 삭제]로 기록도 지울 수 있어요.
 ```
 
