@@ -1,5 +1,6 @@
 # 운영 서버를 15분마다 밖에서 확인한다. 실패하면 이슈를 하나 열고(이미 열려 있으면 그대로 둔다), 정상으로 돌아오면 닫는다.
-# 공개 저장소는 60일 동안 커밋이 없으면 예약 실행이 꺼진다 → Actions 탭에서 다시 켠다(HANDOFF §5).
+# 예약 실행은 기본 브랜치(main)의 이 파일로만 돌고, 몇 분씩 늦거나 빠질 수 있다.
+# 공개 저장소는 60일 동안 저장소 활동(커밋 등)이 없으면 예약 실행이 꺼진다 → Actions 탭에서 다시 켠다(HANDOFF §5).
 name: 서버 상태 감시
 
 on:
@@ -16,14 +17,17 @@ permissions:
   contents: read
   issues: write
 
+# 예약·수동 실행끼리는 한 번에 하나만 돌아 이슈를 두 번 만들지 않는다. PR 실행은 따로 돈다.
 concurrency:
-  group: server-health
+  group: server-health-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
   cancel-in-progress: false
 
 env:
   API: https://flex-able-sh.duckdns.org
   WEB: https://project2-flex-sh.vercel.app
   ISSUE_TITLE: "[서버 감시] 운영 서버 확인 실패"
+  # 이 라벨이 붙은 열린 이슈를 감시 이슈로 본다(제목이 바뀌어도 찾을 수 있게).
+  ISSUE_LABEL: server-health
   CERT_MIN_DAYS: 10
 
 jobs:
@@ -37,14 +41,17 @@ jobs:
           set -uo pipefail
           problems=""
 
-          # 200이 아니면 problems에 한 줄 추가한다. 일시적인 오류(연결 실패, 502·503 등)는 10초 간격으로 3번 더 시도한다.
+          # curl이 성공(종료 코드 0)하고 HTTP 200일 때만 정상이다. 아니면 problems에 한 줄 추가한다.
+          # 일시적인 오류(연결 실패, 본문 중단, 502·503 등)는 10초 간격으로 3번 더 시도한다.
           check() {
-            local name=$1 url=$2 code detail down
+            local name=$1 url=$2 code rc detail down
             code=$(curl -sS -o body.txt -w '%{http_code}' --max-time 10 \
-              --retry 3 --retry-delay 10 --retry-all-errors "$url" 2>curl.txt) || true
-            if [ "$code" = 200 ]; then echo "정상  $name"; return; fi
-            if [ "$code" = 000 ]; then
-              detail="연결 실패: $(tail -n 1 curl.txt)"
+              --retry 3 --retry-delay 10 --retry-all-errors "$url" 2>curl.txt)
+            rc=$?
+            if [ "$rc" -eq 0 ] && [ "$code" = 200 ]; then echo "정상  $name"; return; fi
+            if [ "$rc" -ne 0 ]; then
+              detail="요청 실패: $(tail -n 1 curl.txt)"
+              [ "$code" != 000 ] && detail="$detail (HTTP $code)"
             else
               detail="HTTP $code"
               # Spring 헬스 응답이면 DOWN인 항목(db, diskSpace 등)을 붙인다.
@@ -60,16 +67,19 @@ jobs:
           # Play에 등록한 개인정보처리방침 주소
           check "웹" "$WEB/privacy"
 
-          # Caddy가 인증서를 자동 갱신하지 못하면 만료 전에 알린다.
+          # Caddy가 인증서를 자동 갱신하지 못하면 만료 전에 알린다. 만료일을 못 읽어도 실패로 본다.
           host=${API#https://}
           end=$(echo | timeout 20 openssl s_client -servername "$host" -connect "$host:443" 2>/dev/null \
             | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2) || true
-          if [ -n "$end" ]; then
-            days=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))
+          if [ -n "$end" ] && expires=$(date -d "$end" +%s 2>/dev/null); then
+            days=$(( (expires - $(date +%s)) / 86400 ))
             echo "인증서 만료까지 ${days}일 ($end)"
             if [ "$days" -lt "$CERT_MIN_DAYS" ]; then
               problems+="- HTTPS 인증서가 ${days}일 뒤 만료 — Caddy 자동 갱신 실패 의심"$'\n'
             fi
+          else
+            echo "실패  인증서 만료일을 읽지 못함"
+            problems+="- HTTPS 인증서 만료일을 읽지 못함(\`$host:443\` TLS 연결 실패)"$'\n'
           fi
 
           printf '%s' "$problems" > problems.md
@@ -88,13 +98,14 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          open=$(gh issue list --state open --limit 200 --json number,title \
-            --jq 'map(select(.title == env.ISSUE_TITLE)) | .[0].number // empty')
+          # 라벨로 찾으므로 다른 열린 이슈가 많아도 빠지지 않는다. 라벨이 아직 없으면 빈 목록이다.
+          open=$(gh issue list --state open --label "$ISSUE_LABEL" --limit 100 --json number --jq '.[].number')
           now=$(TZ=Asia/Seoul date '+%F %H:%M KST')
           if [ "$OK" = true ]; then
-            if [ -n "$open" ]; then gh issue close "$open" --comment "$now 정상으로 돌아온 것을 확인했어요. $RUN_URL"; fi
+            for n in $open; do gh issue close "$n" --comment "$now 정상으로 돌아온 것을 확인했어요. $RUN_URL"; done
           elif [ -z "$open" ]; then
-            gh issue create --title "$ISSUE_TITLE" --body-file - <<EOF
+            gh label create "$ISSUE_LABEL" --color B60205 --description "server-health.yml이 자동으로 열고 닫는 이슈" --force >/dev/null
+            gh issue create --title "$ISSUE_TITLE" --label "$ISSUE_LABEL" --body-file - <<EOF
           $now 운영 서버 확인에 실패했어요. 15분마다 다시 확인하고, 정상으로 돌아오면 이 이슈를 자동으로 닫아요.
 
           $(cat problems.md)
@@ -102,10 +113,10 @@ jobs:
           실행 기록: $RUN_URL
 
           **확인 순서** (자세한 명령은 \`docs/HANDOFF.md\` §5)
-          1. 연결 실패: EC2가 꺼졌거나 공인 IP가 바뀌었을 수 있다. AWS 콘솔에서 인스턴스 상태·IP를 보고, IP가 바뀌었으면 DuckDNS를 갱신한다.
+          1. 요청 실패(연결 실패·시간 초과): EC2가 꺼졌거나 공인 IP가 바뀌었을 수 있다. AWS 콘솔에서 인스턴스 상태·IP를 보고, IP가 바뀌었으면 DuckDNS를 갱신한다.
           2. HTTP 502: Caddy는 살아 있고 API 컨테이너가 죽었다. 서버에서 \`docker compose ps\`, \`docker compose logs api --tail 100\`.
           3. DOWN: db → RDS 상태와 보안 그룹. DOWN: diskSpace → \`df -h /\`, \`docker system df\`, 필요하면 \`docker builder prune -af\`.
-          4. 인증서 만료 임박: \`docker compose logs caddy\`.
+          4. 인증서 만료 임박·만료일을 읽지 못함: \`docker compose logs caddy\`.
           EOF
           fi
 
