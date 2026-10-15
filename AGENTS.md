@@ -20,6 +20,7 @@ frontend/                 Expo(React Native) · Expo Router. 한 코드로 Andro
   src/theme/, src/utils/  색·글꼴 토큰, 날짜·금액 포맷
   e2e/                    Playwright(실제 서비스 흐름)
 docs/                     API 계약, 기능 기준표, 운영 인수인계, Play 제출 자료
+.github/workflows/        ci.yml(PR 검증), server-health.yml(운영 서버 15분 감시)
 ```
 
 **의존 방향:** `src/demo`·`src/app/demo`는 서비스·공통 코드를 써도 되지만, 그 밖의 코드는 `@/demo/*`를 import하지 않는다(ESLint로 막혀 있음). 공통 UI는 값을 props로 받아 표시만 하고, 데이터는 서비스·시연 쪽이 넘긴다.
@@ -52,6 +53,7 @@ npx playwright test                        # 로컬 백엔드(8080)와 웹(8081)
 ```
 
 코드를 바꿨으면 바꾼 영역의 검사를 돌리고 결과를 그대로 보고한다. 실기기·배포 확인은 코드 검증과 따로 적는다.
+PR을 올리면 GitHub Actions(`.github/workflows/ci.yml`)가 위 검사를 모두 다시 돌린다(E2E는 정적 웹 빌드 + H2 백엔드). CI가 실패한 PR은 머지하지 않는다.
 
 ## 배포는 세 갈래다
 
