@@ -45,9 +45,10 @@ jobs:
           # 일시적인 오류(연결 실패, 본문 중단, 502·503 등)는 10초 간격으로 3번 더 시도한다.
           check() {
             local name=$1 url=$2 code rc detail down
+            # Actions 기본 셸은 bash -e라서 실패 코드는 `|| rc=$?`로 받아야 단계가 멈추지 않는다.
+            rc=0
             code=$(curl -sS -o body.txt -w '%{http_code}' --max-time 10 \
-              --retry 3 --retry-delay 10 --retry-all-errors "$url" 2>curl.txt)
-            rc=$?
+              --retry 3 --retry-delay 10 --retry-all-errors "$url" 2>curl.txt) || rc=$?
             if [ "$rc" -eq 0 ] && [ "$code" = 200 ]; then echo "정상  $name"; return; fi
             if [ "$rc" -ne 0 ]; then
               detail="요청 실패: $(tail -n 1 curl.txt)"
@@ -99,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           # 라벨로 찾으므로 다른 열린 이슈가 많아도 빠지지 않는다. 라벨이 아직 없으면 빈 목록이다.
-          open=$(gh issue list --state open --label "$ISSUE_LABEL" --limit 100 --json number --jq '.[].number')
+          open=$(gh issue list --state open --label "$ISSUE_LABEL" --limit 1000 --json number --jq '.[].number')
           now=$(TZ=Asia/Seoul date '+%F %H:%M KST')
           if [ "$OK" = true ]; then
             for n in $open; do gh issue close "$n" --comment "$now 정상으로 돌아온 것을 확인했어요. $RUN_URL"; done
