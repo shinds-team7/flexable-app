@@ -22,13 +22,13 @@
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
 | 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (`/demo` 시연, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
+| CI | PR·`main` 푸시마다 백엔드 테스트, tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
+| 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
 | Android 빌드 | production AAB versionCode 7(10-15, 새 아이콘·권한 정리 포함) 빌드 완료, Play 업로드 대기 | §4-2 |
 | Play Console | 등록에 쓰던 Google 계정 복구됨(10-14) → 등록·앱 만들기 진행 | §4-3 |
-| CI | PR·`main` 푸시마다 백엔드 테스트, tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
-| 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
 
