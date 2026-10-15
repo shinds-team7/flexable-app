@@ -9,7 +9,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { SubHeader } from '@/components/SubHeader';
 import { Card, Screen, SectionTitle, T } from '@/components/ui';
-import { useStore } from '@/store/AppStore';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { won } from '@/utils/format';
 import { demoRoutes } from '@/demo/routes';

@@ -5,8 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { SubHeader } from '@/components/SubHeader';
 import { Card, Screen, T } from '@/components/ui';
-import { spendOf } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import { spendOf } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { diffDays, endOfWeek, fromKey, toKey } from '@/utils/date';
 import { won } from '@/utils/format';

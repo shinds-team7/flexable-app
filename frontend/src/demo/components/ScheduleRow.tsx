@@ -2,13 +2,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { ScheduledSpend } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import type { ScheduledSpend } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { colors, pressed as pressedFx, pressTransition } from '@/theme';
 import { fromKey, isSameDay } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
-import { useToast } from './Toast';
-import { T } from './ui';
+import { useToast } from '@/components/Toast';
+import { T } from '@/components/ui';
 import { demoRoutes } from '@/demo/routes';
 
 /**

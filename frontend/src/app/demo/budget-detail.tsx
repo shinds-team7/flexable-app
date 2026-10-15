@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { SubHeader } from '@/components/SubHeader';
 import { Button, Card, Screen, Sheet, T } from '@/components/ui';
-import { useStore } from '@/store/AppStore';
+import { useStore } from '@/demo/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { fromKey, md } from '@/utils/date';
 import { DOW, won } from '@/utils/format';

@@ -1,7 +1,6 @@
 /**
  * 예산 계산 엔진 (Mock) — 기획서 §4 "예산 계산 원칙" 구현.
- * SERVICE_MIGRATION: 실제 서비스의 최종 금액은 Spring Budget Engine이 계산한다.
- * 이 함수는 오프라인 미리보기용으로 유지하고 서버 계산 fixture와 동일한 결과인지 검증한다.
+ * 시연 전용. 실제 서비스의 금액은 서버(backend budget/BudgetCalculator.java)가 계산하며, 계산식이 이 파일과 다르다.
  *
  *  계산 구간: 오늘 ~ 다음 수입일 전날
  *  남은 일반 생활비 = 사용 가능 잔액
@@ -15,9 +14,9 @@
  *  · 결제가 들어올 때마다(오픈뱅킹/카드 알림 → 서버) 오늘 금액을 다시 계산한다
  *  · 계산값이 음수면 0원 + 부족액을 따로 안내 (초과 지출을 숨기지 않음)
  */
-import type { DraftItem } from '@/ai/parsePlan';
-import { SPEND_CATEGORIES } from '@/data/categories';
-import type { FixedExpense, Protected, Transaction } from '@/data/mock';
+import type { DraftItem } from '@/demo/ai/parsePlan';
+import { SPEND_CATEGORIES } from '@/demo/data/categories';
+import type { FixedExpense, Protected, Transaction } from '@/demo/data/mock';
 import { addDays, cycleEnd, cycleStart, diffDays, endOfMonth, endOfWeek, fromKey, nextPayday, startOfWeek, toKey } from '@/utils/date';
 
 export type ScheduledSpend = {

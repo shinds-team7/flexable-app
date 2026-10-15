@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import type { ScheduledSpend } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import type { ScheduledSpend } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { addDays, fromKey, isSameDay, toKey } from '@/utils/date';
 import { DOW, won } from '@/utils/format';
-import { useToast } from './Toast';
-import { Button, Sheet, T } from './ui';
+import { useToast } from '@/components/Toast';
+import { Button, Sheet, T } from '@/components/ui';
 
 /** 예정 지출 수정/삭제 시트 (제목·날짜·금액) */
 export function ScheduleEditSheet({ item, onClose }: { item: ScheduledSpend | null; onClose: () => void }) {

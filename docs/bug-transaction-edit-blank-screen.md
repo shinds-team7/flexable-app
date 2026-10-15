@@ -1,6 +1,6 @@
 # 버그: 저장 후 빈 화면 → 뒤로가기 시 앱 종료 (수입 저장 · 거래 수정)
 
-정리 2026-10-14. PR #23·#25 수정분을 **production 원격 업데이트로 게시했다. Play 내부 테스트 실기기 수신·동작 검증은 대기 중이다**(아래 "Play 앱 반영 상태").
+정리 2026-10-14, 이슈 #24. PR #23·#25로 수정해 원격 업데이트로 배포했다. 실기기 확인 여부는 `docs/HANDOFF.md` §0에서 관리한다.
 다른 화면을 만들 때 같은 일을 막으려면 맨 아래 "재발 방지 규칙"을 본다.
 
 ## 증상
@@ -61,19 +61,6 @@ View already has a parent: [1164]   (SurfaceMountingManager.addViewAt)
 
 웹은 `collapsable`을 무시하고, 성공 시 화면이 바로 바뀌므로 동작 차이가 없다.
 
-## Play 앱 반영 상태
-
-Play 내부 테스트 versionCode 5 AAB에 내장된 코드는 수정 전 코드다. EAS 조회로 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`을 확인했다. 해당 커밋은 `expo-updates`를 추가한 PR #19를 포함한다.
-
-- versionCode 5 AAB는 수정 커밋(`25381c4`, 10-14 17:26)보다 먼저 빌드·업로드됐다. 업로드 기록이 그 수정 커밋에 함께 들어가 있다.
-- 2026-10-14 최신 main `1c0028e`를 `ucmnuniverse` 계정으로 `production` 채널·환경, Android 런타임 `1.0.0`에 게시했다. PR #23·#25 수정과 PR #26 캐릭터 홈 변경을 포함한다.
-- 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). Android 업데이트 ID: `01a13a58-4491-7ad8-b978-efb504cdf459`.
-- 같은 커밋을 preview 그룹 `0fa8cf03`에서 production으로 승격해 [bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601)로 다시 게시했다(코드 동일, production 최신). preview APK도 같은 번들을 받는다.
-
-네이티브 변경이 없어 새 AAB 대신 원격 업데이트로 게시했다. 테스터는 인터넷이 연결된 상태에서 앱을 실행해 업데이트 다운로드 시간을 준 뒤, 앱을 완전히 종료하고 다시 실행한다. 그 후 아래 저장 동작을 검증한다.
-
-게시 전 타입 검사·린트 및 Android 번들 생성은 통과했고, 게시 후 `eas update:view`로 업데이트 그룹과 런타임을 재확인했다. 실기기 수신·동작 성공 여부는 아직 확인하지 않았다.
-
 ## 검증
 
 | 환경 | 조작 | 결과 |
@@ -82,7 +69,7 @@ Play 내부 테스트 versionCode 5 AAB에 내장된 코드는 수정 전 코드
 | 같은 환경, 수정 1 적용 | 같은 조작 | 8번 중 0번, 서버에 매번 반영 |
 | 수정 2 | `npx tsc --noEmit`, `npx expo lint` | 통과. 이 PC에는 Android SDK가 없어 기기 검증은 못 함 |
 
-남은 검증(원격 업데이트 후 Play 앱에서):
+실기기에서 확인할 것(이 화면을 다시 고쳤을 때도):
 
 - [ ] 수입 저장 → 이전 화면 복귀 → 뒤로가기, 5회 이상
 - [ ] 거래 상세 수정(시간 변경 포함) → 저장 → 뒤로가기, 5회 이상

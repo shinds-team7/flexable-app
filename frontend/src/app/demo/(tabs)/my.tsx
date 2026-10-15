@@ -6,8 +6,8 @@ import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { useToast } from '@/components/Toast';
 import { Button, Card, Chip, ConfirmModal, IconCircle, Screen, SectionTitle, Segment, Sheet, T } from '@/components/ui';
-import { ACCOUNTS, USER } from '@/data/mock';
-import { useStore } from '@/store/AppStore';
+import { ACCOUNTS, USER } from '@/demo/data/mock';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { md } from '@/utils/date';
 import { won } from '@/utils/format';

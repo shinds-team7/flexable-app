@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, Screen, T } from '@/components/ui';
-import { WeekCalendar } from '@/components/WeekCalendar';
-import { evaluateWeek, recommendWeek, STATUS_META } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import { WeekCalendar } from '@/demo/components/WeekCalendar';
+import { evaluateWeek, recommendWeek, STATUS_META } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { noOutline, colors, font } from '@/theme';
 import { addDays, diffDays, endOfWeek, isSameDay, md, startOfWeek, toKey, weekLabel } from '@/utils/date';
 import { manwon, won } from '@/utils/format';

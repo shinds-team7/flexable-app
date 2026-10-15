@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { DOW } from '@/utils/format';
-import { T } from './ui';
+import { T } from '@/components/ui';
 
 /** 휴대폰 잠금화면 + 푸시 알림 (시연용) */
 export function LockScreen({
@@ -33,7 +33,7 @@ export function LockScreen({
 
       <Pressable accessibilityRole="button" style={styles.noti} onPress={onOpen}>
         <View style={styles.head}>
-          <Image source={require('../../assets/brand/logo.png')} style={styles.icon} />
+          <Image source={require('../../../assets/brand/logo.png')} style={styles.icon} />
           <T size={13} weight="600" color="rgba(255,255,255,0.75)" style={{ flex: 1 }}>
             텅장관리
           </T>

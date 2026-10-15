@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { Segment } from './ui';
+import { Segment } from '@/components/ui';
 import { demoRoutes } from '@/demo/routes';
 
 /** 분석 탭 상단 — 소비 분석 / 거래내역 전환 */

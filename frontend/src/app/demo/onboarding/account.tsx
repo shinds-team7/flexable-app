@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { OnboardingFrame } from '@/components/OnboardingFrame';
 import { T } from '@/components/ui';
-import { ACCOUNTS } from '@/data/mock';
+import { ACCOUNTS } from '@/demo/data/mock';
 import { colors } from '@/theme';
 import { demoRoutes } from '@/demo/routes';
 

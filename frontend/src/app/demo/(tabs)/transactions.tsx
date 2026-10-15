@@ -4,11 +4,11 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AnalysisTabs } from '@/components/AnalysisTabs';
+import { AnalysisTabs } from '@/demo/components/AnalysisTabs';
 import { Badge, Card, IconCircle, Screen, T } from '@/components/ui';
-import { getCategory } from '@/data/categories';
-import type { Transaction } from '@/data/mock';
-import { useStore } from '@/store/AppStore';
+import { getCategory } from '@/demo/data/categories';
+import type { Transaction } from '@/demo/data/mock';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { fromKey, isSameDay, addDays } from '@/utils/date';
 import { DOW, won } from '@/utils/format';

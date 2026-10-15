@@ -6,9 +6,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { SubHeader } from '@/components/SubHeader';
 import { Badge, Button, Card, ConfirmModal, IconCircle, Screen, Sheet, T } from '@/components/ui';
-import { getCategory, SPEND_CATEGORIES } from '@/data/categories';
-import { computeBudget } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import { getCategory, SPEND_CATEGORIES } from '@/demo/data/categories';
+import { computeBudget } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { fromKey } from '@/utils/date';
 import { DOW, won } from '@/utils/format';

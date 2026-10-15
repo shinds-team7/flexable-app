@@ -4,12 +4,12 @@ import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { TodayHeroView } from './TodayHeroView';
-import { styles } from './HomeStyles';
+import { TodayHeroView } from '@/components/TodayHeroView';
+import { styles } from '@/components/HomeStyles';
 import { ScheduleRow } from './ScheduleRow';
-import { AddButton, Badge, Card, IconCircle, Screen, SectionTitle, T } from './ui';
-import { planDailyReserve } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import { AddButton, Badge, Card, IconCircle, Screen, SectionTitle, T } from '@/components/ui';
+import { planDailyReserve } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { colors, pressTransition } from '@/theme';
 import { diffDays, endOfWeek, fromKey, md, startOfWeek, toKey, weekLabel } from '@/utils/date';
 import { DOW, won } from '@/utils/format';

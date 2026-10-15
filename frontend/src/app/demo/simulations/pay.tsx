@@ -7,10 +7,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { LockScreen } from '@/components/LockScreen';
+import { LockScreen } from '@/demo/components/LockScreen';
 import { Button, T } from '@/components/ui';
-import { SPEND_CATEGORIES, type CategoryId } from '@/data/categories';
-import { useStore } from '@/store/AppStore';
+import { SPEND_CATEGORIES, type CategoryId } from '@/demo/data/categories';
+import { useStore } from '@/demo/store/AppStore';
 import { toKey } from '@/utils/date';
 import { won } from '@/utils/format';
 import { demoRoutes } from '@/demo/routes';

@@ -1,18 +1,13 @@
 /**
- * 캐릭터 홈 상단 — 예산을 잘 지킬수록 부자 캐릭터(Lv.5 다이아), 못 지킬수록 Lv.1(돌)로 강등.
- * 아래 게이지로 승급·하락까지 얼마나 남았는지 보여준다. 실서비스는 서버 점수(하루 예산을 지키면 +15, 넘기면 −50),
- * 시연은 이번 주기 소비 속도(쓴 돈 ÷ 같은 기간 예산)로 단계를 정한다.
- * 좌우 < > 버튼은 시연용(희미하게 표시) — 누르면 레벨이 바뀐다.
+ * 캐릭터 홈 상단 UI — 예산을 잘 지킬수록 부자 캐릭터(Lv.5), 못 지킬수록 Lv.1(광부).
+ * 서비스와 시연이 함께 쓴다. 단계·게이지 값은 부르는 쪽이 계산해서 넘긴다.
+ * 서비스는 서버 점수(pointsStatus), 시연은 src/demo/components/CharacterHero.tsx 가 소비 속도로 계산한다.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
-import type { BudgetSummary } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
 import { colors } from '@/theme';
-import { diffDays } from '@/utils/date';
-import { TodayHeroCard } from './HomeContent';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5;
@@ -76,15 +71,6 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: strin
   },
 };
 
-/** 단계별 소비 속도 구간 [승급 쪽 경계, 하락 쪽 경계]. 속도 = 쓴 돈 ÷ 같은 기간 예산(1이면 예산만큼) */
-const BANDS: Record<Level, [number, number]> = {
-  5: [0, 0.8],
-  4: [0.8, 0.95],
-  3: [0.95, 1.05],
-  2: [1.05, 1.2],
-  1: [1.2, 1.5],
-};
-
 export type PaceStatus = { level: Level; progress: number; label: string };
 
 /** 캐릭터 뒤 동전 더미 단계(1 = 거의 없음, 4 = 가득) */
@@ -96,49 +82,11 @@ export function coinStage(todayAvailable: number, dailyBudget: number): CoinStag
   return ratio > 0.7 ? 4 : ratio > 0.4 ? 3 : ratio > 0.1 ? 2 : 1;
 }
 
-/** 소비 속도 → 단계와 게이지(0 = 곧 하락, 1 = 곧 승급). short 면 생활비가 모자란 상태라 Lv.1. 시연 캐릭터 홈용 */
-export function paceStatus(pace: number, short: boolean): PaceStatus {
-  if (short) return { level: 1, progress: 0, label: '남은 생활비가 모자라요' };
-  const level: Level = pace <= 0.8 ? 5 : pace <= 0.95 ? 4 : pace <= 1.05 ? 3 : pace <= 1.2 ? 2 : 1;
-  const [lo, hi] = BANDS[level];
-  const progress = level === 5 ? 1 : Math.min(1, Math.max(0, (hi - pace) / (hi - lo)));
-  const diff = Math.round((1 - pace) * 100);
-  const label = diff > 0 ? `이번 주기 예산보다 ${diff}% 덜 쓰는 중` : diff < 0 ? `이번 주기 예산보다 ${-diff}% 더 쓰는 중` : '이번 주기 예산만큼 쓰는 중';
-  return { level, progress, label };
-}
-
 /** 서버 캐릭터 점수(0~400, 100점이 한 단계) → 단계와 게이지. 실서비스용 */
 export function pointsStatus(points: number, label: string): PaceStatus {
   const p = Math.min(400, Math.max(0, points));
   const level = Math.min(5, Math.floor(p / 100) + 1) as Level;
   return { level, progress: level === 5 ? 1 : (p % 100) / 100, label };
-}
-
-/** 이번 주기 소비 속도로 단계 계산: 지금까지 쓴 돈 ÷ (같은 기간 예산) */
-export function statusFromBudget(s: BudgetSummary, today: Date): PaceStatus {
-  const total = diffDays(s.cycleEnd, s.cycleStart) + 1;
-  const elapsed = diffDays(today, s.cycleStart) + 1;
-  const expected = (s.cycleBudget * elapsed) / total;
-  const pace = expected > 0 ? s.cycleSpent / expected : 1;
-  return paceStatus(pace, s.shortage > 0);
-}
-
-export function CharacterHero() {
-  const { summary: s, today } = useStore();
-  const status = statusFromBudget(s, today);
-  const auto = status.level;
-  const [level, setLevel] = useState<Level>(auto);
-  // 예산 상태가 바뀌면 시연용으로 바꾼 레벨을 자동 레벨로 되돌린다
-  const [prevAuto, setPrevAuto] = useState(auto);
-  if (auto !== prevAuto) {
-    setPrevAuto(auto);
-    setLevel(auto);
-  }
-  return (
-    <CharacterStage level={level} coins={coinStage(s.todayAvailable, s.dailyLimit)} onChange={setLevel} gauge={level === auto ? status : { level, progress: 0.5, label: '시연용으로 단계를 바꿨어요' }}>
-      <TodayHeroCard />
-    </CharacterStage>
-  );
 }
 
 /** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. coins 는 캐릭터 뒤 동전 더미 단계. message 가 없으면 단계별 기본 말(시연용, 지금 소비 상태 기준)을 쓴다. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
