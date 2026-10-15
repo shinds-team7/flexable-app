@@ -23,6 +23,15 @@ npm run lint
 
 E2E는 로컬 백엔드(8080)와 웹(8081)을 띄운 뒤 `npx playwright test`.
 
+## 환경 변수
+
+| 변수 | 내용 | 어디서 정하나 |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | API 서버 주소(`/api/v1`은 앱이 붙임) | 로컬 `.env.local`, 웹 운영 `.env.production`, 앱 빌드·원격 업데이트는 EAS 환경변수 |
+| `EXPO_PUBLIC_ENABLE_DEMO` | `false`면 웹에서도 `/demo`를 막음. 앱에서는 값과 상관없이 막힘 | 위와 같음(EAS preview·production은 `false`) |
+
+`EXPO_PUBLIC_` 값은 번들에 그대로 들어가므로 비밀값을 넣지 않는다.
+
 > 패키지 추가는 `npx expo install <pkg>` 로 (SDK 호환 버전 자동 선택). 커밋 전 확인할 것은 `../docs/HANDOFF.md` §3
 
 ## 폴더 구조
