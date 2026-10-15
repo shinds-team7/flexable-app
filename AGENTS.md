@@ -25,7 +25,7 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 **의존 방향:** `src/demo`·`src/app/demo`는 서비스·공통 코드를 써도 되지만, 그 밖의 코드는 `@/demo/*`를 import하지 않는다(ESLint로 막혀 있음). 공통 UI는 값을 props로 받아 표시만 하고, 데이터는 서비스·시연 쪽이 넘긴다.
 
 **요청 하나가 지나가는 길(예: 거래 수정):**
-`src/app/(service)/transactions/[id].tsx` → `src/service/TransactionForm.tsx` → `src/service/api/client.ts` → `PATCH /api/v1/transactions/{id}` → `backend/.../transaction/TransactionController.java` → `TransactionService.java` → `TransactionRepository.java` → MySQL `transactions`
+`src/app/(service)/transactions/[id].tsx` → `src/service/TransactionForm.tsx` → `src/service/api/client.ts` → `PATCH /api/v1/transactions/{id}` → `backend/.../transaction/TransactionController.java` → `TransactionService.java`(`TransactionRepository`로 조회한 엔티티를 고치면 트랜잭션이 끝날 때 JPA가 반영) → MySQL `transactions`
 
 ## 먼저 읽을 문서
 
