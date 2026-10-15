@@ -15,7 +15,7 @@ const CHECK_INTERVAL_MS = 10 * 60 * 1000;
 export function UpdateBanner() {
   const { isUpdatePending } = Updates.useUpdates();
   const pathname = usePathname();
-  const [restarting, setRestarting] = useState(false);
+  const [state, setState] = useState<'idle' | 'restarting' | 'failed'>('idle');
   const busy = useRef(false);
   const lastCheck = useRef(0);
 
@@ -40,23 +40,26 @@ export function UpdateBanner() {
 
   if (!isUpdatePending || !SAFE_PATHS.includes(pathname)) return null;
 
+  const message = state === 'failed' ? '적용하지 못했어요' : '새 버전이 준비됐어요';
+  const action = state === 'restarting' ? '적용 중…' : state === 'failed' ? '다시 시도' : '지금 적용';
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="새 버전이 준비됐어요. 눌러서 지금 적용"
+      accessibilityLabel={`${message}. ${action}`}
+      accessibilityState={{ busy: state === 'restarting', disabled: state === 'restarting' }}
       accessibilityLiveRegion="polite"
-      disabled={restarting}
+      disabled={state === 'restarting'}
       onPress={() => {
-        setRestarting(true);
-        Updates.reloadAsync().catch(() => setRestarting(false));
+        setState('restarting');
+        Updates.reloadAsync().catch(() => setState('failed'));
       }}
       style={({ pressed }) => [styles.banner, pressed && { opacity: 0.85 }]}
     >
       <T size={14} weight="600" color={colors.text} style={{ flex: 1 }}>
-        새 버전이 준비됐어요
+        {message}
       </T>
       <T size={14} weight="700" color={colors.brand}>
-        {restarting ? '적용 중…' : '지금 적용'}
+        {action}
       </T>
     </Pressable>
   );
