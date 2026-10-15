@@ -1,18 +1,22 @@
 # 인수인계 — 서비스 1.0.0 Google Play 비공개 테스트
 
-마지막 갱신 2026-10-14. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-15. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
-## 0. 다음에 이어서 할 일 (2026-10-14 기준, 우선순위 순)
+## 0. 다음에 이어서 할 일 (2026-10-15 기준, 우선순위 순)
 
-1. [ ] 거래 수정·수입 저장 후 빈 화면 버그: PR #23·#25 머지, 10-14 `production` 원격 업데이트 게시 완료 → Play 내부 테스트 실기기 검증 대기(`docs/bug-transaction-edit-blank-screen.md`)
-2. [ ] 팀원에게 새 APK 배포 → 2차 피드백 수집(노션)
-3. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
-4. [ ] Google 계정 복구됨(10-14) → §4-3에 따라 Play Console 진행
-5. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
+1. [ ] Play Console 비공개 테스트에 versionCode 7 AAB 업로드 → 검토 → 출시. "이전 버전 포함"은 비워 둔다(지원 기기가 같아 예전 번들을 남길 이유가 없다). AAB는 EAS 빌드 `8699a0f4`(§4-2 빌드 목록)
+2. [ ] Play Console 스토어 등록정보 → 앱 아이콘을 `docs/play-store/icon-512.png`(새 광부 고양이, 32비트 PNG)로 교체
+3. [ ] 실기기 확인(Play에서 versionCode 7로 업데이트한 앱): 홈 화면 아이콘이 원형·둥근 사각형 런처에서 잘리지 않는지, 테마 아이콘, 동전 4단계, 게이지 퍼센트 표시, 거래 수정·수입 저장 후 빈 화면이 다시 나오지 않는지(PR #23·#25, `docs/bug-transaction-edit-blank-screen.md`)
+4. [ ] 팀원 2차 피드백 수집(노션)
+5. [ ] `docs/play-store/` 스크린샷 교체 검토(예전 홈 화면·아이콘 기준)
+6. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
+7. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
 
-최근 변경: PR #23·#25(수입 저장·거래 수정 저장 후 빈 화면 수정, 이슈 #24), #26(캐릭터 홈 하단 탭바·배치), #27(원격 업데이트 절차) — 10-14 `production` 원격 업데이트로 Play 내부 테스트 앱에 게시. PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), PR #14(Expo `apduis-team` 연결, #18로 대체), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구). 백엔드는 10-14 운영 배포 완료, 운영 DB의 자동 테스트 계정 1개 삭제.
+최근 변경(10-15): PR #36(쓰지 않는 Android 권한 6개 제거), #37(오늘 쓴 만큼 캐릭터 뒤 동전 더미가 4단계로 줄어듦, 이미지 `frontend/assets/characters/lv{1-5}-{1-4}.png`), #38(승급 게이지는 퍼센트만), #40(앱 아이콘을 광부 고양이로, adaptive 배경 `#F9BB8B`, 테마 아이콘 포함). #37·#38은 원격 업데이트로 게시했고, #36·#40은 네이티브 변경이라 versionCode 7 빌드에 들어갔다. 그 전: PR #30(캐릭터 단계를 하루 단위 점수 게이지로, 백엔드 운영 배포·Flyway V4), #32(배포마다 Docker 빌드 캐시 정리), #34(캐릭터 홈 기본값·하단 탭바 통일).
+
+10-14 변경: PR #23·#25(수입 저장·거래 수정 저장 후 빈 화면 수정, 이슈 #24), #26(캐릭터 홈 하단 탭바·배치), #27(원격 업데이트 절차), PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구).
 
 ## 1. 지금 상태
 
@@ -23,7 +27,7 @@
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (상세는 `frontend/SERVICE_1_0_0_REPORT.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
-| Android 빌드 | 원래 Expo 프로젝트(`ucmnuniverse-developer/flexable`)로 복귀, production AAB 빌드(10-14) | §4-2 |
+| Android 빌드 | production AAB versionCode 7(10-15, 새 아이콘·권한 정리 포함) 빌드 완료, Play 업로드 대기 | §4-2 |
 | Play Console | 등록에 쓰던 Google 계정 복구됨(10-14) → 등록·앱 만들기 진행 | §4-3 |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
@@ -83,6 +87,7 @@ npx eas-cli@latest build -p android --profile production
 - 10-13~14에 잠시 `apduis-team`으로 옮겼다가(PR #14) 원래 계정이 복구되어 `ucmnuniverse-developer/flexable`로 되돌렸다(PR #18). 서명 키가 프로젝트마다 달라서 `apduis-team` APK가 깔린 폰은 지우고 새로 설치한다. Play 업로드 키는 `ucmnuniverse-developer` 프로젝트의 키스토어(10-13 생성)다.
 - 날짜·시간 선택기(`@react-native-community/datetimepicker`)는 네이티브 모듈이라 Expo Go가 아닌 빌드에서 확인한다.
 - 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다.
+- 원격 업데이트로 바뀌지 않는 것: 앱 아이콘, 권한, 네이티브 설정. 이런 변경은 새 production 빌드를 Play에 올리고 사용자가 앱을 업데이트해야 반영된다. Play는 사용자에게 바뀐 부분만 내려받게 하므로 AAB는 매번 전체를 올린다.
 - 빌드 목록·다운로드: https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/builds
 
 #### 원격 업데이트 (EAS Update)
@@ -90,6 +95,8 @@ npx eas-cli@latest build -p android --profile production
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
 
 현재 검증 대상은 Play 내부 테스트 앱이다. EAS 조회로 versionCode 5의 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`, PR #19 포함을 확인했다. 2026-10-14에 최신 main `1c0028e`(PR #23·#25 저장 버그 수정, PR #26 캐릭터 홈 변경)를 `ucmnuniverse` 계정으로 게시했다. 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). 같은 커밋을 preview 그룹 `0fa8cf03`에서 승격해 production 그룹 [bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601)로도 게시했다(코드 동일, 이것이 최신). 문제가 생기면 그 이전 그룹 `712cddcc-d991-4663-b09e-10220eb8c9b8`(개인정보처리방침 반영본)을 production에 다시 게시해 되돌린다. 타입 검사·린트·Android 번들 생성·EAS 게시 확인 완료. 실기기 수신·저장 동작 검증은 아직 남아 있다.
+
+**2026-10-15 최신:** PR #37·#38을 preview 그룹 `aa8168a2`로 올리고 production 그룹 `1d3f76aa`로 승격했다(이것이 최신). 되돌릴 때는 직전 그룹 `c2afb9ea`를 production에 다시 게시한다. 같은 날 versionCode 7을 빌드했다. `app.json`의 `version`은 그대로 1.0.0이라 런타임도 1.0.0이고, 아이콘·권한 변경은 JS와 무관해서 versionCode 5·6·7이 같은 원격 업데이트를 받아도 된다.
 
 ```bash
 cd frontend
@@ -100,7 +107,7 @@ npx eas-cli@latest update --channel production --environment production --platfo
 ```
 
 - preview APK로 먼저 검증할 때는 `npm run update:preview -- --message "변경 내용" --non-interactive`로 올린다. 결과의 `Update group ID`를 받아 같은 번들을 production으로 승격한다: `npm run update:promote -- <preview 그룹 ID> --message "변경 내용"`. 승격은 preview·production 환경변수가 같을 때만 쓴다(`npx eas-cli@latest env:list --environment preview`/`production`, `env:list`에는 `--non-interactive`가 없다).
-- `update:republish`는 non-interactive 모드에서 `--channel`로 고를 수 없고 `--group`만 받는다. 그래서 `update:promote` 스크립트는 그룹 ID를 인자로 받는다.
+- `update:republish`는 non-interactive 모드에서 `--channel`로 고를 수 없고 `--group`만 받는다. 그래서 `update:promote` 스크립트는 그룹 ID를 인자로 받는다. `--message`도 반드시 넣는다(없으면 non-interactive에서 실패). 예: `npx -y eas-cli@latest update:republish --group <preview 그룹> --destination-channel production --message "변경 내용"`
 - Claude Code auto mode는 production 게시(`update`·`update:republish`를 production으로)를 운영 배포로 보고 막는다. 사용자가 프롬프트에 `! <명령>`으로 직접 실행한다. 이때 셸 위치는 Claude 세션의 현재 폴더(대개 `frontend/`)라 `cd frontend`를 붙이면 실패할 수 있다.
 - `runtimeVersion`은 `appVersion` 정책이다. 네이티브가 바뀌는 변경(네이티브 패키지 추가·업그레이드, `app.json`의 권한·플러그인·아이콘, Expo SDK 업그레이드)은 원격 업데이트로 보낼 수 없다. 이때는 `app.json`의 `version`을 올리고(예: 1.0.0 → 1.0.1) 새로 빌드한다. 버전을 안 올리고 원격 업데이트로 보내면 예전 빌드에서 앱이 꺼질 수 있다.
 - 승격은 preview에서 만든 번들을 그대로 쓰므로 preview·production 환경변수가 같아야 한다. 다르면 `npx eas-cli@latest update --channel production --environment production`으로 따로 올린다.
@@ -148,4 +155,5 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [x] 캐릭터 홈 단계를 하루 단위 점수로 변경(이슈 #29, PR #30): 처음 쓴 날 광부 0%에서 시작, 예산을 지킨 날 +15·넘긴 날 −50(100점이 한 단계). 날짜별 하루 예산은 `daily_budgets`(V4)에 저장. 규칙은 `docs/API.md` "GET /budget/today"
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
 - [ ] 웹 개발 모드에서 원그래프·캐릭터 화면에 "Invalid DOM property transform…" 경고(기능 영향 없음)
+- [ ] 다 쓴 로컬 브랜치 정리(`SXXNHU/*` 여러 개가 남아 있음)
 - [ ] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 rebase 전 원본이다. 원격과 PR은 `SXXNHU/service-frontend`를 쓴다.
