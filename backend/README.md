@@ -19,7 +19,8 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 
 | 변수 | 내용 | 기본값 |
 |---|---|---|
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | MySQL 접속 | `localhost:3306/flexable`, `flexable` |
+| `DB_URL` | MySQL JDBC 주소 | `jdbc:mysql://localhost:3306/flexable?serverTimezone=UTC&characterEncoding=UTF-8` |
+| `DB_USERNAME`, `DB_PASSWORD` | MySQL 계정 | `flexable`, `flexable` |
 | `JWT_SECRET` | 토큰 서명 키(HS256). **바꾸면 모든 사용자가 로그아웃된다** | 비어 있음(운영에서 반드시 설정) |
 | `CORS_ORIGINS` | 허용할 웹 주소(쉼표 구분) | `http://localhost:8081` |
 | `PORT` | 서버 포트 | `8080` |
