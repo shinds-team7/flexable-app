@@ -7,7 +7,7 @@ import { Platform, StyleSheet, View } from "react-native";
 
 import { T } from "@/components/ui";
 import { DEMO_VERSION } from "@/demo/version";
-import { AppStoreProvider } from "@/store/AppStore";
+import { AppStoreProvider } from "@/demo/store/AppStore";
 import { colors } from "@/theme";
 
 export default function DemoLayout() {

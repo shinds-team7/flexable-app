@@ -15,9 +15,9 @@
  *  · 결제가 들어올 때마다(오픈뱅킹/카드 알림 → 서버) 오늘 금액을 다시 계산한다
  *  · 계산값이 음수면 0원 + 부족액을 따로 안내 (초과 지출을 숨기지 않음)
  */
-import type { DraftItem } from '@/ai/parsePlan';
-import { SPEND_CATEGORIES } from '@/data/categories';
-import type { FixedExpense, Protected, Transaction } from '@/data/mock';
+import type { DraftItem } from '@/demo/ai/parsePlan';
+import { SPEND_CATEGORIES } from '@/demo/data/categories';
+import type { FixedExpense, Protected, Transaction } from '@/demo/data/mock';
 import { addDays, cycleEnd, cycleStart, diffDays, endOfMonth, endOfWeek, fromKey, nextPayday, startOfWeek, toKey } from '@/utils/date';
 
 export type ScheduledSpend = {

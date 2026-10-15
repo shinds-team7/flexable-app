@@ -4,11 +4,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ScheduleEditSheet } from '@/components/ScheduleEditSheet';
-import { ScheduleRow } from '@/components/ScheduleRow';
+import { ScheduleEditSheet } from '@/demo/components/ScheduleEditSheet';
+import { ScheduleRow } from '@/demo/components/ScheduleRow';
 import { SubHeader } from '@/components/SubHeader';
 import { AddButton, Card, Screen, SectionTitle, T } from '@/components/ui';
-import { useStore } from '@/store/AppStore';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { fromKey, md, toKey } from '@/utils/date';
 import { won } from '@/utils/format';

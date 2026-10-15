@@ -8,7 +8,7 @@ import {
   pointsStatus,
   type Level,
   type PaceStatus,
-} from "@/components/CharacterHero";
+} from "@/components/CharacterStage";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors } from "@/theme";
 import { useHomeStyle } from "./homeStyle";

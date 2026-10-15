@@ -1,9 +1,9 @@
 import { router, usePathname } from "expo-router";
 import { demoRoutes } from "@/demo/routes";
-import { useStore } from "@/store/AppStore";
+import { useStore } from "@/demo/store/AppStore";
 import { toKey } from "@/utils/date";
-import { AppHeaderView } from "./AppHeaderView";
-export { Logo } from "./AppHeaderView";
+import { AppHeaderView } from "@/components/AppHeaderView";
+export { Logo } from "@/components/AppHeaderView";
 const TABS = [
   {
     href: demoRoutes.home,

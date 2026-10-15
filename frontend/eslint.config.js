@@ -5,9 +5,11 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    files: ["src/service/**/*.{ts,tsx}", "src/app/(service)/**/*.{ts,tsx}", "src/app/auth/**/*.{ts,tsx}", "src/app/onboarding/**/*.{ts,tsx}", "src/app/{index,privacy,terms,support,delete-account}.tsx"],
+    // 시연(src/demo, src/app/demo)은 서비스·공통 코드를 써도 되지만, 그 반대는 안 된다.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/demo/**", "src/app/demo/**"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [{ group: ["@/data/mock", "@/store/AppStore", "@/ai", "@/ai/*"], message: "서비스 화면은 실제 API와 서비스 세션만 사용합니다." }] }],
+      "no-restricted-imports": ["error", { patterns: [{ group: ["@/demo", "@/demo/*"], message: "서비스·공통 코드는 시연 코드(src/demo)를 import하지 않습니다." }] }],
     },
   },
   {

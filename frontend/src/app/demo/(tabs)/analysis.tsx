@@ -4,13 +4,13 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AnalysisTabs } from '@/components/AnalysisTabs';
+import { AnalysisTabs } from '@/demo/components/AnalysisTabs';
 import { Donut } from '@/components/Donut';
 import { Card, IconCircle, Screen, SectionTitle, Segment, T } from '@/components/ui';
-import { SPEND_CATEGORIES } from '@/data/categories';
-import { useStore } from '@/store/AppStore';
+import { SPEND_CATEGORIES } from '@/demo/data/categories';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
-import { isSpend, spendOf } from '@/store/budget';
+import { isSpend, spendOf } from '@/demo/store/budget';
 import { addDays, cycleStart, diffDays, endOfWeek, md, startOfWeek, toKey } from '@/utils/date';
 import { won } from '@/utils/format';
 

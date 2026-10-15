@@ -6,7 +6,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { OnboardingFrame } from '@/components/OnboardingFrame';
 import { T } from '@/components/ui';
-import { useStore } from '@/store/AppStore';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { md } from '@/utils/date';
 import { won } from '@/utils/format';

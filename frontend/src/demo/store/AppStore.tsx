@@ -6,7 +6,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
-import { DEFAULT_INSIGHTS, DEFAULT_MEMORY, type Insight, type MemoryItem } from '@/ai/memory';
+import { DEFAULT_INSIGHTS, DEFAULT_MEMORY, type Insight, type MemoryItem } from '@/demo/ai/memory';
 import {
   buildTransactions,
   DEFAULT_FIXED,
@@ -16,7 +16,7 @@ import {
   type FixedExpense,
   type Protected,
   type Transaction,
-} from '@/data/mock';
+} from '@/demo/data/mock';
 import { addDays, diffDays, endOfWeek, startOfDay, startOfWeek, toKey } from '@/utils/date';
 import { computeBudget, type BudgetInput, type BudgetSummary, type LargePlan, type ScheduledSpend } from './budget';
 

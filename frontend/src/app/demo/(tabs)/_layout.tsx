@@ -1,8 +1,8 @@
 import { Redirect, Tabs } from 'expo-router';
 import { View } from 'react-native';
 
-import { AppHeader } from '@/components/AppHeader';
-import { useStore } from '@/store/AppStore';
+import { AppHeader } from '@/demo/components/AppHeader';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { demoRoutes } from '@/demo/routes';
 

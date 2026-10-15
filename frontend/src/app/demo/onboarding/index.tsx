@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { T } from '@/components/ui';
-import { useStore } from '@/store/AppStore';
+import { useStore } from '@/demo/store/AppStore';
 import { colors } from '@/theme';
 import { demoRoutes } from '@/demo/routes';
 

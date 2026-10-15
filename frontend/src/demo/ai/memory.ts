@@ -3,7 +3,7 @@
  * 예정 지출의 금액을 제안할 때 이 값을 사용하고, 일정 정산 후 실제 금액으로 갱신된다.
  * 실제 서비스에서는 AI 서버(FastAPI)가 관리한다.
  */
-import type { CategoryId } from '@/data/categories';
+import type { CategoryId } from '@/demo/data/categories';
 
 export type MemoryItem = {
   id: string;

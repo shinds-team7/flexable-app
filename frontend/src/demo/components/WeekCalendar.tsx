@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { STATUS_META, type WeekStatus } from '@/store/budget';
+import { STATUS_META, type WeekStatus } from '@/demo/store/budget';
 import { colors } from '@/theme';
 import { addDays, endOfMonth, isSameDay, startOfMonth, startOfWeek, toKey, weekLabel } from '@/utils/date';
-import { T } from './ui';
+import { T } from '@/components/ui';
 
 const HEAD = ['월', '화', '수', '목', '금', '토', '일'];
 const LEGEND: WeekStatus[] = ['relax', 'fine', 'tight', 'danger'];

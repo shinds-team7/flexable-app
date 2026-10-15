@@ -6,9 +6,9 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { goBack, SubHeader } from '@/components/SubHeader';
 import { Button, Card, ConfirmModal, IconCircle, Screen, SectionTitle, T } from '@/components/ui';
-import { getCategory } from '@/data/categories';
-import { isSpend, spendOf } from '@/store/budget';
-import { useStore } from '@/store/AppStore';
+import { getCategory } from '@/demo/data/categories';
+import { isSpend, spendOf } from '@/demo/store/budget';
+import { useStore } from '@/demo/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { addDays, fromKey, md, toKey } from '@/utils/date';
 import { DOW, won } from '@/utils/format';

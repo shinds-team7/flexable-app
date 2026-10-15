@@ -7,8 +7,8 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 
-import { LockScreen } from '@/components/LockScreen';
-import { useStore } from '@/store/AppStore';
+import { LockScreen } from '@/demo/components/LockScreen';
+import { useStore } from '@/demo/store/AppStore';
 import { diffDays, endOfWeek, fromKey, toKey } from '@/utils/date';
 import { won } from '@/utils/format';
 import { demoRoutes } from '@/demo/routes';

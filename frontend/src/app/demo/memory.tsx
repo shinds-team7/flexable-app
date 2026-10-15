@@ -3,12 +3,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import type { MemoryItem } from '@/ai/memory';
+import type { MemoryItem } from '@/demo/ai/memory';
 import { SubHeader } from '@/components/SubHeader';
 import { useToast } from '@/components/Toast';
 import { Badge, Button, Card, IconCircle, Screen, SectionTitle, Sheet, T } from '@/components/ui';
-import { getCategory } from '@/data/categories';
-import { useStore } from '@/store/AppStore';
+import { getCategory } from '@/demo/data/categories';
+import { useStore } from '@/demo/store/AppStore';
 import { colors, font, noOutline } from '@/theme';
 import { won } from '@/utils/format';
 import { demoRoutes } from '@/demo/routes';
