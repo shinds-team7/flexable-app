@@ -4,13 +4,14 @@ import { Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ToastProvider } from "@/components/Toast";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { BudgetDraftProvider } from "@/service/BudgetDraft";
 import { SessionProvider } from "@/service/Session";
 import { colors } from "@/theme";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
-/** 공통 틀(안전영역·폰 프레임·토스트)만 둔다. 시연 Mock 상태는 demo/_layout에서만 주입한다. */
+/** 공통 틀(안전영역·폰 프레임·토스트·업데이트 배너)만 둔다. 시연 Mock 상태는 demo/_layout에서만 주입한다. */
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
@@ -21,6 +22,7 @@ export default function RootLayout() {
           <ToastProvider>
             <SessionProvider>
               <BudgetDraftProvider>
+                {Platform.OS !== "web" && <UpdateBanner />}
                 <Stack
                   screenOptions={{
                     headerShown: false,
