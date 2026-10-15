@@ -22,8 +22,8 @@ export function UpdateBanner() {
   useEffect(() => {
     if (!Updates.isEnabled || __DEV__) return;
     // 실행 시 확인은 expo-updates가 하므로, 켜 둔 채 다시 돌아왔을 때만 확인해 미리 받아 둔다.
-    const sub = AppState.addEventListener('change', async (state) => {
-      if (state !== 'active' || busy.current || Date.now() - lastCheck.current < CHECK_INTERVAL_MS) return;
+    const sub = AppState.addEventListener('change', async (next) => {
+      if (next !== 'active' || busy.current || Date.now() - lastCheck.current < CHECK_INTERVAL_MS) return;
       busy.current = true;
       lastCheck.current = Date.now();
       try {
