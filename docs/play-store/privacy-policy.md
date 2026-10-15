@@ -80,7 +80,7 @@ Limbo(이하 "운영자")는 텅장관리(이하 "서비스") 이용자의 개�
 ## 10. 개인정보 보호책임자 및 문의처
 
 - 개인정보 보호책임자: Limbo
-- 이메일: dofqls0127@gmail.com
+- 이메일: ucmnuniverse@gmail.com
 
 개인정보 침해 관련 상담은 개인정보침해신고센터(privacy.kisa.or.kr, 국번 없이 118), 개인정보분쟁조정위원회(www.kopico.go.kr, 1833-6972)에도 문의할 수 있습니다.
 
