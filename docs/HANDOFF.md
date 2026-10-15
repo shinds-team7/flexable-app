@@ -8,13 +8,13 @@
 
 1. [ ] Play Console 비공개 테스트에 versionCode 7 AAB 업로드 → 검토 → 출시. "이전 버전 포함"은 비워 둔다(지원 기기가 같아 예전 번들을 남길 이유가 없다). AAB는 EAS 빌드 `8699a0f4`(§4-2 빌드 목록)
 2. [ ] Play Console 스토어 등록정보 → 앱 아이콘을 `docs/play-store/icon-512.png`(새 광부 고양이, 32비트 PNG)로 교체
-3. [ ] 실기기 확인(Play에서 versionCode 7로 업데이트한 앱): 홈 화면 아이콘이 원형·둥근 사각형 런처에서 잘리지 않는지, 테마 아이콘, 동전 4단계, 게이지 퍼센트 표시, 거래 수정·수입 저장 후 빈 화면이 다시 나오지 않는지(PR #23·#25, `docs/bug-transaction-edit-blank-screen.md`)
+3. [ ] 실기기 확인(Play에서 versionCode 7로 업데이트한 앱): 홈 화면 아이콘이 원형·둥근 사각형 런처에서 잘리지 않는지, 테마 아이콘, 동전 4단계, 게이지 퍼센트 표시, 거래 완료 알림이 상단에 뜨는지, 다음 원격 업데이트 때 업데이트 배너가 뜨고 "지금 적용"이 동작하는지, 거래 수정·수입 저장 후 빈 화면이 다시 나오지 않는지(PR #23·#25, `docs/bug-transaction-edit-blank-screen.md`)
 4. [ ] 팀원 2차 피드백 수집(노션)
 5. [ ] `docs/play-store/` 스크린샷 교체 검토(예전 홈 화면·아이콘 기준)
 6. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
 7. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
 
-최근 변경(10-15): PR #36(쓰지 않는 Android 권한 6개 제거), #37(오늘 쓴 만큼 캐릭터 뒤 동전 더미가 4단계로 줄어듦, 이미지 `frontend/assets/characters/lv{1-5}-{1-4}.png`), #38(승급 게이지는 퍼센트만), #40(앱 아이콘을 광부 고양이로, adaptive 배경 `#F9BB8B`, 테마 아이콘 포함). #37·#38은 원격 업데이트로 게시했고, #36·#40은 네이티브 변경이라 versionCode 7 빌드에 들어갔다. 그 전: PR #30(캐릭터 단계를 하루 단위 점수 게이지로, 백엔드 운영 배포·Flyway V4), #32(배포마다 Docker 빌드 캐시 정리), #34(캐릭터 홈 기본값·하단 탭바 통일).
+최근 변경(10-15): PR #36(쓰지 않는 Android 권한 6개 제거), #37(오늘 쓴 만큼 캐릭터 뒤 동전 더미가 4단계로 줄어듦, 이미지 `frontend/assets/characters/lv{1-5}-{1-4}.png`), #38(승급 게이지는 퍼센트만), #40(앱 아이콘을 광부 고양이로, adaptive 배경 `#F9BB8B`, 테마 아이콘 포함), #43(거래 기록·수정·삭제 완료 알림을 화면 상단에, `toast`에 `placement` 옵션), #45(받아진 원격 업데이트를 탭 화면 상단 배너 "새 버전이 준비됐어요 · 지금 적용"으로 바로 적용, `frontend/src/components/UpdateBanner.tsx`). #37·#38·#43·#45는 원격 업데이트로 게시했고, #36·#40은 네이티브 변경이라 versionCode 7 빌드에 들어갔다. 그 전: PR #30(캐릭터 단계를 하루 단위 점수 게이지로, 백엔드 운영 배포·Flyway V4), #32(배포마다 Docker 빌드 캐시 정리), #34(캐릭터 홈 기본값·하단 탭바 통일).
 
 10-14 변경: PR #23·#25(수입 저장·거래 수정 저장 후 빈 화면 수정, 이슈 #24), #26(캐릭터 홈 하단 탭바·배치), #27(원격 업데이트 절차), PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구).
 
@@ -96,7 +96,7 @@ npx eas-cli@latest build -p android --profile production
 
 현재 검증 대상은 Play 내부 테스트 앱이다. EAS 조회로 versionCode 5의 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`, PR #19 포함을 확인했다. 2026-10-14에 최신 main `1c0028e`(PR #23·#25 저장 버그 수정, PR #26 캐릭터 홈 변경)를 `ucmnuniverse` 계정으로 게시했다. 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). 같은 커밋을 preview 그룹 `0fa8cf03`에서 승격해 production 그룹 [bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601)로도 게시했다(코드 동일, 이것이 최신). 문제가 생기면 그 이전 그룹 `712cddcc-d991-4663-b09e-10220eb8c9b8`(개인정보처리방침 반영본)을 production에 다시 게시해 되돌린다. 타입 검사·린트·Android 번들 생성·EAS 게시 확인 완료. 실기기 수신·저장 동작 검증은 아직 남아 있다.
 
-**2026-10-15 최신:** PR #37·#38을 preview 그룹 `aa8168a2`로 올리고 production 그룹 `1d3f76aa`로 승격했다(이것이 최신). 되돌릴 때는 직전 그룹 `c2afb9ea`를 production에 다시 게시한다. 같은 날 versionCode 7을 빌드했다. `app.json`의 `version`은 그대로 1.0.0이라 런타임도 1.0.0이고, 아이콘·권한 변경은 JS와 무관해서 versionCode 5·6·7이 같은 원격 업데이트를 받아도 된다.
+**2026-10-15 최신:** production 그룹 이력(위가 최신) — `d63078bb`(PR #45 업데이트 배너, preview `1cefd7bf`) ← `2c35943a`(PR #43 완료 알림 상단, preview `677bc2d0`) ← `1d3f76aa`(PR #37·#38, preview `aa8168a2`) ← `c2afb9ea`. 되돌릴 때는 바로 아래 그룹을 production에 다시 게시한다. 업데이트 배너는 #45를 받은 뒤 나가는 다음 원격 업데이트부터 뜬다(실기기 확인 전). 같은 날 versionCode 7을 빌드했다. `app.json`의 `version`은 그대로 1.0.0이라 런타임도 1.0.0이고, 아이콘·권한 변경은 JS와 무관해서 versionCode 5·6·7이 같은 원격 업데이트를 받아도 된다.
 
 ```bash
 cd frontend
