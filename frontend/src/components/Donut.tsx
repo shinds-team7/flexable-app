@@ -37,7 +37,8 @@ export function Donut({
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
-        <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
+        {/* 12시 방향에서 시작. rotation·origin prop은 웹에서 잘못된 DOM 속성(transform-origin)이 되어 transform 문자열로 쓴다 */}
+        <G transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           {arcs.map((a, i) => (
             <Circle
               key={i}
