@@ -403,7 +403,7 @@ test("expired token returns to start; public routes and demo remain accessible",
   expect(await token(page)).toBeNull();
   await page.goto("/privacy");
   await expect(
-    page.getByText("- 시행일: 2026년 10월 13일", { exact: true }),
+    page.getByText("- 시행일: 2026년 10월 14일", { exact: true }),
   ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.0.0", { exact: true })).toBeVisible();
