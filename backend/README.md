@@ -11,6 +11,20 @@ cd backend
 curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 ```
 
+`local` 프로필은 `build/localdb/`의 H2 파일 DB(MySQL 호환 모드)와 개발용 JWT 비밀키를 쓴다(`src/main/resources/application-local.yml`). DB를 비우려면 서버를 끄고 `build/localdb/`를 지운다.
+
+## 환경 변수
+
+운영에서는 서버 `/opt/flexable/.env`(양식 `deploy/.env.example`)로 넣는다. 기본값은 `src/main/resources/application.yml`.
+
+| 변수 | 내용 | 기본값 |
+|---|---|---|
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | MySQL 접속 | `localhost:3306/flexable`, `flexable` |
+| `JWT_SECRET` | 토큰 서명 키(HS256). **바꾸면 모든 사용자가 로그아웃된다** | 비어 있음(운영에서 반드시 설정) |
+| `CORS_ORIGINS` | 허용할 웹 주소(쉼표 구분) | `http://localhost:8081` |
+| `PORT` | 서버 포트 | `8080` |
+| `API_DOMAIN` | Caddy가 HTTPS 인증서를 받을 도메인(`deploy/` 전용) | — |
+
 ## 구조
 
 | 패키지 | 내용 |
@@ -21,6 +35,32 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `transaction` | 수동 입력 거래 CRUD, `Idempotency-Key` |
 | `analysis` | 기간별 카테고리·일별 합계 |
 | `user` | 사용자, 계정·데이터 일괄 삭제 |
+| `common` | 오류 코드·응답 형식, 기간·시각 도우미, 헬스 체크 |
+| `config` | 보안(JWT 검증·CORS), 설정값 바인딩, 시간대(Asia/Seoul) |
+
+## API
+
+모든 경로는 `/api/v1` 아래. 요청·응답과 규칙은 [`docs/API.md`](../docs/API.md).
+
+| 메서드·경로 | 내용 |
+|---|---|
+| `POST /auth/signup`, `POST /auth/login` | 가입, 로그인(토큰 발급). 인증 없이 호출 |
+| `POST /auth/logout` | 토큰 폐기 |
+| `GET /me`, `DELETE /me` | 내 정보, 계정·데이터 삭제 |
+| `GET·PUT /budget/settings` | 초기 예산 설정 조회·전체 교체 |
+| `GET /budget/today` | 오늘·이번 주 쓸 수 있는 돈, 캐릭터 점수 |
+| `GET·POST /categories`, `PATCH·DELETE /categories/{id}` | 카테고리 |
+| `GET·POST /transactions`, `GET·PATCH·DELETE /transactions/{id}` | 거래(직접 입력). 생성은 `Idempotency-Key`로 중복 방지 |
+| `GET /analysis/summary` | 기간별 카테고리·일별 합계 |
+| `GET /health` | 상태 확인. 인증 없이 호출 |
+
+## 테스트
+
+| 파일 | 다루는 것 |
+|---|---|
+| `ApiFlowTest` | 가입 검증·중복, 로그인 제한, 토큰 필수, 전체 흐름, 고정지출 자동 기록, 로그아웃 후 토큰 거절 |
+| `budget/BudgetCalculatorTest` | 오늘 쓸 수 있는 돈 계산 |
+| `budget/CharacterScoreTest` | 캐릭터 점수(하루 예산 지키면 +15, 넘기면 −50) |
 
 ## 운영 배포 (EC2 + RDS)
 
