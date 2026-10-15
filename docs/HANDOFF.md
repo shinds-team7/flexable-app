@@ -150,6 +150,6 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
 - [x] 캐릭터 홈 단계를 하루 단위 점수로 변경(이슈 #29, PR #30): 처음 쓴 날 광부 0%에서 시작, 예산을 지킨 날 +15·넘긴 날 −50(100점이 한 단계). 날짜별 하루 예산은 `daily_budgets`(V4)에 저장. 규칙은 `docs/API.md` "GET /budget/today"
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
-- [ ] 웹 개발 모드에서 원그래프·캐릭터 화면에 "Invalid DOM property transform…" 경고(기능 영향 없음)
+- [x] 웹 개발 모드 "Invalid DOM property transform-origin" 경고: `Donut`의 `rotation`·`origin`을 `transform="rotate(-90 cx cy)"`로 바꿔 해결. 이 경고 토스트가 탭 바를 가려 실패하던 E2E도 통과(PR #49)
 - [ ] 다 쓴 로컬 브랜치 정리(`SXXNHU/*` 여러 개가 남아 있음)
 - [ ] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 rebase 전 원본이다. 원격과 PR은 `SXXNHU/service-frontend`를 쓴다.
