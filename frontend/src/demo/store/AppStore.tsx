@@ -1,7 +1,6 @@
 /**
  * 앱 전역 상태 (Mock, 메모리 저장 — 새로고침하면 초기화).
- * SERVICE_MIGRATION: 실제 앱에서는 UI가 API를 직접 호출하지 않고 로컬 DB와 outbox를 먼저 갱신한다.
- * 교체 경계와 유지할 불변식은 docs/SERVICE_MIGRATION.md를 따른다.
+ * 시연 전용. 실제 서비스의 상태는 src/service/Session.tsx와 서버 API에 있다.
  */
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';

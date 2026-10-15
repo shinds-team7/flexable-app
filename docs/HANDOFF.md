@@ -14,9 +14,7 @@
 6. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
 7. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
 
-최근 변경(10-15): PR #36(쓰지 않는 Android 권한 6개 제거), #37(오늘 쓴 만큼 캐릭터 뒤 동전 더미가 4단계로 줄어듦, 이미지 `frontend/assets/characters/lv{1-5}-{1-4}.png`), #38(승급 게이지는 퍼센트만), #40(앱 아이콘을 광부 고양이로, adaptive 배경 `#F9BB8B`, 테마 아이콘 포함), #43(거래 기록·수정·삭제 완료 알림을 화면 상단에, `toast`에 `placement` 옵션), #45(받아진 원격 업데이트를 탭 화면 상단 배너 "새 버전이 준비됐어요 · 지금 적용"으로 바로 적용, `frontend/src/components/UpdateBanner.tsx`). #37·#38·#43·#45는 원격 업데이트로 게시했고, #36·#40은 네이티브 변경이라 versionCode 7 빌드에 들어갔다. 그 전: PR #30(캐릭터 단계를 하루 단위 점수 게이지로, 백엔드 운영 배포·Flyway V4), #32(배포마다 Docker 빌드 캐시 정리), #34(캐릭터 홈 기본값·하단 탭바 통일).
-
-10-14 변경: PR #23·#25(수입 저장·거래 수정 저장 후 빈 화면 수정, 이슈 #24), #26(캐릭터 홈 하단 탭바·배치), #27(원격 업데이트 절차), PR #22(expo-updates 수집 항목을 개인정보처리방침·데이터 보안에 반영, RDS 백업 7일), PR #18(Expo를 원래 프로젝트 `ucmnuniverse-developer/flexable`로 되돌림), #15(1차 피드백 반영 + 주말 수입일 → 월요일), #16(lockfile `@emnapi` 복구).
+지난 변경 내역은 PR 목록과 `git log`에 있다. 기능별 현재 상태는 `docs/FEATURES.md`.
 
 ## 1. 지금 상태
 
@@ -24,7 +22,7 @@
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
 | 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (`/demo` 시연, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
-| 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (상세는 `frontend/SERVICE_1_0_0_REPORT.md`) |
+| 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
 | Android 빌드 | production AAB versionCode 7(10-15, 새 아이콘·권한 정리 포함) 빌드 완료, Play 업로드 대기 | §4-2 |
@@ -93,8 +91,6 @@ npx eas-cli@latest build -p android --profile production
 #### 원격 업데이트 (EAS Update)
 
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
-
-현재 검증 대상은 Play 내부 테스트 앱이다. EAS 조회로 versionCode 5의 빌드 커밋 `fe61447`, 채널 `production`, 런타임 `1.0.0`, PR #19 포함을 확인했다. 2026-10-14에 최신 main `1c0028e`(PR #23·#25 저장 버그 수정, PR #26 캐릭터 홈 변경)를 `ucmnuniverse` 계정으로 게시했다. 업데이트 그룹: [538a3d2d-c521-420c-9cc8-6d5b506a1c84](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/538a3d2d-c521-420c-9cc8-6d5b506a1c84). 같은 커밋을 preview 그룹 `0fa8cf03`에서 승격해 production 그룹 [bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601](https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/updates/bbf1b5f2-fa03-40c4-9f3e-7cc8eb8ba601)로도 게시했다(코드 동일, 이것이 최신). 문제가 생기면 그 이전 그룹 `712cddcc-d991-4663-b09e-10220eb8c9b8`(개인정보처리방침 반영본)을 production에 다시 게시해 되돌린다. 타입 검사·린트·Android 번들 생성·EAS 게시 확인 완료. 실기기 수신·저장 동작 검증은 아직 남아 있다.
 
 **2026-10-15 최신:** production 그룹 이력(위가 최신) — `d63078bb`(PR #45 업데이트 배너, preview `1cefd7bf`) ← `2c35943a`(PR #43 완료 알림 상단, preview `677bc2d0`) ← `1d3f76aa`(PR #37·#38, preview `aa8168a2`) ← `c2afb9ea`. 되돌릴 때는 바로 아래 그룹을 production에 다시 게시한다. 업데이트 배너는 #45를 받은 뒤 나가는 다음 원격 업데이트부터 뜬다(실기기 확인 전). 같은 날 versionCode 7을 빌드했다. `app.json`의 `version`은 그대로 1.0.0이라 런타임도 1.0.0이고, 아이콘·권한 변경은 JS와 무관해서 versionCode 5·6·7이 같은 원격 업데이트를 받아도 된다.
 

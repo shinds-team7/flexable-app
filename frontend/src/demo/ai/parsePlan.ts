@@ -1,8 +1,7 @@
 /**
  * 자연어 예정 지출 파서 (Mock).
  * "다음주 금요일 아카데미 회식" → { date, items: [{label, amount, basis}] }
- * SERVICE_MIGRATION: 실제 서비스에서는 Spring AI Gateway를 통해 FastAPI가 구조화한다.
- * 클라이언트는 LLM을 직접 호출하지 않으며 DRAFT 결과만 소비한다. 자세한 계약은 docs/SERVICE_MIGRATION.md 참고.
+ * 시연 전용. 실제 서비스에는 AI 기능이 없다(docs/FEATURES.md).
  */
 import { addDays, startOfWeek } from '@/utils/date';
 import type { MemoryItem } from './memory';
