@@ -89,7 +89,7 @@ function Form({
   };
   const done = (message: string) => {
     session.invalidate();
-    toast(message);
+    toast(message, undefined, "top");
     goBack("/transactions");
   };
   const save = async () => {
