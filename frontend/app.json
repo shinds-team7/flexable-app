@@ -48,7 +48,7 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-splash-screen"
+      ["expo-splash-screen", {}]
     ],
     "extra": {
       "router": {},
