@@ -6,9 +6,10 @@
 
 ## 0. 다음에 이어서 할 일 (2026-10-16 기준, 우선순위 순)
 
-**10-16 PR #50(CI·서버 감시)·#51(문의 이메일·운영자 표시명 `ucmnuniverse` 통일) 머지 후 남은 것 — 사람이 한다**
-- [ ] 백엔드 배포: `bash backend/deploy/deploy.sh`(§5). #50의 헬스 체크 항목별 표시와 디스크 300MB 기준이 이때 반영된다. 배포 뒤 `curl -s https://flex-able-sh.duckdns.org/actuator/health`에 `components`(db, diskSpace)가 나오면 끝
-- [ ] 원격 업데이트 production 승격: preview 그룹 `25bdbc3d-358e-4ad0-a90c-1e93b8e4bdad`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명)를 preview APK에서 확인한 뒤 `npm run update:promote -- 25bdbc3d-358e-4ad0-a90c-1e93b8e4bdad --message "문의 이메일·운영자 표시명 통일, 원그래프 회전 방식 변경"`(§4-2). 확인할 것: 업데이트 배너가 뜨고 "지금 적용"이 동작하는지(#45 이후 첫 업데이트), 마이·고객지원·계정 삭제의 문의 주소, 약관·개인정보처리방침의 운영자명, 분석 화면 원그래프 시작 위치(12시 방향)
+**10-16 PR #50(CI·서버 감시)·#51(문의 이메일·운영자 표시명 `ucmnuniverse` 통일) 머지 후 남은 것**
+- [x] 백엔드 배포(10-16 01:01 UTC, 사용자 요청으로 Claude가 실행): `/actuator/health`에 `components`(db, diskSpace 등)가 나오고 세부값은 숨겨진 것 확인. 배포 전 디스크가 96%(남은 271MB)라 apt 캐시를 지운 뒤 배포했다(§5)
+- [x] 원격 업데이트 production 승격(10-16): preview `25bdbc3d`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명)를 production 그룹 `9fd66eb2`로 승격(§4-2)
+- [ ] 실기기 확인(production `9fd66eb2`를 받은 Play 앱): 업데이트 배너가 뜨고 "지금 적용"이 동작하는지(#45 이후 첫 업데이트), 마이·고객지원·계정 삭제의 문의 주소, 약관·개인정보처리방침의 운영자명, 분석 화면 원그래프 시작 위치(12시 방향). 문제가 있으면 `d63078bb`를 production에 다시 게시해 되돌린다
 - [ ] Play Console 스토어 등록정보 → 자세한 설명 끝 "문의:" 줄을 `ucmnuniverse@gmail.com`으로(`docs/play-store/README.md`의 문구와 같게)
 - [ ] `docs/play-store/README.md` §3.7 금융 기능 선언에 Play Console에서 실제로 고른 항목을 적고 TODO를 지운다
 
@@ -101,7 +102,7 @@ npx eas-cli@latest build -p android --profile production
 
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
 
-**2026-10-16:** preview `25bdbc3d`(#47·#49·#51, 커밋 e77b1d7) 게시, production 승격 대기(§0). preview·production 환경변수가 같은 것을 확인했다.
+**2026-10-16 최신:** production `9fd66eb2`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명, preview `25bdbc3d`, 커밋 e77b1d7) ← `d63078bb`. 되돌릴 때는 `d63078bb`를 production에 다시 게시한다. preview·production 환경변수가 같은 것을 확인했다.
 
 **2026-10-15 최신:** production 그룹 이력(위가 최신) — `d63078bb`(PR #45 업데이트 배너, preview `1cefd7bf`) ← `2c35943a`(PR #43 완료 알림 상단, preview `677bc2d0`) ← `1d3f76aa`(PR #37·#38, preview `aa8168a2`) ← `c2afb9ea`. 되돌릴 때는 바로 아래 그룹을 production에 다시 게시한다. 업데이트 배너는 #45를 받은 뒤 나가는 다음 원격 업데이트부터 뜬다(실기기 확인 전). 같은 날 versionCode 7을 빌드했다. `app.json`의 `version`은 그대로 1.0.0이라 런타임도 1.0.0이고, 아이콘·권한 변경은 JS와 무관해서 versionCode 5·6·7이 같은 원격 업데이트를 받아도 된다.
 
@@ -141,9 +142,10 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 
 - 코드 변경 배포: 로컬에서 `backend/deploy/deploy.sh` (jar 빌드 → 업로드 → 재기동)
 - **EC2 루트 디스크가 6.7GB뿐이다.** Docker 빌드 캐시가 쌓이면 배포 빌드가 `apt-get update`(exit 100)에서 실패하는데 실제 원인은 디스크 부족이다(10-15 발생, 이슈 #31). `deploy.sh`가 배포마다 빌드 캐시·이전 이미지를 지우고 마지막에 `df` 결과를 보여 준다. 사용량이 90%를 넘으면 `docker system df`로 확인하고, 계속 부족하면 EBS 볼륨을 늘린다
+- **10-16 배포 전 디스크 96%(남은 271MB)였다.** 헬스 체크 기준(300MB 미만이면 DOWN)보다 적어 배포하면 바로 DOWN이 될 상태였다. 큰 항목은 swap 2GB(유지), Docker 이미지 0.7GB, Docker 빌드 캐시 0.65GB(`deploy.sh`가 지움), apt 패키지 캐시 0.4GB. `sudo apt-get clean`으로 apt 캐시를 지워(설치된 프로그램과 무관) 683MB를 만든 뒤 배포했고, 배포 뒤 84%(남은 1.2GB). apt 캐시는 자동 업데이트로 다시 쌓일 수 있다 → 감시 이슈에 `DOWN: diskSpace`가 뜨면 `sudo apt-get clean`부터 하고, 근본적으로는 EBS를 늘린다(§6)
 - 구성: `backend/deploy/` (Docker Compose: api + Caddy 자동 HTTPS), 절차는 `backend/README.md`
 - **외부 감시**(`.github/workflows/server-health.yml`, 10-16 추가): 15분마다 아래를 확인한다. 예약 실행은 `main`의 파일로만 돌고, GitHub 사정으로 몇 분씩 늦거나 한 번씩 빠질 수 있다. 일시적인 오류(연결 실패, 응답 중단, 502·503)는 10초 간격으로 3번 더 시도한 뒤 판단한다.
-  - `https://flex-able-sh.duckdns.org/actuator/health` — 앱, DB(RDS), 디스크(남은 공간 300MB 미만이면 DOWN). 응답의 `components`에 항목별 상태만 나온다(용량 같은 세부값은 숨김). 이 설정은 다음 `deploy.sh` 배포부터 반영되고, 그 전에는 전체 상태만 나온다
+  - `https://flex-able-sh.duckdns.org/actuator/health` — 앱, DB(RDS), 디스크(남은 공간 300MB 미만이면 DOWN). 응답의 `components`에 항목별 상태만 나온다(용량 같은 세부값은 숨김). 10-16 배포로 반영됐다
   - 웹 `/privacy`(Play에 등록한 개인정보처리방침 주소)
   - HTTPS 인증서 만료가 10일 미만으로 남았는지(Caddy 자동 갱신 실패). 만료일을 읽지 못해도 실패로 본다
   - 실패하면 저장소에 `server-health` 라벨을 단 `[서버 감시] 운영 서버 확인 실패` 이슈를 하나 연다(라벨 붙은 열린 이슈가 있으면 새로 만들지 않음). 정상으로 돌아오면 확인 기록을 댓글로 남기고 자동으로 닫는다. **팀 전체 알림은 이 이슈로 받는다**(저장소 Watch 설정)
@@ -160,6 +162,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 ## 6. 미뤄 둔 일
 
 - [ ] 도메인 구매 → 서버 `.env`의 `API_DOMAIN`, `frontend/.env.production`, EAS 환경변수 `EXPO_PUBLIC_API_URL`(preview·production) 변경 → 앱 재빌드 또는 원격 업데이트
+- [ ] EBS 루트 볼륨 확장(지금 6.7GB, 10-16 배포 전 96%까지 참): AWS 콘솔 → EC2 → 볼륨 → 크기 수정(예: 16GB) 뒤 서버에서 `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1`(10-16 확인: 루트 파티션 p1이 디스크 맨 끝이라 늘릴 수 있다). 재부팅 없이 된다
 - [ ] EC2 탄력적 IP 할당(지금은 자동 할당 IP라 인스턴스를 멈추면 바뀜 → DuckDNS 갱신 필요)
 - [x] 문의 이메일을 팀 계정으로 교체(10-16): `ucmnuniverse@gmail.com`. 앱은 원격 업데이트, 웹은 머지 후 Vercel 배포로 반영. Play Console 스토어 설명의 "문의:" 줄은 사람이 직접 바꾼다
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
