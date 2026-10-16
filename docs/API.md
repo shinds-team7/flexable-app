@@ -242,6 +242,7 @@ POST 본문:
 
 ## 기타
 
-- `GET /api/v1/health` (공개) → `{ "status": "UP" }`
+- `GET /api/v1/health` (공개) → `{ "status": "UP" }`. 앱이 떠 있는지만 본다(Docker 헬스체크용)
+- `GET /actuator/health` (공개, 운영 감시용) → 앱·DB·디스크(남은 공간 300MB 미만이면 DOWN)를 함께 보고, 하나라도 DOWN이면 503. `components`에 항목별 상태만 있고 세부값은 없다
 - 개인정보처리방침·고객지원·웹 계정 삭제는 프론트 정적 페이지(`/privacy`, `/support`, `/delete-account`)다. 서버 API는 위의 인증·`DELETE /me`를 쓴다.
 - CORS 허용 Origin은 서버 환경변수 `CORS_ORIGINS`(쉼표 구분, 예: `https://project2-flex-sh.vercel.app,http://localhost:8081`).

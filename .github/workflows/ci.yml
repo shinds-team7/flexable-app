@@ -1,0 +1,115 @@
+# PR과 main 푸시마다 AGENTS.md "검증 명령"을 돌린다. 하나라도 실패하면 머지하지 않는다.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 같은 PR에 새 커밋이 올라오면 이전 실행은 취소한다. main 푸시는 실행마다 그룹을 따로 줘서
+# 머지가 몰려도 대기 중인 실행이 밀려나지 않고 커밋마다 끝까지 돈다.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: 백엔드 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew test
+      - name: 실패한 테스트 보고서
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-report
+          path: backend/build/reports/tests/test
+          retention-days: 7
+
+  frontend:
+    name: 프론트엔드 타입 검사·린트
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      # EAS 빌드와 같은 Node 22·npm 10. Windows에서 만든 package-lock.json이 리눅스 npm ci에서
+      # 깨지는 문제(HANDOFF §3, #9·#16·#20)를 EAS 빌드 전에 여기서 잡는다.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx expo lint
+
+  e2e:
+    name: 웹 빌드·E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # 프로세스 환경변수가 .env.production(운영 API)보다 우선한다. E2E는 이 job 안의 로컬 백엔드만 쓴다.
+      EXPO_PUBLIC_API_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 백엔드 실행(H2, local 프로필)
+        working-directory: backend
+        run: nohup ./gradlew bootRun --args='--spring.profiles.active=local' > "$RUNNER_TEMP/backend.log" 2>&1 &
+      - name: 웹 빌드
+        working-directory: frontend
+        run: |
+          npm ci
+          npx expo export -p web
+      - name: Playwright 브라우저 설치
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      # Vercel처럼 모든 경로를 index.html로 돌려준다(-s). expo serve는 /privacy 같은 경로에 404를 낸다.
+      - name: 웹 서버 실행
+        working-directory: frontend
+        run: nohup npx -y serve@14.2.6 -s dist -l 8081 > "$RUNNER_TEMP/web.log" 2>&1 &
+      - name: 백엔드·웹 준비 대기
+        run: |
+          for url in http://localhost:8080/api/v1/health http://localhost:8081/; do
+            timeout 240 bash -c "until curl -fs -o /dev/null $url; do sleep 3; done" \
+              || { echo "::error::$url 이 4분 안에 뜨지 않음"; exit 1; }
+          done
+      - name: E2E
+        working-directory: frontend
+        run: npx playwright test
+      - name: 실패 기록(스크린샷·trace·서버 로그)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results
+          path: |
+            frontend/test-results
+            ${{ runner.temp }}/backend.log
+            ${{ runner.temp }}/web.log
+          retention-days: 7

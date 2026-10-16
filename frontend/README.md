@@ -21,7 +21,7 @@ npm run lint
 
 서비스 화면을 쓰려면 `.env.example`을 `.env.local`로 복사한다(`EXPO_PUBLIC_API_URL=http://localhost:8080`, 백엔드 실행은 [`../backend/README.md`](../backend/README.md)). `.env.production`(운영 API 주소)은 웹 운영 빌드용이다.
 
-E2E는 로컬 백엔드(8080)와 웹(8081)을 띄운 뒤 `npx playwright test`.
+E2E는 로컬 백엔드(8080)와 웹(8081)을 띄운 뒤 `npx playwright test`. PR마다 CI(`../.github/workflows/ci.yml`)가 정적 웹 빌드(`dist/`)를 띄워 같은 테스트를 돌린다.
 
 ## 환경 변수
 

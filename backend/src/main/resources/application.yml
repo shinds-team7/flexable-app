@@ -30,6 +30,13 @@ management:
     health:
       probes:
         enabled: true
+      # 외부 감시(.github/workflows/server-health.yml)가 db·diskSpace 중 무엇이 DOWN인지 알 수 있게
+      # 항목별 상태만 공개한다. 디스크 용량·DB 종류 같은 세부값(show-details)은 계속 숨긴다.
+      show-components: always
+  health:
+    diskspace:
+      # EC2 루트 디스크가 6.7GB라 가득 차기 전에 DOWN으로 알린다(이슈 #31). 기본값 10MB는 이미 늦다.
+      threshold: 300MB
 
 app:
   jwt:

@@ -1,6 +1,6 @@
 # 인수인계 — 서비스 1.0.0 Google Play 비공개 테스트
 
-마지막 갱신 2026-10-15. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-16. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
@@ -22,6 +22,8 @@
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
 | 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (`/demo` 시연, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
+| CI | PR·`main` 푸시마다 백엔드 테스트, tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
+| 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
@@ -62,7 +64,7 @@ npx playwright test     # 로컬 백엔드(8080)와 웹(8081)을 먼저 띄운 �
 - 운영 API의 CORS는 `https://project2-flex-sh.vercel.app`과 `http://localhost:8081`만 허용한다.
 - Windows Git Bash에서 `curl -d '한글'`은 깨져서 400이 난다. 한글 요청은 UTF-8 파일(`--data-binary @file.json`)로 보낸다.
 - **Windows에서 `npx expo install`로 패키지를 추가하면 `package-lock.json`에서 `node_modules/@emnapi/core`·`runtime` 항목이 빠질 수 있다.** 그대로 커밋하면 EAS(리눅스)의 `npm ci`가 실패한다(#9, #16). 커밋 전에 두 항목이 남아 있는지 확인한다.
-- **EAS는 npm 10.9.8(Node 22)로 `npm ci`를 한다.** 로컬 npm 11이 넘기는 peer 불일치를 npm 10은 오류로 본다(#20 → #21로 되돌림: `expo` 57.0.28이 `react-native-worklets@0.10.4`를 요구). 패키지를 바꾼 뒤에는 `package.json`·`package-lock.json`만 빈 폴더에 복사해 `npx -y npm@10.9.8 ci --dry-run --ignore-scripts`로 먼저 확인한다.
+- **EAS는 npm 10.9.8(Node 22)로 `npm ci`를 한다.** 로컬 npm 11이 넘기는 peer 불일치를 npm 10은 오류로 본다(#20 → #21로 되돌림: `expo` 57.0.28이 `react-native-worklets@0.10.4`를 요구). 패키지를 바꾼 뒤에는 `package.json`·`package-lock.json`만 빈 폴더에 복사해 `npx -y npm@10.9.8 ci --dry-run --ignore-scripts`로 먼저 확인한다. PR을 올리면 CI가 리눅스·Node 22(npm 10)로 `npm ci`를 돌려 같은 문제를 한 번 더 잡는다.
 - Claude Code를 쓸 때: 권한 규칙은 PC마다 따로라 새 PC에서 다시 추가한다(`/permissions` → Allow: `Bash(gh pr merge:*)`, `Bash(ssh -i ~/.ssh/sh-flex.pem ubuntu@3.36.103.99:*)`, `Bash(scp -i ~/.ssh/sh-flex.pem:*)`, `Bash(bash backend/deploy/deploy.sh:*)`). Claude 셸에서는 `eas login`의 입력을 받을 수 없으니 `eas login --device --non-interactive`로 받은 링크를 브라우저에서 승인한다(몇 분 뒤 만료).
 
 ## 4. 남은 일 (순서대로)
@@ -130,6 +132,14 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - 코드 변경 배포: 로컬에서 `backend/deploy/deploy.sh` (jar 빌드 → 업로드 → 재기동)
 - **EC2 루트 디스크가 6.7GB뿐이다.** Docker 빌드 캐시가 쌓이면 배포 빌드가 `apt-get update`(exit 100)에서 실패하는데 실제 원인은 디스크 부족이다(10-15 발생, 이슈 #31). `deploy.sh`가 배포마다 빌드 캐시·이전 이미지를 지우고 마지막에 `df` 결과를 보여 준다. 사용량이 90%를 넘으면 `docker system df`로 확인하고, 계속 부족하면 EBS 볼륨을 늘린다
 - 구성: `backend/deploy/` (Docker Compose: api + Caddy 자동 HTTPS), 절차는 `backend/README.md`
+- **외부 감시**(`.github/workflows/server-health.yml`, 10-16 추가): 15분마다 아래를 확인한다. 예약 실행은 `main`의 파일로만 돌고, GitHub 사정으로 몇 분씩 늦거나 한 번씩 빠질 수 있다. 일시적인 오류(연결 실패, 응답 중단, 502·503)는 10초 간격으로 3번 더 시도한 뒤 판단한다.
+  - `https://flex-able-sh.duckdns.org/actuator/health` — 앱, DB(RDS), 디스크(남은 공간 300MB 미만이면 DOWN). 응답의 `components`에 항목별 상태만 나온다(용량 같은 세부값은 숨김). 이 설정은 다음 `deploy.sh` 배포부터 반영되고, 그 전에는 전체 상태만 나온다
+  - 웹 `/privacy`(Play에 등록한 개인정보처리방침 주소)
+  - HTTPS 인증서 만료가 10일 미만으로 남았는지(Caddy 자동 갱신 실패). 만료일을 읽지 못해도 실패로 본다
+  - 실패하면 저장소에 `server-health` 라벨을 단 `[서버 감시] 운영 서버 확인 실패` 이슈를 하나 연다(라벨 붙은 열린 이슈가 있으면 새로 만들지 않음). 정상으로 돌아오면 확인 기록을 댓글로 남기고 자동으로 닫는다. **팀 전체 알림은 이 이슈로 받는다**(저장소 Watch 설정)
+  - 실패한 실행의 GitHub 메일은 한 사람에게만 간다. 처음에는 워크플로를 만든 사람, 그 뒤 `cron` 줄을 바꾸면 바꾼 사람, 꺼진 워크플로를 다시 켜면 다시 켠 사람이다. 그 사람의 GitHub 알림 설정(Settings → Notifications → Actions)이 켜져 있어야 한다
+  - 이슈 본문에 원인별 확인 순서가 있다. 요청 실패(연결 실패·시간 초과)는 EC2 정지·IP 변경(DuckDNS), HTTP 502는 API 컨테이너, `DOWN: db`는 RDS, `DOWN: diskSpace`는 디스크
+  - **공개 저장소는 60일 동안 저장소 활동(커밋 등)이 없으면 예약 실행이 자동으로 꺼진다.** Actions 탭 → 서버 상태 감시 → Enable workflow로 다시 켠다. 손으로 한 번 돌릴 때는 같은 화면의 Run workflow
 - EC2: Ubuntu 26.04, t3.micro, swap 2GB. 보안 그룹 `flex-api-web`(22는 관리자 IP만, 80, 443) + `ec2-rds-1`
   - **새 PC나 사무실에서는 공인 IP가 달라 SSH가 막힌다.** EC2 → 보안 그룹 `flex-api-web` → 인바운드 22번 소스를 새 IP로 바꾼다.
 - RDS: `database-flex` (MySQL), DB `flexable`, 앱 계정 `flexable_app`. 퍼블릭 액세스 없음, EC2에서만 접근
