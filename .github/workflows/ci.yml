@@ -59,6 +59,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx expo lint
+      - run: npm run test:unit
 
   e2e:
     name: 웹 빌드·E2E

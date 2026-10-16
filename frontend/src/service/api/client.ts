@@ -10,12 +10,18 @@ export class ApiError extends Error {
 }
 let token: string | null = null;
 let unauthorized: (() => Promise<void>) | undefined;
+// Bumped on every login/logout so a late response from an earlier session cannot touch the current one.
+let generation = 0;
 export function setApiSession(
   value: string | null,
   expired?: () => Promise<void>,
 ) {
   token = value;
   unauthorized = expired;
+  generation++;
+}
+export function sessionGeneration() {
+  return generation;
 }
 export async function api<T>(
   path: string,
@@ -39,6 +45,7 @@ export async function api<T>(
   options.signal?.addEventListener("abort", abort);
   try {
     const auth = options.token === undefined ? token : options.token;
+    const started = generation;
     const res = await fetch(`${base.replace(/\/$/, "")}/api/v1${path}`, {
       method: options.method ?? "GET",
       headers: {
@@ -53,7 +60,11 @@ export async function api<T>(
     if (res.status === 204) return undefined as T;
     const data = await res.json();
     if (!res.ok) {
-      if (data.code === "UNAUTHORIZED" && options.token === undefined)
+      if (
+        data.code === "UNAUTHORIZED" &&
+        options.token === undefined &&
+        started === generation
+      )
         await unauthorized?.();
       throw new ApiError(
         data.code ?? "INTERNAL_ERROR",
