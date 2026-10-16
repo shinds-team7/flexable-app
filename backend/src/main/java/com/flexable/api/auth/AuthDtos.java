@@ -24,7 +24,7 @@ public final class AuthDtos {
 	}
 
 	public record LoginRequest(
-			@NotBlank(message = "이메일을 입력해 주세요") String email,
+			@NotBlank(message = "이메일을 입력해 주세요") @Size(max = 254, message = "이메일 형식을 확인해 주세요") String email,
 			@NotBlank(message = "비밀번호를 입력해 주세요") String password) {
 	}
 

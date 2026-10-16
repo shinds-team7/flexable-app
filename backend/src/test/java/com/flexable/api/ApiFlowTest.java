@@ -114,6 +114,15 @@ class ApiFlowTest {
 	}
 
 	@Test
+	void loginRejectsOverlongEmail() throws Exception {
+		String email = "a".repeat(250) + "@example.com";
+		mvc.perform(json(post("/api/v1/auth/login"), null,
+				"{\"email\":\"" + email + "\",\"password\":\"wrong1234\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code", is("VALIDATION_FAILED")));
+	}
+
+	@Test
 	void requiresToken() throws Exception {
 		mvc.perform(get("/api/v1/me"))
 			.andExpect(status().isUnauthorized())
