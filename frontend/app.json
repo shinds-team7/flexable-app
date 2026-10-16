@@ -47,7 +47,16 @@
           "faceIDPermission": false
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/android-icon-foreground.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F9BB8B"
+        }
+      ]
     ],
     "extra": {
       "router": {},

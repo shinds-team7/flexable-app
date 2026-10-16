@@ -1,15 +1,35 @@
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ToastProvider } from "@/components/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { BudgetDraftProvider } from "@/service/BudgetDraft";
-import { SessionProvider } from "@/service/Session";
+import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
+
+/** 스플래시는 앱 시작 후 최소 1초, 세션 확인이 더 오래 걸리면 끝날 때까지 띄운다. */
+const SPLASH_MIN_MS = 1000;
+const startedAt = Date.now();
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+function SplashGate() {
+  const { ready } = useSession();
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(
+      () => SplashScreen.hideAsync().catch(() => {}),
+      Math.max(0, startedAt + SPLASH_MIN_MS - Date.now()),
+    );
+    return () => clearTimeout(t);
+  }, [ready]);
+  return null;
+}
 
 /** 공통 틀(안전영역·폰 프레임·토스트·업데이트 배너)만 둔다. 시연 Mock 상태는 demo/_layout에서만 주입한다. */
 export default function RootLayout() {
@@ -21,6 +41,7 @@ export default function RootLayout() {
           {/* demo/: 시연(Mock) / 그 외: 실제 서비스 */}
           <ToastProvider>
             <SessionProvider>
+              <SplashGate />
               <BudgetDraftProvider>
                 {Platform.OS !== "web" && <UpdateBanner />}
                 <Stack
