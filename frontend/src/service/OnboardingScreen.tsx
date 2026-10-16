@@ -15,7 +15,7 @@ import {
   money,
   useResource,
 } from "./ui";
-import type { Today } from "./types";
+import type { BudgetSettings, Today } from "./types";
 import { colors } from "@/theme";
 const steps = [
   "index",
@@ -43,7 +43,8 @@ function Content({ step }: { step: Step }) {
   const session = useSession();
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const saved = useRef(false);
+  // The exact draft object last PUT; a retry after a later step fails re-sends only if the input changed.
+  const saved = useRef<BudgetSettings | null>(null);
   const [error, setError] = useState<unknown>();
   // Only one fixed/protected item is expanded at a time; "확인" folds it into a summary row.
   const [open, setOpen] = useState<number | null>(null);
@@ -117,9 +118,9 @@ function Content({ step }: { step: Step }) {
       lock.current = true;
       setBusy(true);
       try {
-        if (!saved.current) {
+        if (saved.current !== v) {
           await api("/budget/settings", { method: "PUT", body: v });
-          saved.current = true;
+          saved.current = v;
         }
         await session.refreshUser();
         session.invalidate();

@@ -304,6 +304,48 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   });
 });
 
+test("changing input after a failed post-save step re-saves before finishing", async ({
+  page,
+}) => {
+  const bodies: { protectedItems: { amount: number }[] }[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "PUT" && r.url().endsWith("/budget/settings"))
+      bodies.push(r.postDataJSON());
+  });
+  await signup(page, email());
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByLabel("매달 수입일 (1~31)", { exact: true }).fill("25");
+  await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page
+    .getByRole("button", { name: "+ 보호할 돈 추가", exact: true })
+    .click();
+  await page.getByLabel("이름", { exact: true }).fill("비상금");
+  await page.getByLabel("금액 (원)", { exact: true }).fill("1000");
+  let droppedUserLookup = false;
+  await page.route("**/api/v1/me", (route) => {
+    if (route.request().method() === "GET" && !droppedUserLookup) {
+      droppedUserLookup = true;
+      return route.abort("failed");
+    }
+    return route.continue();
+  });
+  // The PUT succeeds but the follow-up user refresh fails, leaving the form editable.
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(page.getByText(/연결이 불안정해요/)).toBeVisible();
+  expect(bodies.map((b) => b.protectedItems[0].amount)).toEqual([1000]);
+  await page.getByLabel("금액 (원)", { exact: true }).fill("9000");
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/done$/);
+  expect(bodies.map((b) => b.protectedItems[0].amount)).toEqual([1000, 9000]);
+  const settings = await snapshot(page, "/budget/settings");
+  expect(settings.protectedItems[0].amount).toBe(9000);
+});
+
 test("re-entering the balance in settings does not subtract earlier spending again", async ({
   page,
 }) => {
