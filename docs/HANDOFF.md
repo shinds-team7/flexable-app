@@ -4,15 +4,16 @@
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
-## 0. 다음에 이어서 할 일 (2026-10-15 기준, 우선순위 순)
+## 0. 다음에 이어서 할 일 (2026-10-16 기준, 우선순위 순)
 
-1. [ ] Play Console 비공개 테스트에 versionCode 7 AAB 업로드 → 검토 → 출시. "이전 버전 포함"은 비워 둔다(지원 기기가 같아 예전 번들을 남길 이유가 없다). AAB는 EAS 빌드 `8699a0f4`(§4-2 빌드 목록)
-2. [ ] Play Console 스토어 등록정보 → 앱 아이콘을 `docs/play-store/icon-512.png`(새 광부 고양이, 32비트 PNG)로 교체
-3. [ ] 실기기 확인(Play에서 versionCode 7로 업데이트한 앱): 홈 화면 아이콘이 원형·둥근 사각형 런처에서 잘리지 않는지, 테마 아이콘, 동전 4단계, 게이지 퍼센트 표시, 거래 완료 알림이 상단에 뜨는지, 다음 원격 업데이트 때 업데이트 배너가 뜨고 "지금 적용"이 동작하는지, 거래 수정·수입 저장 후 빈 화면이 다시 나오지 않는지(PR #23·#25, `docs/bug-transaction-edit-blank-screen.md`)
-4. [ ] 팀원 2차 피드백 수집(노션)
-5. [ ] `docs/play-store/` 스크린샷 교체 검토(예전 홈 화면·아이콘 기준)
-6. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
-7. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
+1. [ ] **진행 중(10-16~)** 비공개 테스트 테스터 모집: 12명 이상(여유 있게 14~15명)이 옵트인한 날부터 14일 연속 유지 → Play Console에서 프로덕션 액세스 신청. 안내 문구·옵트인 링크·피드백 주소는 `docs/play-store/README.md` §5
+2. [x] Play Console 비공개 테스트에 versionCode 7 AAB 업로드 → 검토 → 출시. "이전 버전 포함"은 비워 둔다(지원 기기가 같아 예전 번들을 남길 이유가 없다). AAB는 EAS 빌드 `8699a0f4`(§4-2 빌드 목록)
+3. [x] Play Console 스토어 등록정보 → 앱 아이콘을 `docs/play-store/icon-512.png`(새 광부 고양이, 32비트 PNG)로 교체
+4. [ ] 실기기 확인(Play에서 versionCode 7로 업데이트한 앱): 홈 화면 아이콘이 원형·둥근 사각형 런처에서 잘리지 않는지, 테마 아이콘, 동전 4단계, 게이지 퍼센트 표시, 거래 완료 알림이 상단에 뜨는지, 다음 원격 업데이트 때 업데이트 배너가 뜨고 "지금 적용"이 동작하는지, 거래 수정·수입 저장 후 빈 화면이 다시 나오지 않는지(PR #23·#25, `docs/bug-transaction-edit-blank-screen.md`)
+5. [ ] 팀원 2차 피드백 수집(노션)
+6. [ ] `docs/play-store/` 스크린샷 교체 검토(예전 홈 화면·아이콘 기준)
+7. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
+8. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
 
 지난 변경 내역은 PR 목록과 `git log`에 있다. 기능별 현재 상태는 `docs/FEATURES.md`.
 
@@ -27,8 +28,8 @@
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
-| Android 빌드 | production AAB versionCode 7(10-15, 새 아이콘·권한 정리 포함) 빌드 완료, Play 업로드 대기 | §4-2 |
-| Play Console | 등록에 쓰던 Google 계정 복구됨(10-14) → 등록·앱 만들기 진행 | §4-3 |
+| Android 빌드 | production AAB versionCode 7(10-15, 새 아이콘·권한 정리 포함) 비공개 테스트 출시 완료 | §4-2 |
+| Play Console | 개발자 계정 `ucmnuniverse`. 비공개 테스트 출시·스토어 아이콘 교체 완료, 테스터 모집 중(10-16) | §4-3, `docs/play-store/README.md` |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
 
@@ -118,7 +119,8 @@ npx eas-cli@latest update --channel production --environment production --platfo
 
 ### 4-3. Play Console
 - 등록비를 낸 Google 계정이 복구되었다(10-14). 그 계정으로 등록(본인·주소 확인, 전화번호 인증)을 이어 간다.
-- 연락처 이메일은 앱·정책 문서와 같은 주소로 맞춘다(`frontend/src/service/config.ts`).
+- 연락처 이메일은 앱·정책 문서·Play Console 모두 `ucmnuniverse@gmail.com`이다(10-16 통일). 바꿀 때는 `frontend/src/service/config.ts`, `docs/play-store/*.md`, Play Console(연락처·스토어 설명의 "문의:" 줄)을 함께 바꾼다.
+- 운영자 표시명(개인정보처리방침·약관의 운영자·개인정보 보호책임자)도 Play 개발자 표시명과 같은 `ucmnuniverse`다(10-16 통일, 예전 표시명은 쓰지 않는다). 값은 `frontend/src/service/config.ts`의 `OPERATOR_NAME`과 `docs/play-store/privacy-policy.md`·`terms.md`에 있다.
 
 `docs/play-store/README.md` 순서대로 진행: 앱 만들기 → 앱 콘텐츠 → 스토어 등록정보(그래픽·스크린샷은 `docs/play-store/`) → 비공개 테스트 트랙 → AAB 업로드 → 테스터 12명 이상(여유 있게 14~15명) → 검토 → 옵트인 링크 배포 → 14일 유지 → 프로덕션 액세스 신청.
 
@@ -151,7 +153,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 
 - [ ] 도메인 구매 → 서버 `.env`의 `API_DOMAIN`, `frontend/.env.production`, EAS 환경변수 `EXPO_PUBLIC_API_URL`(preview·production) 변경 → 앱 재빌드 또는 원격 업데이트
 - [ ] EC2 탄력적 IP 할당(지금은 자동 할당 IP라 인스턴스를 멈추면 바뀜 → DuckDNS 갱신 필요)
-- [ ] 문의 이메일을 팀 계정으로 교체: `frontend/src/service/config.ts`, `docs/play-store/*.md`, Play Console
+- [x] 문의 이메일을 팀 계정으로 교체(10-16): `ucmnuniverse@gmail.com`. 앱은 원격 업데이트, 웹은 머지 후 Vercel 배포로 반영. Play Console 스토어 설명의 "문의:" 줄은 사람이 직접 바꾼다
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [x] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 2026-10-14 보관 기간 7일로 설정, 리전 간 복제 없음, 수동 스냅샷 없음, AWS Backup 미사용 확인
