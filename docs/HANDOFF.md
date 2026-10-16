@@ -6,6 +6,12 @@
 
 ## 0. 다음에 이어서 할 일 (2026-10-16 기준, 우선순위 순)
 
+**10-16 PR #50(CI·서버 감시)·#51(문의 이메일·운영자 표시명 `ucmnuniverse` 통일) 머지 후 남은 것 — 사람이 한다**
+- [ ] 백엔드 배포: `bash backend/deploy/deploy.sh`(§5). #50의 헬스 체크 항목별 표시와 디스크 300MB 기준이 이때 반영된다. 배포 뒤 `curl -s https://flex-able-sh.duckdns.org/actuator/health`에 `components`(db, diskSpace)가 나오면 끝
+- [ ] 원격 업데이트 production 승격: preview 그룹 `25bdbc3d-358e-4ad0-a90c-1e93b8e4bdad`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명)를 preview APK에서 확인한 뒤 `npm run update:promote -- 25bdbc3d-358e-4ad0-a90c-1e93b8e4bdad --message "문의 이메일·운영자 표시명 통일, 원그래프 회전 방식 변경"`(§4-2). 확인할 것: 업데이트 배너가 뜨고 "지금 적용"이 동작하는지(#45 이후 첫 업데이트), 마이·고객지원·계정 삭제의 문의 주소, 약관·개인정보처리방침의 운영자명, 분석 화면 원그래프 시작 위치(12시 방향)
+- [ ] Play Console 스토어 등록정보 → 자세한 설명 끝 "문의:" 줄을 `ucmnuniverse@gmail.com`으로(`docs/play-store/README.md`의 문구와 같게)
+- [ ] `docs/play-store/README.md` §3.7 금융 기능 선언에 Play Console에서 실제로 고른 항목을 적고 TODO를 지운다
+
 1. [ ] **진행 중(10-16~)** 비공개 테스트 테스터 모집: 12명 이상(여유 있게 14~15명)이 옵트인한 날부터 14일 연속 유지 → Play Console에서 프로덕션 액세스 신청. 안내 문구·옵트인 링크·피드백 주소는 `docs/play-store/README.md` §5
 2. [x] Play Console 비공개 테스트에 versionCode 7 AAB 업로드 → 검토 → 출시. "이전 버전 포함"은 비워 둔다(지원 기기가 같아 예전 번들을 남길 이유가 없다). AAB는 EAS 빌드 `8699a0f4`(§4-2 빌드 목록)
 3. [x] Play Console 스토어 등록정보 → 앱 아이콘을 `docs/play-store/icon-512.png`(새 광부 고양이, 32비트 PNG)로 교체
@@ -94,6 +100,8 @@ npx eas-cli@latest build -p android --profile production
 #### 원격 업데이트 (EAS Update)
 
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
+
+**2026-10-16:** preview `25bdbc3d`(#47·#49·#51, 커밋 e77b1d7) 게시, production 승격 대기(§0). preview·production 환경변수가 같은 것을 확인했다.
 
 **2026-10-15 최신:** production 그룹 이력(위가 최신) — `d63078bb`(PR #45 업데이트 배너, preview `1cefd7bf`) ← `2c35943a`(PR #43 완료 알림 상단, preview `677bc2d0`) ← `1d3f76aa`(PR #37·#38, preview `aa8168a2`) ← `c2afb9ea`. 되돌릴 때는 바로 아래 그룹을 production에 다시 게시한다. 업데이트 배너는 #45를 받은 뒤 나가는 다음 원격 업데이트부터 뜬다(실기기 확인 전). 같은 날 versionCode 7을 빌드했다. `app.json`의 `version`은 그대로 1.0.0이라 런타임도 1.0.0이고, 아이콘·권한 변경은 JS와 무관해서 versionCode 5·6·7이 같은 원격 업데이트를 받아도 된다.
 
