@@ -390,6 +390,11 @@ test("expired token returns to start; public routes and demo remain accessible",
   page,
 }) => {
   await page.goto("/");
+  // 첫 화면이 저장소를 다 읽은 뒤에 토큰을 넣는다. 먼저 넣으면 첫 페이지가 이 토큰으로 /me를 보내
+  // 401을 받고 토큰을 지운 채 새로고침돼, 다시 연 페이지에는 만료 안내가 뜨지 않는다(CI 10-16).
+  await expect(
+    page.getByRole("button", { name: "이미 계정이 있어요", exact: true }),
+  ).toBeVisible();
   await page.evaluate(() =>
     localStorage.setItem("flexable.service.token", "expired-test-token"),
   );
