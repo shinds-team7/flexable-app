@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { router } from "expo-router";
-import { api, ApiError, setApiSession } from "./api/client";
+import { api, ApiError, sessionGeneration, setApiSession } from "./api/client";
 import { readStorage, writeStorage } from "./storage";
 import type { AuthResponse, User } from "./types";
 import { useToast } from "@/components/Toast";
@@ -49,25 +49,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     toast("다시 로그인해 주세요");
   }, [clear, toast]);
   const refreshUser = useCallback(async () => {
+    const started = sessionGeneration();
     const value = await api<User>("/me");
+    if (started !== sessionGeneration()) return;
     userId.current = value.id;
     setUser(value);
   }, []);
   useEffect(() => {
     let alive = true;
     (async () => {
+      // A login or logout that finishes while restoring owns the session; drop the restore result.
+      let started = sessionGeneration();
+      const current = () => alive && started === sessionGeneration();
       try {
         const saved = await readStorage(KEY);
+        if (!current()) return;
         setApiSession(saved, expired);
+        started = sessionGeneration();
         if (saved) {
           const value = await api<User>("/me");
-          if (alive) {
+          if (current()) {
             userId.current = value.id;
             setUser(value);
           }
         }
       } catch (e) {
-        if (alive && !(e instanceof ApiError && e.code === "UNAUTHORIZED"))
+        if (current() && !(e instanceof ApiError && e.code === "UNAUTHORIZED"))
           setError(e);
       } finally {
         if (alive) setReady(true);
