@@ -118,6 +118,7 @@ npx eas-cli@latest update --channel production --environment production --platfo
 ### 4-3. Play Console
 - 등록비를 낸 Google 계정이 복구되었다(10-14). 그 계정으로 등록(본인·주소 확인, 전화번호 인증)을 이어 간다.
 - 연락처 이메일은 앱·정책 문서·Play Console 모두 `ucmnuniverse@gmail.com`이다(10-16 통일). 바꿀 때는 `frontend/src/service/config.ts`, `docs/play-store/*.md`, Play Console(연락처·스토어 설명의 "문의:" 줄)을 함께 바꾼다.
+- 운영자 표시명(개인정보처리방침·약관의 운영자·개인정보 보호책임자)도 Play 개발자 표시명과 같은 `ucmnuniverse`다(10-16 통일, 예전 표시명은 쓰지 않는다). 값은 `frontend/src/service/config.ts`의 `OPERATOR_NAME`과 `docs/play-store/privacy-policy.md`·`terms.md`에 있다.
 
 `docs/play-store/README.md` 순서대로 진행: 앱 만들기 → 앱 콘텐츠 → 스토어 등록정보(그래픽·스크린샷은 `docs/play-store/`) → 비공개 테스트 트랙 → AAB 업로드 → 테스터 12명 이상(여유 있게 14~15명) → 검토 → 옵트인 링크 배포 → 14일 유지 → 프로덕션 액세스 신청.
 
