@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { T } from "@/components/ui";
-import { colors, pressTransition, radius } from "@/theme";
+import { colors, pressTransition } from "@/theme";
 
 type Props = { onPress: () => void; disabled?: boolean; busy?: boolean };
 
@@ -94,7 +94,7 @@ export function KakaoButton(props: Props) {
   return (
     <BrandButton
       {...props}
-      label="카카오로 시작하기"
+      label="카카오 로그인"
       mark={<KakaoSymbol />}
       background="#FEE500"
       border="#FEE500"
@@ -107,7 +107,7 @@ export function GoogleButton(props: Props) {
   return (
     <BrandButton
       {...props}
-      label="Google 계정으로 계속하기"
+      label="Google 계정으로 로그인"
       mark={<GoogleMark />}
       background="#FFFFFF"
       border="#747775"
@@ -120,7 +120,7 @@ export function EmailButton(props: Props) {
   return (
     <BrandButton
       {...props}
-      label="이메일로 시작하기"
+      label="이메일로 로그인"
       mark={<Ionicons name="mail-outline" size={20} color={colors.brandDark} />}
       background={colors.brandSoft}
       border={colors.brandSoft}
@@ -130,12 +130,13 @@ export function EmailButton(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  // Same height and corner as the app's Button; the mark sits on the left and the label stays centered.
+  // Same height as the app's Button; the mark sits on the left and the label stays centered.
   button: {
     minHeight: 54,
     paddingVertical: 12,
     paddingHorizontal: 52,
-    borderRadius: radius.md,
+    // 카카오 로그인 디자인 가이드: 컨테이너 radius 12px. 세 버튼을 같은 모양으로 맞춘다.
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",

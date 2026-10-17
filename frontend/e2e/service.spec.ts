@@ -8,7 +8,7 @@ const email = () =>
 async function signup(page: Page, address: string) {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "이메일로 시작하기", exact: true })
+    .getByRole("button", { name: "이메일로 로그인", exact: true })
     .click();
   await page.getByRole("button", { name: "회원가입", exact: true }).click();
   await expect(page).toHaveURL(/\/auth\/signup$/);
@@ -37,7 +37,7 @@ async function snapshot(page: Page, path: string) {
 }
 async function login(page: Page, address: string) {
   await page
-    .getByRole("button", { name: "이메일로 시작하기", exact: true })
+    .getByRole("button", { name: "이메일로 로그인", exact: true })
     .click();
   await page.getByLabel("이메일", { exact: true }).fill(address);
   await page.getByLabel("비밀번호", { exact: true }).fill(password);
@@ -438,14 +438,14 @@ test("expired token returns to start; public routes and demo remain accessible",
   // 첫 화면이 저장소를 다 읽은 뒤에 토큰을 넣는다. 먼저 넣으면 첫 페이지가 이 토큰으로 /me를 보내
   // 401을 받고 토큰을 지운 채 새로고침돼, 다시 연 페이지에는 만료 안내가 뜨지 않는다(CI 10-16).
   await expect(
-    page.getByRole("button", { name: "카카오로 시작하기", exact: true }),
+    page.getByRole("button", { name: "카카오 로그인", exact: true }),
   ).toBeVisible();
   await page.evaluate(() =>
     localStorage.setItem("flexable.service.token", "expired-test-token"),
   );
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "카카오로 시작하기", exact: true }),
+    page.getByRole("button", { name: "카카오 로그인", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("다시 로그인해 주세요", { exact: true }),
@@ -519,9 +519,9 @@ test("start screen offers kakao, google and email with policy links at the botto
 }) => {
   await page.goto("/");
   const buttons = [
-    "카카오로 시작하기",
-    "Google 계정으로 계속하기",
-    "이메일로 시작하기",
+    "카카오 로그인",
+    "Google 계정으로 로그인",
+    "이메일로 로그인",
   ].map((name) => page.getByRole("button", { name, exact: true }));
   for (const button of buttons) await expect(button).toBeVisible();
   await expect(
@@ -561,7 +561,7 @@ test("email login keeps password help and signup on one line under the login but
 }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "이메일로 시작하기", exact: true })
+    .getByRole("button", { name: "이메일로 로그인", exact: true })
     .click();
   await expect(page).toHaveURL(/\/auth\/login$/);
   const submit = (await page
@@ -591,14 +591,14 @@ test("social login tells the user when the server has that method turned off", a
   // The local backend has no Kakao or Google keys, so the provider list is empty.
   await page.goto("/");
   await page
-    .getByRole("button", { name: "카카오로 시작하기", exact: true })
+    .getByRole("button", { name: "카카오 로그인", exact: true })
     .click();
   await expect(
     page.getByText("지금은 이 로그인 방법을 쓸 수 없어요", { exact: true }),
   ).toBeVisible();
   await expect(page).toHaveURL(/8081\/$/);
   await expect(
-    page.getByRole("button", { name: "Google 계정으로 계속하기", exact: true }),
+    page.getByRole("button", { name: "Google 계정으로 로그인", exact: true }),
   ).toBeEnabled();
 });
 
@@ -623,7 +623,7 @@ test("social login binds the code to this tab's verifier and signs in once (exch
   );
   await page.goto("/");
   await page
-    .getByRole("button", { name: "카카오로 시작하기", exact: true })
+    .getByRole("button", { name: "카카오 로그인", exact: true })
     .click();
   await page.waitForURL(/\/api\/v1\/auth\/oauth\/kakao\/start\?/);
   const start = new URL(page.url());
@@ -687,7 +687,7 @@ test("social login errors explain what happened and lead back to the start", asy
   await page.getByRole("button", { name: "처음으로", exact: true }).click();
   await expect(page).toHaveURL(/8081\/$/);
   await expect(
-    page.getByRole("button", { name: "카카오로 시작하기", exact: true }),
+    page.getByRole("button", { name: "카카오 로그인", exact: true }),
   ).toBeVisible();
 });
 
@@ -706,7 +706,7 @@ test("social login reports connection and server problems without opening the lo
   );
   await page.goto("/");
   const kakao = page.getByRole("button", {
-    name: "카카오로 시작하기",
+    name: "카카오 로그인",
     exact: true,
   });
   await kakao.click();
@@ -727,7 +727,7 @@ test("social login reports connection and server problems without opening the lo
     });
   });
   await page
-    .getByRole("button", { name: "Google 계정으로 계속하기", exact: true })
+    .getByRole("button", { name: "Google 계정으로 로그인", exact: true })
     .click();
   await expect(
     page.getByText("불러오지 못했어요. 잠시 후 다시 시도해 주세요", {
