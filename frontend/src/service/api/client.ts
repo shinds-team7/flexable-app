@@ -23,6 +23,16 @@ export function setApiSession(
 export function sessionGeneration() {
   return generation;
 }
+/** Full URL of an API path, e.g. for opening the social login start page in a browser. */
+export function apiUrl(path: string) {
+  const base = process.env.EXPO_PUBLIC_API_URL;
+  if (!base)
+    throw new ApiError(
+      "CONFIGURATION",
+      "연결 주소를 확인할 수 없어요. 고객지원에 문의해 주세요",
+    );
+  return `${base.replace(/\/$/, "")}/api/v1${path}`;
+}
 export async function api<T>(
   path: string,
   options: {
@@ -33,12 +43,7 @@ export async function api<T>(
     signal?: AbortSignal;
   } = {},
 ): Promise<T> {
-  const base = process.env.EXPO_PUBLIC_API_URL;
-  if (!base)
-    throw new ApiError(
-      "CONFIGURATION",
-      "연결 주소를 확인할 수 없어요. 고객지원에 문의해 주세요",
-    );
+  const url = apiUrl(path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   const abort = () => controller.abort();
@@ -46,7 +51,7 @@ export async function api<T>(
   try {
     const auth = options.token === undefined ? token : options.token;
     const started = generation;
-    const res = await fetch(`${base.replace(/\/$/, "")}/api/v1${path}`, {
+    const res = await fetch(url, {
       method: options.method ?? "GET",
       headers: {
         "Content-Type": "application/json",

@@ -44,3 +44,14 @@ app:
     ttl-days: 30
   cors-origins: ${CORS_ORIGINS:http://localhost:8081}
   zone: Asia/Seoul
+  oauth:
+    callback-base-url: ${OAUTH_CALLBACK_BASE_URL:http://localhost:8080}
+    allowed-redirect-uris: ${OAUTH_ALLOWED_REDIRECT_URIS:flexable://oauth/callback,http://localhost:8081/oauth/callback}
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
+      admin-key: ${KAKAO_ADMIN_KEY:}
+      scope: ${KAKAO_SCOPE:}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}

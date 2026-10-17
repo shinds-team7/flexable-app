@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 import { Button, T } from "@/components/ui";
+import { colors } from "@/theme";
 import { api, ApiError } from "./api/client";
 import { useSession } from "./Session";
 import { ErrorNotice, Field, Page } from "./ui";
@@ -174,22 +175,48 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
       />
       {!signup && (
         <>
-          <Button
-            label="비밀번호를 잊었어요"
-            variant="ghost"
-            onPress={() => setRecover(true)}
-          />
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: -4,
+            }}
+          >
+            <TextLink label="비밀번호 찾기" onPress={() => setRecover(true)} />
+            {/* replace: 가입 후 뒤로 가기에 이 로그인 화면이 남지 않게 한다(시작 → 가입과 같은 쌓임) */}
+            <TextLink
+              label="회원가입"
+              onPress={() => router.replace("/auth/signup")}
+            />
+          </View>
           {recover && (
             <T>비밀번호 재설정은 준비 중이에요. 문의: {SUPPORT_EMAIL}</T>
           )}
-          <Button
-            label="회원가입"
-            variant="ghost"
-            onPress={() => router.push("/auth/signup")}
-          />
         </>
       )}
     </Page>
+  );
+}
+/** 작은 글씨 텍스트 버튼 (터치 영역은 44px 이상) */
+function TextLink({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        minWidth: 44,
+        paddingHorizontal: 4,
+        justifyContent: "center",
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <T size={14} weight="600" color={colors.textSub}>
+        {label}
+      </T>
+    </Pressable>
   );
 }
 function Eye({ visible, onPress }: { visible: boolean; onPress: () => void }) {

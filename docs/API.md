@@ -22,6 +22,7 @@
 | 400 | `VALIDATION_FAILED` | 입력 형식 오류. `fields: { "email": "이메일 형식을 확인해 주세요" }` 추가 |
 | 401 | `UNAUTHORIZED` | 토큰 없음·만료·탈퇴 계정 → 로그인 화면으로 |
 | 401 | `INVALID_CREDENTIALS` | 로그인·탈퇴 시 이메일/비밀번호 불일치 |
+| 401 | `OAUTH_CODE_INVALID` | 일회용 코드 없음·만료·재사용·verifier 불일치. "로그인 시간이 지났어요. 다시 시도해 주세요" |
 | 404 | `NOT_FOUND` | 리소스 없음(남의 리소스도 404) |
 | 404 | `BUDGET_NOT_SET` | 초기 예산 미설정 |
 | 409 | `EMAIL_UNAVAILABLE` | 가입 불가 이메일(이미 가입 등) |
@@ -42,6 +43,7 @@
 
 - 비밀번호 8~64자, 영문·숫자 각 1자 이상. 두 동의 값은 `true`여야 한다.
 - 201 → `AuthResponse`. 가입 시 기본 카테고리가 자동 생성된다.
+- 소셜 계정 이메일과 중복되어도 409 `EMAIL_UNAVAILABLE`.
 
 ### `POST /auth/login` (공개)
 
@@ -51,11 +53,13 @@
 
 200 → `AuthResponse`
 
+비밀번호가 없는 소셜 계정은 이메일 로그인 시 항상 401 `INVALID_CREDENTIALS`를 받는다.
+
 ```json
 {
   "accessToken": "eyJ...",
   "expiresAt": "2026-11-12T10:00:00+09:00",
-  "user": { "id": 1, "email": "a@b.com", "onboarded": false, "createdAt": "2026-10-13T10:00:00+09:00" }
+  "user": { "id": 1, "email": "a@b.com", "onboarded": false, "createdAt": "2026-10-13T10:00:00+09:00", "provider": "email", "hasPassword": true }
 }
 ```
 
@@ -63,11 +67,57 @@
 - 앱은 `expo-secure-store`, 웹은 `localStorage`에 저장한다.
 - `onboarded=false`면 초기 예산 설정(`/onboarding`)으로, `true`면 홈으로 보낸다.
 
+### 소셜 로그인 (카카오·Google, 공개)
+
+클라이언트는 무작위 32바이트 base64url `codeVerifier`를 보관하고 `codeChallenge = base64url(SHA-256(codeVerifier))`(패딩 없음)를 생성한다. 브라우저 start 이동 → callback 코드 수신 → exchange 순서다. JWT는 리다이렉트 URL에 넣지 않는다.
+
+#### `GET /auth/oauth/providers` → 200
+
+`{ "providers": ["kakao", "google"] }` — client id가 설정된 공급자만 포함한다. 모두 미설정이면 빈 배열이다.
+
+#### `GET /auth/oauth/{provider}/start?redirectUri=&codeChallenge=` → 302
+
+- provider: `kakao` 또는 `google`. 그 외는 404 JSON `NOT_FOUND`.
+- `redirectUri`는 `app.oauth.allowed-redirect-uris`와 **정확히 일치**해야 한다. 누락·불일치는 400 JSON `VALIDATION_FAILED`(field `redirectUri`), 리다이렉트 없음.
+- `codeChallenge`: 정규식 `^[A-Za-z0-9_-]{43}$`. 누락·형식 오류는 `{redirectUri}?error=failed`.
+- client id 미설정은 `{redirectUri}?error=provider_unavailable`.
+- 정상 요청은 무작위 32바이트 base64url state(provider·redirectUri·codeChallenge 포함, 10분)를 저장하고 authorize URL로 이동한다.
+- 카카오: `https://kauth.kakao.com/oauth/authorize`, 파라미터 `client_id, redirect_uri, response_type=code, state`. scope 기본 없음, `KAKAO_SCOPE` 설정 시에만 추가.
+- Google: `https://accounts.google.com/o/oauth2/v2/auth`, 위 파라미터와 `scope=openid%20email`, `prompt=select_account`.
+- 공급자에 넘기는 `redirect_uri`: `{OAUTH_CALLBACK_BASE_URL}/api/v1/auth/oauth/{provider}/callback`.
+
+#### `GET /auth/oauth/{provider}/callback?code=&state=&error=` → 302
+
+- state는 조회 즉시 삭제한다. 없음·만료·재사용·provider 불일치는 **400 HTML 한 줄**: "로그인 요청이 만료됐어요. 처음 화면으로 돌아가 다시 시도해 주세요." (리다이렉트 없음).
+- 공급자 `error=access_denied`만 `{redirectUri}?error=cancelled`. 그 밖의 공급자 오류는 `error=failed`로 이동하고 provider·오류 코드(최대 64자)를 warn 로그에 남긴다. 토큰 교환·프로필 조회 실패·타임아웃도 `error=failed`. 외부 HTTP 오류는 상태 코드만 추가로 기록하며 응답 본문·토큰·이메일은 기록하지 않는다. 외부 연결 3초·읽기 5초 제한.
+- 기존 `(provider, providerUserId)` identity가 있으면 해당 사용자로 로그인한다.
+- 신규 identity의 **검증된 이메일**이 기존 users.email과 겹치면 자동 연결하지 않고 `error=email_in_use`.
+- 카카오 검증: `is_email_valid && is_email_verified`, Google 검증: `email_verified`.
+- 신규 사용자: email은 검증 이메일 또는 NULL, password_hash는 NULL, agreed_at은 현재 시각. 기본 카테고리와 identity도 생성한다. 미검증 이메일은 저장하지 않는다.
+- 성공하면 무작위 32바이트 base64url loginCode(userId·codeChallenge 포함, 2분 유효)를 발급하고 `{redirectUri}?code={loginCode}`로 이동한다.
+- redirectUri에 쿼리가 있으면 `&`로 추가하며 값은 URL 인코딩한다.
+
+#### `POST /auth/oauth/exchange` → 200 `AuthResponse`
+
+```json
+{ "code": "callback의 일회용 코드", "codeVerifier": "클라이언트가 보관한 verifier" }
+```
+
+코드는 조회 즉시 삭제한다. 없음·만료·재사용 또는 verifier의 SHA-256 base64url 값 불일치는 모두 401 `OAUTH_CODE_INVALID`. 잘못된 verifier 시도 후에도 코드를 재사용할 수 없다. 성공 응답은 이메일 로그인과 같다.
+
+state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 만료 항목을 정리한다. 각각 최대 10,000개이며, 정리 후에도 상한이면 새 항목을 발급하지 않고 start·callback은 `error=failed`로 이동한다. 상한 로그에는 개수만 기록한다. 서버 재시작 시 진행 중 로그인은 다시 시작해야 한다. 여러 인스턴스 운영 전 공유 저장소로 교체한다.
+
+설정 환경변수: `OAUTH_CALLBACK_BASE_URL`, `OAUTH_ALLOWED_REDIRECT_URIS`(쉼표 구분), `KAKAO_CLIENT_ID`(REST API 키), `KAKAO_CLIENT_SECRET`(선택), `KAKAO_ADMIN_KEY`(탈퇴 연결 끊기용, 선택), `KAKAO_SCOPE`(선택), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. 키 값은 서버 환경변수에만 넣는다.
+로컬 기본값: callback base `http://localhost:8080`, redirect 허용 목록 `flexable://oauth/callback,http://localhost:8081/oauth/callback`.
+운영 설정: callback base `https://flex-able-sh.duckdns.org`, redirect 허용 목록 `flexable://oauth/callback,https://project2-flex-sh.vercel.app/oauth/callback,http://localhost:8081/oauth/callback`.
+
 ### `POST /auth/logout` → 204
 
 서버가 이 사용자의 기존 토큰을 모두 무효화한다(모든 기기 로그아웃). 클라이언트는 응답과 무관하게 토큰을 지운다.
 
 ### `GET /me` → 200 `User`
+
+`User`는 `id, email, onboarded, createdAt, provider, hasPassword`를 반환한다. `email`은 null 가능. `provider`는 비밀번호가 있으면 `email`, 없으면 첫 identity의 `kakao` 또는 `google`이다. `hasPassword`는 비밀번호 존재 여부(boolean). `AuthResponse.user`도 같은 형식이다.
 
 ### `DELETE /me` → 204 (계정·데이터 삭제)
 
@@ -75,9 +125,12 @@
 { "password": "abcd1234" }
 ```
 
-- 비밀번호가 틀리면 401 `INVALID_CREDENTIALS`.
-- 성공하면 사용자·예산 설정·카테고리·거래를 **즉시 영구 삭제**하고 이후 기존 토큰은 401을 받는다.
-- 웹 계정 삭제 페이지(`/delete-account`)는 `POST /auth/login` → `DELETE /me` 순서로 호출한다.
+- 요청 body: `{ "password"?: string, "confirm"?: string }`.
+- `hasPassword=true`: password 필수(누락 시 400, field `password`), 틀리면 401 `INVALID_CREDENTIALS`.
+- `hasPassword=false`: `{ "confirm": "탈퇴" }` 필수. 누락·불일치는 400 `VALIDATION_FAILED`, field `confirm`, "확인 문구 '탈퇴'를 입력해 주세요".
+- 카카오 identity와 `KAKAO_ADMIN_KEY`가 있으면 삭제 전 카카오 연결 끊기를 시도한다. 실패해도 탈퇴는 진행하고 로그만 남긴다.
+- 성공하면 사용자·소셜 identity·예산 설정·카테고리·거래를 **즉시 영구 삭제**하고 이후 기존 토큰은 401을 받는다.
+- 이메일 계정은 이메일 로그인, 소셜 계정은 소셜 로그인으로 인증한 뒤 `DELETE /me`를 호출한다.
 
 ## 초기 예산 설정
 

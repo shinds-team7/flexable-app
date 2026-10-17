@@ -15,6 +15,25 @@ import { APP_VERSION, SUPPORT_EMAIL } from "./config";
 import { useHomeStyle } from "./homeStyle";
 import { useSession } from "./Session";
 import { ErrorNotice } from "./ui";
+import { PROVIDER_NAME } from "./oauth";
+import type { User } from "./types";
+/** 이메일, 그리고 카카오·Google 계정이면 어느 계정으로 로그인했는지 */
+export function AccountLine({ user }: { user: User }) {
+  const social =
+    user.provider === "kakao" || user.provider === "google"
+      ? `${PROVIDER_NAME[user.provider]} 계정으로 로그인 중`
+      : null;
+  return (
+    <>
+      <T style={{ marginTop: 8 }}>{user.email ?? social}</T>
+      {user.email && social && (
+        <T size={13} color={colors.textMuted} style={{ marginTop: 4 }}>
+          {social}
+        </T>
+      )}
+    </>
+  );
+}
 export function MyScreen() {
   const session = useSession();
   const toast = useToast();
@@ -49,7 +68,7 @@ export function MyScreen() {
         <T size={20} weight="800">
           내 계정
         </T>
-        <T style={{ marginTop: 8 }}>{session.user?.email}</T>
+        {session.user && <AccountLine user={session.user} />}
       </Card>
       <Card style={{ gap: 10 }}>
         <T weight="700">홈 화면</T>

@@ -1,9 +1,14 @@
 export type Kind = "EXPENSE" | "INCOME";
+export type LoginProvider = "email" | "kakao" | "google";
 export type User = {
   id: number;
-  email: string;
+  /** 카카오·Google로 가입하고 이메일 제공에 동의하지 않았으면 null */
+  email: string | null;
   onboarded: boolean;
   createdAt: string;
+  // Absent on servers deployed before social login; treat as an email account.
+  provider?: LoginProvider;
+  hasPassword?: boolean;
 };
 export type AuthResponse = {
   accessToken: string;

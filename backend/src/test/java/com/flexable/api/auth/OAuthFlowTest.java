@@ -1,0 +1,268 @@
+package com.flexable.api.auth;
+
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Import;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.web.util.UriComponentsBuilder;
+import com.jayway.jsonpath.JsonPath;
+
+@SpringBootTest(properties = { "app.oauth.kakao.client-id=test-kakao", "app.oauth.google.client-id=test-google",
+		"app.oauth.kakao.admin-key=test-admin" })
+@AutoConfigureMockMvc
+@Import(OAuthFlowTest.TestTimeConfig.class)
+class OAuthFlowTest {
+	private static final String REDIRECT = "flexable://oauth/callback";
+	private static final String VERIFIER = "test-verifier-with-32-random-bytes-equivalent";
+	@Autowired
+	MockMvc mvc;
+	@Autowired
+	JdbcTemplate jdbc;
+	@MockitoBean
+	OAuthProviderClient provider;
+	@Autowired
+	MutableClock clock;
+
+	@BeforeEach
+	void setup() {
+		clock.now = Instant.now();
+	}
+	private ResultActions json(String path, String body) throws Exception {
+		return mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body));
+	}
+	private String query(String url, String key) {
+		String value = UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst(key);
+		return value == null ? null : java.net.URLDecoder.decode(value, StandardCharsets.UTF_8);
+	}
+	private String start(String name, String redirect) throws Exception {
+		String location = mvc.perform(get("/api/v1/auth/oauth/" + name + "/start")
+			.param("redirectUri", redirect).param("codeChallenge", OAuthService.challenge(VERIFIER)))
+			.andExpect(status().isFound()).andReturn().getResponse().getHeader("Location");
+		return query(location, "state");
+	}
+	private String callback(String name, String state) throws Exception {
+		return mvc.perform(get("/api/v1/auth/oauth/" + name + "/callback").param("state", state).param("code", "provider-code"))
+			.andExpect(status().isFound()).andReturn().getResponse().getHeader("Location");
+	}
+	private String loginCode(String name, String email, boolean verified) throws Exception {
+		when(provider.fetch(eq(name), anyString())).thenReturn(new OAuthProviderClient.Profile(UUID.randomUUID().toString(), email, verified));
+		return query(callback(name, start(name, REDIRECT)), "code");
+	}
+	private ResultActions exchange(String code, String verifier) throws Exception {
+		return json("/api/v1/auth/oauth/exchange", """
+				{"code":"%s","codeVerifier":"%s"}
+				""".formatted(code, verifier));
+	}
+	private String body(ResultActions result) throws Exception {
+		return result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+	}
+
+	@TestConfiguration
+	static class TestTimeConfig {
+		@Bean
+		@Primary
+		MutableClock testClock() { return new MutableClock(); }
+	}
+	static class MutableClock extends Clock {
+		Instant now = Instant.now();
+		@Override public Instant instant() { return now; }
+		@Override public ZoneId getZone() { return ZoneOffset.UTC; }
+		@Override public Clock withZone(ZoneId zone) { return Clock.fixed(now, zone); }
+	}
+
+	@Test
+	void startValidatesRedirectAndBuildsAuthorizeUrls() throws Exception {
+		mvc.perform(get("/api/v1/auth/oauth/kakao/start").param("redirectUri", "https://evil.example"))
+			.andExpect(status().isBadRequest()).andExpect(header().doesNotExist("Location"))
+			.andExpect(jsonPath("$.code", is("VALIDATION_FAILED")));
+		mvc.perform(get("/api/v1/auth/oauth/unknown/start").param("redirectUri", REDIRECT))
+			.andExpect(status().isNotFound()).andExpect(jsonPath("$.code", is("NOT_FOUND")));
+		mvc.perform(get("/api/v1/auth/oauth/kakao/start").param("redirectUri", REDIRECT).param("codeChallenge", "bad"))
+			.andExpect(redirectedUrl(REDIRECT + "?error=failed"));
+		mvc.perform(get("/api/v1/auth/oauth/providers")).andExpect(jsonPath("$.providers", contains("kakao", "google")));
+		for (String name : new String[] { "kakao", "google" }) {
+			String url = mvc.perform(get("/api/v1/auth/oauth/" + name + "/start")
+				.param("redirectUri", REDIRECT).param("codeChallenge", OAuthService.challenge(VERIFIER)))
+				.andExpect(status().isFound()).andReturn().getResponse().getHeader("Location");
+			assertTrue(url.startsWith(name.equals("kakao") ? "https://kauth.kakao.com/oauth/authorize?"
+					: "https://accounts.google.com/o/oauth2/v2/auth?"));
+			assertEquals("test-" + name, query(url, "client_id"));
+			assertEquals("http://localhost:8080/api/v1/auth/oauth/" + name + "/callback", query(url, "redirect_uri"));
+			assertEquals("code", query(url, "response_type"));
+			assertTrue(query(url, "state").matches("[A-Za-z0-9_-]{43}"));
+			assertEquals(name.equals("google") ? "openid email" : null, query(url, "scope"));
+			assertEquals(name.equals("google") ? "select_account" : null, query(url, "prompt"));
+		}
+	}
+
+	@Test
+	void createsVerifiedUsersAndDefaultsAndLogsIntoExistingIdentity() throws Exception {
+		for (String name : new String[] { "kakao", "google" }) {
+			String email = UUID.randomUUID() + "@example.com";
+			String code = loginCode(name, email, true);
+			String auth = body(exchange(code, VERIFIER).andExpect(status().isOk())
+				.andExpect(jsonPath("$.accessToken").isString()).andExpect(jsonPath("$.expiresAt").isString())
+				.andExpect(jsonPath("$.user.email", is(email))).andExpect(jsonPath("$.user.provider", is(name)))
+				.andExpect(jsonPath("$.user.hasPassword", is(false))));
+			Number id = JsonPath.read(auth, "$.user.id");
+			assertEquals(11, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
+			assertNull(jdbc.queryForObject("select password_hash from users where id=?", String.class, id));
+			assertNotNull(jdbc.queryForObject("select agreed_at from users where id=?", java.sql.Timestamp.class, id));
+			String token = JsonPath.read(auth, "$.accessToken");
+			mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + token))
+				.andExpect(jsonPath("$.provider", is(name))).andExpect(jsonPath("$.hasPassword", is(false)));
+			exchange(query(callback(name, start(name, REDIRECT)), "code"), VERIFIER)
+				.andExpect(status().isOk()).andExpect(jsonPath("$.user.id", is(id.intValue())));
+			exchange(code, VERIFIER).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("OAUTH_CODE_INVALID")));
+		}
+	}
+
+	@Test
+	void unverifiedEmailsAreNotStoredOrUsedToLink() throws Exception {
+		String email = UUID.randomUUID() + "@example.com";
+		json("/api/v1/auth/signup", """
+				{"email":"%s","password":"abcd1234","agreeTerms":true,"agreePrivacy":true}
+				""".formatted(email))
+			.andExpect(status().isCreated());
+		for (String name : new String[] { "kakao", "google" }) {
+			String auth = body(exchange(loginCode(name, email, false), VERIFIER).andExpect(status().isOk())
+				.andExpect(jsonPath("$.user.email").doesNotExist()));
+			Number id = JsonPath.read(auth, "$.user.id");
+			assertNull(jdbc.queryForObject("select email from users where id=?", String.class, id));
+			assertNull(jdbc.queryForObject("select email from user_identities where user_id=?", String.class, id));
+			when(provider.fetch(eq(name), anyString())).thenReturn(new OAuthProviderClient.Profile(UUID.randomUUID().toString(), email, true));
+			assertEquals(REDIRECT + "?error=email_in_use", callback(name, start(name, REDIRECT)));
+		}
+	}
+
+	@Test
+	void callbackHandlesCancellationFailuresAndInvalidStates() throws Exception {
+		String state = start("kakao", REDIRECT);
+		mvc.perform(get("/api/v1/auth/oauth/kakao/callback").param("state", state).param("error", "access_denied"))
+			.andExpect(redirectedUrl(REDIRECT + "?error=cancelled"));
+		verifyNoInteractions(provider);
+		for (String invalid : new String[] { state, "missing" }) {
+			mvc.perform(get("/api/v1/auth/oauth/kakao/callback").param("state", invalid))
+				.andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+				.andExpect(content().string("로그인 요청이 만료됐어요. 처음 화면으로 돌아가 다시 시도해 주세요."));
+		}
+		mvc.perform(get("/api/v1/auth/oauth/kakao/callback")).andExpect(status().isBadRequest());
+		String mismatch = start("kakao", REDIRECT);
+		mvc.perform(get("/api/v1/auth/oauth/google/callback").param("state", mismatch)).andExpect(status().isBadRequest());
+		mvc.perform(get("/api/v1/auth/oauth/kakao/callback").param("state", mismatch)).andExpect(status().isBadRequest());
+		when(provider.fetch(anyString(), anyString())).thenThrow(new IllegalStateException("fake failure"));
+		assertEquals("https://example.com/callback?source=app&error=failed",
+				callback("google", start("google", "https://example.com/callback?source=app")));
+		String expired = start("kakao", REDIRECT);
+		clock.now = clock.now.plus(Duration.ofMinutes(10));
+		mvc.perform(get("/api/v1/auth/oauth/kakao/callback").param("state", expired)).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void invalidScopeReturnsFailedInsteadOfCancelled() throws Exception {
+		String state = start("google", REDIRECT);
+		mvc.perform(get("/api/v1/auth/oauth/google/callback").param("state", state).param("error", "invalid_scope"))
+			.andExpect(status().isFound()).andExpect(redirectedUrl(REDIRECT + "?error=failed"));
+		verifyNoInteractions(provider);
+	}
+
+	@Test
+	void wrongVerifierConsumesCodeAndCodesExpire() throws Exception {
+		String code = loginCode("google", null, false);
+		exchange(code, "wrong").andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("OAUTH_CODE_INVALID")));
+		exchange(code, VERIFIER).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("OAUTH_CODE_INVALID")));
+		String expired = loginCode("google", null, false);
+		clock.now = clock.now.plus(Duration.ofMinutes(2));
+		exchange(expired, VERIFIER).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("OAUTH_CODE_INVALID")));
+	}
+
+	@Test
+	void socialAccountRejectsPasswordLoginAndDeletesWithConfirmationEvenIfUnlinkFails() throws Exception {
+		String email = UUID.randomUUID() + "@example.com";
+		String auth = body(exchange(loginCode("kakao", email, true), VERIFIER).andExpect(status().isOk()));
+		String token = JsonPath.read(auth, "$.accessToken");
+		Number id = JsonPath.read(auth, "$.user.id");
+		json("/api/v1/auth/login", """
+				{"email":"%s","password":"abcd1234"}
+				""".formatted(email))
+			.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+		json("/api/v1/auth/signup", """
+				{"email":"%s","password":"abcd1234","agreeTerms":true,"agreePrivacy":true}
+				""".formatted(email))
+			.andExpect(status().isConflict()).andExpect(jsonPath("$.code", is("EMAIL_UNAVAILABLE")));
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+			.andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.confirm", is("확인 문구 '탈퇴'를 입력해 주세요")));
+		doThrow(new IllegalStateException("fake unlink failure")).when(provider).unlinkKakao(anyString());
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content("""
+				{"confirm":"탈퇴"}
+				"""))
+			.andExpect(status().isNoContent());
+		verify(provider).unlinkKakao(anyString());
+		assertEquals(0, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
+		assertEquals(0, jdbc.queryForObject("select count(*) from users where id=?", Integer.class, id));
+		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void emailAccountStillRequiresPasswordToDelete() throws Exception {
+		String email = UUID.randomUUID() + "@example.com";
+		String auth = body(json("/api/v1/auth/signup", """
+				{"email":"%s","password":"abcd1234","agreeTerms":true,"agreePrivacy":true}
+				""".formatted(email)).andExpect(status().isCreated())
+			.andExpect(jsonPath("$.user.provider", is("email"))).andExpect(jsonPath("$.user.hasPassword", is(true))));
+		String token = JsonPath.read(auth, "$.accessToken");
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token)
+			.contentType(MediaType.APPLICATION_JSON).content("""
+				{"confirm":"탈퇴"}
+				"""))
+			.andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.password").exists());
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token)
+			.contentType(MediaType.APPLICATION_JSON).content("""
+				{"password":"wrong1234"}
+				"""))
+			.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token)
+			.contentType(MediaType.APPLICATION_JSON).content("""
+				{"password":"abcd1234"}
+				"""))
+			.andExpect(status().isNoContent());
+	}
+}

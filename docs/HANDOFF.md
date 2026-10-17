@@ -6,6 +6,16 @@
 
 ## 0. 다음에 이어서 할 일 (2026-10-16 기준, 우선순위 순)
 
+**10-17 카카오·Google 로그인(PR `SXXNHU/feat-social-login`) — 반영 순서**
+1. [ ] 카카오 디벨로퍼스: 앱 생성 → [카카오 로그인] 사용 ON → [앱] > [플랫폼 키] > [REST API 키]의 리다이렉트 URI에 `https://flex-able-sh.duckdns.org/api/v1/auth/oauth/kakao/callback` 등록, 같은 화면의 클라이언트 시크릿 확인. 이메일을 받으려면 [계정 설정] 본인인증 → [앱] > [일반] > [비즈니스 정보] > [개인 개발자 비즈 앱] 전환 → [동의항목]에서 카카오계정(이메일)만 선택 동의(닉네임·프로필은 받지 않음 — 개인정보처리방침과 맞춤). 이메일이 없어도 로그인은 된다
+2. [ ] Google Cloud: Google Auth Platform 브랜딩·대상(외부) 설정 → 클라이언트(웹 애플리케이션) 생성, 승인된 리디렉션 URI `https://flex-able-sh.duckdns.org/api/v1/auth/oauth/google/callback`. 결제 계정은 필요 없다. '테스트' 상태면 테스트 사용자만 로그인된다(테스터 등록 또는 프로덕션 게시). scope는 `openid email`만
+3. [ ] 서버 `/opt/flexable/.env`에 키 추가(이름은 `backend/deploy/.env.example`): `OAUTH_CALLBACK_BASE_URL`, `OAUTH_ALLOWED_REDIRECT_URIS`, `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`, `KAKAO_ADMIN_KEY`(선택, 탈퇴 시 카카오 연결 끊기), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. 키가 비어 있으면 그 공급자만 "쓸 수 없어요"로 안내되고 서버는 정상 동작한다
+4. [ ] 백엔드 배포(`deploy.sh`, Flyway V5: `users.email`·`password_hash` NULL 허용 + `user_identities`). **웹(main 머지 시 Vercel 자동 배포)보다 먼저 또는 같이** — 옛 서버에 붙은 새 웹은 소셜 버튼을 "쓸 수 없어요"로 안내하므로 순서가 바뀌어도 깨지지는 않는다
+5. [ ] 앱 1.1.0 새 빌드(`expo-web-browser` 네이티브 모듈 추가, runtimeVersion이 1.1.0으로 바뀜) → Play 비공개 테스트 업로드. 1.0.0 앱은 1.1.0용 원격 업데이트를 받지 않는다
+6. [ ] 실기기 확인: 카카오·Google 로그인 후 브라우저가 닫히고 홈/온보딩으로 한 번만 이동, 동의 화면 취소 → "로그인을 취소했어요", 같은 이메일의 기존 이메일 계정 → 안내, 소셜 계정 탈퇴('탈퇴' 입력), 시작 화면 하단 링크
+7. [ ] 사람 결정: 개인정보처리방침·이용약관 개정 시행일과 변경 고지(지금 표기는 10-14 그대로), 소셜 가입을 안내 문구로 동의받는 방식이 충분한지
+- 알려진 한계: OAuth state·1회용 코드는 API 프로세스 메모리에 있다(상한 각 10,000개) → API 서버는 1대로만 운영. 재시작하면 진행 중이던 로그인만 실패한다
+
 **10-16 PR #50(CI·서버 감시)·#51(문의 이메일·운영자 표시명 `ucmnuniverse` 통일) 머지 후 남은 것**
 - [x] 백엔드 배포(10-16 01:01 UTC, 사용자 요청으로 Claude가 실행): `/actuator/health`에 `components`(db, diskSpace 등)가 나오고 세부값은 숨겨진 것 확인. 배포 전 디스크가 96%(남은 271MB)라 apt 캐시를 지운 뒤 배포했다(§5)
 - [x] 원격 업데이트 production 승격(10-16): preview `25bdbc3d`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명)를 production 그룹 `9fd66eb2`로 승격(§4-2)
@@ -157,7 +167,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - RDS: `database-flex` (MySQL), DB `flexable`, 앱 계정 `flexable_app`. 퍼블릭 액세스 없음, EC2에서만 접근
 - 스키마 변경은 `backend/src/main/resources/db/migration/V{n}__*.sql` 추가(기존 파일 수정 금지)
 - 운영 DB 조회: EC2에 `mysql` 클라이언트가 있다. `/opt/flexable/.env`는 값에 `&`가 있어 `source`하면 깨진다 → `grep '^DB_URL=' .env | cut -d= -f2-`처럼 값만 읽고 `mysql --ssl-mode=REQUIRED -h <RDS 호스트> -u flexable_app flexable`로 접속(비밀번호는 `MYSQL_PWD` 환경 변수로).
-- 사용자 삭제는 앱의 `AccountDeletionService.deleteAll` 순서를 따른다: transactions → categories → fixed_expenses → fixed_expense_postings → protected_items → budget_settings → users(`transactions`가 `categories`를 연쇄 삭제 없이 참조).
+- 사용자 삭제는 앱의 `AccountDeletionService.deleteAll` 순서를 따른다: transactions → categories → fixed_expenses → fixed_expense_postings → protected_items → budget_settings → users(`transactions`가 `categories`를 연쇄 삭제 없이 참조). `user_identities`(소셜 로그인 연결)는 users 삭제 시 연쇄 삭제된다.
 
 ## 6. 미뤄 둔 일
 
