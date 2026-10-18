@@ -2,8 +2,8 @@
   "expo": {
     "name": "텅장관리",
     "slug": "flexable",
-    "version": "1.1.0",
-    "orientation": "portrait",
+    "version": "1.2.0",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -57,7 +57,15 @@
           "backgroundColor": "#F9BB8B"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {},

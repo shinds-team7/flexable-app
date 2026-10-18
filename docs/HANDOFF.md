@@ -12,7 +12,7 @@
 
 **P0 — 10/19 오전에 먼저(막히면 다른 일이 멈춤)**
 
-1. [ ] **앱 원격 업데이트 → PR #67 머지 순서 지키기(사람이 실행)**: #67(Play 경고 대응, 앱 1.2.0)을 머지하면 그 뒤 main에서 올리는 원격 업데이트는 1.2.0 빌드만 받는다. main에 머지됐지만 아직 1.1.0 사용자에게 나가지 않은 변경은 **#67 머지 전에** 원격 업데이트로 먼저 게시한다. 대상은 #64(탭바 위 + 버튼, 0원일 때 빨간 상단 패널)와 #66(내역 탭 기록 버튼 삭제)이고, #61(필수 업데이트 창·스플래시 적용)도 이미 게시했는지 확인한다. 절차는 §4-2 원격 업데이트이고, 게시는 사람이 직접 한다.
+1. [x] **앱 원격 업데이트 → PR #67 머지 순서 지키기(10-19 완료)**: #67(Play 경고 대응, 앱 1.2.0)보다 먼저 #64(탭바 위 + 버튼, 0원일 때 빨간 상단 패널)·#66(내역 탭 기록 버튼 삭제)을 1.1.0용으로 게시했다. main `c146127`에서 preview `1996d0c4` → production `5ed7d163`. #61(필수 업데이트 창)은 이전 그룹 `c3948c24`로 이미 나가 있었다. 이후 main의 원격 업데이트는 1.2.0 빌드만 받는다.
 2. [ ] **대표: 회사 폐쇄망 VM 조건 확인**(확정 19). AWS 운영본으로 시연할 수 있으면 반입 묶음은 만들지 않는다. 같은 날 정책 적금 공식 근거를 확인할 팀원을 배정한다.
 3. [ ] **BE·FE: 웹 API 계약을 하루 안에 고정**(시드머니·타임머신·적금 비교, `docs/web/03-architecture.md`). 사건 근거 필드는 `sources[]`다(01·03 기준, 02의 `links[]`는 디자인 세션에서 맞춤).
 4. [ ] **DATA: 데이터 신청**
@@ -167,11 +167,15 @@ npx eas-cli@latest build -p android --profile production
 - 날짜·시간 선택기(`@react-native-community/datetimepicker`)는 네이티브 모듈이라 Expo Go가 아닌 빌드에서 확인한다.
 - 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다.
 - 원격 업데이트로 바뀌지 않는 것: 앱 아이콘, 권한, 네이티브 설정. 이런 변경은 새 production 빌드를 Play에 올리고 사용자가 앱을 업데이트해야 반영된다. Play는 사용자에게 바뀐 부분만 내려받게 하므로 AAB는 매번 전체를 올린다.
+- **1.2.0부터** 릴리스 빌드에 R8 코드 축소(`expo-build-properties`의 `enableMinifyInReleaseBuilds`)를 켜고 화면 방향 고정(`orientation: portrait`)을 풀었다. Play Console의 'DEX 코드 최적화 기준 미만'·'대형 화면 크기 조절·방향 제한' 경고 대응이다. preview APK도 릴리스 빌드라 R8이 적용되니, 먼저 가입·로그인·거래 저장·날짜 선택기·가로 회전을 확인한다. AAB를 올린 뒤 App Bundle 탐색기에서 난독화 해제 파일이 등록됐는지 본다. 리소스 축소(`enableShrinkResourcesInReleaseBuilds`)는 JS에서 부르는 이미지가 지워질 수 있어 켜지 않았다.
+- Play의 'Android 15 지원 중단 API(setStatusBarColor 등)' 경고는 React Native(`StatusBarModule`, `WindowUtilKt`)와 Material 라이브러리(날짜 선택기가 사용) 안의 코드라 앱 설정으로 없앨 수 없다. 기한 없는 권장 사항이고, 라이브러리가 바뀌는 SDK 업그레이드 때 다시 본다.
 - 빌드 목록·다운로드: https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/builds
 
 #### 원격 업데이트 (EAS Update)
 
 `expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받는다. 스플래시가 떠 있는 3초 안에 받아지면 바로 적용하고(`src/service/LaunchUpdate.ts`), 그보다 늦으면 업데이트 배너("지금 적용")나 그다음 실행에 적용한다. 그래서 업데이트가 있거나 인터넷이 느린 날은 시작이 최대 3초 늦어진다(적용이 멈추면 10초 뒤 그냥 연다). preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
+
+**2026-10-19 최신(1.1.0):** production `5ed7d163`(#64 홈 + 버튼·0원 빨간 패널, #66 내역 기록 버튼 삭제, preview `1996d0c4`, 커밋 c146127) ← `c3948c24`(#61 필수 업데이트 창). 되돌릴 때는 `c3948c24`를 production에 다시 게시한다. preview·production 환경변수가 같은 것을 확인했다. 1.0.0 런타임의 최신은 `a6960891`(1.1.0으로 안내하는 필수 업데이트 창)이다.
 
 **2026-10-16 최신:** production `9fd66eb2`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명, preview `25bdbc3d`, 커밋 e77b1d7) ← `d63078bb`. 되돌릴 때는 `d63078bb`를 production에 다시 게시한다. preview·production 환경변수가 같은 것을 확인했다.
 
