@@ -32,6 +32,7 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 
 | 알고 싶은 것 | 문서 |
 |---|---|
+| 새 데스크톱 웹사이트 계획(기능·화면·아키텍처·일정) | [`docs/web/README.md`](docs/web/README.md) |
 | 지금 되는 기능과 근거 | [`docs/FEATURES.md`](docs/FEATURES.md) |
 | API 요청·응답, 예산 계산식 | [`docs/API.md`](docs/API.md) |
 | 프론트엔드·백엔드 실행 | [`frontend/README.md`](frontend/README.md), [`backend/README.md`](backend/README.md) |
