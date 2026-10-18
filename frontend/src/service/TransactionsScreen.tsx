@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { Button, Card, Screen, Segment, T } from "@/components/ui";
+import { Card, Screen, Segment, T } from "@/components/ui";
 import {
   CategoryIcon,
   ErrorNotice,
@@ -165,16 +165,6 @@ export function TransactionsScreen() {
           </Card>
         )
       )}
-      <Button
-        label="+ 거래 직접 기록"
-        onPress={() =>
-          router.push(
-            filter === "INCOME"
-              ? "/transactions/new?type=INCOME"
-              : "/transactions/new",
-          )
-        }
-      />
     </Screen>
   );
 }
