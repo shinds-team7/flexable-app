@@ -26,9 +26,9 @@
 **P1 — W1(10/19~10/25) 안에**
 
 6. [ ] **1.2.0 AAB를 Play에 올리고 실기기 확인(사람).** #67 머지와 production 빌드 시작까지는 10-19 밤에 끝냈다.
-   - 빌드: 1.2.0 / versionCode 9 / 커밋 `0b5a66b` / Play 업로드 키스토어(EAS 원격). 10-19 밤 기준 빌드 중이었다.
+   - 빌드 완료(10-19 밤): 1.2.0 / versionCode 9 / 커밋 `0b5a66b` / Play 업로드 키스토어(EAS 원격). AAB 안에 R8 매핑(`BUNDLE-METADATA/.../proguard.map`)이 들어 있다.
      https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/builds/3b5f443c-c818-45c9-9138-dd4e9f47e185
-   - 위 페이지에 `ucmnuniverse-developer` 계정으로 로그인해 AAB를 받는다(어느 PC든 된다). 실패했으면 로그를 보고, 다시 빌드하면 versionCode는 10이 된다.
+   - 위 페이지에 `ucmnuniverse-developer` 계정으로 로그인해 AAB를 받는다(어느 PC든 된다). 집 PC에는 `Downloads/flexable-1.2.0-vc9.aab`(75MB)로 받아 두었다. 다시 빌드하면 versionCode는 10이 된다.
    - **내부 테스트 또는 비공개 테스트 트랙에 먼저** 올린다. R8 코드 축소와 화면 회전이 처음 들어간 빌드다. 따로 preview APK를 만들지 않았으니 이 빌드로 바로 확인한다.
    - 휴대폰에서 확인할 것: 가입·로그인, 거래 저장·수정, 날짜 선택기, 카테고리 추가, 홈 + 버튼, 가로 회전(시트 92% 높이·스크롤, #67 본문).
    - 업로드 뒤 App Bundle 탐색기에서 난독화 해제 파일이 등록됐는지 본다. 다음 Android vitals 검사에서 'DEX 코드 최적화'와 '방향 제한' 경고가 사라졌는지 본다.
