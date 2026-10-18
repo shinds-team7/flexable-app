@@ -43,18 +43,21 @@ export function TodayHeroView({
     (t) => t.date === toKey(today) && t.amount < 0,
   );
   const over = s.todayAvailable < 0;
+  const empty = s.todayAvailable <= 0;
+  // Translucent white drops below 4.5:1 on the red panel, so small text goes solid white there.
+  const sub = empty ? colors.onBrand : colors.onBrandSub;
   const shown = useRollingNumber(Math.max(0, s.todayAvailable));
 
   const totalDays = diffDays(s.cycleEnd, s.cycleStart) + 1;
   const todayIdx = diffDays(today, s.cycleStart);
 
   return (
-    <View style={styles.hero}>
+    <View style={[styles.hero, empty && styles.heroEmpty]}>
       <View style={styles.heroTop}>
         <T size={15} weight="700" color={colors.onBrand}>
           오늘 쓸 수 있는 돈
         </T>
-        <T size={13} weight="500" color={colors.onBrandSub}>
+        <T size={13} weight="500" color={sub}>
           {today.getMonth() + 1}월 {today.getDate()}일 {DOW[today.getDay()]}요일
         </T>
       </View>
@@ -76,12 +79,12 @@ export function TodayHeroView({
       </T>
 
       {over ? (
-        <T size={13} weight="600" color="#FFE1DE" style={{ marginTop: 2 }} num>
+        <T size={13} weight="600" color={colors.onBrand} style={{ marginTop: 2 }} num>
           오늘 {won(-s.todayAvailable)}원 넘게 썼어요. 남은 {s.daysLeft - 1}일에
           나눠서 반영할게요
         </T>
       ) : caption === null ? null : (
-        <T size={13} color={colors.onBrandSub} style={{ marginTop: 2 }} num>
+        <T size={13} color={sub} style={{ marginTop: 2 }} num>
           {caption ??
             `${DOW[today.getDay()]}요일 기준 ${won(s.dailyLimit)}원(${s.todayWeight}%) 중 ${won(s.todaySpent)}원 썼어요`}
         </T>
@@ -100,13 +103,14 @@ export function TodayHeroView({
                 style={[
                   styles.tick,
                   i < todayIdx && styles.tickPast,
+                  i < todayIdx && empty && styles.heroEmptyAccent,
                   i === todayIdx && styles.tickToday,
                 ]}
               />
             ))}
           </View>
           <View style={styles.rowBetween}>
-            <T size={12} color={colors.onBrandSub} num>
+            <T size={12} color={sub} num>
               {md(s.cycleStart)} 급여
             </T>
             <T size={12} weight="700" color={colors.onBrand} num>
@@ -117,7 +121,7 @@ export function TodayHeroView({
       )}
 
       {s.todayPlanned.length > 0 && (
-        <View style={styles.heroPlan}>
+        <View style={[styles.heroPlan, empty && styles.heroEmptyAccent]}>
           <Ionicons name="calendar" size={14} color={colors.onBrand} />
           <T
             size={13}
@@ -142,7 +146,7 @@ export function TodayHeroView({
       >
         <T
           size={12}
-          color={colors.onBrandSub}
+          color={sub}
           numberOfLines={1}
           style={{ flex: 1 }}
           num
