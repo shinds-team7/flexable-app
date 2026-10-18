@@ -100,15 +100,24 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     fullPage: true,
   });
   const before = await snapshot(page, "/budget/today");
-  // The record button floats above the tab bar, so it stays on screen after scrolling.
+  // The record button floats above the tab bar: the list scrolls under it while it keeps its place.
   const record = page.getByRole("button", {
     name: "거래 직접 기록",
     exact: true,
   });
+  const week = page.getByText("이번 주 쓸 수 있는 돈", { exact: true });
+  // A shorter window guarantees the home list is taller than the screen.
+  await page.setViewportSize({ width: 390, height: 640 });
   await expect(record).toBeInViewport();
-  await page.mouse.move(195, 420);
+  const fabY = (await record.boundingBox())!.y;
+  const weekY = (await week.boundingBox())!.y;
+  await page.mouse.move(195, 320);
   await page.mouse.wheel(0, 2000);
-  await expect(record).toBeInViewport();
+  await expect
+    .poll(async () => (await week.boundingBox())!.y)
+    .toBeLessThan(weekY);
+  expect((await record.boundingBox())!.y).toBeCloseTo(fabY, 0);
+  await page.setViewportSize({ width: 390, height: 844 });
   await record.click();
   await page.getByLabel("금액 (원)", { exact: true }).fill("1000000000000");
   await page.getByRole("button", { name: "저장", exact: true }).click();
