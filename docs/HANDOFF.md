@@ -128,6 +128,10 @@ npx eas-cli@latest update --channel production --environment production --platfo
 - `update:republish`는 non-interactive 모드에서 `--channel`로 고를 수 없고 `--group`만 받는다. 그래서 `update:promote` 스크립트는 그룹 ID를 인자로 받는다. `--message`도 반드시 넣는다(없으면 non-interactive에서 실패). 예: `npx -y eas-cli@latest update:republish --group <preview 그룹> --destination-channel production --message "변경 내용"`
 - Claude Code auto mode는 production 게시(`update`·`update:republish`를 production으로)를 운영 배포로 보고 막는다. 사용자가 프롬프트에 `! <명령>`으로 직접 실행한다. 이때 셸 위치는 Claude 세션의 현재 폴더(대개 `frontend/`)라 `cd frontend`를 붙이면 실패할 수 있다.
 - `runtimeVersion`은 `appVersion` 정책이다. 네이티브가 바뀌는 변경(네이티브 패키지 추가·업그레이드, `app.json`의 권한·플러그인·아이콘, Expo SDK 업그레이드)은 원격 업데이트로 보낼 수 없다. 이때는 `app.json`의 `version`을 올리고(예: 1.0.0 → 1.0.1) 새로 빌드한다. 버전을 안 올리고 원격 업데이트로 보내면 예전 빌드에서 앱이 꺼질 수 있다.
+- **필수 업데이트**: 앱은 시작할 때와 다시 열 때(10분 간격) `frontend/public/app-version.json`의 `android.minVersion`을 읽고, 설치된 버전이 이보다 낮으면 닫을 수 없는 업데이트 창(Play 스토어로 이동)을 띄운다. 파일을 못 읽으면 막지 않는다.
+  - 새 네이티브 버전은 Play Console에서 출시가 끝나 테스터 Play 스토어에 새 버전이 보인 **뒤에** minVersion을 올리는 PR을 머지한다(Vercel 자동 배포). 먼저 올리면 업데이트할 수 없는 사용자가 갇힌다.
+  - 되돌리려면 minVersion을 내린다. 앱이 다음 확인에 성공하면 창이 사라진다.
+  - 1.0.0 앱은 1.1.0용 원격 업데이트를 못 받으므로, 이 창은 1.0.0 전용 원격 업데이트(브랜치 `SXXNHU/release-1.0.0-force-update`)를 올려야 1.0.0 사용자에게 뜬다.
 - 승격은 preview에서 만든 번들을 그대로 쓰므로 preview·production 환경변수가 같아야 한다. 다르면 `npx eas-cli@latest update --channel production --environment production`으로 따로 올린다.
 - 잘못 올렸으면 이전 업데이트를 같은 채널에 다시 게시해서 되돌린다(`npx eas-cli@latest update:republish --group <이전 그룹 ID>`). 그룹 ID는 `npx eas-cli@latest update:list --branch production`에서 확인한다.
 - `expo-updates`가 없는 예전 빌드(10-14 이전 APK·AAB)는 원격 업데이트를 받지 않는다.

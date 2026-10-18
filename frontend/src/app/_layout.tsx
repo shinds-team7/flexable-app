@@ -8,6 +8,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { ToastProvider } from "@/components/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { BudgetDraftProvider } from "@/service/BudgetDraft";
+import { ForceUpdate } from "@/service/ForceUpdate";
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
               <SplashGate />
               <BudgetDraftProvider>
                 {Platform.OS !== "web" && <UpdateBanner />}
+                {Platform.OS === "android" && <ForceUpdate />}
                 <Stack
                   screenOptions={{
                     headerShown: false,
