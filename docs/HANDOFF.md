@@ -110,7 +110,7 @@ npx eas-cli@latest build -p android --profile production
 
 #### 원격 업데이트 (EAS Update)
 
-`expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
+`expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받는다. 스플래시가 떠 있는 3초 안에 받아지면 바로 적용하고(`src/service/LaunchUpdate.ts`), 그보다 늦으면 업데이트 배너("지금 적용")나 그다음 실행에 적용한다. 그래서 업데이트가 있거나 인터넷이 느린 날은 시작이 최대 3초 늦어진다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
 
 **2026-10-16 최신:** production `9fd66eb2`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명, preview `25bdbc3d`, 커밋 e77b1d7) ← `d63078bb`. 되돌릴 때는 `d63078bb`를 production에 다시 게시한다. preview·production 환경변수가 같은 것을 확인했다.
 

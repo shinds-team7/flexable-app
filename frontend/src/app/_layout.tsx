@@ -9,26 +9,28 @@ import { ToastProvider } from "@/components/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { BudgetDraftProvider } from "@/service/BudgetDraft";
 import { ForceUpdate } from "@/service/ForceUpdate";
+import { useLaunchUpdateSettled } from "@/service/LaunchUpdate";
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
-/** 스플래시는 앱 시작 후 최소 1초, 세션 확인이 더 오래 걸리면 끝날 때까지 띄운다. */
+/** 스플래시는 앱 시작 후 최소 1초, 세션 확인·새 원격 업데이트 확인(최대 3초)이 더 오래 걸리면 끝날 때까지 띄운다. */
 const SPLASH_MIN_MS = 1000;
 const startedAt = Date.now();
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function SplashGate() {
   const { ready } = useSession();
+  const updateSettled = useLaunchUpdateSettled();
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !updateSettled) return;
     const t = setTimeout(
       () => SplashScreen.hideAsync().catch(() => {}),
       Math.max(0, startedAt + SPLASH_MIN_MS - Date.now()),
     );
     return () => clearTimeout(t);
-  }, [ready]);
+  }, [ready, updateSettled]);
   return null;
 }
 
