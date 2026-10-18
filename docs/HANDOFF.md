@@ -167,6 +167,8 @@ npx eas-cli@latest build -p android --profile production
 - 날짜·시간 선택기(`@react-native-community/datetimepicker`)는 네이티브 모듈이라 Expo Go가 아닌 빌드에서 확인한다.
 - 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다.
 - 원격 업데이트로 바뀌지 않는 것: 앱 아이콘, 권한, 네이티브 설정. 이런 변경은 새 production 빌드를 Play에 올리고 사용자가 앱을 업데이트해야 반영된다. Play는 사용자에게 바뀐 부분만 내려받게 하므로 AAB는 매번 전체를 올린다.
+- **1.2.0부터** 릴리스 빌드에 R8 코드 축소(`expo-build-properties`의 `enableMinifyInReleaseBuilds`)를 켜고 화면 방향 고정(`orientation: portrait`)을 풀었다. Play Console의 'DEX 코드 최적화 기준 미만'·'대형 화면 크기 조절·방향 제한' 경고 대응이다. preview APK도 릴리스 빌드라 R8이 적용되니, 먼저 가입·로그인·거래 저장·날짜 선택기·가로 회전을 확인한다. AAB를 올린 뒤 App Bundle 탐색기에서 난독화 해제 파일이 등록됐는지 본다. 리소스 축소(`enableShrinkResourcesInReleaseBuilds`)는 JS에서 부르는 이미지가 지워질 수 있어 켜지 않았다.
+- Play의 'Android 15 지원 중단 API(setStatusBarColor 등)' 경고는 React Native(`StatusBarModule`, `WindowUtilKt`)와 Material 라이브러리(날짜 선택기가 사용) 안의 코드라 앱 설정으로 없앨 수 없다. 기한 없는 권장 사항이고, 라이브러리가 바뀌는 SDK 업그레이드 때 다시 본다.
 - 빌드 목록·다운로드: https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/builds
 
 #### 원격 업데이트 (EAS Update)
