@@ -100,9 +100,16 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     fullPage: true,
   });
   const before = await snapshot(page, "/budget/today");
-  await page
-    .getByRole("button", { name: "+ 거래 직접 기록", exact: true })
-    .click();
+  // The record button floats above the tab bar, so it stays on screen after scrolling.
+  const record = page.getByRole("button", {
+    name: "거래 직접 기록",
+    exact: true,
+  });
+  await expect(record).toBeInViewport();
+  await page.mouse.move(195, 420);
+  await page.mouse.wheel(0, 2000);
+  await expect(record).toBeInViewport();
+  await record.click();
   await page.getByLabel("금액 (원)", { exact: true }).fill("1000000000000");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(

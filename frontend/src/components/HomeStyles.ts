@@ -8,6 +8,9 @@ export const styles = StyleSheet.create({
     padding: 22,
     paddingBottom: 14,
   },
+  // Nothing left to spend today: the whole panel turns red, and the navy accents darken instead.
+  heroEmpty: { backgroundColor: colors.danger },
+  heroEmptyAccent: { backgroundColor: "rgba(0,0,0,0.2)" },
   heroTop: {
     flexDirection: "row",
     alignItems: "baseline",

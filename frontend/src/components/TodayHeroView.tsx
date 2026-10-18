@@ -43,13 +43,14 @@ export function TodayHeroView({
     (t) => t.date === toKey(today) && t.amount < 0,
   );
   const over = s.todayAvailable < 0;
+  const empty = s.todayAvailable <= 0;
   const shown = useRollingNumber(Math.max(0, s.todayAvailable));
 
   const totalDays = diffDays(s.cycleEnd, s.cycleStart) + 1;
   const todayIdx = diffDays(today, s.cycleStart);
 
   return (
-    <View style={styles.hero}>
+    <View style={[styles.hero, empty && styles.heroEmpty]}>
       <View style={styles.heroTop}>
         <T size={15} weight="700" color={colors.onBrand}>
           오늘 쓸 수 있는 돈
@@ -100,6 +101,7 @@ export function TodayHeroView({
                 style={[
                   styles.tick,
                   i < todayIdx && styles.tickPast,
+                  i < todayIdx && empty && styles.heroEmptyAccent,
                   i === todayIdx && styles.tickToday,
                 ]}
               />
@@ -117,7 +119,7 @@ export function TodayHeroView({
       )}
 
       {s.todayPlanned.length > 0 && (
-        <View style={styles.heroPlan}>
+        <View style={[styles.heroPlan, empty && styles.heroEmptyAccent]}>
           <Ionicons name="calendar" size={14} color={colors.onBrand} />
           <T
             size={13}
