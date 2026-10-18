@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
   CharacterStage,
@@ -123,7 +123,7 @@ export function HomeScreen() {
               onClose={() => setBasis(false)}
               title="오늘 예산의 계산 근거"
             >
-              <View style={{ gap: 12 }}>
+              <ScrollView contentContainerStyle={{ gap: 12 }}>
                 {[
                   ["추정 잔액", s.estimatedBalance],
                   ["남겨둘 고정지출", s.reservedFixed],
@@ -153,7 +153,7 @@ export function HomeScreen() {
                     router.push("/onboarding");
                   }}
                 />
-              </View>
+              </ScrollView>
             </Sheet>
           </>
         )}

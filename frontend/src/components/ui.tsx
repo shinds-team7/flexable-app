@@ -296,7 +296,8 @@ export function Sheet({
       <View style={styles.dim}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="닫기" accessibilityRole="button" />
         <Animated.View style={[styles.sheet, floating, { transform: [{ translateY }] }]}>
-          <View>
+          {/* 가로 화면처럼 낮은 창에서는 본문이 줄어들어, 안쪽 ScrollView가 스크롤된다 */}
+          <View style={{ flexShrink: 1 }}>
             <View style={styles.grabber} />
             <View style={styles.sheetHead}>
               <T size={19} weight="700" style={{ flex: 1 }} accessibilityRole="header">
@@ -311,7 +312,7 @@ export function Sheet({
                 {subtitle}
               </T>
             )}
-            <View style={{ marginTop: 18 }}>{children}</View>
+            <View style={{ marginTop: 18, flexShrink: 1 }}>{children}</View>
           </View>
         </Animated.View>
       </View>
@@ -391,6 +392,7 @@ export const styles = StyleSheet.create({
   sheet: {
     width: '100%',
     maxWidth: 440,
+    maxHeight: '92%',
     backgroundColor: '#fff',
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
