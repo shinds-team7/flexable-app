@@ -8,11 +8,25 @@ import {
   type ReactNode,
 } from "react";
 import { router } from "expo-router";
+import { Linking } from "react-native";
 import { api, ApiError, sessionGeneration, setApiSession } from "./api/client";
 import { readStorage, writeStorage } from "./storage";
 import type { AuthResponse, User } from "./types";
 import { useToast } from "@/components/Toast";
 const KEY = "flexable.service.token";
+/** True when the app or page was opened on /oauth/callback (web: the current address). */
+async function opensOnOAuthCallback() {
+  try {
+    const url = await Promise.race([
+      Linking.getInitialURL(),
+      // getInitialURL can stay pending in some environments; don't hold up the restore for it.
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 500)),
+    ]);
+    return !!url && url.split(/[?#]/)[0].endsWith("/oauth/callback");
+  } catch {
+    return false;
+  }
+}
 type Session = {
   user: User | null;
   ready: boolean;
@@ -64,13 +78,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       try {
         const saved = await readStorage(KEY);
         if (!current()) return;
-        setApiSession(saved, expired);
+        // Opened on the social login callback (app launched by the link, or web first load): an
+        // expired saved token is only dropped, so the callback screen stays and finishes the login.
+        const quiet = !!saved && (await opensOnOAuthCallback());
+        if (!current()) return;
+        setApiSession(saved, quiet ? clear : expired);
         started = sessionGeneration();
         if (saved) {
           const value = await api<User>("/me");
           if (current()) {
             userId.current = value.id;
             setUser(value);
+            // The quiet handling covers only this first check; later expiry behaves as usual.
+            if (quiet) {
+              setApiSession(saved, expired);
+              started = sessionGeneration();
+            }
           }
         }
       } catch (e) {
@@ -83,7 +106,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [expired, attempt]);
+  }, [clear, expired, attempt]);
   const accept = async (auth: AuthResponse) => {
     await writeStorage(KEY, auth.accessToken);
     setApiSession(auth.accessToken, expired);

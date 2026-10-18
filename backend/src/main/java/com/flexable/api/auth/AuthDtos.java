@@ -28,7 +28,7 @@ public final class AuthDtos {
 			@NotBlank(message = "비밀번호를 입력해 주세요") String password) {
 	}
 
-	public record PasswordRequest(@NotBlank(message = "비밀번호를 입력해 주세요") String password) {
+	public record PasswordRequest(String password, String confirm) {
 	}
 
 	public record AuthResponse(String accessToken, OffsetDateTime expiresAt, UserResponse user) {

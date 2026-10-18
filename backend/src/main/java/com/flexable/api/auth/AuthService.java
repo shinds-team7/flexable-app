@@ -4,9 +4,15 @@ import java.time.Clock;
 import java.time.ZoneId;
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.flexable.api.config.OAuthProperties;
+import com.flexable.api.user.UserIdentityRepository;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flexable.api.auth.AuthDtos.AuthResponse;
@@ -25,6 +31,11 @@ import com.flexable.api.user.UserResponse;
 @Service
 public class AuthService {
 
+	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+	private final UserIdentityRepository identities;
+	private final OAuthProviderClient oauthClient;
+	private final OAuthProperties oauthProps;
+
 	private final UserRepository users;
 	private final PasswordEncoder passwordEncoder;
 	private final TokenService tokens;
@@ -38,7 +49,10 @@ public class AuthService {
 
 	public AuthService(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens,
 			LoginAttemptLimiter limiter, CategoryService categories, AccountDeletionService deletion, Clock clock,
-			AppProperties props) {
+			AppProperties props, UserIdentityRepository identities, OAuthProviderClient oauthClient, OAuthProperties oauthProps) {
+		this.identities = identities;
+		this.oauthClient = oauthClient;
+		this.oauthProps = oauthProps;
 		this.users = users;
 		this.passwordEncoder = passwordEncoder;
 		this.tokens = tokens;
@@ -72,8 +86,8 @@ public class AuthService {
 		String email = normalize(req.email());
 		limiter.check(email);
 		User user = users.findByEmail(email).orElse(null);
-		boolean ok = passwordEncoder.matches(req.password(), user == null ? dummyHash : user.getPasswordHash());
-		if (user == null || !ok) {
+		boolean ok = passwordEncoder.matches(req.password(), user == null || user.getPasswordHash() == null ? dummyHash : user.getPasswordHash());
+		if (user == null || user.getPasswordHash() == null || !ok) {
 			limiter.recordFailure(email);
 			throw new ApiException(ErrorCode.INVALID_CREDENTIALS);
 		}
@@ -88,16 +102,48 @@ public class AuthService {
 
 	@Transactional(readOnly = true)
 	public UserResponse me(long userId) {
-		return UserResponse.of(find(userId), zone);
+		return userResponse(find(userId));
 	}
 
 	@Transactional
-	public void deleteAccount(long userId, String password) {
+	public void deleteAccount(long userId, String password, String confirm) {
 		User user = find(userId);
-		if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-			throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "비밀번호가 맞지 않아요");
+		if (user.getPasswordHash() != null) {
+			if (password == null || password.isBlank()) {
+				throw ApiException.invalid("password", "비밀번호를 입력해 주세요");
+			}
+			if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+				throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "비밀번호가 맞지 않아요");
+			}
+		}
+		else if (!"탈퇴".equals(confirm)) {
+			throw ApiException.invalid("confirm", "확인 문구 '탈퇴'를 입력해 주세요");
+		}
+		if (oauthProps.kakao().adminKey() != null && !oauthProps.kakao().adminKey().isBlank()) {
+			identities.findByUserId(userId).stream().filter(i -> "kakao".equals(i.getProvider())).forEach(i -> {
+				try {
+					oauthClient.unlinkKakao(i.getProviderUserId());
+				}
+				catch (RestClientResponseException e) {
+					log.warn("카카오 연결 끊기 실패: provider=kakao, status={}", e.getStatusCode().value());
+				}
+				catch (RuntimeException e) {
+					log.warn("카카오 연결 끊기 실패: cause={}", e.getClass().getSimpleName());
+				}
+			});
 		}
 		deletion.deleteAll(userId);
+	}
+
+	@Transactional(readOnly = true)
+	public AuthResponse socialLogin(long userId) {
+		return respond(find(userId));
+	}
+
+	private UserResponse userResponse(User user) {
+		String provider = user.getPasswordHash() != null ? "email"
+				: identities.findFirstByUserIdOrderByIdAsc(user.getId()).orElseThrow().getProvider();
+		return UserResponse.of(user, zone, provider);
 	}
 
 	private User find(long userId) {
@@ -106,7 +152,7 @@ public class AuthService {
 
 	private AuthResponse respond(User user) {
 		TokenService.IssuedToken token = tokens.issue(user);
-		return new AuthResponse(token.value(), Times.at(token.expiresAt(), zone), UserResponse.of(user, zone));
+		return new AuthResponse(token.value(), Times.at(token.expiresAt(), zone), userResponse(user));
 	}
 
 	private static String normalize(String email) {
