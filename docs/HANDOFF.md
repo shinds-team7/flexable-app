@@ -110,7 +110,7 @@ npx eas-cli@latest build -p android --profile production
 
 #### 원격 업데이트 (EAS Update)
 
-`expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받고, 그다음 실행부터 적용한다. preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
+`expo-updates`가 들어간 빌드(PR #19 이후)는 JS·이미지 변경을 다시 설치하지 않고 받는다. 앱은 실행할 때 새 업데이트를 내려받는다. 스플래시가 떠 있는 3초 안에 받아지면 바로 적용하고(`src/service/LaunchUpdate.ts`), 그보다 늦으면 업데이트 배너("지금 적용")나 그다음 실행에 적용한다. 그래서 업데이트가 있거나 인터넷이 느린 날은 시작이 최대 3초 늦어진다(적용이 멈추면 10초 뒤 그냥 연다). preview APK는 `preview` 채널, Play용 AAB는 `production` 채널을 본다.
 
 **2026-10-16 최신:** production `9fd66eb2`(#47 시연 코드 정리, #49 원그래프 회전, #51 문의 이메일·운영자명, preview `25bdbc3d`, 커밋 e77b1d7) ← `d63078bb`. 되돌릴 때는 `d63078bb`를 production에 다시 게시한다. preview·production 환경변수가 같은 것을 확인했다.
 
@@ -128,6 +128,10 @@ npx eas-cli@latest update --channel production --environment production --platfo
 - `update:republish`는 non-interactive 모드에서 `--channel`로 고를 수 없고 `--group`만 받는다. 그래서 `update:promote` 스크립트는 그룹 ID를 인자로 받는다. `--message`도 반드시 넣는다(없으면 non-interactive에서 실패). 예: `npx -y eas-cli@latest update:republish --group <preview 그룹> --destination-channel production --message "변경 내용"`
 - Claude Code auto mode는 production 게시(`update`·`update:republish`를 production으로)를 운영 배포로 보고 막는다. 사용자가 프롬프트에 `! <명령>`으로 직접 실행한다. 이때 셸 위치는 Claude 세션의 현재 폴더(대개 `frontend/`)라 `cd frontend`를 붙이면 실패할 수 있다.
 - `runtimeVersion`은 `appVersion` 정책이다. 네이티브가 바뀌는 변경(네이티브 패키지 추가·업그레이드, `app.json`의 권한·플러그인·아이콘, Expo SDK 업그레이드)은 원격 업데이트로 보낼 수 없다. 이때는 `app.json`의 `version`을 올리고(예: 1.0.0 → 1.0.1) 새로 빌드한다. 버전을 안 올리고 원격 업데이트로 보내면 예전 빌드에서 앱이 꺼질 수 있다.
+- **필수 업데이트**: 앱은 시작할 때와 다시 열 때(10분 간격) `frontend/public/app-version.json`의 `android.minVersion`을 읽고, 설치된 버전이 이보다 낮으면 닫을 수 없는 업데이트 창(Play 스토어로 이동)을 띄운다. 파일을 못 읽으면 막지 않는다.
+  - 새 네이티브 버전은 Play Console에서 출시가 끝나 테스터 Play 스토어에 새 버전이 보인 **뒤에** minVersion을 올리는 PR을 머지한다(Vercel 자동 배포). 먼저 올리면 업데이트할 수 없는 사용자가 갇힌다.
+  - 되돌리려면 minVersion을 내린다. 앱이 다음 확인에 성공하면 창이 사라진다.
+  - 1.0.0 앱은 1.1.0용 원격 업데이트를 못 받으므로, 이 창은 1.0.0 전용 원격 업데이트(브랜치 `SXXNHU/release-1.0.0-force-update`)를 올려야 1.0.0 사용자에게 뜬다.
 - 승격은 preview에서 만든 번들을 그대로 쓰므로 preview·production 환경변수가 같아야 한다. 다르면 `npx eas-cli@latest update --channel production --environment production`으로 따로 올린다.
 - 잘못 올렸으면 이전 업데이트를 같은 채널에 다시 게시해서 되돌린다(`npx eas-cli@latest update:republish --group <이전 그룹 ID>`). 그룹 ID는 `npx eas-cli@latest update:list --branch production`에서 확인한다.
 - `expo-updates`가 없는 예전 빌드(10-14 이전 APK·AAB)는 원격 업데이트를 받지 않는다.
