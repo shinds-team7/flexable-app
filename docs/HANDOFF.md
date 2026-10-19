@@ -15,7 +15,7 @@
 - 완료: 랜딩·로그인(카카오·Google·이메일, 운영 로그인 확인)·홈·내 정보. 홈 데이터(시드머니·코스피/코스닥·소식)는 API가 없어 예시 값이다.
 - 상단 메뉴: 투자 시뮬레이션(`/invest`)·적금 비교(`/savings`)·섞어보기(`/mix`)·AI 목표 달성(`/goal`)·청년 금융 소식(`/news`)·플러스(`/plus`). 각 화면은 자리만 있다(팀원 개발). 와이어프레임 사본은 그 저장소 `docs/reference/`.
 - 앱 시연은 그 저장소 `/m`으로 옮기고 이 저장소에서 지웠다(#72). 옛 `/demo/*` 주소는 `/m/*`로 넘어간다.
-- 서버 `/opt/flexable/.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소를 더하고 API를 다시 시작했다. 도메인을 사면(14번) 이 두 값과 카카오·Google 콘솔 콜백, `frontend/vercel.json`의 `/m` redirect 목적지를 새 주소로 바꾼다.
+- 서버 `/opt/flexable/.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소를 더하고 API를 다시 시작했다. 도메인을 사면(14번, 확정 18) 기존 DuckDNS 주소는 그대로 두고 새 주소를 **더한다**. 순서: ① 카카오·Google 콘솔에 새 API 콜백(`https://api.<도메인>/api/v1/auth/oauth/{kakao,google}/callback`)을 추가(기존 콜백은 지우지 않음) → ② 서버 `.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소 추가 → ③ 공급자에게 넘기는 콜백을 새 주소로 옮길 때만 `OAUTH_CALLBACK_BASE_URL`을 바꾸고 `docker compose up -d`(①이 먼저 끝나 있어야 로그인이 안 깨진다) → ④ `frontend/vercel.json`의 `/m` redirect 목적지를 새 웹 주소로.
 
 **P0 — 10/19 오전에 먼저(막히면 다른 일이 멈춤)**
 
@@ -268,7 +268,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [x] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 2026-10-14 보관 기간 7일로 설정, 리전 간 복제 없음, 수동 스냅샷 없음, AWS Backup 미사용 확인
 - [ ] 수입 저장·거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(이슈 #24): PR #23·#25로 수정, `production` 원격 업데이트 게시 완료, 실기기 확인 대기. 원인·재발 방지 규칙·검증 체크리스트는 `docs/bug-transaction-edit-blank-screen.md`
-- [ ] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): `expo-build-properties` 플러그인으로 `android.enableMinifyInReleaseBuilds: true` 설정 → EAS 빌드 결과물의 `mapping.txt`를 Play에 업로드. 켜면 리플렉션 쓰는 네이티브 모듈이 release에서만 깨질 수 있으니 preview 빌드로 먼저 확인
+- [x] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): 1.2.0(#67, versionCode 9)에서 `enableMinifyInReleaseBuilds`로 켰고 AAB에 매핑 파일이 들어 있다. 남은 것은 Play 업로드와 실기기 확인으로, §0-1 P1 6번에서 한다
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
 - [x] 캐릭터 홈 단계를 하루 단위 점수로 변경(이슈 #29, PR #30): 처음 쓴 날 광부 0%에서 시작, 예산을 지킨 날 +15·넘긴 날 −50(100점이 한 단계). 날짜별 하루 예산은 `daily_budgets`(V4)에 저장. 규칙은 `docs/API.md` "GET /budget/today"
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
