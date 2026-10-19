@@ -438,7 +438,7 @@ test("public deletion without budget setup and offline failure preserves credent
   expect((await denied.json()).code).toBe("INVALID_CREDENTIALS");
 });
 
-test("expired token returns to start; public routes and demo remain accessible", async ({
+test("expired token returns to start; public routes remain accessible", async ({
   page,
 }) => {
   await page.goto("/");
@@ -464,10 +464,9 @@ test("expired token returns to start; public routes and demo remain accessible",
   ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.1.0", { exact: true })).toBeVisible();
-  await page.goto("/demo");
-  await expect(
-    page.getByText("시연용 · 예시 데이터 · v1.1.0", { exact: true }),
-  ).toBeVisible();
+  // 시연은 웹사이트 저장소(flexable-web)의 /m 으로 옮겼다. 시작 화면에는 링크만 남는다.
+  await page.goto("/");
+  await expect(page.getByText("시연 보기", { exact: true })).toBeVisible();
 });
 
 test("approved legal copy and public terms link preserve signup input", async ({

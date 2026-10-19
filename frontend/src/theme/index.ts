@@ -93,4 +93,3 @@ export const pressTransition = Platform.select({
   } as object,
   default: {},
 });
-export const pressed = { transform: [{ scale: 0.97 }] };

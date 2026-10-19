@@ -184,7 +184,7 @@ Google Play 정식 출시 전에 14일 동안 테스트가 필요해요.
 
 ## 7. 제출 전 점검
 
-- [ ] Android 앱에서 `/demo` 시연 경로가 열리지 않는다
+- [x] Android 앱에 시연 경로가 없다(2026-10-19 시연 코드를 웹사이트 저장소로 옮김)
 - [ ] 앱이 `https://flex-able-sh.duckdns.org`에 붙는다(HTTP 아님)
 - [ ] `/privacy`, `/delete-account`, `/support`가 로그인 없이 웹에서 열린다
 - [ ] 가입 화면 약관·개인정보 동의 링크가 열린다(`/terms`, `/privacy`)

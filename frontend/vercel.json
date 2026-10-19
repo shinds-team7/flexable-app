@@ -4,48 +4,58 @@
   "outputDirectory": "dist",
   "redirects": [
     {
+      "source": "/demo",
+      "destination": "https://flexable-web-delta.vercel.app/m",
+      "permanent": false
+    },
+    {
+      "source": "/demo/:path*",
+      "destination": "https://flexable-web-delta.vercel.app/m/:path*",
+      "permanent": false
+    },
+    {
       "source": "/home2",
-      "destination": "/demo/home2",
+      "destination": "https://flexable-web-delta.vercel.app/m/home2",
       "permanent": false
     },
     {
       "source": "/plan",
-      "destination": "/demo/plan",
+      "destination": "https://flexable-web-delta.vercel.app/m/plan",
       "permanent": false
     },
     {
       "source": "/budget-detail",
-      "destination": "/demo/budget-detail",
+      "destination": "https://flexable-web-delta.vercel.app/m/budget-detail",
       "permanent": false
     },
     {
       "source": "/notifications",
-      "destination": "/demo/notifications",
+      "destination": "https://flexable-web-delta.vercel.app/m/notifications",
       "permanent": false
     },
     {
       "source": "/memory",
-      "destination": "/demo/memory",
+      "destination": "https://flexable-web-delta.vercel.app/m/memory",
       "permanent": false
     },
     {
       "source": "/schedule",
-      "destination": "/demo/schedule",
+      "destination": "https://flexable-web-delta.vercel.app/m/schedule",
       "permanent": false
     },
     {
       "source": "/schedule/:path*",
-      "destination": "/demo/schedule/:path*",
+      "destination": "https://flexable-web-delta.vercel.app/m/schedule/:path*",
       "permanent": false
     },
     {
       "source": "/tx/:id",
-      "destination": "/demo/tx/:id",
+      "destination": "https://flexable-web-delta.vercel.app/m/tx/:id",
       "permanent": false
     },
     {
       "source": "/settle/:id",
-      "destination": "/demo/settle/:id",
+      "destination": "https://flexable-web-delta.vercel.app/m/settle/:id",
       "permanent": false
     }
   ],

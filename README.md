@@ -5,7 +5,8 @@
 
 신한 DS 금융SW아카데미 7팀
 
-- 웹: https://project2-flex-sh.vercel.app (시연: `/demo`)
+- 웹: https://project2-flex-sh.vercel.app (서비스·약관 등 공개 페이지)
+- 데스크톱 웹사이트·앱 시연: https://flexable-web-delta.vercel.app (시연은 `/m`, 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web))
 - Android: Google Play 비공개 테스트 중
 
 ## 주요 기능
@@ -16,7 +17,7 @@
 - 거래 직접 기록·수정·삭제, 카테고리 관리, 고정지출 자동 기록
 - 소비 분석(기간별 카테고리 합계), 계정·데이터 삭제
 
-계좌 연결, AI 분석, 알림 자동 기록은 시연(`/demo`)에만 있다. 전체 목록과 구현 근거는 [`docs/FEATURES.md`](docs/FEATURES.md).
+계좌 연결, AI 분석, 알림 자동 기록은 시연(웹사이트 저장소의 `/m`)에만 있다. 전체 목록과 구현 근거는 [`docs/FEATURES.md`](docs/FEATURES.md).
 
 ## 구성
 

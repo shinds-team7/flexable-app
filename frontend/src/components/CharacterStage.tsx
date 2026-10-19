@@ -1,7 +1,6 @@
 /**
  * 캐릭터 홈 상단 UI — 예산을 잘 지킬수록 부자 캐릭터(Lv.5), 못 지킬수록 Lv.1(광부).
- * 서비스와 시연이 함께 쓴다. 단계·게이지 값은 부르는 쪽이 계산해서 넘긴다.
- * 서비스는 서버 점수(pointsStatus), 시연은 src/demo/components/CharacterHero.tsx 가 소비 속도로 계산한다.
+ * 단계·게이지 값은 부르는 쪽(서비스 홈, 서버 점수 pointsStatus)이 계산해서 넘긴다.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, type ReactNode } from 'react';

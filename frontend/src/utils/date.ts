@@ -38,18 +38,6 @@ export function endOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0);
 }
 
-/** "10월 3주차" — 주의 목요일이 속한 달 기준(ISO 방식)으로 계산 */
-export function weekLabel(weekStart: Date): string {
-  const thu = addDays(weekStart, 3);
-  const firstThu = (() => {
-    const first = startOfMonth(thu);
-    const offset = (4 - first.getDay() + 7) % 7;
-    return addDays(first, offset);
-  })();
-  const n = Math.floor(diffDays(thu, firstThu) / 7) + 1;
-  return `${thu.getMonth() + 1}월 ${n}주차`;
-}
-
 export function md(d: Date): string {
   return `${d.getMonth() + 1}.${d.getDate()}`;
 }

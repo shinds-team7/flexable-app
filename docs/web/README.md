@@ -116,7 +116,7 @@ ADR-2·4·6·8은 교차 리뷰 합의, 나머지는 팀장 확인 대기인 **�
 | ADR | 결정 요약(03 §1) |
 |---|---|
 | ADR-1 | 기존 Spring에 모듈 추가, 같은 jar를 api·worker 프로필로 분리 실행 |
-| ADR-2 | 새 `web/`에 Vite+React+TypeScript SPA, 기존 Expo와 분리 |
+| ADR-2 | 별도 저장소 [`flexable-web`](https://github.com/shinds-team7/flexable-web)에 Vite+React+TypeScript SPA(10-19 `web/`에서 변경), 앱 시연은 그 저장소 `/m` |
 | ADR-3 | 계산·고지·한도는 서버, TanStack Query와 공개 GET 캐시 사용 |
 | ADR-4 | 타임머신 visx, 단순 차트 Recharts, 키보드 핀 탐색 제공 |
 | ADR-5 | RDS MySQL 일봉 저장. 해커톤은 사전 스냅숏 1회 적재, 일별 증분 수집은 이후 |
