@@ -16,7 +16,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, floating, font, motion, pressed as pressedFx, pressTransition, radius } from '@/theme';
+import { colors, floating, font, motion, pressTransition, radius } from '@/theme';
 
 type TProps = TextProps & {
   size?: number;
@@ -117,17 +117,6 @@ export function Screen({ children }: { children: ReactNode }) {
   );
 }
 
-export function SectionTitle({ title, right }: { title: string; right?: ReactNode }) {
-  return (
-    <View style={styles.sectionTitle}>
-      <T size={17} weight="700" accessibilityRole="header">
-        {title}
-      </T>
-      {right}
-    </View>
-  );
-}
-
 type BtnProps = PressableProps & {
   label: string;
   variant?: 'primary' | 'soft' | 'ghost';
@@ -159,60 +148,6 @@ export function Button({ label, variant = 'primary', icon, style, disabled, ...r
         {label}
       </T>
     </Pressable>
-  );
-}
-
-/** 점선 테두리 + 버튼 (일정/계획 추가용) */
-export function AddButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.add, pressTransition, pressed && styles.pressed]}
-    >
-      <Ionicons name="add" size={20} color={colors.brandDark} />
-      <T size={14} weight="600" color={colors.brandDark}>
-        {label}
-      </T>
-    </Pressable>
-  );
-}
-
-export function Badge({ label, color, bg }: { label: string; color: string; bg: string }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: bg }]}>
-      <T size={12} weight="700" color={color}>
-        {label}
-      </T>
-    </View>
-  );
-}
-
-export function IconCircle({
-  name,
-  color,
-  size = 40,
-  bg,
-}: {
-  name: ComponentProps<typeof Ionicons>['name'];
-  color: string;
-  size?: number;
-  bg?: string;
-}) {
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: bg ?? color + '1F',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Ionicons name={name} size={size * 0.5} color={color} />
-    </View>
   );
 }
 
@@ -364,26 +299,6 @@ export function ConfirmModal({
   );
 }
 
-export function Chip({ label, on, onPress }: { label: string; on?: boolean; onPress?: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!on }}
-      onPress={onPress}
-      hitSlop={4}
-      style={({ pressed }) => [styles.chip, pressTransition, on && styles.chipOn, pressed && pressedFx]}
-    >
-      <T size={13} weight="600" color={on ? colors.onBrand : colors.textSub} style={{ textAlign: 'center' }}>
-        {label}
-      </T>
-    </Pressable>
-  );
-}
-
-export function Row({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }, style]}>{children}</View>;
-}
-
 export const styles = StyleSheet.create({
   dim: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
   dimBg: { backgroundColor: 'rgba(16,26,51,0.45)' },
@@ -401,14 +316,11 @@ export const styles = StyleSheet.create({
   },
   sheetHead: { flexDirection: 'row', alignItems: 'center' },
   dialog: { width: '100%', maxWidth: 360, backgroundColor: '#fff', borderRadius: radius.xl - 4, padding: 22, alignSelf: 'center' },
-  chip: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.sunken },
-  chipOn: { backgroundColor: colors.brand },
   screen: { padding: 16, paddingBottom: 48, gap: 12 },
   card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: 20 },
   pressed: { transform: [{ scale: 0.97 }], opacity: 0.85 },
   cardPressed: { transform: [{ scale: 0.985 }], backgroundColor: colors.brandSofter },
   btnPrimaryPressed: { transform: [{ scale: 0.97 }], backgroundColor: colors.brandDark },
-  sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   btn: {
     minHeight: 54,
     paddingVertical: 12,
@@ -419,16 +331,6 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  add: {
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.brandSofter,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, alignSelf: 'flex-start' },
   segment: { flexDirection: 'row', backgroundColor: colors.sunken, borderRadius: radius.sm, padding: 4 },
   segItem: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.xs },
   segOn: { backgroundColor: '#fff', ...(Platform.OS === 'web' ? ({ boxShadow: '0 1px 3px rgba(16,26,51,0.10)' } as object) : {}) },
