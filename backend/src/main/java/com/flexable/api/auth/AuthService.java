@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.flexable.api.auth.AuthDtos.AuthResponse;
 import com.flexable.api.auth.AuthDtos.LoginRequest;
 import com.flexable.api.auth.AuthDtos.SignupRequest;
+import com.flexable.api.budget.SettingsRepository;
 import com.flexable.api.category.CategoryService;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
@@ -41,6 +42,7 @@ public class AuthService {
 	private final TokenService tokens;
 	private final LoginAttemptLimiter limiter;
 	private final CategoryService categories;
+	private final SettingsRepository settings;
 	private final AccountDeletionService deletion;
 	private final Clock clock;
 	private final ZoneId zone;
@@ -49,7 +51,9 @@ public class AuthService {
 
 	public AuthService(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens,
 			LoginAttemptLimiter limiter, CategoryService categories, AccountDeletionService deletion, Clock clock,
-			AppProperties props, UserIdentityRepository identities, OAuthProviderClient oauthClient, OAuthProperties oauthProps) {
+			AppProperties props, UserIdentityRepository identities, OAuthProviderClient oauthClient, OAuthProperties oauthProps,
+			SettingsRepository settings) {
+		this.settings = settings;
 		this.identities = identities;
 		this.oauthClient = oauthClient;
 		this.oauthProps = oauthProps;
@@ -107,7 +111,9 @@ public class AuthService {
 
 	@Transactional
 	public void deleteAccount(long userId, String password, String confirm) {
-		User user = find(userId);
+		// 소셜 연결이 비밀번호를 지우는 중이면 끝난 뒤의 값으로 확인한다. 잠금 순서는 다른 쓰기와 같게 설정 → 사용자.
+		settings.findForUpdate(userId);
+		User user = users.findWithLockById(userId).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
 		if (user.getPasswordHash() != null) {
 			if (password == null || password.isBlank()) {
 				throw ApiException.invalid("password", "비밀번호를 입력해 주세요");
