@@ -1,6 +1,7 @@
 package com.flexable.api;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -81,8 +82,12 @@ class SecurityTest {
 	void forgedAndUnsignedTokensAreRejected() throws Exception {
 		String token = signup();
 		String[] parts = token.split("\\.");
-		String forgedPayload = B64URL
-			.encodeToString("{\"sub\":\"1\",\"tv\":0,\"exp\":4102444800}".getBytes(StandardCharsets.UTF_8));
+		// 방금 발급받은 토큰의 사용자(sub)·토큰 버전(tv)은 그대로 두고 만료 시각만 바꾼다.
+		// 그래야 사용자 확인이 아니라 서명 검증 때문에 거절되는지를 본다.
+		String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+		String extended = payload.replaceFirst("\"exp\":\\d+", "\"exp\":4102444800");
+		assertNotEquals(payload, extended, "토큰에 exp가 있어야 한다");
+		String forgedPayload = B64URL.encodeToString(extended.getBytes(StandardCharsets.UTF_8));
 
 		// 서명은 그대로 두고 내용만 바꾼 토큰
 		mvc.perform(json(get("/api/v1/me"), parts[0] + "." + forgedPayload + "." + parts[2], null))
