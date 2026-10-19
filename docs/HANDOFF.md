@@ -10,13 +10,21 @@
 
 다른 PC에서는 `git pull` 뒤 이 절부터 읽는다. 웹(해커톤) 계획의 정본은 `docs/web/`이다. 10-18 결정은 `docs/web/decisions.md` 확정 21~24와 `docs/web/meeting-2026-10-18.md` §7에 있다.
 
+**10-19 변경: 웹사이트 코드는 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)** (`docs/web/03-architecture.md` ADR-2 변경)
+- 운영 `https://flexable-web-delta.vercel.app` (Vercel, `main` 자동 배포). 앱과 같은 계정·API(`flex-able-sh.duckdns.org`)를 쓴다.
+- 완료: 랜딩·로그인(카카오·Google·이메일, 운영 로그인 확인)·홈·내 정보. 홈 데이터(시드머니·코스피/코스닥·소식)는 API가 없어 예시 값이다.
+- 상단 메뉴: 투자 시뮬레이션(`/invest`)·적금 비교(`/savings`)·섞어보기(`/mix`)·AI 목표 달성(`/goal`)·청년 금융 소식(`/news`)·플러스(`/plus`). 각 화면은 자리만 있다(팀원 개발). 와이어프레임 사본은 그 저장소 `docs/reference/`.
+- 앱 시연은 그 저장소 `/m`으로 옮기고 이 저장소에서 지웠다(#72). 옛 `/demo/*` 주소는 `/m/*`로 넘어간다.
+- 서버 `/opt/flexable/.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소를 더하고 API를 다시 시작했다. 도메인을 사면(14번, 확정 18) 기존 DuckDNS 주소는 그대로 두고 새 주소를 **더한다**. 순서: ① 카카오·Google 콘솔에 새 API 콜백(`https://api.<도메인>/api/v1/auth/oauth/{kakao,google}/callback`)을 추가(기존 콜백은 지우지 않음) → ② 서버 `.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소 추가 → ③ 공급자에게 넘기는 콜백을 새 주소로 옮길 때만 `OAUTH_CALLBACK_BASE_URL`을 바꾸고 `docker compose up -d`(①이 먼저 끝나 있어야 로그인이 안 깨진다) → ④ `frontend/vercel.json`의 `/m` redirect 목적지를 새 웹 주소로.
+
 **P0 — 10/19 오전에 먼저(막히면 다른 일이 멈춤)**
 
 1. [x] **앱 원격 업데이트 → PR #67 머지 순서 지키기(10-19 완료)**: #67(Play 경고 대응, 앱 1.2.0)보다 먼저 #64(탭바 위 + 버튼, 0원일 때 빨간 상단 패널)·#66(내역 탭 기록 버튼 삭제)을 1.1.0용으로 게시했다. main `c146127`에서 preview `1996d0c4` → production `5ed7d163`. #61(필수 업데이트 창)은 이전 그룹 `c3948c24`로 이미 나가 있었다. 이후 main의 원격 업데이트는 1.2.0 빌드만 받는다.
 2. [ ] **대표: 회사 폐쇄망 VM 조건 확인**(확정 19). AWS 운영본으로 시연할 수 있으면 반입 묶음은 만들지 않는다. 같은 날 정책 적금 공식 근거를 확인할 팀원을 배정한다.
 3. [ ] **BE·FE: 웹 API 계약을 하루 안에 고정**(시드머니·타임머신·적금 비교, `docs/web/03-architecture.md`). 사건 근거 필드는 `sources[]`다(01·03 기준, 02의 `links[]`는 디자인 세션에서 맞춤).
+   - 10-19 추가: 웹 홈 오른쪽의 코스피·코스닥 지수 API(일 단위 종가 + 기준일 + 출처). 웹 화면이 기대하는 모양은 웹 저장소 `src/data/home.ts`의 `SeedMoney`·`MarketIndices` 타입이다.
 4. [ ] **DATA: 데이터 신청**
-   - 공공데이터포털 금융위 주식시세정보·증권상품시세정보 활용신청(개발·운영 자동승인, 공공누리 제4유형)
+   - 공공데이터포털 금융위 주식시세정보·증권상품시세정보 활용신청(개발·운영 자동승인, 공공누리 제4유형). 웹 홈 코스피·코스닥용 지수시세정보도 함께
    - 금감원 finlife·한국은행 ECOS 인증키
    - 시연 조건 3가지(출처 표시 / 원본 재제공 없음 / 비상업 시연 고지)는 확정 22에 있다.
 5. [ ] **디자인 재작업 시작 전에 캐릭터 홈 3D 방식 결정.**
@@ -45,8 +53,11 @@
 9. [ ] **콘텐츠·DATA: 사건 카드 20건 초안·근거, 정책 적금 공식 출처.**
    - 정책 적금 계산의 공식 예시 대비 약 17만원 차이 해소는 Must다(01 F2-b).
    - 시연 데이터(지수 470,000원·월 78,000원)를 고정한다.
-10. [ ] **FE·BE: 웹 골격·로그인·시드머니·타임머신 계산·차트·핀 툴팁/상세·첫 방문 안내 연결.**
+10. [ ] **FE·BE: 웹 골격·로그인·시드머니·타임머신 계산·차트·핀 툴팁/상세·첫 방문 안내 연결.** 골격·로그인·홈 화면은 10-19 완료(웹 저장소). 남은 것은 API 연결과 투자 시뮬레이션 화면(차트 코드 `src/charts/drawTimeChart.ts`는 옮겨 둠).
     - 10/25에 운영(Vercel+EC2)에서 로그인 → 시드머니 → 타임머신 기본 실행 → 핀 상세까지 확인한다(`docs/web/README.md` §8 첫 주 체크리스트).
+
+    - [ ] **팀원 공지: 웹은 새 저장소에서 개발.** 먼저 읽을 것은 그 저장소 `README.md`·`AGENTS.md`·`docs/reference/README.md`. 메뉴별 화면 담당을 정한다.
+    - [ ] **'AI 목표 달성'의 범위 결정.** 메뉴 이름이 AI 기능을 약속한다. 해커톤 범위(확정 8: 실시간 AI 생성 제외, 확정 17: 웹 목표는 발표 자료로만)와 맞출지, 범위를 바꿀지 팀장이 정하고 `docs/web/decisions.md`에 적는다.
 
 **P2 — W2(10/26~11/1)·발표 전**
 
@@ -70,6 +81,7 @@
 
 - Play 비공개 테스트 테스터 12명 이상, 14일 유지 → 프로덕션 액세스 신청(`docs/play-store/README.md` §5).
 - 아래 0-2(10-16 목록) 중 소셜 로그인 1~5번은 10-19에 완료를 확인했다. 나머지 항목은 아직 상태를 다시 확인하지 않았다.
+- EC2 SSH: 보안 그룹 `flex-api-web` 22번에 10-19 작업 PC IP를 추가했다. 작업이 끝난 PC의 IP는 지운다(§5).
 
 ### 0-2. 10-16 기준 목록(상태 확인 필요)
 
@@ -107,7 +119,8 @@
 | 영역 | 상태 | 위치 |
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
-| 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (옛 `/demo`는 `https://flexable-web-delta.vercel.app/m`으로 이동, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
+| 웹(앱 서비스) | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (옛 `/demo`는 `https://flexable-web-delta.vercel.app/m`으로 이동, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
+| 웹사이트(해커톤)·앱 시연 | 별도 저장소, Vercel이 `main`을 자동 배포(10-19~). 골격·로그인·홈 완료, 나머지 화면 개발 중 | `https://flexable-web-delta.vercel.app` (시연 `/m`), 코드 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
 | CI | PR·`main` 푸시마다 백엔드 테스트, tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
 | 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
@@ -147,7 +160,7 @@ npx playwright test     # 로컬 백엔드(8080)와 웹(8081)을 먼저 띄운 �
 ```
 
 - 운영 웹 빌드는 `frontend/.env.production`(공개 API 주소)를 쓴다. 앱 빌드와 원격 업데이트는 EAS 환경변수(`preview`·`production` 환경의 `EXPO_PUBLIC_API_URL`)를 쓴다. 확인은 `npx eas-cli@latest env:list --environment production`.
-- 운영 API의 CORS는 서버 `.env`의 `CORS_ORIGINS`로 정한다(지금 `https://project2-flex-sh.vercel.app`, `http://localhost:8081`). 새 웹사이트(`https://flexable-web-delta.vercel.app`)에서 로그인하려면 이 값과 `OAUTH_ALLOWED_REDIRECT_URIS`(`…/oauth/callback`)에 그 주소를 더하고 API를 다시 시작한다.
+- 운영 API의 CORS는 서버 `.env`의 `CORS_ORIGINS`로 정한다(지금 `https://project2-flex-sh.vercel.app`, `http://localhost:8081`, `https://flexable-web-delta.vercel.app`). 웹 주소를 더할 때는 `OAUTH_ALLOWED_REDIRECT_URIS`에도 `…/oauth/callback`을 더하고, `/opt/flexable`에서 `docker compose up -d`로 컨테이너를 다시 만든다(`restart`는 `.env`를 다시 읽지 않는다). 10-19에 새 웹사이트 주소를 이렇게 추가했다.
 - Windows Git Bash에서 `curl -d '한글'`은 깨져서 400이 난다. 한글 요청은 UTF-8 파일(`--data-binary @file.json`)로 보낸다.
 - **Windows에서 `npx expo install`로 패키지를 추가하면 `package-lock.json`에서 `node_modules/@emnapi/core`·`runtime` 항목이 빠질 수 있다.** 그대로 커밋하면 EAS(리눅스)의 `npm ci`가 실패한다(#9, #16). 커밋 전에 두 항목이 남아 있는지 확인한다.
 - **EAS는 npm 10.9.8(Node 22)로 `npm ci`를 한다.** 로컬 npm 11이 넘기는 peer 불일치를 npm 10은 오류로 본다(#20 → #21로 되돌림: `expo` 57.0.28이 `react-native-worklets@0.10.4`를 요구). 패키지를 바꾼 뒤에는 `package.json`·`package-lock.json`만 빈 폴더에 복사해 `npx -y npm@10.9.8 ci --dry-run --ignore-scripts`로 먼저 확인한다. PR을 올리면 CI가 리눅스·Node 22(npm 10)로 `npm ci`를 돌려 같은 문제를 한 번 더 잡는다.
@@ -255,7 +268,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
 - [x] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 2026-10-14 보관 기간 7일로 설정, 리전 간 복제 없음, 수동 스냅샷 없음, AWS Backup 미사용 확인
 - [ ] 수입 저장·거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(이슈 #24): PR #23·#25로 수정, `production` 원격 업데이트 게시 완료, 실기기 확인 대기. 원인·재발 방지 규칙·검증 체크리스트는 `docs/bug-transaction-edit-blank-screen.md`
-- [ ] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): `expo-build-properties` 플러그인으로 `android.enableMinifyInReleaseBuilds: true` 설정 → EAS 빌드 결과물의 `mapping.txt`를 Play에 업로드. 켜면 리플렉션 쓰는 네이티브 모듈이 release에서만 깨질 수 있으니 preview 빌드로 먼저 확인
+- [x] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): 1.2.0(#67, versionCode 9)에서 `enableMinifyInReleaseBuilds`로 켰고 AAB에 매핑 파일이 들어 있다. 남은 것은 Play 업로드와 실기기 확인으로, §0-1 P1 6번에서 한다
 - [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
 - [x] 캐릭터 홈 단계를 하루 단위 점수로 변경(이슈 #29, PR #30): 처음 쓴 날 광부 0%에서 시작, 예산을 지킨 날 +15·넘긴 날 −50(100점이 한 단계). 날짜별 하루 예산은 `daily_budgets`(V4)에 저장. 규칙은 `docs/API.md` "GET /budget/today"
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
