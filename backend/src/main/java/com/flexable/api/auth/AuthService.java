@@ -97,7 +97,7 @@ public class AuthService {
 
 	@Transactional
 	public void logout(long userId) {
-		users.findById(userId).ifPresent(User::revokeTokens);
+		users.findWithLockById(userId).ifPresent(User::revokeTokens);
 	}
 
 	@Transactional(readOnly = true)
