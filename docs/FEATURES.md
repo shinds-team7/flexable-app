@@ -1,6 +1,6 @@
 # 현재 기능 기준표
 
-기준 2026-10-19, `main`. 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다.
+기준 2026-10-19 저녁, `main`. 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다.
 기능을 추가하거나 바꾸면 이 표를 같이 고친다. README와 HANDOFF는 이 표를 기준으로 쓴다.
 
 구분: **서비스** = 실제 앱(Android·웹) / **시연** = 예시 데이터 웹 화면(2026-10-19부터 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `/m`) / **미구현** = 계획만 있음
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 시작 분기 | `/` → `src/app/index.tsx` (로그인·예산 설정 여부로 `/home`·`/onboarding`·시작 화면) | `GET /me` | E2E `expired token returns to start…` |
 | 회원가입·로그인·로그아웃 | `/auth/signup`, `/auth/login` → `service/AuthScreen.tsx` | `POST /auth/signup·login·logout`. 토큰은 앱 SecureStore, 웹 localStorage(`service/storage.ts`) | 백엔드 `ApiFlowTest`(가입 검증·로그인 제한·로그아웃 폐기), E2E `real service lifecycle…` |
-| 카카오·Google 로그인 | 시작 화면 `src/app/index.tsx`(`service/OAuthButtons.tsx`) → 브라우저 → `/oauth/callback`(`service/OAuthCallbackScreen.tsx`, 흐름은 `service/oauth.ts`). 앱 1.1.0부터(`expo-web-browser` 네이티브 모듈), 웹은 바로 | `GET /auth/oauth/providers`, `GET /auth/oauth/{provider}/start·callback`, `POST /auth/oauth/exchange`(1회용 코드 + verifier). 키가 없는 공급자는 "쓸 수 없어요" 안내. 같은 검증 이메일의 기존 계정과 자동 연결하지 않음. 소셜 계정 탈퇴는 '탈퇴' 입력 | 백엔드 `OAuthFlowTest`·`MemoryOAuthStoreTest`·`RestOAuthProviderClientTest`, E2E `social login …`(교환 응답은 mock). **운영 키 설정·실기기 확인 전** |
+| 카카오·Google 로그인 | 시작 화면 `src/app/index.tsx`(`service/OAuthButtons.tsx`) → 브라우저 → `/oauth/callback`(`service/OAuthCallbackScreen.tsx`, 흐름은 `service/oauth.ts`). 앱 1.1.0부터(`expo-web-browser` 네이티브 모듈), 웹은 바로 | `GET /auth/oauth/providers`, `GET /auth/oauth/{provider}/start·callback`, `POST /auth/oauth/exchange`(1회용 코드 + verifier). 키가 없는 공급자는 "쓸 수 없어요" 안내. 같은 검증 이메일의 기존 계정과 자동 연결하지 않음. 소셜 계정 탈퇴는 '탈퇴' 입력 | 백엔드 `OAuthFlowTest`·`MemoryOAuthStoreTest`·`RestOAuthProviderClientTest`, E2E `social login …`(교환 응답은 mock). 운영 키 설정 완료(10-19), 새 웹사이트에서 운영 로그인 확인. **Android 실기기 확인 전**(1.2.0 빌드로) |
 | 초기 예산 설정 7단계 | `/onboarding/*` → `service/OnboardingScreen.tsx` (index·balance·income·fixed·card·protect·done) | 입력 중에는 기기에 임시 보관(`service/BudgetDraft.tsx`), 마지막에 `PUT /budget/settings` 한 번 | E2E `real service lifecycle…` |
 | 오늘 쓸 수 있는 돈 | `/home` → `service/HomeScreen.tsx` | `GET /budget/today`. 계산은 서버(`budget/BudgetCalculator.java`)가 최종값 | 백엔드 `BudgetCalculatorTest` |
 | 캐릭터 홈 / 기본 홈 | `/home`, 마이에서 전환 | 점수는 서버(`characterPoints`, `daily_budgets` 테이블 V4). 홈 스타일 선택은 기기 저장(`service/homeStyle.ts`) | 백엔드 `CharacterScoreTest` |
@@ -22,6 +22,7 @@
 | 예산 다시 설정 | 마이 → 예산 설정 수정 | `PUT /budget/settings` (잔액 기준 시각을 지금으로) | E2E `re-entering the balance…` |
 | 계정 삭제 | 앱 `/account/delete`, 웹 공개 `/delete-account` → `service/DeleteAccountScreen.tsx` | `DELETE /me` (`user/AccountDeletionService.java`) | E2E `public deletion…` |
 | 공개 페이지 | `/privacy`, `/terms`, `/support` | 원문은 `docs/play-store/privacy-policy.md`·`terms.md` | E2E `approved legal copy…`(웹 화면과 원문 일치 검사) |
+| 접근 제어 | 로그인 후 모든 API | JWT 서명·사용자·토큰 버전 확인(`config/SecurityConfig.java`), 거래·카테고리는 소유자 조건으로 조회(남의 것은 404). CORS는 서버 `.env`의 허용 출처만 | 백엔드 `SecurityTest`(비로그인 401, 위조·서명 없는 토큰 401, 다른 사용자 데이터 차단, 허용 안 된 출처 403) |
 | 원격 업데이트 안내 | 앱 탭 화면 상단 배너 → `components/UpdateBanner.tsx` (웹에서는 안 뜸) | `expo-updates` | Android 실기기 |
 
 ## 시연 (`https://flexable-web-delta.vercel.app/m`, 이 저장소 밖)

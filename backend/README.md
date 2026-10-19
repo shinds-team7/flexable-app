@@ -62,6 +62,9 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `ApiFlowTest` | 가입 검증·중복, 로그인 제한, 토큰 필수, 전체 흐름, 고정지출 자동 기록, 로그아웃 후 토큰 거절 |
 | `budget/BudgetCalculatorTest` | 오늘 쓸 수 있는 돈 계산 |
 | `budget/CharacterScoreTest` | 캐릭터 점수(하루 예산 지키면 +15, 넘기면 −50) |
+| `SecurityTest` | 접근 제어: 비로그인 401, 내용을 바꾼 토큰·서명 없는 토큰 401, 다른 사용자의 거래·카테고리 접근 차단, 허용 안 된 출처의 CORS 403 |
+| `auth/LoginAttemptLimiterTest` | 로그인 실패 제한과 만료 기록 정리 |
+| `auth/OAuthFlowTest`·`OAuthUnavailableTest`·`MemoryOAuthStoreTest`·`RestOAuthProviderClientTest` | 카카오·Google 로그인(start·callback·exchange), 키 없을 때 안내, state·1회용 코드 저장, 공급자 HTTP 호출 |
 
 ## 운영 배포 (EC2 + RDS)
 
