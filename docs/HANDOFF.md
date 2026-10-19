@@ -1,6 +1,6 @@
 # 인수인계 — 서비스 1.0.0 Google Play 비공개 테스트
 
-마지막 갱신 2026-10-18. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-19. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
@@ -69,17 +69,18 @@
 **계속 진행 중**
 
 - Play 비공개 테스트 테스터 12명 이상, 14일 유지 → 프로덕션 액세스 신청(`docs/play-store/README.md` §5).
-- 아래 0-2(10-16 목록)는 10-18까지 상태를 다시 확인하지 않았다. 소셜 로그인(#59, 10-18 머지)의 콘솔·서버 `.env`·백엔드 배포(Flyway V5) 단계가 끝났는지 먼저 점검한다.
+- 아래 0-2(10-16 목록) 중 소셜 로그인 1~5번은 10-19에 완료를 확인했다. 나머지 항목은 아직 상태를 다시 확인하지 않았다.
 
 ### 0-2. 10-16 기준 목록(상태 확인 필요)
 
 **10-17 카카오·Google 로그인(PR `SXXNHU/feat-social-login`) — 반영 순서**
-1. [ ] 카카오 디벨로퍼스: 앱 생성 → [카카오 로그인] 사용 ON → [앱] > [플랫폼 키] > [REST API 키]의 리다이렉트 URI에 `https://flex-able-sh.duckdns.org/api/v1/auth/oauth/kakao/callback` 등록, 같은 화면의 클라이언트 시크릿 확인. 이메일을 받으려면 [계정 설정] 본인인증 → [앱] > [일반] > [비즈니스 정보] > [개인 개발자 비즈 앱] 전환 → [동의항목]에서 카카오계정(이메일)만 선택 동의(닉네임·프로필은 받지 않음 — 개인정보처리방침과 맞춤). 이메일이 없어도 로그인은 된다
-2. [ ] Google Cloud: Google Auth Platform 브랜딩·대상(외부) 설정 → 클라이언트(웹 애플리케이션) 생성, 승인된 리디렉션 URI `https://flex-able-sh.duckdns.org/api/v1/auth/oauth/google/callback`. 결제 계정은 필요 없다. '테스트' 상태면 테스트 사용자만 로그인된다(테스터 등록 또는 프로덕션 게시). scope는 `openid email`만
-3. [ ] 서버 `/opt/flexable/.env`에 키 추가(이름은 `backend/deploy/.env.example`): `OAUTH_CALLBACK_BASE_URL`, `OAUTH_ALLOWED_REDIRECT_URIS`, `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`, `KAKAO_ADMIN_KEY`(선택, 탈퇴 시 카카오 연결 끊기), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. 키가 비어 있으면 그 공급자만 "쓸 수 없어요"로 안내되고 서버는 정상 동작한다
-4. [ ] 백엔드 배포(`deploy.sh`, Flyway V5: `users.email`·`password_hash` NULL 허용 + `user_identities`). **웹(main 머지 시 Vercel 자동 배포)보다 먼저 또는 같이** — 옛 서버에 붙은 새 웹은 소셜 버튼을 "쓸 수 없어요"로 안내하므로 순서가 바뀌어도 깨지지는 않는다
-5. [ ] 앱 1.1.0 새 빌드(`expo-web-browser` 네이티브 모듈 추가, runtimeVersion이 1.1.0으로 바뀜) → Play 비공개 테스트 업로드. 1.0.0 앱은 1.1.0용 원격 업데이트를 받지 않는다
-6. [ ] 실기기 확인: 카카오·Google 로그인 후 브라우저가 닫히고 홈/온보딩으로 한 번만 이동, 동의 화면 취소 → "로그인을 취소했어요", 같은 이메일의 기존 이메일 계정 → 안내, 소셜 계정 탈퇴('탈퇴' 입력), 시작 화면 하단 링크
+- 10-19 확인: 운영 `GET /api/v1/auth/oauth/providers`가 `["kakao","google"]`를 반환(서버 `.env` 키·V5 배포 반영), 두 공급자의 `/start`가 리다이렉트 URI 오류 없이 각 로그인 화면으로 이동(콘솔 등록 반영).
+1. [x] 카카오 디벨로퍼스: 앱 생성 → [카카오 로그인] 사용 ON → [앱] > [플랫폼 키] > [REST API 키]의 리다이렉트 URI에 `https://flex-able-sh.duckdns.org/api/v1/auth/oauth/kakao/callback` 등록, 같은 화면의 클라이언트 시크릿 확인. 이메일을 받으려면 [계정 설정] 본인인증 → [앱] > [일반] > [비즈니스 정보] > [개인 개발자 비즈 앱] 전환 → [동의항목]에서 카카오계정(이메일)만 선택 동의(닉네임·프로필은 받지 않음 — 개인정보처리방침과 맞춤). 이메일이 없어도 로그인은 된다
+2. [x] Google Cloud: Google Auth Platform 브랜딩·대상(외부) 설정 → 클라이언트(웹 애플리케이션) 생성, 승인된 리디렉션 URI `https://flex-able-sh.duckdns.org/api/v1/auth/oauth/google/callback`. 결제 계정은 필요 없다. '테스트' 상태면 테스트 사용자만 로그인된다(테스터 등록 또는 프로덕션 게시). scope는 `openid email`만
+3. [x] 서버 `/opt/flexable/.env`에 키 추가(이름은 `backend/deploy/.env.example`): `OAUTH_CALLBACK_BASE_URL`, `OAUTH_ALLOWED_REDIRECT_URIS`, `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`, `KAKAO_ADMIN_KEY`(선택, 탈퇴 시 카카오 연결 끊기), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. 키가 비어 있으면 그 공급자만 "쓸 수 없어요"로 안내되고 서버는 정상 동작한다
+4. [x] 백엔드 배포(`deploy.sh`, Flyway V5: `users.email`·`password_hash` NULL 허용 + `user_identities`). **웹(main 머지 시 Vercel 자동 배포)보다 먼저 또는 같이** — 옛 서버에 붙은 새 웹은 소셜 버튼을 "쓸 수 없어요"로 안내하므로 순서가 바뀌어도 깨지지는 않는다
+5. [x] 앱 1.1.0 새 빌드(`expo-web-browser` 네이티브 모듈 추가, runtimeVersion이 1.1.0으로 바뀜) → Play 비공개 테스트 업로드. 1.0.0 앱은 1.1.0용 원격 업데이트를 받지 않는다
+6. [ ] 실기기 확인(1.2.0 빌드로, P1 6번과 함께): 카카오·Google 로그인 후 브라우저가 닫히고 홈/온보딩으로 한 번만 이동, 동의 화면 취소 → "로그인을 취소했어요", 같은 이메일의 기존 이메일 계정 → 안내, 소셜 계정 탈퇴('탈퇴' 입력), 시작 화면 하단 링크
 7. [ ] 사람 결정: 개인정보처리방침·이용약관 개정 시행일과 변경 고지(지금 표기는 10-14 그대로), 소셜 가입을 안내 문구로 동의받는 방식이 충분한지
 - 알려진 한계: OAuth state·1회용 코드는 API 프로세스 메모리에 있다(상한 각 10,000개) → API 서버는 1대로만 운영. 재시작하면 진행 중이던 로그인만 실패한다
 
