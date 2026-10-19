@@ -82,6 +82,7 @@
 - Play 비공개 테스트 테스터 12명 이상, 14일 유지 → 프로덕션 액세스 신청(`docs/play-store/README.md` §5).
 - 아래 0-2(10-16 목록) 중 소셜 로그인 1~5번은 10-19에 완료를 확인했다. 나머지 항목은 아직 상태를 다시 확인하지 않았다.
 - EC2 SSH: 보안 그룹 `flex-api-web` 22번에 10-19 작업 PC IP를 추가했다. 작업이 끝난 PC의 IP는 지운다(§5).
+- 10-16 보안·리팩토링 검토 문서(`docs/security-plan-…`, `security-presentation-brief.md`, `refactoring-review-…`)는 저장소에 넣지 않는다(10-19 결정). 고치지 않은 약점을 위치까지 나열해 공개 저장소에 두면 공격 목록이 되기 때문이다. 팀 비공개 공간(노션·드라이브)에 둔다. 리팩토링 R1·R2는 #58·#56으로 수정, R3은 #57로 만료 정리까지 했고 기록 수 상한은 남아 있다. 보안 검토의 접근 제어 테스트 4개는 `backend/.../SecurityTest.java`로 옮겼다(#74).
 
 ### 0-2. 10-16 기준 목록(상태 확인 필요)
 
@@ -121,12 +122,12 @@
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
 | 웹(앱 서비스) | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (옛 `/demo`는 `https://flexable-web-delta.vercel.app/m`으로 이동, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
 | 웹사이트(해커톤)·앱 시연 | 별도 저장소, Vercel이 `main`을 자동 배포(10-19~). 골격·로그인·홈 완료, 나머지 화면 개발 중 | `https://flexable-web-delta.vercel.app` (시연 `/m`), 코드 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
-| CI | PR·`main` 푸시마다 백엔드 테스트, tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
+| CI | PR·`main` 푸시마다 백엔드 테스트(접근 제어 보안 테스트 `SecurityTest` 포함, 10-19~), tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
 | 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
-| 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
+| 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), E2E 13개를 CI에서 실행 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
-| Android 빌드 | production AAB versionCode 7(10-15, 새 아이콘·권한 정리 포함) 비공개 테스트 출시 완료 | §4-2 |
+| Android 빌드 | 비공개 테스트에 1.1.0 출시. 1.2.0 AAB(versionCode 9, R8·화면 회전) 빌드 완료(10-19), Play 업로드·실기기 확인 전(§0-1 P1 6번) | §4-2 |
 | Play Console | 개발자 계정 `ucmnuniverse`. 비공개 테스트 출시·스토어 아이콘 교체 완료, 테스터 모집 중(10-16) | §4-3, `docs/play-store/README.md` |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
