@@ -6,6 +6,24 @@
 
 ## 0. 다음에 이어서 할 일
 
+### 0-0. 10-20 이어서: 소셜 로그인 계정 연결 후 이메일 로그인 안내 (코드 아직 없음)
+
+**10-19 반영된 것(PR #76, 운영 배포 완료):** 확인된 이메일이 같은 기존 계정이 있으면 Google·카카오 로그인 때 새로 가입시키지 않고, 그 계정에 연결해 로그인시킨다. 전에는 "이미 가입된 이메일이에요"로 막혔다. 지금 연결 방식은 이렇다(`OAuthUserService.link`).
+- 기존 계정에 비밀번호가 있으면 **비밀번호를 지우고(`password_hash` NULL) `token_version`을 올린다.** 그 뒤 이메일 로그인은 `INVALID_CREDENTIALS`("이메일 또는 비밀번호가 맞지 않아요")가 된다.
+- 이유: 이메일 가입은 메일 인증이 없다. 그래서 남의 Gmail로 먼저 가입해 둔 사람이, 진짜 주인이 Google로 연결한 뒤에도 비밀번호로 들어오는 것을 막으려고 했다.
+
+**사용자가 원하는 동작(10-19 결정, 내일 구현):**
+- 연결할 때 비밀번호를 지우지 않는다. 기존 계정과 Google 계정을 **연동**만 한다.
+- 연동된 계정에 이메일·비밀번호로 로그인하려 하면 **"Google로 가입한 계정이에요"** 같은 안내를 띄운다. 그리고 **Google로 로그인할 수 있게** 안내한다. 예: 로그인 화면에서 바로 Google 로그인 버튼으로 이어지게 한다.
+
+**구현 전에 정할 것·주의:**
+- 안내를 띄운 뒤 비밀번호 로그인을 **막을지, 맞으면 들여보낼지** 확인한다. 들여보내면 위의 선가입 탈취 위험이 다시 생긴다.
+- `token_version` 증가(기존 세션 끊기)를 유지할지 정한다. 선가입자의 세션을 끊으려면 유지하는 편이 안전하다.
+- **10-19 배포 이후 이미 연결된 계정은 비밀번호 해시가 지워져 되돌릴 수 없다.** 새 안내가 이 계정들에도 나오게 한다. 조건 예: `password_hash`가 NULL이고 소셜 identity가 있음.
+- 원래부터 소셜로만 가입한 계정이 이메일 로그인을 시도할 때도 같은 안내를 쓸 수 있다. 지금은 `INVALID_CREDENTIALS`다.
+- 서버는 새 오류 코드를 낸다(예: `SOCIAL_ACCOUNT`, 공급자 이름 포함). 앱은 `AuthScreen` 로그인 오류에서 이 코드를 받으면 안내와 Google·카카오 버튼을 보여 준다. 안내는 이메일의 가입 여부와 가입 방법을 알려 주므로 계정 조회에 쓰일 수 있다. 회원가입 화면도 이미 가입 여부는 알려 주지만, 로그인 시도 제한(`LoginAttemptLimiter`)은 그대로 적용한다.
+- 고칠 곳: `OAuthUserService.link`, `AuthService.login`, `ErrorCode`, `frontend/src/service/AuthScreen.tsx`·`api/client.ts`, `OAuthFlowTest.verifiedEmailLogsIntoExistingAccountAndRevokesItsPassword`, `docs/API.md`(OAuth callback·로그인 절), `docs/FEATURES.md`.
+
 ### 0-1. 2026-10-19(월)부터 — 10-18 밤 기준, 우선순위 순
 
 다른 PC에서는 `git pull` 뒤 이 절부터 읽는다. 웹(해커톤) 계획의 정본은 `docs/web/`이다. 10-18 결정은 `docs/web/decisions.md` 확정 21~24와 `docs/web/meeting-2026-10-18.md` §7에 있다.
