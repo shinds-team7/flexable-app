@@ -91,7 +91,8 @@
 - state는 조회 즉시 삭제한다. 없음·만료·재사용·provider 불일치는 **400 HTML 한 줄**: "로그인 요청이 만료됐어요. 처음 화면으로 돌아가 다시 시도해 주세요." (리다이렉트 없음).
 - 공급자 `error=access_denied`만 `{redirectUri}?error=cancelled`. 그 밖의 공급자 오류는 `error=failed`로 이동하고 provider·오류 코드(최대 64자)를 warn 로그에 남긴다. 토큰 교환·프로필 조회 실패·타임아웃도 `error=failed`. 외부 HTTP 오류는 상태 코드만 추가로 기록하며 응답 본문·토큰·이메일은 기록하지 않는다. 외부 연결 3초·읽기 5초 제한.
 - 기존 `(provider, providerUserId)` identity가 있으면 해당 사용자로 로그인한다.
-- 신규 identity의 **검증된 이메일**이 기존 users.email과 겹치면 자동 연결하지 않고 `error=email_in_use`.
+- 신규 identity의 **검증된 이메일**이 기존 users.email과 같으면 그 계정에 identity를 붙이고 로그인한다. 이메일 가입은 메일 인증을 하지 않으므로, 기존 계정에 비밀번호가 있으면 비밀번호를 지우고(NULL) `token_version`을 올려 기존 세션도 끊는다. 이후 그 계정은 소셜 로그인으로만 들어온다.
+- 그 계정에 같은 공급자의 다른 identity가 이미 있으면 연결하지 않고 `error=email_in_use`.
 - 카카오 검증: `is_email_valid && is_email_verified`, Google 검증: `email_verified`.
 - 신규 사용자: email은 검증 이메일 또는 NULL, password_hash는 NULL, agreed_at은 현재 시각. 기본 카테고리와 identity도 생성한다. 미검증 이메일은 저장하지 않는다.
 - 성공하면 무작위 32바이트 base64url loginCode(userId·codeChallenge 포함, 2분 유효)를 발급하고 `{redirectUri}?code={loginCode}`로 이동한다.

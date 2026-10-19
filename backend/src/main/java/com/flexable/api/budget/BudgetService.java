@@ -92,7 +92,7 @@ public class BudgetService {
 		}
 		protectedItems.saveAll(newProtected);
 
-		users.findById(userId).ifPresent(u -> u.markOnboarded());
+		users.findWithLockById(userId).ifPresent(u -> u.markOnboarded());
 		return toResponse(s, userId);
 	}
 

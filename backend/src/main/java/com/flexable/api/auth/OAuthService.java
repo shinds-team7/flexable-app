@@ -8,6 +8,7 @@ import java.util.Base64;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -82,7 +83,7 @@ public class OAuthService {
 			if (code == null || code.isBlank()) {
 				return redirect(state.redirectUri(), "error", "failed");
 			}
-			long userId = users.findOrCreate(provider, client.fetch(provider, code));
+			long userId = findOrCreate(provider, client.fetch(provider, code));
 			String loginCode = store.saveCode(userId, state.codeChallenge());
 			return loginCode == null ? redirect(state.redirectUri(), "error", "failed")
 					: redirect(state.redirectUri(), "code", loginCode);
@@ -101,6 +102,19 @@ public class OAuthService {
 			log.warn("소셜 로그인 실패: provider={}, cause={}", provider, e.getClass().getSimpleName());
 		}
 		return redirect(state.redirectUri(), "error", "failed");
+	}
+	/** 서로 다른 가입·연결이 같은 인덱스 구간을 잠가 데드락이 나면, 받아 둔 프로필로 트랜잭션을 다시 실행한다. */
+	private long findOrCreate(String provider, OAuthProviderClient.Profile profile) {
+		for (int attempt = 1;; attempt++) {
+			try {
+				return users.findOrCreate(provider, profile);
+			}
+			catch (PessimisticLockingFailureException e) {
+				if (attempt >= 3) {
+					throw e;
+				}
+			}
+		}
 	}
 	public AuthResponse exchange(String value, String verifier) {
 		OAuthStore.LoginCode code = store.consumeCode(value);

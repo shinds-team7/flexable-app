@@ -73,6 +73,10 @@ public class User {
 		this.onboarded = true;
 	}
 
+	public void clearPassword() {
+		this.passwordHash = null;
+	}
+
 	public void revokeTokens() {
 		this.tokenVersion++;
 	}

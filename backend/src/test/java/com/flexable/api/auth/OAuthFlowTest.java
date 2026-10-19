@@ -168,9 +168,44 @@ class OAuthFlowTest {
 			Number id = JsonPath.read(auth, "$.user.id");
 			assertNull(jdbc.queryForObject("select email from users where id=?", String.class, id));
 			assertNull(jdbc.queryForObject("select email from user_identities where user_id=?", String.class, id));
-			when(provider.fetch(eq(name), anyString())).thenReturn(new OAuthProviderClient.Profile(UUID.randomUUID().toString(), email, true));
-			assertEquals(REDIRECT + "?error=email_in_use", callback(name, start(name, REDIRECT)));
 		}
+		json("/api/v1/auth/login", """
+				{"email":"%s","password":"abcd1234"}
+				""".formatted(email))
+			.andExpect(status().isOk());
+	}
+
+	@Test
+	void verifiedEmailLogsIntoExistingAccountAndRevokesItsPassword() throws Exception {
+		String email = UUID.randomUUID() + "@example.com";
+		String signup = body(json("/api/v1/auth/signup", """
+				{"email":"%s","password":"abcd1234","agreeTerms":true,"agreePrivacy":true}
+				""".formatted(email))
+			.andExpect(status().isCreated()));
+		Number id = JsonPath.read(signup, "$.user.id");
+		String oldToken = JsonPath.read(signup, "$.accessToken");
+		String googleId = UUID.randomUUID().toString();
+		when(provider.fetch(eq("google"), anyString())).thenReturn(new OAuthProviderClient.Profile(googleId, email.toUpperCase(), true));
+		exchange(query(callback("google", start("google", REDIRECT)), "code"), VERIFIER)
+			.andExpect(status().isOk()).andExpect(jsonPath("$.user.id", is(id.intValue())))
+			.andExpect(jsonPath("$.user.hasPassword", is(false)));
+		assertEquals(11, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
+		assertEquals(1, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
+		// 남의 주소로 먼저 가입한 사람이 비밀번호나 기존 세션으로 다시 들어오지 못한다.
+		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + oldToken)).andExpect(status().isUnauthorized());
+		json("/api/v1/auth/login", """
+				{"email":"%s","password":"abcd1234"}
+				""".formatted(email))
+			.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+		// 다음 Google 로그인도, 같은 이메일의 카카오 로그인도 같은 계정으로 들어간다.
+		exchange(query(callback("google", start("google", REDIRECT)), "code"), VERIFIER)
+			.andExpect(status().isOk()).andExpect(jsonPath("$.user.id", is(id.intValue())));
+		exchange(loginCode("kakao", email, true), VERIFIER)
+			.andExpect(status().isOk()).andExpect(jsonPath("$.user.id", is(id.intValue())));
+		// 같은 공급자의 다른 계정은 붙이지 않는다.
+		when(provider.fetch(eq("google"), anyString())).thenReturn(new OAuthProviderClient.Profile(UUID.randomUUID().toString(), email, true));
+		assertEquals(REDIRECT + "?error=email_in_use", callback("google", start("google", REDIRECT)));
+		assertEquals(2, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
 	}
 
 	@Test
