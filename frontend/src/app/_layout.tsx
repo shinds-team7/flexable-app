@@ -34,14 +34,13 @@ function SplashGate() {
   return null;
 }
 
-/** 공통 틀(안전영역·폰 프레임·토스트·업데이트 배너)만 둔다. 시연 Mock 상태는 demo/_layout에서만 주입한다. */
+/** 공통 틀(안전영역·폰 프레임·토스트·업데이트 배너)과 세션을 둔다. */
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <View style={styles.outer}>
         <SafeAreaView style={styles.phone} edges={["top", "bottom"]}>
           <StatusBar style="dark" />
-          {/* demo/: 시연(Mock) / 그 외: 실제 서비스 */}
           <ToastProvider>
             <SessionProvider>
               <SplashGate />

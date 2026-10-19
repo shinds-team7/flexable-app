@@ -1,9 +1,9 @@
 # 현재 기능 기준표
 
-기준 2026-10-15, `main`. 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다.
+기준 2026-10-19, `main`. 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다.
 기능을 추가하거나 바꾸면 이 표를 같이 고친다. README와 HANDOFF는 이 표를 기준으로 쓴다.
 
-구분: **서비스** = 실제 앱(Android·웹) / **시연** = `/demo` 아래 예시 데이터(웹 전용) / **미구현** = 계획만 있음
+구분: **서비스** = 실제 앱(Android·웹) / **시연** = 예시 데이터 웹 화면(2026-10-19부터 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `/m`) / **미구현** = 계획만 있음
 
 ## 서비스
 
@@ -24,19 +24,10 @@
 | 공개 페이지 | `/privacy`, `/terms`, `/support` | 원문은 `docs/play-store/privacy-policy.md`·`terms.md` | E2E `approved legal copy…`(웹 화면과 원문 일치 검사) |
 | 원격 업데이트 안내 | 앱 탭 화면 상단 배너 → `components/UpdateBanner.tsx` (웹에서는 안 뜸) | `expo-updates` | Android 실기기 |
 
-## 시연 (`/demo`, 웹 전용)
+## 시연 (`https://flexable-web-delta.vercel.app/m`, 이 저장소 밖)
 
-앱(Android·iOS)에서는 열리지 않고, 웹도 `EXPO_PUBLIC_ENABLE_DEMO=false`면 막힌다(`src/app/demo/_layout.tsx`). 데이터는 전부 `src/demo/data/mock.ts`이고 서버를 부르지 않는다. 새로 고침하면 처음 상태로 돌아간다.
-
-| 기능 | 경로 | 비고 |
-|---|---|---|
-| 계좌 연결·AI 분석 온보딩 | `/demo/onboarding/*` | 오픈뱅킹 Mock. 실제 서비스에는 없음 |
-| 홈·캐릭터 홈(B안) | `/demo`, `/demo/home2` | 캐릭터 단계는 소비 속도로 계산(`demo/components/CharacterHero.tsx`) |
-| 예정 지출·AI 초안 | `/demo/schedule`, `/demo/schedule/new` | 자연어 파싱 Mock(`demo/ai/parsePlan.ts`) |
-| 고액 지출 계획 | `/demo/plan` | AI 추천 결제 주 Mock |
-| AI 메모리 | `/demo/memory` | `demo/ai/memory.ts` |
-| 정산·1/N·대신 결제 | `/demo/settle/[id]`, `/demo/tx/[id]` | |
-| 결제·아침 요약 푸시 | `/demo/simulations/*` | 잠금화면 모양만 보여줌. 실제 푸시 없음 |
+2026-10-19에 이 저장소에서 빼서 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `mobile-demo/`로 옮겼다. 데이터는 전부 예시이고 서버를 부르지 않는다. 화면 목록은 그 저장소의 README를 본다.
+계좌 연결·AI 분석 온보딩, 예정 지출·AI 초안, 고액 지출 계획, AI 메모리, 정산·1/N, 결제·아침 요약 푸시는 시연에만 있다.
 
 ## 미구현 (서비스에 없음)
 
@@ -55,5 +46,4 @@
 
 | 경로 | 하는 일 | 결정 | 이유 |
 |---|---|---|---|
-| `frontend/vercel.json` redirect 9개 (`/home2`, `/plan`, `/budget-detail`, `/notifications`, `/memory`, `/schedule`, `/schedule/*`, `/tx/:id`, `/settle/:id`) | 분리 전 시연 주소 → `/demo/...` (307 임시) | 유지 | 발표 자료 등에 예전 주소가 남아 있을 수 있음. 서비스가 같은 경로를 쓰게 되면 그 줄을 지운다 |
-| `src/app/demo/pay.tsx`, `src/app/demo/push.tsx` | `/demo/pay`·`/demo/push` → `/demo/simulations/...` (쿼리 유지) | 유지 | 위와 같음 |
+| `frontend/vercel.json` redirect 11개 (`/demo`, `/demo/*`, 그리고 분리 전 `/home2`, `/plan`, `/budget-detail`, `/notifications`, `/memory`, `/schedule`, `/schedule/*`, `/tx/:id`, `/settle/:id`) | 옛 시연 주소 → `https://flexable-web-delta.vercel.app/m/...` (307 임시) | 유지 | 발표 자료 등에 예전 주소가 남아 있을 수 있음. 서비스가 같은 경로를 쓰게 되면 그 줄을 지운다. 새 웹사이트 주소가 바뀌면(10/30 도메인) 목적지도 바꾼다 |

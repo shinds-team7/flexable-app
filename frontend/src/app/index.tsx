@@ -1,6 +1,6 @@
 import { Redirect, router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Image, Platform, Pressable, ScrollView, View } from "react-native";
+import { Image, Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import { T } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { EmailButton, GoogleButton, KakaoButton } from "@/service/OAuthButtons";
@@ -13,6 +13,8 @@ import {
 import { useSession } from "@/service/Session";
 import { ErrorNotice, Loading } from "@/service/ui";
 import { colors } from "@/theme";
+
+const DEMO_URL = "https://flexable-web-delta.vercel.app/m";
 export default function Start() {
   const s = useSession();
   const toast = useToast();
@@ -52,8 +54,8 @@ export default function Start() {
     else if (result.type === "redirect")
       router.push({ pathname: "/oauth/callback", params: result.params });
   };
-  const demo =
-    Platform.OS === "web" && process.env.EXPO_PUBLIC_ENABLE_DEMO !== "false";
+  // 시연은 웹사이트 저장소(shinds-team7/flexable-web)의 /m 으로 옮겼다. 웹에서만 링크를 보여 준다.
+  const demo = Platform.OS === "web";
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
@@ -120,7 +122,10 @@ export default function Start() {
         {demo && (
           <>
             <Dot />
-            <FooterLink label="시연 보기" onPress={() => router.push("/demo")} />
+            <FooterLink
+              label="시연 보기"
+              onPress={() => Linking.openURL(DEMO_URL)}
+            />
           </>
         )}
       </View>

@@ -33,7 +33,7 @@
 
 ## 0. 한 장 요약
 
-**구조:** 새 웹은 저장소 안 `web/`(Vite + React + TypeScript, Vercel)로 만들고, 서버는 **기존 Spring 백엔드에 패키지를 추가하는 모듈러 모놀리스**로 간다. 같은 jar를 `api` 프로세스와 `worker`(수집·사건 탐지·LLM 사전 생성) 프로세스 두 개로 띄운다. DB는 지금 RDS MySQL. 계정·JWT·소셜 로그인(PR #59)은 앱과 **완전히 같은 것**을 쓰고, 웹 주소만 redirectUri·CORS 허용 목록에 추가한다.
+**구조:** 새 웹은 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)(Vite + React + TypeScript, Vercel)로 만들고, 서버는 **기존 Spring 백엔드에 패키지를 추가하는 모듈러 모놀리스**로 간다. 같은 jar를 `api` 프로세스와 `worker`(수집·사건 탐지·LLM 사전 생성) 프로세스 두 개로 띄운다. DB는 지금 RDS MySQL. 계정·JWT·소셜 로그인(PR #59)은 앱과 **완전히 같은 것**을 쓰고, 웹 주소만 redirectUri·CORS 허용 목록에 추가한다.
 
 **확정 반영 핵심(팀장 확정 12개 → 개발 설계):**
 | 확정 | 설계 |
@@ -76,11 +76,12 @@
 - **버린 대안:** (a) 별도 서비스(시세 서비스 + 인증 공유) — 서비스 간 인증·배포 파이프라인이 두 배가 된다. (b) Python 데이터 파이프라인 — 데이터 담당이 편하지만 언어·배포가 하나 더 늘고 폐쇄망 반입 대상도 늘어난다. 분석 실험(노트북)은 Python으로 해도 되지만 **운영 수집기는 Java로 통일**한다.
 - **결과:** 패키지 경계를 지키는 규칙이 필요하다 — `market`/`savings`/`news`는 다른 도메인 패키지를 import하지 않고, `simulation`만 `market`·`savings`를 읽는다(ArchUnit 테스트 1개로 막는다). 나중에 트래픽이 커지면 `worker`부터 별도 서버로 뺀다.
 
-### ADR-2. 프론트: Vite + React + TypeScript SPA, 저장소는 monorepo `web/`
+### ADR-2. 프론트: Vite + React + TypeScript SPA, 저장소는 별도 `flexable-web` (2026-10-19 변경)
 - **맥락:** 데스크톱 중심, 차트·시뮬레이션 상호작용이 많다. 폐쇄망 VM에서도 정적 파일만으로 띄울 수 있어야 한다. 기존 Expo 웹(`frontend/`)은 모바일 화면이라 재사용하기 어렵다.
-- **결정:** `web/`에 Vite + React + TS. 라우팅 React Router, 서버 상태 TanStack Query, 작은 클라이언트 상태(시뮬레이션 조합 편집 중인 값) Zustand, 폼 검증 Zod. 디자인 토큰은 `frontend/src/theme/index.ts`의 값을 CSS 변수로 옮겨 같은 색(신한 블루 `#0046FF`·네이비 잉크)을 쓴다. 공유 링크 미리보기(카카오톡 OG 태그)는 공유 주소 `https://<웹>/s/:id`를 Vercel `rewrites`로 API의 `GET /share/{id}/og`(OG 메타 + 화면 이동만 담은 HTML)에 넘기고, 사람은 SPA의 `/p/:id` 화면으로 이동하는 방식으로 해결한다(SPA는 미리보기 봇이 JS를 실행하지 않아 OG를 못 준다). 랜딩 예시 차트는 **웹 빌드에 정적 JSON으로 포함**해 API가 죽어도 뜨게 한다.
+- **결정:** 별도 저장소 `flexable-web`에 Vite + React + TS. 라우팅 React Router, 서버 상태 TanStack Query, 작은 클라이언트 상태(시뮬레이션 조합 편집 중인 값) Zustand, 폼 검증 Zod. 디자인 토큰은 `frontend/src/theme/index.ts`의 값을 CSS 변수로 옮겨 같은 색(신한 블루 `#0046FF`·네이비 잉크)을 쓴다. 공유 링크 미리보기(카카오톡 OG 태그)는 공유 주소 `https://<웹>/s/:id`를 Vercel `rewrites`로 API의 `GET /share/{id}/og`(OG 메타 + 화면 이동만 담은 HTML)에 넘기고, 사람은 SPA의 `/p/:id` 화면으로 이동하는 방식으로 해결한다(SPA는 미리보기 봇이 JS를 실행하지 않아 OG를 못 준다). 랜딩 예시 차트는 **웹 빌드에 정적 JSON으로 포함**해 API가 죽어도 뜨게 한다.
 - **버린 대안:** Next.js(SSR/ISR로 SEO·OG가 쉽다) — Node 서버가 하나 더 생기고 폐쇄망 반입·운영이 복잡해진다. 청년 소식 페이지 SEO가 BM상 중요해지면 그때 소식 페이지만 사전 렌더링(빌드 시 정적 HTML 생성)을 붙인다.
-- **결과:** `docs/API.md`가 앱·웹 공통 계약이 되고, PR 하나로 API와 웹을 같이 바꿀 수 있다. CI에 `web` job을 추가한다. `web/`은 Expo 규칙(`frontend/AGENTS.md`)과 별개 규칙 파일(`web/AGENTS.md`)을 둔다.
+- **결과:** `docs/API.md`(이 저장소)가 앱·웹 공통 계약이다. 웹 저장소는 자체 CI와 `AGENTS.md`를 둔다. 앱 시연도 그 저장소의 `/m`(`mobile-demo/`, Expo 웹)으로 옮겼다.
+- **변경(2026-10-19, 팀장 결정):** 처음에는 이 저장소의 `web/`(monorepo)였다. 앱(하루 예산)과 웹(시드머니로 굴려보기)은 프론트 코드를 공유하지 않고 빌드·배포·담당자가 달라 프론트만 분리했다. 대가로 API 계약을 바꾸는 기능은 두 저장소에 PR이 필요하다. 계약 정본은 계속 이 저장소의 `docs/API.md`다.
 
 ### ADR-3. 데이터 패칭: 서버 계산 + TanStack Query 캐시, 공개 GET은 HTTP 캐시
 - **결정:** 시뮬레이션 결과·적금 이자·세금·사건 전후 내 돈·원금 시계열·비교선은 **모두 서버가 계산**한다(클라이언트 재계산 금지, AGENTS.md 원칙 유지). 웹은 결과를 그리기만 한다. 고지 문장도 서버 상수 한 곳에서 `noticeKey`와 함께 내려 준다(8-3). 무료/유료 한도도 서버 설정값 한 곳(`GET /billing/plans`)에서 내려 준다. 시세·사건·소식 같은 공개 GET은 `Cache-Control: public, max-age=300` + ETag. 시뮬레이션 POST는 입력 해시로 서버 메모리 캐시(Caffeine, 10분).

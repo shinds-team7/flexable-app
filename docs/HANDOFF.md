@@ -106,7 +106,7 @@
 | 영역 | 상태 | 위치 |
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
-| 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (`/demo` 시연, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
+| 웹 | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (옛 `/demo`는 `https://flexable-web-delta.vercel.app/m`으로 이동, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
 | CI | PR·`main` 푸시마다 백엔드 테스트, tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
 | 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), 로컬 E2E 5개 통과 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
