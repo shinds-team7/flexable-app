@@ -16,7 +16,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, floating, font, motion, pressTransition, radius } from '@/theme';
+import { colors, elevation1, floating, font, motion, pressTransition, radius, touch } from '@/theme';
 
 type TProps = TextProps & {
   size?: number;
@@ -143,7 +143,7 @@ export function Button({ label, variant = 'primary', icon, style, disabled, ...r
         style,
       ]}
     >
-      {icon && <Ionicons name={icon} size={18} color={disabled ? colors.textFaint : fg} />}
+      {icon && <Ionicons name={icon} size={18} color={disabled ? colors.textMuted : fg} />}
       <T size={16} weight="700" color={disabled ? colors.textMuted : fg} style={{ textAlign: 'center' }}>
         {label}
       </T>
@@ -173,13 +173,90 @@ export function Segment<K extends string>({
             onPress={() => onChange(it.key)}
             style={[styles.segItem, pressTransition, on && styles.segOn]}
           >
-            <T size={14} weight={on ? '700' : '500'} color={on ? colors.text : colors.textMuted}>
+            <T size={15} weight={on ? '700' : '500'} color={on ? colors.text : colors.textSub}>
               {it.label}
             </T>
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+/** 켜짐/꺼짐이 바로 보이도록 0→1로 160ms 움직이는 값. 동작 줄이기 설정이면 즉시 바뀐다 */
+function useToggle(on: boolean) {
+  const reduced = useReducedMotion();
+  const p = useAnimValue(on ? 1 : 0);
+  useEffect(() => {
+    Animated.timing(p, {
+      toValue: on ? 1 : 0,
+      duration: reduced ? 0 : motion.toggle,
+      easing: motion.easeOut,
+      useNativeDriver: false,
+    }).start();
+  }, [on, reduced, p]);
+  return p;
+}
+
+/** 설정 행 오른쪽의 스위치. 행 전체가 누르는 영역이라 이 컴포넌트는 표시만 한다 */
+export function SwitchMark({ on }: { on: boolean }) {
+  const p = useToggle(on);
+  return (
+    <Animated.View
+      style={[
+        styles.switch,
+        { backgroundColor: p.interpolate({ inputRange: [0, 1], outputRange: [colors.borderInput, colors.brand] }) },
+      ]}
+    >
+      <Animated.View style={[styles.knob, { transform: [{ translateX: p.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) }] }]} />
+    </Animated.View>
+  );
+}
+
+/** 라디오 동그라미. 행 전체가 누르는 영역이라 이 컴포넌트는 표시만 한다 */
+export function RadioMark({ on }: { on: boolean }) {
+  const p = useToggle(on);
+  return (
+    <View style={[styles.radio, { borderColor: on ? colors.brand : colors.borderInput }]}>
+      <Animated.View style={[styles.radioDot, { transform: [{ scale: p }] }]} />
+    </View>
+  );
+}
+
+/** 흰 카드 안의 한 줄(설정·메뉴). 높이 56, 줄 사이는 구분선 */
+export function Row({
+  label,
+  caption,
+  right,
+  first,
+  onPress,
+  ...a11y
+}: {
+  label: string;
+  caption?: string;
+  right?: ReactNode;
+  first?: boolean;
+  onPress: () => void;
+} & Pick<PressableProps, 'accessibilityRole' | 'accessibilityState' | 'aria-checked'>) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      {...a11y}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, !first && styles.rowLine, pressed && { backgroundColor: colors.sunken }]}
+    >
+      {a11y.accessibilityRole === 'radio' && right}
+      <View style={{ flex: 1, gap: 2 }}>
+        <T size={16}>{label}</T>
+        {caption && (
+          <T size={13} color={colors.textMuted}>
+            {caption}
+          </T>
+        )}
+      </View>
+      {a11y.accessibilityRole !== 'radio' && (right ?? <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />)}
+    </Pressable>
   );
 }
 
@@ -309,29 +386,35 @@ export const styles = StyleSheet.create({
     maxWidth: 440,
     maxHeight: '92%',
     backgroundColor: '#fff',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
     padding: 22,
     paddingBottom: 34,
   },
   sheetHead: { flexDirection: 'row', alignItems: 'center' },
-  dialog: { width: '100%', maxWidth: 360, backgroundColor: '#fff', borderRadius: radius.xl - 4, padding: 22, alignSelf: 'center' },
+  dialog: { width: '100%', maxWidth: 360, backgroundColor: '#fff', borderRadius: radius.dialog, padding: 22, alignSelf: 'center' },
   screen: { padding: 16, paddingBottom: 48, gap: 12 },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: 20 },
+  card: { backgroundColor: colors.card, borderRadius: radius.soft, padding: 20, ...elevation1 },
   pressed: { transform: [{ scale: 0.97 }], opacity: 0.85 },
-  cardPressed: { transform: [{ scale: 0.985 }], backgroundColor: colors.brandSofter },
+  cardPressed: { transform: [{ scale: 0.985 }], backgroundColor: colors.sunken },
   btnPrimaryPressed: { transform: [{ scale: 0.97 }], backgroundColor: colors.brandDark },
   btn: {
-    minHeight: 54,
+    minHeight: touch.cta,
     paddingVertical: 12,
     paddingHorizontal: 10,
-    borderRadius: radius.md,
+    borderRadius: radius.soft,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
   },
-  segment: { flexDirection: 'row', backgroundColor: colors.sunken, borderRadius: radius.sm, padding: 4 },
-  segItem: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.xs },
-  segOn: { backgroundColor: '#fff', ...(Platform.OS === 'web' ? ({ boxShadow: '0 1px 3px rgba(16,26,51,0.10)' } as object) : {}) },
+  segment: { flexDirection: 'row', gap: 4, backgroundColor: colors.sunken, borderRadius: radius.soft, padding: 4 },
+  segItem: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: touch.row, paddingHorizontal: 20, paddingVertical: 8 },
+  rowLine: { borderTopWidth: 1, borderTopColor: colors.line },
+  switch: { width: 52, height: 32, borderRadius: 16, padding: 3 },
+  knob: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(16,26,51,0.25)' },
+  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.brand },
+  segOn: { backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(16,26,51,0.12)' },
 });

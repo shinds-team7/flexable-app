@@ -4,7 +4,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Platform, Pressable, View } from "react-native";
 import { T } from "@/components/ui";
-import { colors } from "@/theme";
+import { colors, radius } from "@/theme";
 // value is "YYYY-MM-DDTHH:mm" in Seoul time. The pickers use device time, which is Seoul for our users.
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -15,6 +15,14 @@ function toDate(value: string) {
 function toValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+/** "2026. 10. 20. (화) 오후 12:40" */
+export function dateTimeText(value: string) {
+  const date = toDate(value);
+  const h = date.getHours();
+  const noon = h < 12 ? "오전" : "오후";
+  return `${value.slice(0, 10).replace(/-/g, ". ")}. (${DOW[date.getDay()]}) ${noon} ${h % 12 || 12}:${pad(date.getMinutes())}`;
+}
+// One field for both: the date picker opens first, then the time wheel for the picked day.
 export function DateTimeField({
   label,
   value,
@@ -25,22 +33,33 @@ export function DateTimeField({
   onChange: (value: string) => void;
 }) {
   const date = toDate(value);
-  const open = (mode: "date" | "time") =>
+  const pickTime = (day: Date) =>
     DateTimePickerAndroid.open({
-      value: date,
-      mode,
-      is24Hour: true,
+      value: day,
+      mode: "time",
+      is24Hour: false,
       // The spinner lets people drag the hour and minute wheels.
-      display: mode === "time" ? "spinner" : "calendar",
+      display: "spinner",
       onChange: (event, picked) => {
         if (event.type === "set" && picked) onChange(toValue(picked));
       },
     });
+  const pickDate = () =>
+    DateTimePickerAndroid.open({
+      value: date,
+      mode: "date",
+      display: "calendar",
+      onChange: (event, picked) => {
+        if (event.type !== "set" || !picked) return;
+        onChange(toValue(picked));
+        pickTime(picked);
+      },
+    });
   if (Platform.OS !== "android")
     return (
-      <View style={{ gap: 7 }}>
-        <T size={13} weight="600">
-          {label} 날짜와 시간
+      <View style={{ gap: 8 }}>
+        <T size={14} weight="700" color={colors.textSub}>
+          {label}
         </T>
         <DateTimePicker
           value={date}
@@ -50,44 +69,33 @@ export function DateTimeField({
         />
       </View>
     );
+  const text = dateTimeText(value);
   return (
-    <View style={{ flexDirection: "row", gap: 10 }}>
-      {(
-        [
-          [
-            "date",
-            `${label} 날짜`,
-            `${value.slice(0, 10).replace(/-/g, ".")} (${DOW[date.getDay()]})`,
-            "calendar-outline",
-          ],
-          ["time", `${label} 시간`, value.slice(11, 16), "time-outline"],
-        ] as const
-      ).map(([mode, title, text, icon]) => (
-        <View key={mode} style={{ flex: mode === "date" ? 3 : 2, gap: 7 }}>
-          <T size={13} weight="600">
-            {title}
-          </T>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${title} ${text}, 바꾸기`}
-            onPress={() => open(mode)}
-            style={{
-              minHeight: 50,
-              paddingHorizontal: 14,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              borderWidth: 1,
-              borderColor: colors.line,
-              borderRadius: 14,
-              backgroundColor: "#fff",
-            }}
-          >
-            <Ionicons name={icon} size={18} color={colors.textMuted} />
-            <T>{text}</T>
-          </Pressable>
-        </View>
-      ))}
+    <View style={{ gap: 8 }}>
+      <T size={14} weight="700" color={colors.textSub}>
+        {label}
+      </T>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label} ${text}, 바꾸기`}
+        onPress={pickDate}
+        style={{
+          minHeight: 52,
+          paddingHorizontal: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          borderWidth: 1,
+          borderColor: colors.borderInput,
+          borderRadius: radius.soft,
+          backgroundColor: colors.card,
+        }}
+      >
+        <T style={{ flex: 1 }} num>
+          {text}
+        </T>
+        <Ionicons name="calendar-outline" size={20} color={colors.textSub} />
+      </Pressable>
     </View>
   );
 }

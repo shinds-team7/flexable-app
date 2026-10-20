@@ -213,7 +213,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 - `reservedFixed` = 내일 ~ 수입일 전날 사이에 날짜가 오는 고정지출 합. 오늘까지 날짜가 된 고정지출은 지출 거래로 자동 기록되어 `estimatedBalance`에서 빠진다(아래 "고정지출 자동 기록")
 - `remaining` = `estimatedBalance` − `reservedFixed` − `cardUnpaid` − `protectedTotal`
 - `dailyBudget` = max(0, `remaining` + `todaySpent`) ÷ `daysLeft`
-- `todayAvailable` = max(0, `dailyBudget` − `todaySpent`), `shortage` = `remaining` < 0이면 −`remaining`, 아니면 max(0, `todaySpent` − `dailyBudget`)
+- `todayAvailable` = `dailyBudget` − `todaySpent`(오늘 예산을 넘으면 넘은 만큼 음수. 1.3.0 앱 홈은 마이너스로, 그 전 앱은 0원으로 보여 준다), `shortage` = `remaining` < 0이면 −`remaining`, 아니면 max(0, `todaySpent` − `dailyBudget`)
 - `todaySpent`, `weekSpent` = 오늘 / 이번 주(월~일) 지출 합. 고정지출 자동 기록(`fromFixed`)은 넣지 않는다. `cycleStart` = 직전 수입일
 - `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
 - `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈

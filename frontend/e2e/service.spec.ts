@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 const apiBase = "http://localhost:8080/api/v1";
 const password = "Testpass1234";
+// The form CTA reads 기록하기 for a new transaction and 저장하기 when editing.
+const SAVE = /^(기록하기|저장하기)$/;
 const email = () =>
   `frontend.${Date.now()}.${Math.random().toString(36).slice(2)}@example.com`;
 async function signup(page: Page, address: string) {
@@ -60,9 +62,9 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   // A refresh must recover the in-progress draft, with no server write yet.
   await page.reload();
-  await expect(page.getByLabel("생활비 잔액 (원)", { exact: true })).toHaveValue(
-    "1,000,000",
-  );
+  await expect(
+    page.getByLabel("생활비 잔액 (원)", { exact: true }),
+  ).toHaveValue("1,000,000");
   expect(budgetWrites).toBe(0);
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByLabel("매달 수입일 (1~31)", { exact: true }).fill("25");
@@ -120,20 +122,18 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   expect((await record.boundingBox())!.y).toBeCloseTo(fabY, 0);
   await page.setViewportSize({ width: 390, height: 844 });
   await record.click();
-  await page.getByLabel("금액 (원)", { exact: true }).fill("1000000000000");
-  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await page.getByLabel("금액", { exact: true }).fill("1000000000000");
+  await page.getByRole("button", { name: SAVE }).click();
   await expect(
     page.getByText("금액은 1원 이상, 1조 미만으로 입력해 주세요", {
       exact: true,
     }),
   ).toBeVisible();
-  await expect(page.getByLabel("금액 (원)", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("금액", { exact: true })).toHaveValue(
     "1,000,000,000,000",
   );
-  await page.getByLabel("금액 (원)", { exact: true }).fill("8500");
-  await page
-    .getByLabel("내용 (40자 이내)", { exact: true })
-    .fill("테스트 점심");
+  await page.getByLabel("금액", { exact: true }).fill("8500");
+  await page.getByLabel("어디에 썼나요?", { exact: true }).fill("테스트 점심");
   await page.getByRole("button", { name: "+ 추가", exact: true }).click();
   await page
     .getByLabel("카테고리 이름 (20자 이내)", { exact: true })
@@ -162,9 +162,9 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
       { exact: true },
     ),
   ).toBeVisible();
-  await expect(
-    page.getByLabel("내용 (40자 이내)", { exact: true }),
-  ).toHaveValue("테스트 점심");
+  await expect(page.getByLabel("어디에 썼나요?", { exact: true })).toHaveValue(
+    "테스트 점심",
+  );
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   expect(keys).toHaveLength(2);
@@ -191,12 +191,12 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     page.getByRole("tab", { name: "지출", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "수입", exact: true }).click();
-  await page.getByLabel("금액 (원)", { exact: true }).fill("50000");
+  await page.getByLabel("금액", { exact: true }).fill("50000");
   await page.getByRole("radio", { name: "급여", exact: true }).click();
   await page
-    .getByLabel("내용 (40자 이내)", { exact: true })
+    .getByLabel("어디서 받았나요?", { exact: true })
     .fill("테스트 수입");
-  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await page.getByRole("button", { name: SAVE }).click();
   await expect(page).toHaveURL(/\/home$/);
   await page.getByRole("tab", { name: "내역", exact: true }).click();
   await expect(page.getByText("테스트 수입", { exact: true })).toBeVisible();
@@ -217,23 +217,15 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("tab", { name: "내역", exact: true }).click();
   await page.getByRole("tab", { name: "전체", exact: true }).click();
   await page.getByRole("button", { name: /테스트 점심, .*상세 보기/ }).click();
-  await page.getByLabel("금액 (원)", { exact: true }).fill("7000");
-  await page
-    .getByLabel("메모 (200자 이내, 선택)", { exact: true })
-    .fill("수정 메모");
-  // Adding a category while editing must preserve unsaved amounts and memo.
+  await page.getByLabel("금액", { exact: true }).fill("7000");
+  // Adding a category while editing must preserve the unsaved amount.
   await page.getByRole("button", { name: "+ 추가", exact: true }).click();
   await page
     .getByLabel("카테고리 이름 (20자 이내)", { exact: true })
     .fill("수정 중 추가");
   await page.getByRole("button", { name: "추가하기", exact: true }).click();
-  await expect(page.getByLabel("금액 (원)", { exact: true })).toHaveValue(
-    "7,000",
-  );
-  await expect(
-    page.getByLabel("메모 (200자 이내, 선택)", { exact: true }),
-  ).toHaveValue("수정 메모");
-  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(page.getByLabel("금액", { exact: true })).toHaveValue("7,000");
+  await page.getByRole("button", { name: SAVE }).click();
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(
     page.getByRole("button", { name: /테스트 점심, 7,000원/ }),
@@ -265,9 +257,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("button", { name: "거래 삭제", exact: true }).click();
   await page.getByRole("button", { name: "삭제", exact: true }).click();
   await expect(page.getByText(/연결이 불안정해요/)).toBeVisible();
-  await expect(page.getByLabel("금액 (원)", { exact: true })).toHaveValue(
-    "7,000",
-  );
+  await expect(page.getByLabel("금액", { exact: true })).toHaveValue("7,000");
   await page.unroute("**/api/v1/transactions/*");
   await page
     .getByRole("button", { name: "거래 삭제 다시 시도", exact: true })
@@ -390,7 +380,7 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   // The bank now shows 900,000. Re-enter only the balance, without touching the time.
   await page.getByRole("tab", { name: "마이", exact: true }).click();
   await page
-    .getByRole("button", { name: "예산 설정 수정", exact: true })
+    .getByRole("button", { name: "예산 설정 바꾸기", exact: true })
     .click();
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   // The first onboarding screen stays mounted (hidden) in the web stack; roles skip hidden nodes.
@@ -662,7 +652,10 @@ test("email login keeps password help and signup on one line under the login but
   const submit = (await page
     .getByRole("button", { name: "로그인", exact: true })
     .boundingBox())!;
-  const forgot = page.getByRole("button", { name: "비밀번호 찾기", exact: true });
+  const forgot = page.getByRole("button", {
+    name: "비밀번호 찾기",
+    exact: true,
+  });
   const join = page.getByRole("button", { name: "회원가입", exact: true });
   const f = (await forgot.boundingBox())!;
   const j = (await join.boundingBox())!;
@@ -708,7 +701,9 @@ test("email login of a google-linked account explains it and starts google login
   await page.getByLabel("비밀번호", { exact: true }).fill(password);
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await expect(
-    page.getByText("Google로 가입한 계정이에요. Google로 로그인해 주세요", { exact: true }),
+    page.getByText("Google로 가입한 계정이에요. Google로 로그인해 주세요", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "카카오 로그인", exact: true }),

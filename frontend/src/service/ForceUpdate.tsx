@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     padding: space[6],
-    borderRadius: radius.lg,
+    borderRadius: radius.soft,
     backgroundColor: colors.card,
   },
   message: {

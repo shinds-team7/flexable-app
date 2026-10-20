@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 16,
     minHeight: 48,
-    borderRadius: radius.md,
+    borderRadius: radius.soft,
     backgroundColor: colors.brandSoft,
   },
 });

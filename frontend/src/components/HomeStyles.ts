@@ -4,7 +4,7 @@ import { colors, radius } from "@/theme";
 export const styles = StyleSheet.create({
   hero: {
     backgroundColor: colors.brand,
-    borderRadius: radius.xl,
+    borderRadius: radius.soft,
     padding: 22,
     paddingBottom: 14,
   },
