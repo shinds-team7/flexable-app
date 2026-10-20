@@ -25,6 +25,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.jayway.jsonpath.JsonPath;
+import com.flexable.api.auth.LoginAttemptLimiter;
+import com.flexable.api.common.ApiException;
+import com.flexable.api.common.ErrorCode;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,6 +35,9 @@ class ApiFlowTest {
 
 	@Autowired
 	MockMvc mvc;
+
+	@Autowired
+	LoginAttemptLimiter loginLimiter;
 
 	@Autowired
 	org.springframework.jdbc.core.JdbcTemplate jdbc;
@@ -97,6 +103,39 @@ class ApiFlowTest {
 			.andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
 		mvc.perform(json(post("/api/v1/auth/login"), null, "{\"email\":\" DUP@example.com \",\"password\":\"abcd1234\"}"))
 			.andExpect(status().isOk());
+	}
+
+	@Test
+	void fullFailureStoreReturns429ButAllowsValidLogin() throws Exception {
+		String prefix = "capacity-" + UUID.randomUUID();
+		String validEmail = prefix + "@example.com";
+		signup(validEmail);
+		try {
+			for (int i = 0; i < 10_000; i++) {
+				try {
+					loginLimiter.recordFailure(prefix + "-" + i + "@example.invalid");
+				}
+				catch (ApiException ex) {
+					org.junit.jupiter.api.Assertions.assertEquals(ErrorCode.TOO_MANY_ATTEMPTS, ex.code());
+					break;
+				}
+			}
+			mvc.perform(json(post("/api/v1/auth/login"), null,
+					"{\"email\":\"" + validEmail + "\",\"password\":\"wrong1234\"}"))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.code", is("TOO_MANY_ATTEMPTS")))
+				.andExpect(jsonPath("$.retryAfterSeconds", is(600)));
+			mvc.perform(json(post("/api/v1/auth/login"), null,
+					"{\"email\":\"" + validEmail + "\",\"password\":\"abcd1234\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.accessToken").isNotEmpty());
+		}
+		finally {
+			for (int i = 0; i < 10_000; i++) {
+				loginLimiter.reset(prefix + "-" + i + "@example.invalid");
+			}
+			loginLimiter.reset(validEmail);
+		}
 	}
 
 	@Test
