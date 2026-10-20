@@ -92,12 +92,11 @@ function Form({ existing }: { existing?: Transaction }) {
     if (
       !uncertain &&
       (!categoryId ||
-        !title.trim() ||
         title.trim().length > 40 ||
         memo.length > 200 ||
         !validTime(time))
     ) {
-      setError("카테고리, 내용, 날짜와 시간을 확인해 주세요");
+      setError("카테고리와 날짜·시간을 확인해 주세요");
       return;
     }
     lock.current = true;
@@ -108,7 +107,11 @@ function Form({ existing }: { existing?: Transaction }) {
       type,
       amount: Number(amount),
       categoryId,
-      title: title.trim(),
+      // The server needs a title; an empty one falls back to the category name.
+      title:
+        title.trim() ||
+        list.find((c) => c.id === categoryId)?.name ||
+        (type === "INCOME" ? "수입" : "지출"),
       memo,
       occurredAt,
     };
@@ -199,7 +202,7 @@ function Form({ existing }: { existing?: Transaction }) {
           value={amount ? money(Number(amount)) : ""}
           keyboardType="number-pad"
           onChangeText={(s) => setAmount(digits(s))}
-          style={{ minHeight: 72, fontSize: 26, fontWeight: "800" }}
+          style={{ minHeight: 64, fontSize: 20, fontWeight: "700" }}
           right={
             <T
               size={20}
@@ -255,7 +258,7 @@ function Form({ existing }: { existing?: Transaction }) {
           editable={!busy && !uncertain}
           label={expense ? "어디에 썼나요?" : "어디서 받았나요?"}
           placeholder={expense ? "예: 점심 김밥" : "예: 10월 급여"}
-          help="40자까지 쓸 수 있어요"
+          help="비워 두면 카테고리 이름으로 기록해요"
           value={title}
           onChangeText={setTitle}
           maxLength={40}
