@@ -14,20 +14,24 @@ import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors, floating, pressTransition } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
 import { SeedMoneyCard } from "./SeedMoneyCard";
-import { scheduleSeedReminder } from "./seedReminder";
+import { DayBudgets } from "@/components/DayBudgets";
+import { useSeedReminderSetting } from "./reminderSetting";
+import { cancelSeedReminder, scheduleSeedReminder } from "./seedReminder";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
 import type { Today } from "./types";
 export function HomeScreen() {
   const result = useResource<Today>("/budget/today");
   const [basis, setBasis] = useState(false);
   const [style] = useHomeStyle();
+  const [remind] = useSeedReminderSetting();
   const s = result.data;
   const status = s && statusOf(s);
   const nextPayday = s?.nextPayday;
   useEffect(() => {
     // 알림 예약이 실패해도 반영 창은 홈에서 뜨므로 조용히 넘긴다.
-    if (nextPayday) scheduleSeedReminder(nextPayday).catch(() => {});
-  }, [nextPayday]);
+    if (!remind) cancelSeedReminder().catch(() => {});
+    else if (nextPayday) scheduleSeedReminder(nextPayday).catch(() => {});
+  }, [nextPayday, remind]);
   const hero = s && (
     <TodayHeroView
       today={new Date(s.date + "T12:00:00")}
@@ -58,64 +62,34 @@ export function HomeScreen() {
             ) : (
               hero
             )}
-            {s.shortage > 0 && (
-              <Card style={{ backgroundColor: colors.dangerSoft }}>
-                <T color={colors.danger} weight="700">
-                  {s.remaining < 0 ? "다음 수입일까지" : "오늘 예산보다"}{" "}
-                  {money(s.shortage)}원이 부족해요
-                </T>
-                <T size={13}>
-                  예산 설정에서 잔액과 매달 저축할 돈을 확인해 보세요
-                </T>
-              </Card>
-            )}
-            <Card style={{ gap: 14 }}>
+            <Card style={{ gap: 4 }}>
               <T size={14} color={colors.textSub}>
                 이번 주 쓸 수 있는 돈
               </T>
-              <T size={26} weight="800">
+              <T size={24} weight="800" num>
                 {money(s.weekAvailable)}원
               </T>
-              <T size={13} color={colors.textMuted}>
+              <T size={13} color={colors.textMuted} num>
                 남은 {s.weekDaysLeft}일 · 이번 주 쓴 돈 {money(s.weekSpent)}원
               </T>
-              <View style={{ height: 1, backgroundColor: colors.line }} />
-              <T size={13} color={colors.textMuted}>
-                다음 수입일까지 남은 생활비
-              </T>
-              <T size={20} weight="700">
-                {money(Math.max(0, s.remaining))}원
-              </T>
-            </Card>
-            <SeedMoneyCard onChanged={result.retry} />
-            <Card style={{ gap: 10 }}>
-              <T weight="700">요일별 생활비 예산 · 기본 배분</T>
-              <T size={13} color={colors.textMuted}>
-                하루 {money(s.dailyBudget)}원씩 계산해요
-              </T>
-              <View style={{ flexDirection: "row", gap: 4 }}>
-                {["월", "화", "수", "목", "금", "토", "일"].map((d) => (
-                  <View
-                    key={d}
-                    style={{ flex: 1, alignItems: "center", gap: 6 }}
-                  >
-                    <View
-                      style={{
-                        width: "100%",
-                        height: 28,
-                        backgroundColor: colors.brandSoft,
-                        borderRadius: 6,
-                      }}
-                    />
-                    <T size={12}>{d}</T>
-                  </View>
-                ))}
+              <View style={styles.divider} />
+              <View style={styles.between}>
+                <T size={14} color={colors.textSub}>
+                  다음 수입일까지 남은 생활비
+                </T>
+                <T size={17} weight="700" num>
+                  {money(Math.max(0, s.remaining))}원
+                </T>
               </View>
             </Card>
+            <SeedMoneyCard onChanged={result.retry} />
+            <DayBudgets date={s.date} dailyBudget={s.dailyBudget} />
             {!s.hasTransactions && (
-              <Card>
-                <T>아직 기록한 거래가 없어요</T>
-                <T size={13}>수동으로 첫 거래를 기록해보세요</T>
+              <Card style={{ gap: 4 }}>
+                <T weight="700">아직 기록한 거래가 없어요</T>
+                <T size={13} color={colors.textMuted}>
+                  아래 + 버튼으로 첫 거래를 기록해 보세요
+                </T>
               </Card>
             )}
             <Sheet
@@ -198,6 +172,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.brand,
+  },
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: 12 },
+  between: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
   },
   fabPressed: {
     transform: [{ scale: 0.94 }],

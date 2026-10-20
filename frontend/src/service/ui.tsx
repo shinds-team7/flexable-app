@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
-import { colors, font } from "@/theme";
+import { colors, font, noOutline, radius } from "@/theme";
 import { useSession } from "./Session";
 import { api, errorText } from "./api/client";
 export const money = (n: number) => n.toLocaleString("ko-KR");
@@ -27,37 +27,56 @@ export const digits = (s: string) =>
     .replace(/[^0-9]/g, "")
     .replace(/^0+(?=\d)/, "")
     .slice(0, 13);
+// 1px 테두리, 입력 중에는 2px 신한 블루. 테두리가 두꺼워지는 만큼 안쪽 여백을 줄여 글자가 움직이지 않게 한다.
 export function Field({
   label,
+  hideLabel,
+  help,
   right,
   ...props
 }: TextInputProps & {
   label: string;
+  /** 칸 위 글자를 숨긴다(스크린리더는 label을 그대로 읽는다) */
+  hideLabel?: boolean;
+  help?: string;
   ref?: Ref<TextInput>;
   right?: ReactNode;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <View style={{ gap: 7 }}>
-      <T size={13} weight="600">
-        {label}
-      </T>
+    <View style={{ gap: 8 }}>
+      {!hideLabel && (
+        <T size={14} weight="700" color={colors.textSub}>
+          {label}
+        </T>
+      )}
       <View style={{ position: "relative" }}>
         <TextInput
           {...props}
           accessibilityLabel={label}
           placeholderTextColor={colors.placeholder}
+          onFocus={(e) => {
+            setFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            props.onBlur?.(e);
+          }}
           style={[
             {
               fontFamily: font,
               fontSize: 16,
-              minHeight: 50,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: colors.line,
-              borderRadius: 14,
-              backgroundColor: "#fff",
+              minHeight: 52,
+              paddingVertical: 14,
+              paddingHorizontal: focused ? 15 : 16,
+              borderWidth: focused ? 2 : 1,
+              borderColor: focused ? colors.brand : colors.borderInput,
+              borderRadius: radius.soft,
+              backgroundColor: colors.card,
               color: colors.text,
             },
+            noOutline,
             right ? { paddingRight: 52 } : undefined,
             props.style,
           ]}
@@ -76,6 +95,11 @@ export function Field({
           </View>
         )}
       </View>
+      {help && (
+        <T size={13} color={colors.textMuted}>
+          {help}
+        </T>
+      )}
     </View>
   );
 }
@@ -145,9 +169,12 @@ export function Guard({
 }
 export function Page({
   title,
+  footer,
   children,
 }: {
   title: string;
+  /** 화면 아래에 고정되는 주 버튼 자리(하단 고정 CTA) */
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -157,6 +184,21 @@ export function Page({
     >
       <SubHeader title={title} fallback="/" />
       <Screen>{children}</Screen>
+      {footer && (
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: 12,
+            paddingBottom: 20,
+            gap: 4,
+            backgroundColor: colors.card,
+            borderTopWidth: 1,
+            borderTopColor: colors.line,
+          }}
+        >
+          {footer}
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

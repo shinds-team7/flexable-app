@@ -68,7 +68,7 @@ export function TransactionsScreen() {
               <T
                 size={18}
                 weight="800"
-                color={type === "INCOME" ? colors.info : colors.text}
+                color={type === "INCOME" ? colors.brand : colors.text}
               >
                 {money(total(type))}원
               </T>
@@ -153,7 +153,7 @@ export function TransactionsScreen() {
                     </View>
                     <T
                       weight="700"
-                      color={t.type === "INCOME" ? colors.info : colors.text}
+                      color={t.type === "INCOME" ? colors.brand : colors.text}
                     >
                       {t.type === "INCOME" ? "+" : "-"}
                       {money(t.amount)}원

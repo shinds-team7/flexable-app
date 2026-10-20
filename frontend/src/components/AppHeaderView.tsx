@@ -42,7 +42,7 @@ export function AppHeaderView({ homeHref }: { homeHref: Href }) {
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
-/** 하단 아이콘 탭바 — 글자 대신 아이콘만 보이고, 라벨은 스크린리더용으로 남긴다 */
+/** 하단 탭바 — 아이콘 아래 라벨을 함께 보여 준다. 선택된 탭만 신한 블루 */
 export function BottomTabBar({
   tabs,
   pathname,
@@ -71,9 +71,16 @@ export function BottomTabBar({
           >
             <Ionicons
               name={on ? t.activeIcon : t.icon}
-              size={26}
+              size={24}
               color={on ? colors.brand : colors.textMuted}
             />
+            <T
+              size={12}
+              weight={on ? "700" : "500"}
+              color={on ? colors.brand : colors.textMuted}
+            >
+              {t.label}
+            </T>
           </Pressable>
         );
       })}
@@ -106,6 +113,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 56,
+    gap: 2,
+    minHeight: 60,
+    paddingVertical: 6,
   },
 });

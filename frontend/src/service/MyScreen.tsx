@@ -1,11 +1,15 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
   ConfirmModal,
+  RadioMark,
+  Row,
   Screen,
-  Segment,
+  SwitchMark,
   T,
 } from "@/components/ui";
 import { useToast } from "@/components/Toast";
@@ -13,6 +17,7 @@ import { colors } from "@/theme";
 import { api } from "./api/client";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config";
 import { useHomeStyle } from "./homeStyle";
+import { useSeedReminderSetting } from "./reminderSetting";
 import { useSession } from "./Session";
 import { ErrorNotice } from "./ui";
 import { PROVIDER_NAME } from "./oauth";
@@ -42,6 +47,8 @@ export function MyScreen() {
   const lock = useRef(false);
   const [error, setError] = useState<unknown>();
   const [homeStyle, setHomeStyle] = useHomeStyle();
+  // Turning it off cancels the scheduled reminder; the home screen reschedules when it is back on.
+  const [remind, setRemind] = useSeedReminderSetting();
   const logout = async () => {
     if (lock.current) return;
     lock.current = true;
@@ -64,58 +71,91 @@ export function MyScreen() {
   };
   return (
     <Screen>
-      <Card>
-        <T size={20} weight="800">
-          내 계정
+      <Card style={styles.profile}>
+        <View style={styles.avatar}>
+          <Ionicons name="person" size={24} color={colors.brand} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <T size={17} weight="700">
+            내 계정
+          </T>
+          {session.user && <AccountLine user={session.user} />}
+        </View>
+      </Card>
+      <Card style={styles.group}>
+        <T
+          size={14}
+          weight="700"
+          color={colors.textSub}
+          style={styles.groupTitle}
+        >
+          홈 화면
         </T>
-        {session.user && <AccountLine user={session.user} />}
+        <View accessibilityRole="radiogroup">
+          {(
+            [
+              [
+                "character",
+                "캐릭터 홈",
+                "예산을 지킨 날이 쌓이면 캐릭터가 자라요",
+              ],
+              ["classic", "기본 홈", "캐릭터 없이 금액만 보여 드려요"],
+            ] as const
+          ).map(([key, label, caption], i) => (
+            <Row
+              key={key}
+              first={i === 0}
+              label={label}
+              caption={caption}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: homeStyle === key }}
+              aria-checked={homeStyle === key}
+              right={<RadioMark on={homeStyle === key} />}
+              onPress={() => setHomeStyle(key)}
+            />
+          ))}
+        </View>
       </Card>
-      <Card style={{ gap: 10 }}>
-        <T weight="700">홈 화면</T>
-        <Segment
-          items={[
-            { key: "character", label: "캐릭터 홈" },
-            { key: "classic", label: "기본 홈" },
-          ]}
-          value={homeStyle}
-          onChange={setHomeStyle}
-        />
-        <T size={12} color={colors.textMuted}>
-          예산을 지킨 날이 쌓일수록 캐릭터가 올라가요. 기본 홈은 캐릭터 없이
-          보여줘요
+      {Platform.OS !== "web" && (
+        <Card style={styles.group}>
+          <Row
+            first
+            label="수입일 전날 알림"
+            caption="시드머니를 반영할 때 알려 드려요"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: remind }}
+            aria-checked={remind}
+            right={<SwitchMark on={remind} />}
+            onPress={() => setRemind(!remind)}
+          />
+        </Card>
+      )}
+      <Card style={styles.group}>
+        {(
+          [
+            ["예산 설정 바꾸기", "/onboarding"],
+            ["카테고리 관리", "/categories"],
+            ["고객지원", "/support"],
+            ["서비스 이용약관", "/terms"],
+            ["개인정보처리방침", "/privacy"],
+          ] as const
+        ).map(([label, href], i) => (
+          <Row
+            key={href}
+            first={i === 0}
+            label={label}
+            onPress={() => router.push(href)}
+          />
+        ))}
+      </Card>
+      <View style={{ gap: 4, paddingHorizontal: 4 }}>
+        <T size={13} color={colors.textMuted}>
+          앱 버전 {APP_VERSION}
         </T>
-      </Card>
-      <Card style={{ gap: 4 }}>
-        <Button
-          label="예산 설정 수정"
-          variant="ghost"
-          onPress={() => router.push("/onboarding")}
-        />
-        <Button
-          label="카테고리 관리"
-          variant="ghost"
-          onPress={() => router.push("/categories")}
-        />
-        <Button
-          label="고객지원"
-          variant="ghost"
-          onPress={() => router.push("/support")}
-        />
-        <Button
-          label="서비스 이용약관"
-          variant="ghost"
-          onPress={() => router.push("/terms")}
-        />
-        <Button
-          label="개인정보처리방침"
-          variant="ghost"
-          onPress={() => router.push("/privacy")}
-        />
-      </Card>
-      <Card style={{ gap: 8 }}>
-        <T>앱 버전 {APP_VERSION}</T>
-        <T size={13}>문의: {SUPPORT_EMAIL}</T>
-      </Card>
+        <T size={13} color={colors.textMuted}>
+          문의: {SUPPORT_EMAIL}
+        </T>
+      </View>
       <ErrorNotice error={error} />
       <Button
         label="로그아웃"
@@ -139,3 +179,16 @@ export function MyScreen() {
     </Screen>
   );
 }
+const styles = StyleSheet.create({
+  profile: { flexDirection: "row", alignItems: "center", gap: 12 },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.brandSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  group: { padding: 0, overflow: "hidden" },
+  groupTitle: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
+});

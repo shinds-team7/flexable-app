@@ -4,7 +4,7 @@ import { Pressable, View } from "react-native";
 import { Button, ConfirmModal, Segment, T } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { goBack } from "@/components/SubHeader";
-import { colors } from "@/theme";
+import { colors, radius } from "@/theme";
 import { api } from "./api/client";
 import { CategorySheet } from "./CategorySheet";
 import { DateTimeField } from "./DateTimeField";
@@ -42,7 +42,8 @@ function Form({ existing }: { existing?: Transaction }) {
     existing?.categoryId ?? null,
   );
   const [title, setTitle] = useState(existing?.title ?? "");
-  const [memo, setMemo] = useState(existing?.memo ?? "");
+  // The form no longer edits memos; an existing one is sent back unchanged.
+  const memo = existing?.memo ?? "";
   // Keep seconds for the default "now": minute truncation can put a new transaction before balanceAt.
   const [occurredAt, setOccurredAt] = useState(
     () => existing?.occurredAt ?? new Date().toISOString(),
@@ -150,8 +151,28 @@ function Form({ existing }: { existing?: Transaction }) {
       unlock();
     }
   };
+  const expense = type === "EXPENSE";
   return (
-    <Page title={existing ? "거래 상세" : "거래 직접 기록"}>
+    <Page
+      title={existing ? "거래 상세" : "거래 직접 기록"}
+      footer={
+        <Button
+          label={
+            busy
+              ? "처리 중…"
+              : error && errorAction === "save"
+                ? "다시 시도"
+                : !amount && !uncertain
+                  ? "금액을 입력해 주세요"
+                  : existing
+                    ? "저장하기"
+                    : "기록하기"
+          }
+          disabled={busy || (!amount && !uncertain)}
+          onPress={save}
+        />
+      }
+    >
       {/* Keep a real native view: toggling pointerEvents would otherwise flatten/unflatten it and
           reparent the fields while the screen pops, which crashed Android (addViewAt: already has a parent). */}
       <View
@@ -172,12 +193,27 @@ function Form({ existing }: { existing?: Transaction }) {
         />
         <Field
           editable={!busy && !uncertain}
-          label="금액 (원)"
+          label="금액"
+          hideLabel
+          placeholder="금액 입력"
           value={amount ? money(Number(amount)) : ""}
           keyboardType="number-pad"
           onChangeText={(s) => setAmount(digits(s))}
+          style={{ minHeight: 72, fontSize: 26, fontWeight: "800" }}
+          right={
+            <T
+              size={20}
+              weight="700"
+              color={colors.textSub}
+              style={{ paddingRight: 10 }}
+            >
+              원
+            </T>
+          }
         />
-        <T weight="700">카테고리</T>
+        <T size={14} weight="700" color={colors.textSub}>
+          카테고리
+        </T>
         {categories.loading && <Loading />}
         <ErrorNotice error={categories.error} retry={categories.retry} />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -195,7 +231,7 @@ function Form({ existing }: { existing?: Transaction }) {
                 padding: 12,
                 gap: 6,
                 alignItems: "center",
-                borderRadius: 14,
+                borderRadius: radius.soft,
                 backgroundColor:
                   categoryId === c.id ? colors.brandSoft : "#fff",
                 borderWidth: 1,
@@ -215,54 +251,28 @@ function Form({ existing }: { existing?: Transaction }) {
             onPress={() => setSheet(true)}
           />
         </View>
+        <Field
+          editable={!busy && !uncertain}
+          label={expense ? "어디에 썼나요?" : "어디서 받았나요?"}
+          placeholder={expense ? "예: 점심 김밥" : "예: 10월 급여"}
+          help="40자까지 쓸 수 있어요"
+          value={title}
+          onChangeText={setTitle}
+          maxLength={40}
+        />
         <DateTimeField
-          label="거래"
+          label="날짜와 시간"
           value={time}
           onChange={(value) => {
             setTime(value);
             if (validTime(value)) setOccurredAt(value + ":00+09:00");
           }}
         />
-        <Button
-          label="지금"
-          variant="ghost"
-          onPress={() => {
-            const now = new Date();
-            setOccurredAt(now.toISOString());
-            setTime(toSeoulInput(now.toISOString()));
-          }}
-        />
-        <Field
-          editable={!busy && !uncertain}
-          label="내용 (40자 이내)"
-          value={title}
-          onChangeText={setTitle}
-          maxLength={40}
-        />
-        <Field
-          editable={!busy && !uncertain}
-          label="메모 (200자 이내, 선택)"
-          value={memo}
-          onChangeText={setMemo}
-          maxLength={200}
-          multiline
-        />
       </View>
       {uncertain && (
         <T>저장 여부를 확인하지 못했어요. 같은 내용으로 다시 확인할게요</T>
       )}
       <ErrorNotice error={error} />
-      <Button
-        label={
-          busy
-            ? "처리 중…"
-            : error && errorAction === "save"
-              ? "다시 시도"
-              : "저장"
-        }
-        disabled={busy}
-        onPress={save}
-      />
       {existing && (
         <Button
           label={

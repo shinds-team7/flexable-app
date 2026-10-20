@@ -1,7 +1,8 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Sheet, T } from "@/components/ui";
-import { colors } from "@/theme";
+import { colors, radius } from "@/theme";
 import { api } from "./api/client";
 import { ErrorNotice, MoneyField, money, useResource } from "./ui";
 import type { SeedChoice, SeedMoney } from "./types";
@@ -45,17 +46,22 @@ export function SeedMoneyCard({ onChanged }: { onChanged: () => void }) {
   const [, month, day] = pending?.payday.split("-").map(Number) ?? [];
   return (
     <>
-      <Card style={{ gap: 6 }}>
-        <T size={14} color={colors.textSub}>
-          시드머니
-        </T>
-        <T size={22} weight="800">
-          {money(seed.total)}원
-        </T>
-        <T size={13} color={colors.textMuted}>
-          모아둔 돈 {money(seed.base)}원 + 반영한 돈 {money(seed.saved)}원 · 매달{" "}
-          {money(seed.monthlyGoal)}원 저축
-        </T>
+      <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={styles.icon}>
+          <Ionicons name="wallet-outline" size={22} color={colors.brand} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T size={14} color={colors.textSub}>
+            시드머니
+          </T>
+          <T size={20} weight="800" num>
+            {money(seed.total)}원
+          </T>
+          <T size={13} color={colors.textMuted} num>
+            모아둔 돈 {money(seed.base)}원 + 반영한 돈 {money(seed.saved)}원 ·
+            매달 {money(seed.monthlyGoal)}원 저축
+          </T>
+        </View>
       </Card>
       <Sheet
         visible={!!pending && later !== pending.cycleEnd}
@@ -117,3 +123,13 @@ export function SeedMoneyCard({ onChanged }: { onChanged: () => void }) {
     </>
   );
 }
+const styles = StyleSheet.create({
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

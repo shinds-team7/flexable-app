@@ -19,7 +19,7 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: st
       require('../../assets/characters/lv1-3.png'),
       require('../../assets/characters/lv1-4.png'),
     ],
-    bg: '#EEF2FA',
+    bg: colors.stage,
     accent: '#667085',
   },
   2: {
@@ -29,7 +29,7 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: st
       require('../../assets/characters/lv2-3.png'),
       require('../../assets/characters/lv2-4.png'),
     ],
-    bg: '#EEF2FA',
+    bg: colors.stage,
     accent: '#8A6A3B',
   },
   3: {
@@ -39,7 +39,7 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: st
       require('../../assets/characters/lv3-3.png'),
       require('../../assets/characters/lv3-4.png'),
     ],
-    bg: '#EEF2FA',
+    bg: colors.stage,
     accent: '#1D3A8A',
   },
   4: {
@@ -49,7 +49,7 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: st
       require('../../assets/characters/lv4-3.png'),
       require('../../assets/characters/lv4-4.png'),
     ],
-    bg: '#EEF2FA',
+    bg: colors.stage,
     accent: '#A11D2B',
   },
   5: {
@@ -59,7 +59,7 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: st
       require('../../assets/characters/lv5-3.png'),
       require('../../assets/characters/lv5-4.png'),
     ],
-    bg: '#EEF2FA',
+    bg: colors.stage,
     accent: '#B7791F',
   },
 };
