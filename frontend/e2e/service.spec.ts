@@ -591,6 +591,45 @@ test("email login keeps password help and signup on one line under the login but
   await expect(page).toHaveURL(/\/auth\/signup$/);
 });
 
+// Client side only: the login answer is mocked. The server rule (a linked account is sent back to its
+// social method even with the right password) is covered by the backend OAuthFlowTest.
+test("email login of a google-linked account explains it and starts google login (login answer mocked)", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/auth/login", (route) =>
+    route.fulfill({
+      status: 401,
+      json: {
+        code: "SOCIAL_ACCOUNT",
+        message: "Google로 가입한 계정이에요. Google로 로그인해 주세요",
+        provider: "google",
+      },
+    }),
+  );
+  await page.route("**/api/v1/auth/oauth/providers", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { providers: ["kakao", "google"] } });
+  });
+  await page.route("**/api/v1/auth/oauth/google/start**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<p>google</p>" }),
+  );
+  await page.goto("/auth/login");
+  await page.getByLabel("이메일", { exact: true }).fill(email());
+  await page.getByLabel("비밀번호", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await expect(
+    page.getByText("Google로 가입한 계정이에요. Google로 로그인해 주세요", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "카카오 로그인", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Google 계정으로 로그인", exact: true })
+    .click();
+  await page.waitForURL(/\/api\/v1\/auth\/oauth\/google\/start\?/);
+});
+
 test("social login tells the user when the server has that method turned off", async ({
   page,
 }) => {

@@ -176,7 +176,7 @@ class OAuthFlowTest {
 	}
 
 	@Test
-	void verifiedEmailLogsIntoExistingAccountAndRevokesItsPassword() throws Exception {
+	void verifiedEmailLinksExistingAccountAndSendsPasswordLoginToProvider() throws Exception {
 		String email = UUID.randomUUID() + "@example.com";
 		String signup = body(json("/api/v1/auth/signup", """
 				{"email":"%s","password":"abcd1234","agreeTerms":true,"agreePrivacy":true}
@@ -188,15 +188,21 @@ class OAuthFlowTest {
 		when(provider.fetch(eq("google"), anyString())).thenReturn(new OAuthProviderClient.Profile(googleId, email.toUpperCase(), true));
 		exchange(query(callback("google", start("google", REDIRECT)), "code"), VERIFIER)
 			.andExpect(status().isOk()).andExpect(jsonPath("$.user.id", is(id.intValue())))
-			.andExpect(jsonPath("$.user.hasPassword", is(false)));
+			.andExpect(jsonPath("$.user.provider", is("google"))).andExpect(jsonPath("$.user.hasPassword", is(false)));
+		// 비밀번호는 지우지 않는다.
+		assertNotNull(jdbc.queryForObject("select password_hash from users where id=?", String.class, id));
 		assertEquals(11, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
 		assertEquals(1, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
-		// 남의 주소로 먼저 가입한 사람이 비밀번호나 기존 세션으로 다시 들어오지 못한다.
+		// 남의 주소로 먼저 가입한 사람이 기존 세션이나 맞는 비밀번호로 다시 들어오지 못하고 Google로 안내된다.
 		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + oldToken)).andExpect(status().isUnauthorized());
-		json("/api/v1/auth/login", """
-				{"email":"%s","password":"abcd1234"}
-				""".formatted(email))
-			.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+		for (String password : new String[] { "abcd1234", "wrong1234" }) {
+			json("/api/v1/auth/login", """
+					{"email":"%s","password":"%s"}
+					""".formatted(email, password))
+				.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("SOCIAL_ACCOUNT")))
+				.andExpect(jsonPath("$.provider", is("google")))
+				.andExpect(jsonPath("$.message", is("Google로 가입한 계정이에요. Google로 로그인해 주세요")));
+		}
 		// 다음 Google 로그인도, 같은 이메일의 카카오 로그인도 같은 계정으로 들어간다.
 		exchange(query(callback("google", start("google", REDIRECT)), "code"), VERIFIER)
 			.andExpect(status().isOk()).andExpect(jsonPath("$.user.id", is(id.intValue())));
@@ -206,6 +212,20 @@ class OAuthFlowTest {
 		when(provider.fetch(eq("google"), anyString())).thenReturn(new OAuthProviderClient.Profile(UUID.randomUUID().toString(), email, true));
 		assertEquals(REDIRECT + "?error=email_in_use", callback("google", start("google", REDIRECT)));
 		assertEquals(2, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
+		// 비밀번호가 남아 있어도 탈퇴는 소셜 계정처럼 확인 문구로 한다.
+		when(provider.fetch(eq("google"), anyString())).thenReturn(new OAuthProviderClient.Profile(googleId, email, true));
+		String token = JsonPath.read(body(exchange(query(callback("google", start("google", REDIRECT)), "code"), VERIFIER)), "$.accessToken");
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
+			.content("""
+					{"password":"abcd1234"}
+					"""))
+			.andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.confirm").exists());
+		mvc.perform(delete("/api/v1/me").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
+			.content("""
+					{"confirm":"탈퇴"}
+					"""))
+			.andExpect(status().isNoContent());
+		assertEquals(0, jdbc.queryForObject("select count(*) from users where id=?", Integer.class, id));
 	}
 
 	@Test
@@ -258,7 +278,8 @@ class OAuthFlowTest {
 		json("/api/v1/auth/login", """
 				{"email":"%s","password":"abcd1234"}
 				""".formatted(email))
-			.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+			.andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code", is("SOCIAL_ACCOUNT")))
+			.andExpect(jsonPath("$.provider", is("kakao"))).andExpect(jsonPath("$.message", is("카카오로 가입한 계정이에요. 카카오로 로그인해 주세요")));
 		json("/api/v1/auth/signup", """
 				{"email":"%s","password":"abcd1234","agreeTerms":true,"agreePrivacy":true}
 				""".formatted(email))

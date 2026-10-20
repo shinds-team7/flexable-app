@@ -1,59 +1,20 @@
 import { Redirect, router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
 import { Image, Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import { T } from "@/components/ui";
-import { useToast } from "@/components/Toast";
 import { EmailButton, GoogleButton, KakaoButton } from "@/service/OAuthButtons";
-import {
-  OAUTH_UNAVAILABLE,
-  startErrorText,
-  startOAuth,
-  type OAuthProvider,
-} from "@/service/oauth";
 import { useSession } from "@/service/Session";
+import { useSocialLogin } from "@/service/useSocialLogin";
 import { ErrorNotice, Loading } from "@/service/ui";
 import { colors } from "@/theme";
 
 const DEMO_URL = "https://flexable-web-delta.vercel.app/m";
 export default function Start() {
   const s = useSession();
-  const toast = useToast();
-  const [busy, setBusy] = useState<OAuthProvider | null>(null);
-  const lock = useRef(false);
-  // Web: coming back from the login page with the browser's back button can restore this page as it was left.
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    const reset = () => {
-      lock.current = false;
-      setBusy(null);
-    };
-    window.addEventListener("pageshow", reset);
-    return () => window.removeEventListener("pageshow", reset);
-  }, []);
+  const { busy, start: social } = useSocialLogin();
   if (!s.ready) return <Loading />;
   if (s.error) return <ErrorNotice error={s.error} retry={s.retry} />;
   if (s.user)
     return <Redirect href={s.user.onboarded ? "/home" : "/onboarding"} />;
-  const social = async (provider: OAuthProvider) => {
-    if (lock.current) return;
-    lock.current = true;
-    setBusy(provider);
-    // In the app this waits until the login browser closes, so the buttons stay locked meanwhile.
-    let failure: unknown = null;
-    const result = await startOAuth(provider).catch((e: unknown) => {
-      failure = e;
-      return null;
-    });
-    // Web: the page is moving to the login page; pageshow resets this if the user comes back.
-    if (result?.type === "leaving") return;
-    // Release before any navigation (docs/bug-transaction-edit-blank-screen.md rule 2).
-    lock.current = false;
-    setBusy(null);
-    if (!result) toast(startErrorText(failure));
-    else if (result.type === "unavailable") toast(OAUTH_UNAVAILABLE);
-    else if (result.type === "redirect")
-      router.push({ pathname: "/oauth/callback", params: result.params });
-  };
   // 시연은 웹사이트 저장소(shinds-team7/flexable-web)의 /m 으로 옮겼다. 웹에서만 링크를 보여 준다.
   const demo = Platform.OS === "web";
   return (

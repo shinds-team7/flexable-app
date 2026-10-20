@@ -8,6 +8,8 @@ import { api, ApiError } from "./api/client";
 import { useSession } from "./Session";
 import { ErrorNotice, Field, Page } from "./ui";
 import type { AuthResponse } from "./types";
+import { GoogleButton, KakaoButton } from "./OAuthButtons";
+import { useSocialLogin } from "./useSocialLogin";
 import { SUPPORT_EMAIL } from "./config";
 export function AuthScreen({ signup = false }: { signup?: boolean }) {
   const session = useSession();
@@ -23,6 +25,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
   const [error, setError] = useState<unknown>();
   const [fields, setFields] = useState<Record<string, string>>({});
   const [recover, setRecover] = useState(false);
+  const social = useSocialLogin();
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
@@ -83,6 +86,14 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
       setBusy(false);
     }
   };
+  // 카카오·Google이 붙은 계정은 비밀번호가 맞아도 서버가 그 방법으로 돌려보낸다.
+  const socialProvider =
+    error instanceof ApiError &&
+    error.code === "SOCIAL_ACCOUNT" &&
+    (error.provider === "kakao" || error.provider === "google")
+      ? error.provider
+      : null;
+  const SocialButton = socialProvider === "kakao" ? KakaoButton : GoogleButton;
   return (
     <Page title={signup ? "회원가입" : "로그인"}>
       <Field
@@ -160,11 +171,18 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
         </>
       )}
       <ErrorNotice error={error} />
+      {socialProvider && (
+        <SocialButton
+          busy={social.busy === socialProvider}
+          disabled={social.busy !== null}
+          onPress={() => social.start(socialProvider)}
+        />
+      )}
       <Button
         label={
           busy
             ? "확인 중…"
-            : error
+            : error && !socialProvider
               ? "다시 시도"
               : signup
                 ? "가입하기"
