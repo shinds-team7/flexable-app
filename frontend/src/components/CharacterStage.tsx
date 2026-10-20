@@ -2,9 +2,8 @@
  * 캐릭터 홈 상단 UI — 예산을 잘 지킬수록 부자 캐릭터(Lv.5), 못 지킬수록 Lv.1(광부).
  * 단계·게이지 값은 부르는 쪽(서비스 홈, 서버 점수 pointsStatus)이 계산해서 넘긴다.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, type ReactNode } from 'react';
-import { Animated, Image, Platform, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Animated, Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import { colors } from '@/theme';
 import { T, useAnimValue, useReducedMotion } from './ui';
@@ -12,7 +11,7 @@ import { T, useAnimValue, useReducedMotion } from './ui';
 export type Level = 1 | 2 | 3 | 4 | 5;
 
 /** 레벨별 캐릭터(광부 → 왕). img 는 뒤에 쌓인 동전이 적은 순 4장 — 오늘 남은 돈만큼 고른다(coinStage) */
-const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: string; accent: string }> = {
+const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: string }> = {
   1: {
     img: [
       require('../../assets/characters/lv1-1.png'),
@@ -20,7 +19,6 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: strin
       require('../../assets/characters/lv1-3.png'),
       require('../../assets/characters/lv1-4.png'),
     ],
-    msg: '예산 초과! 오늘은 한도 안에서만 써요',
     bg: '#EEF2FA',
     accent: '#667085',
   },
@@ -31,7 +29,6 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: strin
       require('../../assets/characters/lv2-3.png'),
       require('../../assets/characters/lv2-4.png'),
     ],
-    msg: '이번 주 빠듯해요. 카페 한 번만 줄여요',
     bg: '#EEF2FA',
     accent: '#8A6A3B',
   },
@@ -42,7 +39,6 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: strin
       require('../../assets/characters/lv3-3.png'),
       require('../../assets/characters/lv3-4.png'),
     ],
-    msg: '잘 버티는 중! 오늘 한도만 지키면 돼요',
     bg: '#EEF2FA',
     accent: '#1D3A8A',
   },
@@ -53,7 +49,6 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: strin
       require('../../assets/characters/lv4-3.png'),
       require('../../assets/characters/lv4-4.png'),
     ],
-    msg: '예산을 잘 지키고 있어요. 이 정도면 플렉스 가능!',
     bg: '#EEF2FA',
     accent: '#A11D2B',
   },
@@ -64,7 +59,6 @@ const LEVELS: Record<Level, { img: ImageSourcePropType[]; msg: string; bg: strin
       require('../../assets/characters/lv5-3.png'),
       require('../../assets/characters/lv5-4.png'),
     ],
-    msg: '완벽해요! 예산 관리의 왕이에요',
     bg: '#EEF2FA',
     accent: '#B7791F',
   },
@@ -88,27 +82,8 @@ export function pointsStatus(points: number, label: string): PaceStatus {
   return { level, progress: level === 5 ? 1 : (p % 100) / 100, label };
 }
 
-/** 위 오늘 카드 + 아래 말풍선·캐릭터·승급 게이지. coins 는 캐릭터 뒤 동전 더미 단계. message 가 없으면 단계별 기본 말(시연용, 지금 소비 상태 기준)을 쓴다. onChange가 있으면 시연용 좌우 화살표를 보여준다(실서비스는 없음) */
-export function CharacterStage({ level, coins, gauge, message, onChange, children }: { level: Level; coins: CoinStage; gauge: PaceStatus; message?: string; onChange?: (level: Level) => void; children: ReactNode }) {
-
-  // 캐릭터 전환: 누른 방향에서 살짝 밀려 들어오며 커진다 (과한 바운스 없이)
-  const scale = useAnimValue(1);
-  const shift = useAnimValue(0);
-  const reduced = useReducedMotion();
-  const bump = (d: -1 | 1) => {
-    if (reduced) return;
-    scale.setValue(0.94);
-    shift.setValue(d * 18);
-    const cfg = { toValue: 1, friction: 8, tension: 140, useNativeDriver: Platform.OS !== 'web' };
-    Animated.parallel([Animated.spring(scale, cfg), Animated.spring(shift, { ...cfg, toValue: 0 })]).start();
-  };
-  const change = (d: -1 | 1) => {
-    const next = Math.min(5, Math.max(1, level + d)) as Level;
-    if (next === level || !onChange) return;
-    onChange(next);
-    bump(d);
-  };
-
+/** 서버 점수에 따른 캐릭터·동전 단계·승급 게이지. 서비스가 안내 문구를 전달한다. */
+export function CharacterStage({ level, coins, gauge, message, children }: { level: Level; coins: CoinStage; gauge: PaceStatus; message: string; children: ReactNode }) {
   const L = LEVELS[level];
 
   return (
@@ -118,21 +93,13 @@ export function CharacterStage({ level, coins, gauge, message, onChange, childre
 
       <View style={styles.bubble}>
         <T size={14} weight="600" numberOfLines={1} style={{ textAlign: 'center', lineHeight: 20 }}>
-          {message ?? L.msg}
+          {message}
         </T>
         <View style={styles.tail} />
       </View>
 
       <View style={styles.stage}>
-        <Pressable accessibilityRole="button" accessibilityLabel="이전 단계 캐릭터" accessibilityElementsHidden={level === 1 || !onChange} importantForAccessibility={level === 1 || !onChange ? 'no-hide-descendants' : 'auto'} onPress={() => change(-1)} disabled={level === 1 || !onChange} hitSlop={12} style={[styles.arrow, (level === 1 || !onChange) && { opacity: 0 }]}>
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </Pressable>
-        <Animated.View style={{ transform: [{ translateX: shift }, { scale }] }}>
-          <Image source={L.img[coins - 1]} style={styles.char} resizeMode="contain" accessible accessibilityRole="image" accessibilityLabel={`Lv.${level} 캐릭터, 오늘 예산 동전 ${coins}/4단계`} />
-        </Animated.View>
-        <Pressable accessibilityRole="button" accessibilityLabel="다음 단계 캐릭터" accessibilityElementsHidden={level === 5 || !onChange} importantForAccessibility={level === 5 || !onChange ? 'no-hide-descendants' : 'auto'} onPress={() => change(1)} disabled={level === 5 || !onChange} hitSlop={12} style={[styles.arrow, (level === 5 || !onChange) && { opacity: 0 }]}>
-          <Ionicons name="chevron-forward" size={22} color={colors.text} />
-        </Pressable>
+        <Image source={L.img[coins - 1]} style={styles.char} resizeMode="contain" accessible accessibilityRole="image" accessibilityLabel={`Lv.${level} 캐릭터, 오늘 예산 동전 ${coins}/4단계`} />
       </View>
 
       <Gauge status={gauge} accent={L.accent} />
@@ -206,7 +173,6 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   stage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4, alignSelf: 'stretch' },
-  arrow: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', opacity: 0.22 },
   char: { width: 220, height: 220 },
   gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
   gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

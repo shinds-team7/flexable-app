@@ -12,22 +12,7 @@ export function Logo({ size = 30 }: { size?: number }) {
     />
   );
 }
-export function AppHeaderView({
-  tabs,
-  pathname,
-  homeHref,
-  pendingCount = 0,
-  onNotifications,
-  showTabs = true,
-}: {
-  tabs: { href: Href; label: string; match: (p: string) => boolean }[];
-  pathname: string;
-  homeHref: Href;
-  pendingCount?: number;
-  onNotifications?: () => void;
-  /** false 면 로고 줄만 그리고 탭은 BottomTabBar 에 맡긴다 */
-  showTabs?: boolean;
-}) {
+export function AppHeaderView({ homeHref }: { homeHref: Href }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.top}>
@@ -50,58 +35,7 @@ export function AppHeaderView({
             flex-able
           </T>
         </Pressable>
-        {onNotifications && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.actions,
-              pressed && { backgroundColor: colors.sunken },
-            ]}
-            onPress={onNotifications}
-            accessibilityRole="button"
-            accessibilityLabel={
-              pendingCount > 0 ? `알림, 확인할 일 ${pendingCount}건` : "알림"
-            }
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={colors.textSub}
-            />
-            {pendingCount > 0 && <View style={styles.dot} />}
-          </Pressable>
-        )}
       </View>
-      {showTabs && (
-        <View style={styles.nav} accessibilityRole="tablist">
-          {tabs.map((t) => {
-            const on = t.match(pathname);
-            return (
-              <Pressable
-                key={t.label}
-                style={styles.tab}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-                onPress={() => router.navigate(t.href)}
-              >
-                <T
-                  size={15}
-                  weight={on ? "700" : "500"}
-                  color={on ? colors.text : colors.textMuted}
-                  numberOfLines={1}
-                >
-                  {t.label}
-                </T>
-                <View
-                  style={[
-                    styles.indicator,
-                    on && { backgroundColor: colors.brand },
-                  ]}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
     </View>
   );
 }
@@ -161,34 +95,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brand: { flexDirection: "row", alignItems: "center", gap: 8 },
-  actions: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: -10,
-  },
-  dot: {
-    position: "absolute",
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.danger,
-    borderWidth: 1.5,
-    borderColor: "#fff",
-  },
-  nav: { flexDirection: "row", paddingHorizontal: 8 },
-  tab: { flex: 1, alignItems: "center", paddingTop: 8, minHeight: 44 },
-  indicator: {
-    height: 3,
-    width: 28,
-    borderRadius: 2,
-    marginTop: 9,
-    backgroundColor: "transparent",
-  },
   bottom: {
     flexDirection: "row",
     backgroundColor: "#fff",

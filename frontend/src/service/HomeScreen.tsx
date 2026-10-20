@@ -26,18 +26,8 @@ export function HomeScreen() {
       today={new Date(s.date + "T12:00:00")}
       summary={{
         todayAvailable: s.todayAvailable,
-        cycleStart: new Date(s.cycleStart + "T12:00:00"),
-        cycleEnd: new Date(
-          new Date(s.nextPayday + "T12:00:00").getTime() - 86400000,
-        ),
         daysLeft: s.daysLeft,
-        dailyLimit: s.dailyBudget,
-        todayWeight: 100,
-        todaySpent: s.todaySpent,
-        todayPlanned: [],
       }}
-      caption={null}
-      showCycle={false}
       footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
       onDetails={() => setBasis(true)}
     />
