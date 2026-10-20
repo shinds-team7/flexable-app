@@ -1,6 +1,6 @@
 # 현재 기능 기준표
 
-기준 2026-10-19 저녁, `main`. 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다.
+기준 2026-10-20, `main` + 시드머니 PR. 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다.
 기능을 추가하거나 바꾸면 이 표를 같이 고친다. README와 HANDOFF는 이 표를 기준으로 쓴다.
 
 구분: **서비스** = 실제 앱(Android·웹) / **시연** = 예시 데이터 웹 화면(2026-10-19부터 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `/m`) / **미구현** = 계획만 있음
@@ -12,9 +12,11 @@
 | 시작 분기 | `/` → `src/app/index.tsx` (로그인·예산 설정 여부로 `/home`·`/onboarding`·시작 화면) | `GET /me` | E2E `expired token returns to start…` |
 | 회원가입·로그인·로그아웃 | `/auth/signup`, `/auth/login` → `service/AuthScreen.tsx` | `POST /auth/signup·login·logout`. 토큰은 앱 SecureStore, 웹 localStorage(`service/storage.ts`) | 백엔드 `ApiFlowTest`(가입 검증·로그인 제한·로그아웃 폐기), E2E `real service lifecycle…` |
 | 카카오·Google 로그인 | 시작 화면 `src/app/index.tsx`(`service/OAuthButtons.tsx`) → 브라우저 → `/oauth/callback`(`service/OAuthCallbackScreen.tsx`, 흐름은 `service/oauth.ts`). 앱 1.1.0부터(`expo-web-browser` 네이티브 모듈), 웹은 바로 | `GET /auth/oauth/providers`, `GET /auth/oauth/{provider}/start·callback`, `POST /auth/oauth/exchange`(1회용 코드 + verifier). 키가 없는 공급자는 "쓸 수 없어요" 안내. 같은 검증 이메일의 기존 계정이 있으면 연결해 로그인(기존 세션은 끊음). 연결된 계정에 이메일 로그인하면 비밀번호가 맞아도 "Google로 가입한 계정이에요" 안내와 해당 소셜 버튼(`service/AuthScreen.tsx`, 동작은 `service/useSocialLogin.ts`). 소셜 계정 탈퇴는 '탈퇴' 입력 | 백엔드 `OAuthFlowTest`·`MemoryOAuthStoreTest`·`RestOAuthProviderClientTest`, E2E `social login …`(교환 응답은 mock)·`email login of a google-linked account …`(로그인 응답 mock). 운영 키 설정 완료(10-19), 새 웹사이트에서 운영 로그인 확인. **Android 실기기 확인 전**(1.2.0 빌드로) |
-| 초기 예산 설정 7단계 | `/onboarding/*` → `service/OnboardingScreen.tsx` (index·balance·income·fixed·card·protect·done) | 입력 중에는 기기에 임시 보관(`service/BudgetDraft.tsx`), 마지막에 `PUT /budget/settings` 한 번 | E2E `real service lifecycle…` |
+| 초기 예산 설정 8단계 | `/onboarding/*` → `service/OnboardingScreen.tsx` (index·balance·income·fixed·card·seed(모아둔 돈)·protect(매달 저축할 돈)·done) | 입력 중에는 기기에 임시 보관(`service/BudgetDraft.tsx`), 마지막에 `PUT /budget/settings` 한 번 | E2E `real service lifecycle…` |
 | 오늘 쓸 수 있는 돈 | `/home` → `service/HomeScreen.tsx` | `GET /budget/today`. 계산은 서버(`budget/BudgetCalculator.java`)가 최종값 | 백엔드 `BudgetCalculatorTest` |
 | 캐릭터 홈 / 기본 홈 | `/home`, 마이에서 전환 | 점수는 서버(`characterPoints`, `daily_budgets` 테이블 V4). 홈 스타일 선택은 기기 저장(`service/homeStyle.ts`) | 백엔드 `CharacterScoreTest` |
+| 시드머니·수입일 전날 반영 | 홈 시드머니 카드와 반영 창 → `service/SeedMoneyCard.tsx`. 수입일 전날 20시 기기 알림 → `service/seedReminder.ts`(앱 1.3.0부터 `expo-notifications`, 웹은 알림 없이 홈에서 창만) | `GET /budget/seed-money`, `POST /budget/seed-money/entries`(매달 저축할 돈 / 남은 돈 전부 / 직접 입력, 주기당 1번). 모아둔 돈은 `PUT /budget/settings`의 `seedBase`. 옮긴 돈은 추정 잔액에서 빠짐(`budget/SeedMoneyService.java`, V7) | 백엔드 `SeedMoneyFlowTest`, E2E `onboarding saves the money already set aside…`(반영 대기 응답은 mock). **Android 실기기 알림 확인 전** |
+| 웹사이트 연동 | 앱 화면 없음(연동 코드 받기·목록 화면 예정) | `POST /me/web-link-codes`, `GET·DELETE /me/web-links`, 웹 서버 전용 `/internal/v1/web-links/*`(서비스 키, 회원 정보·시드머니) | 백엔드 `WebLinkFlowTest`, `SeedMoneyFlowTest.webLinkReadsConfirmedSeedMoney` |
 | 고정지출 자동 기록 | 화면 없음(내역에 거래로 나타남) | 날짜가 된 고정지출을 서버가 지출 거래로 기록(`budget/FixedExpensePoster.java`) | 백엔드 `ApiFlowTest.fixedExpenses…` |
 | 거래 직접 입력·수정·삭제 | `/transactions`, `/transactions/new`, `/transactions/[id]` → `service/TransactionForm.tsx` | `GET·POST·PATCH·DELETE /transactions`, 재시도 시 같은 `Idempotency-Key` | E2E `real service lifecycle…`, 백엔드 `ApiFlowTest.fullFlow` |
 | 카테고리 관리 | `/categories` → `service/CategoriesScreen.tsx` | `GET·POST·PATCH·DELETE /categories` (삭제하면 거래는 기타로) | E2E `real service lifecycle…` |
@@ -35,7 +37,7 @@
 문서나 시연에 나와도 실제 앱에는 없다. 스토어 문구·앱 화면에 쓰지 않는다.
 
 - 계좌 연결(오픈뱅킹), AI 소비 분석·추천
-- 결제 알림·문자 자동 기록, 푸시 알림
+- 결제 알림·문자 자동 기록, 서버 푸시 알림(기기 안에서 예약하는 시드머니 알림만 있음)
 - 예정 지출·고액 지출 계획, 정산
 - 비밀번호 찾기, 이메일 인증
 - 오프라인 저장(SQLite·outbox) — 앱은 온라인 전용

@@ -13,6 +13,7 @@ import { api, ApiError, sessionGeneration, setApiSession } from "./api/client";
 import { readStorage, writeStorage } from "./storage";
 import type { AuthResponse, User } from "./types";
 import { useToast } from "@/components/Toast";
+import { cancelSeedReminder } from "./seedReminder";
 const KEY = "flexable.service.token";
 /** True when the app or page was opened on /oauth/callback (web: the current address). */
 async function opensOnOAuthCallback() {
@@ -56,6 +57,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     userId.current = null;
     await writeStorage(KEY, null);
     if (id !== null) await writeStorage(`flexable.service.draft.${id}`, null);
+    // 로그아웃·탈퇴한 기기에 다음 수입일 알림이 남지 않게 한다.
+    await cancelSeedReminder().catch(() => {});
   }, []);
   const expired = useCallback(async () => {
     await clear();

@@ -70,8 +70,9 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
-    .getByRole("button", { name: "+ 보호할 돈 추가", exact: true })
+    .getByRole("button", { name: "+ 저축할 돈 추가", exact: true })
     .click();
   await page.getByLabel("이름", { exact: true }).fill("비상금");
   await page.getByLabel("금액 (원)", { exact: true }).fill("50000");
@@ -331,8 +332,9 @@ test("changing input after a failed post-save step re-saves before finishing", a
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
-    .getByRole("button", { name: "+ 보호할 돈 추가", exact: true })
+    .getByRole("button", { name: "+ 저축할 돈 추가", exact: true })
     .click();
   await page.getByLabel("이름", { exact: true }).fill("비상금");
   await page.getByLabel("금액 (원)", { exact: true }).fill("1000");
@@ -362,7 +364,8 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   await signup(page, email());
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
-  for (let i = 0; i < 4; i++)
+  // 잔액 다음 단계: 수입 → 고정지출 → 카드 → 모아둔 돈 → 매달 저축할 돈
+  for (let i = 0; i < 5; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
@@ -397,11 +400,97 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   });
   await expect(balance).toHaveValue("1,000,000");
   await balance.fill("900000");
-  for (let i = 0; i < 4; i++)
+  // 잔액 다음 단계: 수입 → 고정지출 → 카드 → 모아둔 돈 → 매달 저축할 돈
+  for (let i = 0; i < 5; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/done$/);
   expect((await snapshot(page, "/budget/today")).estimatedBalance).toBe(900000);
+});
+
+test("onboarding saves the money already set aside, and the payday prompt moves savings into seed money (pending answer mocked)", async ({
+  page,
+}) => {
+  await signup(page, email());
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
+  for (let i = 0; i < 4; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByLabel("모아둔 돈 (원)", { exact: true }).fill("500000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(
+    page.getByText("매달 얼마씩 저축할까요?", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "+ 저축할 돈 추가", exact: true })
+    .click();
+  await page.getByLabel("이름", { exact: true }).fill("적금");
+  await page.getByLabel("금액 (원)", { exact: true }).fill("300000");
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/done$/);
+  expect((await snapshot(page, "/budget/settings")).seedBase).toBe(500000);
+  await page.getByRole("button", { name: "홈으로", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByText("500,000원", { exact: true })).toBeVisible();
+  // The real prompt needs a finished pay cycle, so the pending answer is mocked; the POST body is what matters.
+  let posted: unknown;
+  const pending = {
+    cycleEnd: "2026-10-25",
+    payday: "2026-10-26",
+    goalAmount: 300000,
+    allAmount: 950000,
+  };
+  await page.route(`${apiBase}/budget/seed-money`, (route) =>
+    route.fulfill({
+      json: {
+        base: 500000,
+        saved: posted ? 120000 : 0,
+        total: posted ? 620000 : 500000,
+        monthlyGoal: 300000,
+        pending: posted ? null : pending,
+        entries: [],
+      },
+    }),
+  );
+  await page.route(`${apiBase}/budget/seed-money/entries`, (route) => {
+    posted = route.request().postDataJSON();
+    return route.fulfill({ status: 201, json: {} });
+  });
+  await page.reload();
+  await expect(
+    page.getByText("이번 달 모은 돈을 시드머니에 반영할까요?", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "매달 저축할 돈 300,000원",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "실제로 모은 돈 전부 950,000원",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/service-seed-prompt.png" });
+  await page.getByRole("button", { name: "직접 입력", exact: true }).click();
+  await page.getByLabel("반영할 금액 (원)", { exact: true }).fill("120000");
+  await page
+    .getByRole("button", { name: "이 금액으로 반영", exact: true })
+    .click();
+  await expect(page.getByText("620,000원", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("이번 달 모은 돈을 시드머니에 반영할까요?", { exact: true }),
+  ).toBeHidden();
+  expect(posted).toEqual({
+    cycleEnd: "2026-10-25",
+    choice: "MANUAL",
+    amount: 120000,
+  });
+  await page.screenshot({
+    path: "test-results/service-seed-money.png",
+    fullPage: true,
+  });
 });
 
 test("public deletion without budget setup and offline failure preserves credentials", async ({
@@ -460,7 +549,7 @@ test("expired token returns to start; public routes remain accessible", async ({
   expect(await token(page)).toBeNull();
   await page.goto("/privacy");
   await expect(
-    page.getByText("- 시행일: 2026년 10월 14일", { exact: true }),
+    page.getByText("- 시행일: 2026년 10월 27일", { exact: true }),
   ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.1.0", { exact: true })).toBeVisible();
@@ -482,7 +571,7 @@ test("approved legal copy and public terms link preserve signup input", async ({
     .click();
   await expect(page).toHaveURL(/\/terms$/);
   await expect(
-    page.getByText("이 약관은 2026년 10월 13일부터 시행합니다.", {
+    page.getByText("이 약관은 2026년 10월 27일부터 시행합니다.", {
       exact: true,
     }),
   ).toBeVisible();

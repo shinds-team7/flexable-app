@@ -17,6 +17,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.flexable.api.budget.BudgetDtos.WebSeedMoney;
+import com.flexable.api.budget.SeedMoneyService;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
@@ -48,16 +50,19 @@ public class WebLinkService {
 	private final UserRepository users;
 	private final UserIdentityRepository identities;
 	private final WebLinkAttemptLimiter limiter;
+	private final SeedMoneyService seedMoney;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public WebLinkService(WebLinkCodeRepository codes, WebLinkRepository links, UserRepository users,
-			UserIdentityRepository identities, WebLinkAttemptLimiter limiter, Clock clock, AppProperties props) {
+			UserIdentityRepository identities, WebLinkAttemptLimiter limiter, SeedMoneyService seedMoney, Clock clock,
+			AppProperties props) {
 		this.codes = codes;
 		this.links = links;
 		this.users = users;
 		this.identities = identities;
 		this.limiter = limiter;
+		this.seedMoney = seedMoney;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -117,6 +122,12 @@ public class WebLinkService {
 	public AppProfile profile(String linkId) {
 		WebLink link = find(linkId);
 		return profileOf(users.findById(link.getUserId()).orElseThrow(() -> new ApiException(ErrorCode.LINK_NOT_FOUND)));
+	}
+
+	/** 예산 설정 전이면 404 BUDGET_NOT_SET(LINK_NOT_FOUND와 코드로 구분). */
+	@Transactional(readOnly = true)
+	public WebSeedMoney seedMoney(String linkId) {
+		return seedMoney.forWeb(find(linkId).getUserId());
 	}
 
 	@Transactional

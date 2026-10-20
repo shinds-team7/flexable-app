@@ -30,8 +30,16 @@ public final class BudgetCalculator {
 		}
 	}
 
+	/** savedSinceBalance: 잔액 기준 시각 뒤에 시드머니로 옮긴 돈(통장에서 빠진 돈). */
 	public record Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
-			List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions) {
+			List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions,
+			long savedSinceBalance) {
+
+		public Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
+				List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions) {
+			this(balance, balanceAt, payday, cardUnpaid, fixedDays, fixedAmounts, protectedTotal, transactions,
+					hasTransactions, 0);
+		}
 	}
 
 	public static TodayResponse compute(Input in, LocalDate today, ZoneId zone) {
@@ -41,7 +49,7 @@ public final class BudgetCalculator {
 		LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 		LocalDate weekEnd = weekStart.plusDays(6);
 
-		long estimated = in.balance();
+		long estimated = in.balance() - in.savedSinceBalance();
 		long todaySpent = 0;
 		long weekSpent = 0;
 		for (Tx t : in.transactions()) {

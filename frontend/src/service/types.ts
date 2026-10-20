@@ -43,7 +43,30 @@ export type BudgetSettings = {
   incomeAmount: number;
   cardUnpaid: number;
   fixedExpenses: { name: string; amount: number; day: number }[];
+  /** 매달 저축할 돈(화면 이름). 수입일 전날 시드머니 반영 금액의 기준 */
   protectedItems: { name: string; amount: number }[];
+  /** 모아둔 돈(시드머니 시작 금액). 이 기능 전 서버는 주지 않고, 보내지 않으면 서버 값이 유지된다 */
+  seedBase?: number;
+};
+export type SeedChoice = "GOAL" | "ALL" | "MANUAL";
+export type SeedMoney = {
+  base: number;
+  saved: number;
+  total: number;
+  monthlyGoal: number;
+  /** 반영할 주기. payday는 수입일, allAmount는 그 전날까지 기록 기준 남은 돈 전부 */
+  pending: {
+    cycleEnd: string;
+    payday: string;
+    goalAmount: number;
+    allAmount: number;
+  } | null;
+  entries: {
+    cycleEnd: string;
+    choice: SeedChoice;
+    amount: number;
+    createdAt: string;
+  }[];
 };
 export type Today = {
   date: string;

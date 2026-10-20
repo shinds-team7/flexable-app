@@ -2,7 +2,7 @@
 
 앱 API 서버. Spring Boot 4.1, Java 21, MySQL 8(Flyway). API 계약은 [`docs/API.md`](../docs/API.md).
 
-웹사이트는 별도 서버(flexable-web `backend/`)다. 이 서버는 웹에 [앱 연동하기]용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`, 서비스 키 인증)만 제공한다(`weblink` 패키지, 유동자산 집계는 아직 없음). 경계와 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
+웹사이트는 별도 서버(flexable-web `backend/`)다. 이 서버는 웹에 [앱 연동하기]용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`, 서비스 키 인증)만 제공한다(`weblink` 패키지. 웹에 주는 앱 정보는 회원 이메일·로그인 방법과 시드머니). 경계와 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
 ## 로컬 실행
 
@@ -34,7 +34,7 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | 패키지 | 내용 |
 |---|---|
 | `auth` | 가입·로그인·로그아웃·탈퇴, JWT(HS256, 30일, `tv` 클레임으로 폐기), 로그인 실패 제한 |
-| `budget` | 초기 예산 설정, `BudgetCalculator`(오늘 쓸 수 있는 돈, 서버 최종값) |
+| `budget` | 초기 예산 설정, `BudgetCalculator`(오늘 쓸 수 있는 돈, 서버 최종값), 시드머니(`SeedMoneyService`) |
 | `category` | 기본 카테고리 생성, 사용자 카테고리 CRUD |
 | `transaction` | 수동 입력 거래 CRUD, `Idempotency-Key` |
 | `analysis` | 기간별 카테고리·일별 합계 |
@@ -54,6 +54,7 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `GET /me`, `DELETE /me` | 내 정보, 계정·데이터 삭제 |
 | `GET·PUT /budget/settings` | 초기 예산 설정 조회·전체 교체 |
 | `GET /budget/today` | 오늘·이번 주 쓸 수 있는 돈, 캐릭터 점수 |
+| `GET /budget/seed-money`, `POST /budget/seed-money/entries` | 시드머니(모아둔 돈 + 주기마다 옮긴 돈), 수입일 전날 반영 |
 | `GET·POST /categories`, `PATCH·DELETE /categories/{id}` | 카테고리 |
 | `GET·POST /transactions`, `GET·PATCH·DELETE /transactions/{id}` | 거래(직접 입력). 생성은 `Idempotency-Key`로 중복 방지 |
 | `GET /analysis/summary` | 기간별 카테고리·일별 합계 |
