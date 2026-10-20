@@ -3,6 +3,7 @@ package com.flexable.api.auth;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.Locale;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,6 +91,14 @@ public class AuthService {
 		String email = normalize(req.email());
 		limiter.check(email);
 		User user = users.findByEmail(email).orElse(null);
+		var social = user == null ? null : identities.findFirstByUserIdOrderByIdAsc(user.getId()).orElse(null);
+		if (social != null) {
+			// 같은 이메일에 소셜 로그인이 붙으면 비밀번호가 맞아도 그 방법으로 돌려보낸다(선가입 계정 차단).
+			limiter.recordFailure(email);
+			String name = "kakao".equals(social.getProvider()) ? "카카오" : "Google";
+			throw new ApiException(ErrorCode.SOCIAL_ACCOUNT, name + "로 가입한 계정이에요. " + name + "로 로그인해 주세요",
+					Map.of("provider", social.getProvider()));
+		}
 		boolean ok = passwordEncoder.matches(req.password(), user == null || user.getPasswordHash() == null ? dummyHash : user.getPasswordHash());
 		if (user == null || user.getPasswordHash() == null || !ok) {
 			limiter.recordFailure(email);
@@ -110,11 +119,16 @@ public class AuthService {
 	}
 
 	@Transactional
-	public void deleteAccount(long userId, String password, String confirm) {
-		// 소셜 연결이 비밀번호를 지우는 중이면 끝난 뒤의 값으로 확인한다. 잠금 순서는 다른 쓰기와 같게 설정 → 사용자.
+	public void deleteAccount(long userId, int tokenVersion, String password, String confirm) {
+		// 소셜 연결과 동시에 오면 연결이 끝난 뒤의 상태로 확인한다. 잠금 순서는 다른 쓰기와 같게 설정 → 사용자.
 		settings.findForUpdate(userId);
 		User user = users.findWithLockById(userId).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
-		if (user.getPasswordHash() != null) {
+		// 인증 필터를 지난 뒤 연결·로그아웃으로 폐기된 토큰이면 탈퇴하지 않는다.
+		if (user.getTokenVersion() != tokenVersion) {
+			throw new ApiException(ErrorCode.UNAUTHORIZED);
+		}
+		// 소셜 로그인이 붙은 계정은 비밀번호를 쓸 수 없으므로 확인 문구로 탈퇴한다.
+		if (identities.findWithLockByUserId(userId).isEmpty()) {
 			if (password == null || password.isBlank()) {
 				throw ApiException.invalid("password", "비밀번호를 입력해 주세요");
 			}
@@ -147,8 +161,8 @@ public class AuthService {
 	}
 
 	private UserResponse userResponse(User user) {
-		String provider = user.getPasswordHash() != null ? "email"
-				: identities.findFirstByUserIdOrderByIdAsc(user.getId()).orElseThrow().getProvider();
+		// 소셜 로그인이 붙어 있으면 비밀번호가 남아 있어도 그 방법으로만 들어온다.
+		String provider = identities.findFirstByUserIdOrderByIdAsc(user.getId()).map(i -> i.getProvider()).orElse("email");
 		return UserResponse.of(user, zone, provider);
 	}
 

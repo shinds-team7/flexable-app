@@ -54,6 +54,6 @@ public class AuthController {
 	@DeleteMapping("/me")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void delete(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasswordRequest req) {
-		auth.deleteAccount(CurrentUser.id(jwt), req.password(), req.confirm());
+		auth.deleteAccount(CurrentUser.id(jwt), CurrentUser.tokenVersion(jwt), req.password(), req.confirm());
 	}
 }

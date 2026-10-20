@@ -43,8 +43,9 @@ public class OAuthUserService {
 		return user.getId();
 	}
 	/**
-	 * 공급자가 확인한 이메일과 같은 계정에 로그인 방법을 붙인다. 이메일 가입은 메일 인증을 하지 않으므로
-	 * 남의 주소로 미리 가입해 둔 사람이 계속 들어오지 못하게 비밀번호와 기존 로그인 세션을 무효화한다.
+	 * 공급자가 확인한 이메일과 같은 계정에 로그인 방법을 붙인다. 비밀번호는 지우지 않지만, 소셜 로그인이 붙은 계정은
+	 * 이메일 로그인을 받지 않는다(AuthService.login). 이메일 가입은 메일 인증을 하지 않으므로 남의 주소로 미리 가입해 둔
+	 * 사람이 계속 들어오지 못하게 기존 로그인 세션도 끊는다.
 	 * 같은 공급자의 다른 계정이 이미 붙어 있으면 어느 쪽이 주인인지 알 수 없어 연결하지 않는다.
 	 * 사용자 행을 잠근 채로 확인하므로 같은 계정에 대한 연결 요청은 하나씩 처리된다.
 	 */
@@ -54,7 +55,6 @@ public class OAuthUserService {
 			throw new ApiException(ErrorCode.EMAIL_UNAVAILABLE);
 		}
 		if (owner.getPasswordHash() != null) {
-			owner.clearPassword();
 			owner.revokeTokens();
 		}
 		identities.saveAndFlush(new UserIdentity(owner.getId(), provider, providerUserId, email, clock.instant()));

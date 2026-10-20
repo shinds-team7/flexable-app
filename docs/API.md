@@ -22,6 +22,7 @@
 | 400 | `VALIDATION_FAILED` | 입력 형식 오류. `fields: { "email": "이메일 형식을 확인해 주세요" }` 추가 |
 | 401 | `UNAUTHORIZED` | 토큰 없음·만료·탈퇴 계정 → 로그인 화면으로 |
 | 401 | `INVALID_CREDENTIALS` | 로그인·탈퇴 시 이메일/비밀번호 불일치 |
+| 401 | `SOCIAL_ACCOUNT` | 카카오·Google이 붙은 계정에 이메일 로그인 시도. 본문에 `provider`(`kakao`·`google`) |
 | 401 | `OAUTH_CODE_INVALID` | 일회용 코드 없음·만료·재사용·verifier 불일치. "로그인 시간이 지났어요. 다시 시도해 주세요" |
 | 404 | `NOT_FOUND` | 리소스 없음(남의 리소스도 404) |
 | 404 | `BUDGET_NOT_SET` | 초기 예산 미설정 |
@@ -53,7 +54,13 @@
 
 200 → `AuthResponse`
 
-비밀번호가 없는 소셜 계정은 이메일 로그인 시 항상 401 `INVALID_CREDENTIALS`를 받는다.
+카카오·Google identity가 하나라도 붙은 계정은 비밀번호가 맞든 틀리든 401 `SOCIAL_ACCOUNT`를 받는다. 이메일 가입 후 소셜 로그인으로 연결된 계정도 같다(비밀번호는 남아 있지만 쓰지 않음). 로그인 시도 제한에는 실패로 센다.
+
+```json
+{ "code": "SOCIAL_ACCOUNT", "message": "Google로 가입한 계정이에요. Google로 로그인해 주세요", "provider": "google" }
+```
+
+`provider`는 가장 먼저 붙은 identity다. 앱은 이 안내와 함께 해당 소셜 로그인 버튼을 보여 준다.
 
 ```json
 {
@@ -91,7 +98,7 @@
 - state는 조회 즉시 삭제한다. 없음·만료·재사용·provider 불일치는 **400 HTML 한 줄**: "로그인 요청이 만료됐어요. 처음 화면으로 돌아가 다시 시도해 주세요." (리다이렉트 없음).
 - 공급자 `error=access_denied`만 `{redirectUri}?error=cancelled`. 그 밖의 공급자 오류는 `error=failed`로 이동하고 provider·오류 코드(최대 64자)를 warn 로그에 남긴다. 토큰 교환·프로필 조회 실패·타임아웃도 `error=failed`. 외부 HTTP 오류는 상태 코드만 추가로 기록하며 응답 본문·토큰·이메일은 기록하지 않는다. 외부 연결 3초·읽기 5초 제한.
 - 기존 `(provider, providerUserId)` identity가 있으면 해당 사용자로 로그인한다.
-- 신규 identity의 **검증된 이메일**이 기존 users.email과 같으면 그 계정에 identity를 붙이고 로그인한다. 이메일 가입은 메일 인증을 하지 않으므로, 기존 계정에 비밀번호가 있으면 비밀번호를 지우고(NULL) `token_version`을 올려 기존 세션도 끊는다. 이후 그 계정은 소셜 로그인으로만 들어온다.
+- 신규 identity의 **검증된 이메일**이 기존 users.email과 같으면 그 계정에 identity를 붙이고 로그인한다. 비밀번호는 지우지 않지만, 이후 이메일 로그인은 `SOCIAL_ACCOUNT`로 돌려보낸다. 이메일 가입은 메일 인증을 하지 않으므로(남의 주소로 선가입 가능), 기존 계정에 비밀번호가 있으면 `token_version`을 올려 기존 세션도 끊는다.
 - 그 계정에 같은 공급자의 다른 identity가 이미 있으면 연결하지 않고 `error=email_in_use`.
 - 카카오 검증: `is_email_valid && is_email_verified`, Google 검증: `email_verified`.
 - 신규 사용자: email은 검증 이메일 또는 NULL, password_hash는 NULL, agreed_at은 현재 시각. 기본 카테고리와 identity도 생성한다. 미검증 이메일은 저장하지 않는다.
@@ -118,7 +125,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 ### `GET /me` → 200 `User`
 
-`User`는 `id, email, onboarded, createdAt, provider, hasPassword`를 반환한다. `email`은 null 가능. `provider`는 비밀번호가 있으면 `email`, 없으면 첫 identity의 `kakao` 또는 `google`이다. `hasPassword`는 비밀번호 존재 여부(boolean). `AuthResponse.user`도 같은 형식이다.
+`User`는 `id, email, onboarded, createdAt, provider, hasPassword`를 반환한다. `email`은 null 가능. `provider`는 identity가 있으면 첫 identity의 `kakao` 또는 `google`, 없으면 `email`이다. `hasPassword`는 비밀번호로 로그인할 수 있는지(`provider=email`이고 비밀번호가 있음)다. `AuthResponse.user`도 같은 형식이다.
 
 ### `DELETE /me` → 204 (계정·데이터 삭제)
 
@@ -128,6 +135,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 - 요청 body: `{ "password"?: string, "confirm"?: string }`.
 - `hasPassword=true`: password 필수(누락 시 400, field `password`), 틀리면 401 `INVALID_CREDENTIALS`.
+- 사용자 행을 잠근 뒤 토큰의 `tv`를 다시 비교한다. 인증 후 연결·로그아웃으로 폐기된 토큰이면 401 `UNAUTHORIZED`.
 - `hasPassword=false`: `{ "confirm": "탈퇴" }` 필수. 누락·불일치는 400 `VALIDATION_FAILED`, field `confirm`, "확인 문구 '탈퇴'를 입력해 주세요".
 - 카카오 identity와 `KAKAO_ADMIN_KEY`가 있으면 삭제 전 카카오 연결 끊기를 시도한다. 실패해도 탈퇴는 진행하고 로그만 남긴다.
 - 성공하면 사용자·소셜 identity·예산 설정·카테고리·거래를 **즉시 영구 삭제**하고 이후 기존 토큰은 401을 받는다.

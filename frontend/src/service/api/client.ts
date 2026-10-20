@@ -4,6 +4,8 @@ export class ApiError extends Error {
     message: string,
     public fields: Record<string, string> = {},
     public retryAfterSeconds?: number,
+    /** SOCIAL_ACCOUNT: 이 이메일 계정에 붙은 로그인 방법(kakao·google) */
+    public provider?: string,
   ) {
     super(message);
   }
@@ -76,6 +78,7 @@ export async function api<T>(
         data.message ?? "잠시 후 다시 시도해 주세요",
         data.fields,
         data.retryAfterSeconds,
+        data.provider,
       );
     }
     return data as T;
