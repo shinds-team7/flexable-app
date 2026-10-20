@@ -57,7 +57,7 @@ class LoginAttemptLimiterTest {
 		assertThatThrownBy(() -> limiter.check("a@example.com")).isInstanceOf(ApiException.class);
 		clock.advance(LoginAttemptLimiter.WINDOW.plusSeconds(1));
 		limiter.check("a@example.com");
-		assertThat(limiter.size()).isZero();
+		assertThat(limiter.size()).isEqualTo(1); // A fresh credential check reserves one slot.
 	}
 
 	@Test
@@ -156,7 +156,7 @@ class LoginAttemptLimiterTest {
 		clock.advance(java.time.Duration.ofMinutes(9));
 		// The periodic sweep is not due until minute 20; these keys expired at minute 19.
 		limiter.check("fresh@example.invalid");
-		assertThat(limiter.size()).isEqualTo(1);
+		assertThat(limiter.size()).isEqualTo(2);
 		limiter.recordFailure("fresh@example.invalid");
 		assertThat(limiter.size()).isEqualTo(2);
 	}
@@ -181,6 +181,50 @@ class LoginAttemptLimiterTest {
 	}
 
 	@Test
+	void admittedEmailKeepsItsSlotUntilItsFailureIsRecorded() {
+		for (int i = 0; i < 9_999; i++) {
+			limiter.recordFailure("reserved-" + i + "@example.invalid");
+		}
+		for (int i = 0; i < LoginAttemptLimiter.MAX_FAILURES; i++) {
+			limiter.check("victim@example.invalid");
+			assertThatThrownBy(() -> limiter.recordFailure("competitor@example.invalid"))
+				.isInstanceOf(ApiException.class);
+			limiter.recordFailure("victim@example.invalid");
+		}
+		assertThat(limiter.size()).isEqualTo(10_000);
+		assertThatThrownBy(() -> limiter.check("victim@example.invalid"))
+			.isInstanceOf(ApiException.class);
+	}
+
+	@Test
+	void acceptedCheckKeepsReservationWhenOlderFailuresExpire() {
+		limiter.recordFailure("victim@example.invalid");
+		clock.advance(java.time.Duration.ofMinutes(9));
+		for (int i = 0; i < 9_999; i++) {
+			limiter.recordFailure("recent-" + i + "@example.invalid");
+		}
+		limiter.check("victim@example.invalid");
+		clock.advance(java.time.Duration.ofMinutes(1));
+		// An old failure expires while the admitted credential check is in flight.
+		assertThatThrownBy(() -> limiter.recordFailure("competitor@example.invalid"))
+			.isInstanceOf(ApiException.class);
+		limiter.recordFailure("victim@example.invalid");
+		assertThat(limiter.size()).isEqualTo(10_000);
+	}
+
+	@Test
+	void abandonedCredentialChecksExpireWithoutFailures() {
+		for (int i = 0; i < 10_000; i++) {
+			limiter.check("abandoned-" + i + "@example.invalid");
+		}
+		assertThatThrownBy(() -> limiter.check("overflow@example.invalid"))
+			.isInstanceOf(ApiException.class);
+		clock.advance(LoginAttemptLimiter.WINDOW);
+		limiter.check("fresh@example.invalid");
+		assertThat(limiter.size()).isEqualTo(1);
+	}
+
+	@Test
 	void inFlightFailuresCannotExtendAnAlreadyFullQueue() {
 		for (int i = 0; i < LoginAttemptLimiter.MAX_FAILURES; i++) {
 			limiter.recordFailure("in-flight@example.invalid");
@@ -192,7 +236,7 @@ class LoginAttemptLimiterTest {
 		}
 		clock.advance(LoginAttemptLimiter.WINDOW.minusMinutes(1));
 		limiter.check("in-flight@example.invalid");
-		assertThat(limiter.size()).isZero();
+		assertThat(limiter.size()).isEqualTo(1);
 	}
 
 	@Test
@@ -209,6 +253,7 @@ class LoginAttemptLimiterTest {
 				results.add(pool.submit(() -> {
 					start.await();
 					try {
+						limiter.check(email);
 						limiter.recordFailure(email);
 						return true;
 					}
