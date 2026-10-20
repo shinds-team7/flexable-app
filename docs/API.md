@@ -3,7 +3,7 @@
 서비스 1.0.0 비공개 테스트(Google Play 12명)용 최소 API. 서버 코드는 `backend/`(Spring Boot 4.1, Java 21, MySQL 8).
 이 문서가 프론트·백엔드 사이의 계약이다. 바꿀 때는 이 문서를 먼저 고친다.
 
-웹사이트 API는 웹 서버(flexable-web `backend/`)에 있고 이 문서에 적지 않는다. 이 문서에는 웹 연동용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`)만 구현 PR에서 추가한다. 절차 초안은 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
+웹사이트 API는 웹 서버(flexable-web `backend/`)에 있고 이 문서에 적지 않는다. 이 문서에는 웹 연동용 API만 적는다([웹사이트 연동](#웹사이트-연동)). 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
 ## 공통
 
@@ -31,7 +31,9 @@
 | 409 | `EMAIL_UNAVAILABLE` | 가입 불가 이메일(이미 가입 등) |
 | 409 | `CATEGORY_DUPLICATE` | 같은 종류에 같은 이름 카테고리 존재 |
 | 409 | `CATEGORY_DEFAULT` | 기본 카테고리는 삭제 불가 |
-| 429 | `TOO_MANY_ATTEMPTS` | 로그인 연속 실패(10분 내 5회). `retryAfterSeconds` 추가 |
+| 400 | `LINK_CODE_INVALID` | 웹 연동 코드 없음·만료·이미 사용(웹 서버 전용 API) |
+| 404 | `LINK_NOT_FOUND` | 웹 연동이 해제됐거나 앱 계정이 탈퇴함(웹 서버 전용 API) |
+| 429 | `TOO_MANY_ATTEMPTS` | 로그인 연속 실패(10분 내 5회), 웹 연동 코드 실패(서비스 전체 10분 내 30회). `retryAfterSeconds` 추가 |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |
 
 화면 문구는 `message`를 그대로 써도 되도록 한국어 존댓말로 내려준다. 분기는 반드시 `code`로 한다.
@@ -303,6 +305,27 @@ POST 본문:
 - `byCategory`는 **지출만**, 금액 내림차순. `ratio`는 지출 합 대비(소수 3자리).
 - `daily`는 `from`~`to` 모든 날짜를 0 포함해 채운다. 최대 366일.
 - 이번 주/이번 정산 주기 탭은 클라이언트가 기간을 계산해 호출한다(정산 주기 시작은 `/budget/today.cycleStart`).
+
+## 웹사이트 연동
+
+웹사이트(flexable-web)는 계정·서버·DB가 따로다. 사용자가 앱에서 받은 코드를 웹에 입력하면 웹 서버가 이 서버에서 연동을 만들고, 이후 `linkId`로 앱 회원 정보를 읽는다. 앱 로그아웃은 연동에 영향이 없고, 앱 탈퇴하면 연동도 함께 지워진다. 거래 목록 같은 원본 기록은 넘기지 않는다.
+
+### 앱 사용자 API (사용자 토큰)
+
+- `POST /me/web-link-codes` → 201 `{ "code": "K7M2Q9XB", "expiresAt": "2026-10-20T16:40:00+09:00" }`. 8자리(영문 대문자·숫자, 헷갈리는 0·1·I·L·O 제외), **10분 유효, 한 번만 사용**. 새로 받으면 이전 코드는 무효. 서버는 해시만 저장한다. 화면에는 `K7M2-Q9XB`처럼 끊어 보여 줘도 된다
+- `GET /me/web-links` → 200 `[{ "id": 3, "createdAt": "..." }]` 최신순
+- `DELETE /me/web-links/{id}` → 204. 남의 것·없는 것은 404 `NOT_FOUND`
+
+### 웹 서버 전용 API (`/internal/v1`, 서비스 키)
+
+- 경로가 `/api/v1`이 아니라 `/internal/v1`이다. 헤더 `X-Service-Key`로 인증하고 사용자 토큰으로는 열리지 않는다. 키가 없거나 틀리면 401 `UNAUTHORIZED`. CORS를 열지 않는다(서버끼리만 호출)
+- 키는 서버 환경변수 `WEB_LINK_SERVICE_KEYS`(쉼표 구분, 32자 이상만 사용). 교체할 때는 새 키를 더해 두 개로 두고, 웹 서버를 새 키로 바꾼 뒤 옛 키를 뺀다. 비어 있으면 이 API는 모두 401
+- `POST /internal/v1/web-links` `{ "code": "k7m2-q9xb" }` → 201 `{ "linkId": "<43자 임의 값>", "profile": AppProfile }`. 대소문자·공백·하이픈은 무시한다. 코드 없음·만료·재사용은 400 `LINK_CODE_INVALID`. 실패가 서비스 전체로 10분 내 30회면 429(웹 사용자별 제한은 웹 서버가 한다). `linkId`는 응답에서 한 번만 주고 서버는 해시만 저장한다
+- `GET /internal/v1/web-links/{linkId}/profile` → 200 `AppProfile`
+- `DELETE /internal/v1/web-links/{linkId}` → 204
+- 연동이 없으면(해제·앱 탈퇴) 위 둘은 404 `LINK_NOT_FOUND` → 웹은 연동을 끊고 저장한 앱 정보를 지운다
+- `AppProfile` = `{ "email": string|null, "provider": "email"|"kakao"|"google" }`. 앱에는 닉네임이 없다. 소셜 계정은 `email`이 null일 수 있다
+- 유동자산 집계(`/seed-money`)는 아직 없다. 넣을 항목을 정한 뒤 추가한다
 
 ## 기타
 

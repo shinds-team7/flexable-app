@@ -17,6 +17,14 @@
 
 웹 제품의 기획·데이터·화면·일정은 [flexable-web 인수인계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/HANDOFF.md)에서 관리한다. 웹 서버는 flexable-web `backend/`에서 따로 만든다(2026-10-20 분리 결정). 이 저장소에는 [앱 연동하기]용 API와 앱 설정 화면만 추가한다. 경계는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
+웹사이트 연동 API(`weblink`, Flyway V6) — 코드만 머지, 운영 반영 전:
+
+- [ ] 서버 `.env`에 `WEB_LINK_SERVICE_KEYS` 추가 → 백엔드 배포(`deploy.sh`, V6 적용). 키는 웹 서버 쪽에도 같은 값을 넣는다. 비워 두고 배포해도 기존 앱 기능은 그대로고 internal API만 401이다
+- [ ] 앱 설정 화면 [웹 연동 코드 받기]·연동 목록(프론트, 원격 업데이트로 반영 가능)
+- [ ] 사람 결정: 웹 연동으로 앱 이메일(·이후 유동자산 집계)을 웹 서비스에 넘기는 내용을 개인정보처리방침에 넣을지와 시행일. 앱 화면에 연동 메뉴를 열기 전에 정한다
+- [ ] 유동자산 집계(`/internal/v1/web-links/{linkId}/seed-money`) — 넣을 항목 결정 후
+- 알려진 한계: 코드 실패 제한은 API 프로세스 메모리에 있다(API 서버 1대 운영 전제, 재시작하면 초기화)
+
 기존 앱 출시 기록(10-19, 현재 배포 상태는 재확인 필요):
 
 1. [x] **앱 원격 업데이트 → PR #67 머지 순서 지키기(10-19 완료)**: #67(Play 경고 대응, 앱 1.2.0)보다 먼저 #64(탭바 위 + 버튼, 0원일 때 빨간 상단 패널)·#66(내역 탭 기록 버튼 삭제)을 1.1.0용으로 게시했다. main `c146127`에서 preview `1996d0c4` → production `5ed7d163`. #61(필수 업데이트 창)은 이전 그룹 `c3948c24`로 이미 나가 있었다. 이후 main의 원격 업데이트는 1.2.0 빌드만 받는다.

@@ -9,3 +9,6 @@ app:
   jwt:
     secret: local-dev-secret-local-dev-secret-0123456789
   cors-origins: http://localhost:8081,http://localhost:19006
+  web-link:
+    # 로컬 웹 백엔드(flexable-web)가 이 서버를 부를 때 쓰는 개발용 키
+    service-keys: local-dev-service-key-local-dev-service-key

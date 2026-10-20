@@ -2,7 +2,7 @@
 
 앱 API 서버. Spring Boot 4.1, Java 21, MySQL 8(Flyway). API 계약은 [`docs/API.md`](../docs/API.md).
 
-웹사이트는 별도 서버(flexable-web `backend/`)다. 이 서버는 웹에 [앱 연동하기]용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`, 서비스 키 인증)만 제공한다. 아직 구현되지 않았다. 경계와 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
+웹사이트는 별도 서버(flexable-web `backend/`)다. 이 서버는 웹에 [앱 연동하기]용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`, 서비스 키 인증)만 제공한다(`weblink` 패키지, 유동자산 집계는 아직 없음). 경계와 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
 ## 로컬 실행
 
@@ -25,6 +25,7 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `DB_USERNAME`, `DB_PASSWORD` | MySQL 계정 | `flexable`, `flexable` |
 | `JWT_SECRET` | 토큰 서명 키(HS256). **바꾸면 모든 사용자가 로그아웃된다** | 비어 있음(운영에서 반드시 설정) |
 | `CORS_ORIGINS` | 허용할 웹 주소(쉼표 구분) | `http://localhost:8081` |
+| `WEB_LINK_SERVICE_KEYS` | 웹 서버가 `/internal/**`을 부를 때 쓰는 키(쉼표 구분, 32자 이상, 교체 중엔 두 개) | 비어 있음(internal API 전부 401). `local` 프로필은 개발용 키 |
 | `PORT` | 서버 포트 | `8080` |
 | `API_DOMAIN` | Caddy가 HTTPS 인증서를 받을 도메인(`deploy/` 전용) | — |
 
@@ -38,8 +39,9 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `transaction` | 수동 입력 거래 CRUD, `Idempotency-Key` |
 | `analysis` | 기간별 카테고리·일별 합계 |
 | `user` | 사용자, 계정·데이터 일괄 삭제 |
+| `weblink` | 웹사이트 [앱 연동하기]: 연동 코드 발급, 연동 목록·해제, 웹 서버 전용 `/internal/v1/web-links` |
 | `common` | 오류 코드·응답 형식, 기간·시각 도우미, 헬스 체크 |
-| `config` | 보안(JWT 검증·CORS), 설정값 바인딩, 시간대(Asia/Seoul) |
+| `config` | 보안(JWT 검증·CORS, `/internal/**` 서비스 키), 설정값 바인딩, 시간대(Asia/Seoul) |
 
 ## API
 
@@ -55,7 +57,10 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `GET·POST /categories`, `PATCH·DELETE /categories/{id}` | 카테고리 |
 | `GET·POST /transactions`, `GET·PATCH·DELETE /transactions/{id}` | 거래(직접 입력). 생성은 `Idempotency-Key`로 중복 방지 |
 | `GET /analysis/summary` | 기간별 카테고리·일별 합계 |
+| `POST /me/web-link-codes`, `GET /me/web-links`, `DELETE /me/web-links/{id}` | 웹 연동 코드 발급, 연동 목록·해제 |
 | `GET /health` | 상태 확인. 인증 없이 호출 |
+
+웹 서버 전용 `/internal/v1/web-links/*`(서비스 키)는 [`docs/API.md`](../docs/API.md) "웹사이트 연동".
 
 ## 테스트
 

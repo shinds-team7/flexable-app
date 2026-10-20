@@ -44,6 +44,9 @@ app:
     ttl-days: 30
   cors-origins: ${CORS_ORIGINS:http://localhost:8081}
   zone: Asia/Seoul
+  web-link:
+    # 웹 서버(flexable-web)가 /internal/** 을 부를 때 쓰는 키. 쉼표 구분(교체 중 두 개), 32자 이상. 비우면 internal API는 401
+    service-keys: ${WEB_LINK_SERVICE_KEYS:}
   oauth:
     callback-base-url: ${OAUTH_CALLBACK_BASE_URL:http://localhost:8080}
     allowed-redirect-uris: ${OAUTH_ALLOWED_REDIRECT_URIS:flexable://oauth/callback,http://localhost:8081/oauth/callback}
