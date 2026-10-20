@@ -26,7 +26,7 @@ public class CategoryService {
 	private record Preset(String name, TxType type, String color, String icon) {
 	}
 
-	/** 가입 시 만드는 기본 카테고리. 순서가 화면 표시 순서다. 시연 categories.ts 색·아이콘과 맞춘다. */
+	/** 가입 시 만드는 기본 카테고리. 순서가 화면 표시 순서다. */
 	private static final List<Preset> DEFAULTS = List.of(
 			new Preset("식비", TxType.EXPENSE, "#12B76A", "restaurant"),
 			new Preset("카페·간식", TxType.EXPENSE, "#F79009", "cafe"),

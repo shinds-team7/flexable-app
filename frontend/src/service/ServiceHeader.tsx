@@ -32,15 +32,7 @@ const tabs = [
 ];
 // Tabs live in the bottom icon bar for every home style; the header keeps only the logo row.
 export function ServiceHeader() {
-  const pathname = usePathname();
-  return (
-    <AppHeaderView
-      tabs={tabs}
-      pathname={pathname}
-      homeHref="/home"
-      showTabs={false}
-    />
-  );
+  return <AppHeaderView homeHref="/home" />;
 }
 export function ServiceTabBar() {
   const pathname = usePathname();
