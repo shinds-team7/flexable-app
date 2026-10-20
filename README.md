@@ -54,6 +54,8 @@ npm run web
 
 검증 명령(타입 검사, 린트, 백엔드 테스트, E2E)은 [`AGENTS.md`](AGENTS.md) "검증 명령".
 
+웹 제품의 기능·화면·데이터 계획과 개발 책임은 [flexable-web 제품 문서](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/README.md)에서 관리한다. 웹 서버는 flexable-web `backend/`에 따로 있고, 이 저장소 `backend/`는 앱 API와 웹 연동용 서버 간 API(미구현)를 맡는다([앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md)).
+
 ## 처음 보는 사람이 읽는 순서
 
 1. [`docs/FEATURES.md`](docs/FEATURES.md) — 지금 되는 기능, 시연에만 있는 기능, 아직 없는 기능
