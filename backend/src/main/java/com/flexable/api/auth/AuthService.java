@@ -119,10 +119,14 @@ public class AuthService {
 	}
 
 	@Transactional
-	public void deleteAccount(long userId, String password, String confirm) {
+	public void deleteAccount(long userId, int tokenVersion, String password, String confirm) {
 		// 소셜 연결과 동시에 오면 연결이 끝난 뒤의 상태로 확인한다. 잠금 순서는 다른 쓰기와 같게 설정 → 사용자.
 		settings.findForUpdate(userId);
 		User user = users.findWithLockById(userId).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
+		// 인증 필터를 지난 뒤 연결·로그아웃으로 폐기된 토큰이면 탈퇴하지 않는다.
+		if (user.getTokenVersion() != tokenVersion) {
+			throw new ApiException(ErrorCode.UNAUTHORIZED);
+		}
 		// 소셜 로그인이 붙은 계정은 비밀번호를 쓸 수 없으므로 확인 문구로 탈퇴한다.
 		if (identities.findWithLockByUserId(userId).isEmpty()) {
 			if (password == null || password.isBlank()) {

@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,6 +45,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.web.util.UriComponentsBuilder;
 import com.jayway.jsonpath.JsonPath;
+import com.flexable.api.common.ApiException;
+import com.flexable.api.common.ErrorCode;
 
 @SpringBootTest(properties = { "app.oauth.kakao.client-id=test-kakao", "app.oauth.google.client-id=test-google",
 		"app.oauth.kakao.admin-key=test-admin" })
@@ -60,6 +63,8 @@ class OAuthFlowTest {
 	OAuthProviderClient provider;
 	@Autowired
 	MutableClock clock;
+	@Autowired
+	AuthService authService;
 
 	@BeforeEach
 	void setup() {
@@ -184,6 +189,7 @@ class OAuthFlowTest {
 			.andExpect(status().isCreated()));
 		Number id = JsonPath.read(signup, "$.user.id");
 		String oldToken = JsonPath.read(signup, "$.accessToken");
+		int oldVersion = jdbc.queryForObject("select token_version from users where id=?", Integer.class, id);
 		String googleId = UUID.randomUUID().toString();
 		when(provider.fetch(eq("google"), anyString())).thenReturn(new OAuthProviderClient.Profile(googleId, email.toUpperCase(), true));
 		exchange(query(callback("google", start("google", REDIRECT)), "code"), VERIFIER)
@@ -195,6 +201,9 @@ class OAuthFlowTest {
 		assertEquals(1, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
 		// 남의 주소로 먼저 가입한 사람이 기존 세션이나 맞는 비밀번호로 다시 들어오지 못하고 Google로 안내된다.
 		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + oldToken)).andExpect(status().isUnauthorized());
+		// 연결 전에 인증 필터를 지난 탈퇴 요청도, 잠금을 잡은 뒤 폐기된 토큰임을 알고 거절한다.
+		ApiException stale = assertThrows(ApiException.class, () -> authService.deleteAccount(id.longValue(), oldVersion, null, "탈퇴"));
+		assertEquals(ErrorCode.UNAUTHORIZED, stale.code());
 		for (String password : new String[] { "abcd1234", "wrong1234" }) {
 			json("/api/v1/auth/login", """
 					{"email":"%s","password":"%s"}

@@ -135,6 +135,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 - 요청 body: `{ "password"?: string, "confirm"?: string }`.
 - `hasPassword=true`: password 필수(누락 시 400, field `password`), 틀리면 401 `INVALID_CREDENTIALS`.
+- 사용자 행을 잠근 뒤 토큰의 `tv`를 다시 비교한다. 인증 후 연결·로그아웃으로 폐기된 토큰이면 401 `UNAUTHORIZED`.
 - `hasPassword=false`: `{ "confirm": "탈퇴" }` 필수. 누락·불일치는 400 `VALIDATION_FAILED`, field `confirm`, "확인 문구 '탈퇴'를 입력해 주세요".
 - 카카오 identity와 `KAKAO_ADMIN_KEY`가 있으면 삭제 전 카카오 연결 끊기를 시도한다. 실패해도 탈퇴는 진행하고 로그만 남긴다.
 - 성공하면 사용자·소셜 identity·예산 설정·카테고리·거래를 **즉시 영구 삭제**하고 이후 기존 토큰은 401을 받는다.
