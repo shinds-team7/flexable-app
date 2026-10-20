@@ -3,6 +3,8 @@
 서비스 1.0.0 비공개 테스트(Google Play 12명)용 최소 API. 서버 코드는 `backend/`(Spring Boot 4.1, Java 21, MySQL 8).
 이 문서가 프론트·백엔드 사이의 계약이다. 바꿀 때는 이 문서를 먼저 고친다.
 
+웹사이트 API는 웹 서버(flexable-web `backend/`)에 있고 이 문서에 적지 않는다. 이 문서에는 웹 연동용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`)만 구현 PR에서 추가한다. 절차 초안은 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
+
 ## 공통
 
 - Base URL: `${EXPO_PUBLIC_API_URL}/api/v1` (예: `https://api.example.com/api/v1`, 로컬 `http://localhost:8080/api/v1`)

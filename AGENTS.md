@@ -21,6 +21,8 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 .github/workflows/        ci.yml(PR 검증), server-health.yml(운영 서버 15분 감시)
 ```
 
+웹사이트는 flexable-web이 자기 서버·DB·계정으로 따로 운영한다(2026-10-20 결정). 이 저장소 `backend/`는 앱 API이고, 웹에는 사용자가 앱에서 받은 연동 코드로 [앱 연동하기]를 했을 때만 서버 간 API(`/internal/v1/web-links/*`, 미구현)로 회원 정보·유동자산 집계를 준다. 경계와 계약 초안은 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md), 웹 기획 정본은 flexable-web에 있다.
+
 **의존 방향:** 공통 UI(`src/components`)는 값을 props로 받아 표시만 하고, 데이터는 서비스 쪽이 넘긴다.
 
 **요청 하나가 지나가는 길(예: 거래 수정):**
@@ -30,7 +32,7 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 
 | 알고 싶은 것 | 문서 |
 |---|---|
-| 새 데스크톱 웹사이트 계획(기능·화면·아키텍처·일정) | [`docs/web/README.md`](docs/web/README.md). 코드는 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
+| 새 데스크톱 웹사이트 계획(기능·화면·아키텍처·일정) | [웹 제품 정본](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/README.md). 웹 제품 개발은 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
 | 지금 되는 기능과 근거 | [`docs/FEATURES.md`](docs/FEATURES.md) |
 | API 요청·응답, 예산 계산식 | [`docs/API.md`](docs/API.md) |
 | 프론트엔드·백엔드 실행 | [`frontend/README.md`](frontend/README.md), [`backend/README.md`](backend/README.md) |

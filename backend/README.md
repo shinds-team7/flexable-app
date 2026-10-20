@@ -1,6 +1,8 @@
 # Flex-able 텅장관리 — Backend
 
-서비스 1.0.0 API 서버. Spring Boot 4.1, Java 21, MySQL 8(Flyway). API 계약은 [`docs/API.md`](../docs/API.md).
+앱 API 서버. Spring Boot 4.1, Java 21, MySQL 8(Flyway). API 계약은 [`docs/API.md`](../docs/API.md).
+
+웹사이트는 별도 서버(flexable-web `backend/`)다. 이 서버는 웹에 [앱 연동하기]용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`, 서비스 키 인증)만 제공한다. 아직 구현되지 않았다. 경계와 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
 ## 로컬 실행
 

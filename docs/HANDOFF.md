@@ -1,6 +1,6 @@
 # 인수인계 — 서비스 1.0.0 Google Play 비공개 테스트
 
-마지막 갱신 2026-10-19. 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-20(문서 소유권 정리; 배포 상태 재확인 아님). 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
@@ -13,32 +13,18 @@
 - 10-19~20 사이에 연결된 계정은 비밀번호 해시가 이미 지워졌다. 이 계정도 identity가 있으므로 같은 안내를 받는다.
 - 반영: 백엔드는 `deploy.sh`로 배포한다. 앱 로그인 화면의 소셜 버튼은 JS 변경이라 EAS 원격 업데이트로 반영한다. 업데이트 전 앱도 서버 안내 문구는 그대로 보여 준다(버튼만 없음).
 
-### 0-1. 2026-10-19(월)부터 — 10-18 밤 기준, 우선순위 순
+### 0-1. 2026-10-20 — 앱·앱 API 업무
 
-다른 PC에서는 `git pull` 뒤 이 절부터 읽는다. 웹(해커톤) 계획의 정본은 `docs/web/`이다. 10-18 결정은 `docs/web/decisions.md` 확정 21~24와 `docs/web/meeting-2026-10-18.md` §7에 있다.
+웹 제품의 기획·데이터·화면·일정은 [flexable-web 인수인계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/HANDOFF.md)에서 관리한다. 웹 서버는 flexable-web `backend/`에서 따로 만든다(2026-10-20 분리 결정). 이 저장소에는 [앱 연동하기]용 API와 앱 설정 화면만 추가한다. 경계는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
-**10-19 변경: 웹사이트 코드는 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)** (`docs/web/03-architecture.md` ADR-2 변경)
-- 운영 `https://flexable-web-delta.vercel.app` (Vercel, `main` 자동 배포). 앱과 같은 계정·API(`flex-able-sh.duckdns.org`)를 쓴다.
-- 완료: 랜딩·로그인(카카오·Google·이메일, 운영 로그인 확인)·홈·내 정보. 홈 데이터(시드머니·코스피/코스닥·소식)는 API가 없어 예시 값이다.
-- 상단 메뉴: 투자 시뮬레이션(`/invest`)·적금 비교(`/savings`)·섞어보기(`/mix`)·AI 목표 달성(`/goal`)·청년 금융 소식(`/news`)·플러스(`/plus`). 각 화면은 자리만 있다(팀원 개발). 와이어프레임 사본은 그 저장소 `docs/reference/`.
-- 앱 시연은 그 저장소 `/m`으로 옮기고 이 저장소에서 지웠다(#72). 옛 `/demo/*` 주소는 `/m/*`로 넘어간다.
-- 서버 `/opt/flexable/.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소를 더하고 API를 다시 시작했다. 도메인을 사면(14번, 확정 18) 기존 DuckDNS 주소는 그대로 두고 새 주소를 **더한다**. 순서: ① 카카오·Google 콘솔에 새 API 콜백(`https://api.<도메인>/api/v1/auth/oauth/{kakao,google}/callback`)을 추가(기존 콜백은 지우지 않음) → ② 서버 `.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소 추가 → ③ 공급자에게 넘기는 콜백을 새 주소로 옮길 때만 `OAUTH_CALLBACK_BASE_URL`을 바꾸고 `docker compose up -d`(①이 먼저 끝나 있어야 로그인이 안 깨진다) → ④ `frontend/vercel.json`의 `/m` redirect 목적지를 새 웹 주소로.
-
-**P0 — 10/19 오전에 먼저(막히면 다른 일이 멈춤)**
+기존 앱 출시 기록(10-19, 현재 배포 상태는 재확인 필요):
 
 1. [x] **앱 원격 업데이트 → PR #67 머지 순서 지키기(10-19 완료)**: #67(Play 경고 대응, 앱 1.2.0)보다 먼저 #64(탭바 위 + 버튼, 0원일 때 빨간 상단 패널)·#66(내역 탭 기록 버튼 삭제)을 1.1.0용으로 게시했다. main `c146127`에서 preview `1996d0c4` → production `5ed7d163`. #61(필수 업데이트 창)은 이전 그룹 `c3948c24`로 이미 나가 있었다. 이후 main의 원격 업데이트는 1.2.0 빌드만 받는다.
-2. [ ] **대표: 회사 폐쇄망 VM 조건 확인**(확정 19). AWS 운영본으로 시연할 수 있으면 반입 묶음은 만들지 않는다. 같은 날 정책 적금 공식 근거를 확인할 팀원을 배정한다.
-3. [ ] **BE·FE: 웹 API 계약을 하루 안에 고정**(시드머니·타임머신·적금 비교, `docs/web/03-architecture.md`). 사건 근거 필드는 `sources[]`다(01·03 기준, 02의 `links[]`는 디자인 세션에서 맞춤).
-   - 10-19 추가: 웹 홈 오른쪽의 코스피·코스닥 지수 API(일 단위 종가 + 기준일 + 출처). 웹 화면이 기대하는 모양은 웹 저장소 `src/data/home.ts`의 `SeedMoney`·`MarketIndices` 타입이다.
-4. [ ] **DATA: 데이터 신청**
-   - 공공데이터포털 금융위 주식시세정보·증권상품시세정보 활용신청(개발·운영 자동승인, 공공누리 제4유형). 웹 홈 코스피·코스닥용 지수시세정보도 함께
-   - 금감원 finlife·한국은행 ECOS 인증키
-   - 시연 조건 3가지(출처 표시 / 원본 재제공 없음 / 비상업 시연 고지)는 확정 22에 있다.
+
 5. [ ] **디자인 재작업 시작 전에 캐릭터 홈 3D 방식 결정.**
    - 권장안(새 빌드 불필요): 3D 렌더 결과를 지금처럼 프레임 이미지(WebP 8~12장, 레벨당 150~300KB)로 넣는다. 원격 업데이트로 반영되고 투명 배경도 유지된다.
    - 영상 방식: `expo-video`(네이티브 모듈)를 써야 해서 새 빌드가 필요하다. 이 방식으로 간다면 **1.2.0 빌드(#67)에 함께 넣어야** 네이티브 출시를 한 번 더 하지 않는다. 투명 배경이 어렵고, 3~5초 반복 영상 한 편을 1MB 이하로 맞춰야 한다.
 
-**P1 — W1(10/19~10/25) 안에**
 
 6. [ ] **1.2.0 AAB를 Play에 올리고 실기기 확인(사람).** #67 머지와 production 빌드 시작까지는 10-19 밤에 끝냈다.
    - 빌드 완료(10-19 밤): 1.2.0 / versionCode 9 / 커밋 `0b5a66b` / Play 업로드 키스토어(EAS 원격). AAB 안에 R8 매핑(`BUNDLE-METADATA/.../proguard.map`)이 들어 있다.
@@ -49,40 +35,10 @@
    - 업로드 뒤 App Bundle 탐색기에서 난독화 해제 파일이 등록됐는지 본다. 다음 Android vitals 검사에서 'DEX 코드 최적화'와 '방향 제한' 경고가 사라졌는지 본다.
    - `public/app-version.json`의 `android.minVersion`은 테스터 Play 스토어에 1.2.0이 보인 **뒤에만** 올린다(§4-2 필수 업데이트).
    - 1.1.0 앱은 1.2.0용 원격 업데이트를 받지 않는다. 5번에서 영상 방식(`expo-video`)을 고르면 네이티브 빌드를 한 번 더 해야 한다.
-7. [ ] **디자인 피드백·재작업(디자인 세션).**
-   - 열린 PR #62(디자인 2차 회의 결정 반영)를 머지할지 닫을지 정한다.
-   - 10-18 기획 결정 중 `docs/web/02-design.md`에 아직 반영하지 않은 것: 기간 칩 [1년 전][3년 전·기본][날짜 지정], 계산 시점(첫 진입 자동 → 이후 [다시 계산]), 과거 적금 가정, 금리 카드, 근거 필드 `sources[]`, 적금 정렬 키, F8 이벤트 4종, F9 상품 카드 3장(`PRODUCT_CARD` 고지).
-   - 행 번호는 PR #63·#65·#68 본문에 있다.
-8. [ ] **DATA: 시연 종목 10~15개 선정·3년 일봉 스냅숏 1회 적재.**
-   - 기간 중 분할·병합·무상증자가 없는 종목을 우선한다(수정주가 제공 여부가 미확인).
-   - 활용신청 뒤 API 응답에서 조회 가능 기간과 수정주가 여부를 직접 확인해 03 §4의 '미확인'을 고친다.
-   - finlife·ECOS 금리 스냅숏도 함께 확보한다.
-9. [ ] **콘텐츠·DATA: 사건 카드 20건 초안·근거, 정책 적금 공식 출처.**
-   - 정책 적금 계산의 공식 예시 대비 약 17만원 차이 해소는 Must다(01 F2-b).
-   - 시연 데이터(지수 470,000원·월 78,000원)를 고정한다.
-10. [ ] **FE·BE: 웹 골격·로그인·시드머니·타임머신 계산·차트·핀 툴팁/상세·첫 방문 안내 연결.** 골격·로그인·홈 화면은 10-19 완료(웹 저장소). 남은 것은 API 연결과 투자 시뮬레이션 화면(차트 코드 `src/charts/drawTimeChart.ts`는 옮겨 둠).
-    - 10/25에 운영(Vercel+EC2)에서 로그인 → 시드머니 → 타임머신 기본 실행 → 핀 상세까지 확인한다(`docs/web/README.md` §8 첫 주 체크리스트).
 
-    - [ ] **팀원 공지: 웹은 새 저장소에서 개발.** 먼저 읽을 것은 그 저장소 `README.md`·`AGENTS.md`·`docs/reference/README.md`. 메뉴별 화면 담당을 정한다.
-    - [ ] **'AI 목표 달성'의 범위 결정.** 메뉴 이름이 AI 기능을 약속한다. 해커톤 범위(확정 8: 실시간 AI 생성 제외, 확정 17: 웹 목표는 발표 자료로만)와 맞출지, 범위를 바꿀지 팀장이 정하고 `docs/web/decisions.md`에 적는다.
+### 웹 임시 로그인 연동 기록(10-19)
 
-**P2 — W2(10/26~11/1)·발표 전**
-
-11. [ ] 적금 비교·정책 적금 계산기, 조합·프리셋, 승인 소식 10건, 플러스 요금표·모의 결제 완성. **11/1(일) 기능 동결.**
-12. [ ] **F9 상품 카드 3장 구현**(Should, 기존 설명 패널 안, Must 완료 후. 일정이 밀리면 뺀다).
-    - 문구·출처는 `docs/web/01-product.md` F9에 있다.
-    - 세법·예금보호가 바뀌면 원문을 다시 확인한다.
-13. [ ] F8 이벤트 4종(`trial_start`·`first_result`·`pin_open`·`preset_save`). 완료율은 first_result ÷ trial_start(이탈 포함)로 잰다. 수집 전에 개인정보처리방침에 반영한다(확정 16·17).
-14. [ ] **10/30 도메인 구매·연결**(확정 18). 웹은 `www`, API는 `api`이고, DuckDNS도 함께 유지한다.
-15. [ ] **대표: 기관 구매 검증 인터뷰 2~3건.** 관심·견적 요청·계약을 구분한다(`docs/web/bm-ideas.md` 장치 4).
-16. [ ] 남은 미확인 검증: ECOS 호출 제한·상업 이용 조건, SnapTool 정책 적금 지원, 토스 '그때 샀다면' 류 기능(01 §2-1·03 §4).
-17. [ ] W3(11/2~11/7): 신규 기능 없음. 11/2~11/4 청년 5~10명 과제형 테스트(F8 자동 집계·수기 백업) → 11/5까지 반영 → 11/6 리허설 → 11/7 완료.
-
-**보류·선택(작업 목록에서 뺌)**
-
-- 테스트 설문 준비: 팀장 지시로 보류(`meeting-2026-10-18.md` 부록 B, 내용은 남겨 둠).
-- 금융위·KRX 서면 문의: 선택(확정 22). 초안은 같은 문서 부록 A.
-- 출시 후로 미룬 것: F7 웹 목표, 월간 리포트, 정밀 모드, 물가 반영선·기준금리 연속선, 4주 가상 적립 챌린지, 가상자산(확정 24).
+- 서버 `/opt/flexable/.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소를 더하고 API를 다시 시작했다. 도메인을 사면(14번, 확정 18) 기존 DuckDNS 주소는 그대로 두고 새 주소를 **더한다**. 순서: ① 카카오·Google 콘솔에 새 API 콜백(`https://api.<도메인>/api/v1/auth/oauth/{kakao,google}/callback`)을 추가(기존 콜백은 지우지 않음) → ② 서버 `.env`의 `CORS_ORIGINS`·`OAUTH_ALLOWED_REDIRECT_URIS`에 새 웹 주소 추가 → ③ 공급자에게 넘기는 콜백을 새 주소로 옮길 때만 `OAUTH_CALLBACK_BASE_URL`을 바꾸고 `docker compose up -d`(①이 먼저 끝나 있어야 로그인이 안 깨진다) → ④ `frontend/vercel.json`의 `/m` redirect 목적지를 새 웹 주소로.
 
 **계속 진행 중**
 
@@ -128,7 +84,7 @@
 |---|---|---|
 | API 서버 | 운영 중 | `https://flex-able-sh.duckdns.org/api/v1` (EC2 + RDS), 코드 `backend/`, 계약 `docs/API.md` |
 | 웹(앱 서비스) | Vercel이 `main`을 자동 배포 | `https://project2-flex-sh.vercel.app` (옛 `/demo`는 `https://flexable-web-delta.vercel.app/m`으로 이동, `/privacy`·`/terms`·`/support`·`/delete-account` 공개 페이지) |
-| 웹사이트(해커톤)·앱 시연 | 별도 저장소, Vercel이 `main`을 자동 배포(10-19~). 골격·로그인·홈 완료, 나머지 화면 개발 중 | `https://flexable-web-delta.vercel.app` (시연 `/m`), 코드 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
+| 웹사이트(해커톤)·앱 시연 | 별도 저장소, Vercel이 `main`을 자동 배포(10-19~). 초기 UI·로그인 기반 제공, 기능별 상태는 웹 저장소 README에서 관리 | `https://flexable-web-delta.vercel.app` (시연 `/m`), 코드 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
 | CI | PR·`main` 푸시마다 백엔드 테스트(접근 제어 보안 테스트 `SecurityTest` 포함, 10-19~), tsc·lint, 정적 웹 빌드 + E2E 자동 실행(10-16~) | `.github/workflows/ci.yml` |
 | 서버 감시 | 15분마다 API(앱·DB·디스크)·웹·인증서 확인, 실패하면 이슈 자동 생성(10-16~) | `.github/workflows/server-health.yml`, §5 |
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), E2E 13개를 CI에서 실행 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |

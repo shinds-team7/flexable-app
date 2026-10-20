@@ -2,7 +2,7 @@
 
 Expo(React Native) + Expo Router. 한 코드로 Android와 웹을 빌드한다.
 
-- **실제 서비스(버전 1.0.0)**: `/` 이하. 백엔드 API(`../backend/`)로 가입·예산 설정·거래·분석·계정 삭제를 한다. 온라인 전용
+- **실제 서비스(버전은 app.json의 version 기준)**: `/` 이하. 백엔드 API(`../backend/`)로 가입·예산 설정·거래·분석·계정 삭제를 한다. 온라인 전용
 - **시연**: 이 저장소에서 뺐다(2026-10-19). 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `mobile-demo/`, 주소 `https://flexable-web-delta.vercel.app/m`
 
 기능별 구현 여부는 [`../docs/FEATURES.md`](../docs/FEATURES.md), 작업 규칙은 [`../AGENTS.md`](../AGENTS.md)와 [`AGENTS.md`](AGENTS.md)(Expo).
