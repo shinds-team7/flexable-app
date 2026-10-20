@@ -549,7 +549,7 @@ test("expired token returns to start; public routes remain accessible", async ({
   expect(await token(page)).toBeNull();
   await page.goto("/privacy");
   await expect(
-    page.getByText("- 시행일: 2026년 10월 14일", { exact: true }),
+    page.getByText("- 시행일: 2026년 10월 27일", { exact: true }),
   ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.1.0", { exact: true })).toBeVisible();
@@ -571,7 +571,7 @@ test("approved legal copy and public terms link preserve signup input", async ({
     .click();
   await expect(page).toHaveURL(/\/terms$/);
   await expect(
-    page.getByText("이 약관은 2026년 10월 13일부터 시행합니다.", {
+    page.getByText("이 약관은 2026년 10월 27일부터 시행합니다.", {
       exact: true,
     }),
   ).toBeVisible();
