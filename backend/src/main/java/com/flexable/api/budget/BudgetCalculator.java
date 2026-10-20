@@ -76,7 +76,8 @@ public final class BudgetCalculator {
 
 		long remaining = estimated - reservedFixed - in.cardUnpaid() - in.protectedTotal();
 		long dailyBudget = Math.max(0, remaining + todaySpent) / daysLeft;
-		long todayAvailable = Math.max(0, dailyBudget - todaySpent);
+		// 오늘 예산을 넘으면 넘은 만큼 음수로 둔다(홈에서 마이너스로 보여 준다).
+		long todayAvailable = dailyBudget - todaySpent;
 		long shortage = remaining < 0 ? -remaining : Math.max(0, todaySpent - dailyBudget);
 		LocalDate weekLast = weekEnd.isBefore(nextPayday) ? weekEnd : nextPayday.minusDays(1);
 		int weekDaysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, weekLast) + 1);

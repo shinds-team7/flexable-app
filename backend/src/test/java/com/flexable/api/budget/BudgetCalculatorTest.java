@@ -78,7 +78,7 @@ class BudgetCalculatorTest {
 		assertThat(r.remaining()).isEqualTo(1_268_000 - 450_000 - 300_000);
 		assertThat(r.todaySpent()).isEqualTo(70_000);
 		assertThat(r.dailyBudget()).isEqualTo((518_000 + 70_000) / 13);
-		assertThat(r.todayAvailable()).isEqualTo(0);
+		assertThat(r.todayAvailable()).isEqualTo(588_000 / 13 - 70_000); // 넘은 만큼 음수
 		assertThat(r.shortage()).isEqualTo(70_000 - 588_000 / 13);
 		assertThat(r.cycleStart()).isEqualTo(LocalDate.of(2026, 9, 25));
 		// 10/13(화) ~ 10/18(일) 6일
