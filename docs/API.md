@@ -31,6 +31,7 @@
 | 409 | `EMAIL_UNAVAILABLE` | 가입 불가 이메일(이미 가입 등) |
 | 409 | `CATEGORY_DUPLICATE` | 같은 종류에 같은 이름 카테고리 존재 |
 | 409 | `CATEGORY_DEFAULT` | 기본 카테고리는 삭제 불가 |
+| 409 | `SEED_NOT_PENDING` | 시드머니 반영: 이미 반영했거나 그 주기를 반영할 수 있는 기간이 지남 |
 | 400 | `LINK_CODE_INVALID` | 웹 연동 코드 없음·만료·이미 사용(웹 서버 전용 API) |
 | 404 | `LINK_NOT_FOUND` | 웹 연동이 해제됐거나 앱 계정이 탈퇴함(웹 서버 전용 API) |
 | 429 | `TOO_MANY_ATTEMPTS` | 로그인 연속 실패(10분 내 5회), 웹 연동 코드 실패(서비스 전체 10분 내 30회). `retryAfterSeconds` 추가 |
@@ -159,7 +160,8 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
   "incomeAmount": 2400000,
   "cardUnpaid": 0,
   "fixedExpenses": [{ "name": "월세", "amount": 450000, "day": 1 }],
-  "protectedItems": [{ "name": "비상금", "amount": 300000 }]
+  "protectedItems": [{ "name": "적금", "amount": 300000 }],
+  "seedBase": 500000
 }
 ```
 
@@ -170,9 +172,10 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 | `payday` | 1~31. 31은 "매달 말일"(달마다 말일로 맞춤). 그날이 토·일이면 다음 월요일에 들어온 것으로 계산(공휴일은 반영 안 함) |
 | `incomeAmount`, `cardUnpaid` | 0 이상 |
 | `fixedExpenses[]` | 0~30개. `day` 1~31(31=말일), `amount` 1 이상 |
-| `protectedItems[]` | 0~30개. `amount` 1 이상 |
+| `protectedItems[]` | **매달 저축할 돈**(화면 이름. 예전 이름 '보호 금액'). 0~30개, `amount` 1 이상. 합계를 오늘 쓸 수 있는 돈에서 미리 빼고, 수입일 전날 시드머니 반영의 기준 금액이 된다 |
+| `seedBase` | 모아둔 돈(시드머니 시작 금액, 생활비 잔액과 별도). 0 이상 1조 미만. **생략하면 저장된 값을 유지**(1.3.0 이전 앱 호환) |
 
-응답은 같은 모양에 `fixedExpenses[].id`, `protectedItems[].id`, `updatedAt`이 붙는다.
+응답은 같은 모양에 `fixedExpenses[].id`, `protectedItems[].id`, `updatedAt`이 붙고 `seedBase`는 항상 온다(설정 전 기본 0).
 잔액만 다시 맞출 때도 PUT으로 전체를 보낸다(`balanceAt`을 지금으로).
 
 ### `GET /budget/today` → 200 | 404 `BUDGET_NOT_SET`
@@ -203,7 +206,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 계산(서버가 최종값, 원 단위 정수, 나눗셈은 내림):
 
-- `estimatedBalance` = `balance` + (`balanceAt` 이후 수입 합) − (`balanceAt` 이후 지출 합)
+- `estimatedBalance` = `balance` + (`balanceAt` 이후 수입 합) − (`balanceAt` 이후 지출 합) − (`balanceAt` 이후 시드머니로 옮긴 돈 합, 아래 "시드머니")
 - `nextPayday` = 오늘 이후(오늘 제외) 가장 가까운 수입일(토·일이면 다음 월요일. 예: 25일이 일요일이면 26일), `daysLeft` = 오늘부터 수입일 전날까지 날짜 수(오늘 포함, 최소 1)
 - `reservedFixed` = 내일 ~ 수입일 전날 사이에 날짜가 오는 고정지출 합. 오늘까지 날짜가 된 고정지출은 지출 거래로 자동 기록되어 `estimatedBalance`에서 빠진다(아래 "고정지출 자동 기록")
 - `remaining` = `estimatedBalance` − `reservedFixed` − `cardUnpaid` − `protectedTotal`
@@ -219,6 +222,39 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
   - `characterDelta` = 어제 하루의 점수 변화(반영한 날이 없으면 0)
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
+
+## 시드머니
+
+시드머니 = 모아둔 돈(`seedBase`) + 정산 주기마다 옮긴 돈의 합. 수입일 전날 앱이 기기 알림(20시, 서버 없음)으로 반영을 권하고, 홈에서 반영 창을 띄운다.
+
+- **반영할 주기(`pending`)**: 오늘이 수입일 전날이면 오늘 끝나는 주기, 아니면 직전 수입일 전날에 끝난 주기. 그 주기 마지막 날 **전에** 앱을 쓰기 시작했고(`daily_budgets` 첫 날짜) 아직 반영하지 않았을 때만 있다. 응답하지 않으면 다음 수입일 전날까지 기다리고, 그날이 되면 지난 주기는 반영 없이 넘어간다. 수입일은 `/budget/today`와 같은 규칙(31=말일, 토·일이면 다음 월요일)
+- **반영 방법**: `GOAL` = 매달 저축할 돈(`protectedItems` 합), `ALL` = 그 주기 마지막 날까지의 기록 기준 남은 돈 전부 = max(0, 그날 추정 잔액 − 카드 미결제액). 수입일 전날에는 남은 고정지출 예정액이 0이므로 '매달 저축할 돈 + 남은 생활비'와 같다. `MANUAL` = 직접 입력(0원 가능)
+- 옮긴 돈은 생활비 통장에서 빠진 것으로 보고 `estimatedBalance`에서 뺀다(잔액을 다시 입력하면 그 시각 이후 것만 뺀다). 소비 분석·오늘 쓴 돈에는 넣지 않는다
+
+### `GET /budget/seed-money` → 200 | 404 `BUDGET_NOT_SET`
+
+```json
+{
+  "base": 500000,
+  "saved": 950000,
+  "total": 1450000,
+  "monthlyGoal": 300000,
+  "pending": { "cycleEnd": "2026-11-25", "payday": "2026-11-26", "goalAmount": 300000, "allAmount": 820000 },
+  "entries": [{ "cycleEnd": "2026-10-25", "choice": "ALL", "amount": 950000, "createdAt": "2026-10-28T12:00:00+09:00" }]
+}
+```
+
+- `pending`은 없으면 null. `entries`는 최근 12개, 최신순
+
+### `POST /budget/seed-money/entries` → 201 (응답은 GET과 같음)
+
+```json
+{ "cycleEnd": "2026-11-25", "choice": "MANUAL", "amount": 200000 }
+```
+
+- `cycleEnd`는 지금 `pending.cycleEnd`와 같아야 한다. 다르거나 이미 반영했으면 409 `SEED_NOT_PENDING`
+- `GOAL`·`ALL`의 금액은 서버가 정한다(보낸 `amount`는 무시). `MANUAL`은 `amount` 필수(0 이상, 없으면 400 field `amount`)
+- 주기당 한 번만 반영된다(설정 행 잠금 + `(user_id, cycle_end)` 고유 키)
 
 ## 카테고리
 
@@ -325,7 +361,7 @@ POST 본문:
 - `DELETE /internal/v1/web-links/{linkId}` → 204
 - 연동이 없으면(해제·앱 탈퇴) 위 둘은 404 `LINK_NOT_FOUND` → 웹은 연동을 끊고 저장한 앱 정보를 지운다
 - `AppProfile` = `{ "email": string|null, "provider": "email"|"kakao"|"google" }`. 앱에는 닉네임이 없다. 소셜 계정은 `email`이 null일 수 있다
-- 유동자산 집계(`/seed-money`)는 아직 없다. 넣을 항목을 정한 뒤 추가한다
+- `GET /internal/v1/web-links/{linkId}/seed-money` → 200 `{ "total": 1450000, "base": 500000, "monthlyGoal": 300000, "lastEntry": { "cycleEnd", "choice", "amount", "createdAt" } | null, "updatedAt": "..." }`. 확정된 값만 준다(반영 대기·주기별 기록·거래는 주지 않음). `updatedAt`은 마지막 반영 또는 예산 설정 저장 시각 중 늦은 것. 앱에서 예산 설정을 아직 안 했으면 404 `BUDGET_NOT_SET`(연동 해제 `LINK_NOT_FOUND`와 코드로 구분)
 
 ## 기타
 

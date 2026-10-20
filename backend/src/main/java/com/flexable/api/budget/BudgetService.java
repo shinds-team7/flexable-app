@@ -38,12 +38,14 @@ public class BudgetService {
 	private final UserRepository users;
 	private final FixedExpensePoster fixedPoster;
 	private final DailyBudgetRepository dailyBudgets;
+	private final SeedMoneyEntryRepository seedEntries;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public BudgetService(SettingsRepository settings, FixedExpenseRepository fixed,
 			ProtectedItemRepository protectedItems, TransactionRepository transactions, UserRepository users,
-			FixedExpensePoster fixedPoster, DailyBudgetRepository dailyBudgets, Clock clock, AppProperties props) {
+			FixedExpensePoster fixedPoster, DailyBudgetRepository dailyBudgets, SeedMoneyEntryRepository seedEntries,
+			Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
 		this.protectedItems = protectedItems;
@@ -51,6 +53,7 @@ public class BudgetService {
 		this.users = users;
 		this.fixedPoster = fixedPoster;
 		this.dailyBudgets = dailyBudgets;
+		this.seedEntries = seedEntries;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -73,6 +76,10 @@ public class BudgetService {
 		BudgetSettings s = settings.findForUpdate(userId).orElseGet(() -> new BudgetSettings(userId));
 		s.apply(req.balance(), balanceAt, req.payday(), req.incomeAmount(),
 				req.cardUnpaid() == null ? 0 : req.cardUnpaid(), now);
+		// 1.3.0 이전 앱은 seedBase를 보내지 않는다. 그때는 저장된 값을 지키도록 null이면 바꾸지 않는다.
+		if (req.seedBase() != null) {
+			s.applySeedBase(req.seedBase());
+		}
 		settings.save(s);
 
 		fixed.deleteByUserId(userId);
@@ -116,7 +123,8 @@ public class BudgetService {
 		BudgetCalculator.Input input = new BudgetCalculator.Input(s.getBalance(), s.getBalanceAt(), s.getPayday(),
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
 				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
-				!txs.isEmpty() || transactions.existsByUserId(userId));
+				!txs.isEmpty() || transactions.existsByUserId(userId),
+				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()));
 		TodayResponse r = BudgetCalculator.compute(input, today, zone);
 		dailyBudgets.upsert(userId, today, r.dailyBudget());
 		return r.withCharacter(characterScore(userId, today));
@@ -152,6 +160,6 @@ public class BudgetService {
 			.map(p -> new ProtectedEntry(p.getId(), p.getName(), p.getAmount()))
 			.toList();
 		return new SettingsResponse(s.getBalance(), Times.at(s.getBalanceAt(), zone), s.getPayday(),
-				s.getIncomeAmount(), s.getCardUnpaid(), fixedList, protectedList, Times.at(s.getUpdatedAt(), zone));
+				s.getIncomeAmount(), s.getCardUnpaid(), fixedList, protectedList, s.getSeedBase(), Times.at(s.getUpdatedAt(), zone));
 	}
 }

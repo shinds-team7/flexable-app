@@ -18,6 +18,7 @@ const initial = (): BudgetSettings => ({
   cardUnpaid: 0,
   fixedExpenses: [],
   protectedItems: [],
+  seedBase: 0,
 });
 type Draft = { value: BudgetSettings; step: string; editing: boolean };
 const Ctx = createContext<{

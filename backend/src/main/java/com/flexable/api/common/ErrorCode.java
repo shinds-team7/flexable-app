@@ -13,6 +13,7 @@ public enum ErrorCode {
 	EMAIL_UNAVAILABLE(HttpStatus.CONFLICT, "이 이메일로 가입할 수 없어요. 로그인하거나 비밀번호를 찾아보세요"),
 	CATEGORY_DUPLICATE(HttpStatus.CONFLICT, "같은 이름의 카테고리가 이미 있어요"),
 	CATEGORY_DEFAULT(HttpStatus.CONFLICT, "기본 카테고리는 삭제할 수 없어요"),
+	SEED_NOT_PENDING(HttpStatus.CONFLICT, "이미 반영했거나 반영할 수 있는 기간이 지났어요"),
 	LINK_CODE_INVALID(HttpStatus.BAD_REQUEST, "연동 코드가 맞지 않거나 시간이 지났어요. 앱에서 새 코드를 받아 주세요"),
 	LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "앱 연동이 해제됐어요"),
 	TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요"),

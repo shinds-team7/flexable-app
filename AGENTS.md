@@ -21,7 +21,7 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 .github/workflows/        ci.yml(PR 검증), server-health.yml(운영 서버 15분 감시)
 ```
 
-웹사이트는 flexable-web이 자기 서버·DB·계정으로 따로 운영한다(2026-10-20 결정). 이 저장소 `backend/`는 앱 API이고, 웹에는 사용자가 앱에서 받은 연동 코드로 [앱 연동하기]를 했을 때만 서버 간 API(`/internal/v1/web-links/*`, 미구현)로 회원 정보·유동자산 집계를 준다. 경계와 계약 초안은 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md), 웹 기획 정본은 flexable-web에 있다.
+웹사이트는 flexable-web이 자기 서버·DB·계정으로 따로 운영한다(2026-10-20 결정). 이 저장소 `backend/`는 앱 API이고, 웹에는 사용자가 앱에서 받은 연동 코드로 [앱 연동하기]를 했을 때만 서버 간 API(`/internal/v1/web-links/*`)로 회원 정보·시드머니를 준다. 경계와 계약 초안은 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md), 웹 기획 정본은 flexable-web에 있다.
 
 **의존 방향:** 공통 UI(`src/components`)는 값을 props로 받아 표시만 하고, 데이터는 서비스 쪽이 넘긴다.
 

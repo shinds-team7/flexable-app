@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.flexable.api.budget.BudgetDtos.WebSeedMoney;
 import com.flexable.api.weblink.WebLinkDtos.AppProfile;
 import com.flexable.api.weblink.WebLinkDtos.LinkCreated;
 import com.flexable.api.weblink.WebLinkDtos.LinkRequest;
@@ -36,6 +37,11 @@ public class InternalWebLinkController {
 	@GetMapping("/{linkId}/profile")
 	AppProfile profile(@PathVariable String linkId) {
 		return service.profile(linkId);
+	}
+
+	@GetMapping("/{linkId}/seed-money")
+	WebSeedMoney seedMoney(@PathVariable String linkId) {
+		return service.seedMoney(linkId);
 	}
 
 	@DeleteMapping("/{linkId}")

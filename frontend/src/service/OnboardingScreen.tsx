@@ -23,6 +23,7 @@ const steps = [
   "income",
   "fixed",
   "card",
+  "seed",
   "protect",
   "done",
 ] as const;
@@ -86,7 +87,9 @@ function Content({ step }: { step: Step }) {
           ? v.incomeAmount
           : step === "card"
             ? v.cardUnpaid
-            : undefined;
+            : step === "seed"
+              ? (v.seedBase ?? 0)
+              : undefined;
     if (
       amount !== undefined &&
       (!Number.isSafeInteger(amount) || amount < 0 || amount >= 1e12)
@@ -111,7 +114,7 @@ function Content({ step }: { step: Step }) {
         (x) => !x.name.trim() || x.amount < 1 || x.amount >= 1e12,
       )
     ) {
-      setError("보호할 항목의 이름과 금액을 확인해 주세요");
+      setError("저축 항목의 이름과 금액을 확인해 주세요");
       return;
     }
     if (step === "protect") {
@@ -147,17 +150,20 @@ function Content({ step }: { step: Step }) {
     income: "다음 수입은 언제 들어오나요?",
     fixed: "매달 꼭 나가는 돈이 있나요?",
     card: "아직 내지 않은 카드값이 있나요?",
-    protect: "쓰지 않고 지킬 돈이 있나요?",
+    seed: "지금까지 모아둔 돈이 있나요?",
+    protect: "매달 얼마씩 저축할까요?",
   }[step];
   const subtitle = {
     index:
       "입력한 정보로 오늘 쓸 수 있는 돈을 계산해요. 실제 은행 잔액과 다를 수 있어요",
     balance:
-      "생활비 통장의 지금 잔액을 적어 주세요. 저축이나 비상금은 빼거나, 뒤에서 '지킬 돈'으로 넣으면 돼요",
+      "생활비 통장의 지금 잔액을 적어 주세요. 이미 모아둔 저축은 빼고, 뒤에서 '모아둔 돈'으로 따로 넣으면 돼요",
     income: "예정 수입액은 지금 잔액에 더하지 않아요",
     fixed: "없으면 다음으로 넘어가도 돼요",
     card: "이미 썼지만 아직 결제되지 않은 금액이에요. 없으면 비워 두고 넘어가도 돼요",
-    protect: "비상금이나 저축처럼 따로 남겨둘 돈이에요",
+    seed: "생활비와 따로 모아둔 돈이에요. 시드머니의 시작 금액이 되고, 오늘 쓸 수 있는 돈에는 넣지 않아요. 없으면 비워 두세요",
+    protect:
+      "오늘 쓸 수 있는 돈에서 미리 빼 두고, 수입일 전날 알림으로 시드머니에 반영해요. 없으면 비워 두세요",
   }[step];
   return (
     <KeyboardAvoidingView
@@ -166,7 +172,7 @@ function Content({ step }: { step: Step }) {
     >
       <OnboardingFrame
         step={idx + 1}
-        total={7}
+        total={8}
         title={title}
         subtitle={subtitle}
         backFallback={editing ? "/my" : "/"}
@@ -321,6 +327,14 @@ function Content({ step }: { step: Step }) {
             onChange={(cardUnpaid) => set({ ...v, cardUnpaid })}
           />
         )}
+        {step === "seed" && (
+          <MoneyField
+            label="모아둔 돈 (원)"
+            placeholder="없으면 비워 두세요"
+            value={v.seedBase ?? 0}
+            onChange={(seedBase) => set({ ...v, seedBase })}
+          />
+        )}
         {step === "protect" && (
           <>
             {v.protectedItems.map((x, i) => {
@@ -340,7 +354,7 @@ function Content({ step }: { step: Step }) {
                   onConfirm={() => {
                     if (!x.name.trim() || x.amount < 1 || x.amount >= 1e12)
                       return setError(
-                        "보호할 항목의 이름과 금액을 확인해 주세요",
+                        "저축 항목의 이름과 금액을 확인해 주세요",
                       );
                     setError(undefined);
                     setOpen(null);
@@ -357,7 +371,7 @@ function Content({ step }: { step: Step }) {
                 >
                   <Field
                     label="이름"
-                    placeholder="예: 비상금"
+                    placeholder="예: 적금"
                     maxLength={40}
                     value={x.name}
                     onChangeText={(name) => update({ name })}
@@ -372,7 +386,7 @@ function Content({ step }: { step: Step }) {
               );
             })}
             <Button
-              label="+ 보호할 돈 추가"
+              label="+ 저축할 돈 추가"
               variant="soft"
               disabled={v.protectedItems.length >= 30 || open !== null}
               onPress={() => {
@@ -397,8 +411,8 @@ function Done() {
   const { data, error, loading, retry } = useResource<Today>("/budget/today");
   return (
     <OnboardingFrame
-      step={7}
-      total={7}
+      step={8}
+      total={8}
       title="오늘의 예산을 준비했어요"
       subtitle="입력한 잔액·기록 기준 추정"
       backFallback="/"

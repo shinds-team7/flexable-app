@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
@@ -13,6 +13,8 @@ import {
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors, floating, pressTransition } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
+import { SeedMoneyCard } from "./SeedMoneyCard";
+import { scheduleSeedReminder } from "./seedReminder";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
 import type { Today } from "./types";
 export function HomeScreen() {
@@ -21,6 +23,11 @@ export function HomeScreen() {
   const [style] = useHomeStyle();
   const s = result.data;
   const status = s && statusOf(s);
+  const nextPayday = s?.nextPayday;
+  useEffect(() => {
+    // 알림 예약이 실패해도 반영 창은 홈에서 뜨므로 조용히 넘긴다.
+    if (nextPayday) scheduleSeedReminder(nextPayday).catch(() => {});
+  }, [nextPayday]);
   const hero = s && (
     <TodayHeroView
       today={new Date(s.date + "T12:00:00")}
@@ -57,7 +64,9 @@ export function HomeScreen() {
                   {s.remaining < 0 ? "다음 수입일까지" : "오늘 예산보다"}{" "}
                   {money(s.shortage)}원이 부족해요
                 </T>
-                <T size={13}>예산 설정에서 잔액과 남겨둘 돈을 확인해 보세요</T>
+                <T size={13}>
+                  예산 설정에서 잔액과 매달 저축할 돈을 확인해 보세요
+                </T>
               </Card>
             )}
             <Card style={{ gap: 14 }}>
@@ -78,6 +87,7 @@ export function HomeScreen() {
                 {money(Math.max(0, s.remaining))}원
               </T>
             </Card>
+            <SeedMoneyCard onChanged={result.retry} />
             <Card style={{ gap: 10 }}>
               <T weight="700">요일별 생활비 예산 · 기본 배분</T>
               <T size={13} color={colors.textMuted}>
@@ -118,7 +128,7 @@ export function HomeScreen() {
                   ["추정 잔액", s.estimatedBalance],
                   ["남겨둘 고정지출", s.reservedFixed],
                   ["카드 미결제액", s.cardUnpaid],
-                  ["보호 금액", s.protectedTotal],
+                  ["매달 저축할 돈", s.protectedTotal],
                   ["오늘 쓴 돈", s.todaySpent],
                 ].map(([label, n]) => (
                   <View
