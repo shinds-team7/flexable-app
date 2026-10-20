@@ -450,24 +450,26 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
   await expect(
     page.getByText("이번 달 모은 돈을 시드머니에 반영할까요?", { exact: true }),
   ).toBeVisible();
+  // The modal opens with the monthly goal picked; amounts come from the server as-is.
   await expect(
-    page.getByRole("button", {
-      name: "매달 저축할 돈 300,000원",
-      exact: true,
-    }),
-  ).toBeVisible();
+    page.getByRole("radio", { name: "매달 저축할 돈 300,000원", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   await expect(
-    page.getByRole("button", {
+    page.getByRole("radio", {
       name: "실제로 모은 돈 전부 950,000원",
       exact: true,
     }),
   ).toBeVisible();
   await page.screenshot({ path: "test-results/service-seed-prompt.png" });
-  await page.getByRole("button", { name: "직접 입력", exact: true }).click();
+  // "Later" closes it for now; a reload brings it back while the cycle is still pending.
+  await page.getByRole("button", { name: "나중에", exact: true }).click();
+  await expect(
+    page.getByText("이번 달 모은 돈을 시드머니에 반영할까요?", { exact: true }),
+  ).toBeHidden();
+  await page.reload();
+  await page.getByRole("radio", { name: "직접 입력", exact: true }).click();
   await page.getByLabel("반영할 금액 (원)", { exact: true }).fill("120000");
-  await page
-    .getByRole("button", { name: "이 금액으로 반영", exact: true })
-    .click();
+  await page.getByRole("button", { name: "반영하기", exact: true }).click();
   await expect(page.getByText("620,000원", { exact: true })).toBeVisible();
   await expect(
     page.getByText("이번 달 모은 돈을 시드머니에 반영할까요?", { exact: true }),

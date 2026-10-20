@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import { useSession } from "./Session";
 
 // 수입일 전날 시드머니 반영 알림. 기기 안에서만 예약하고 서버로 보내는 정보는 없다.
 const ID = "seed-money";
@@ -48,9 +49,13 @@ export async function cancelSeedReminder() {
 }
 // 같은 알림 응답으로 화면이 다시 열릴 때 홈으로 또 보내지 않도록 처리한 응답을 기억한다.
 const handled = new Set<string>();
-/** 알림을 누르면 홈으로 간다. 홈에서 반영 창이 뜬다. */
+/**
+ * 알림을 누르면 홈으로 간다. 홈에서 반영 창이 뜬다.
+ * 앱이 이미 홈에 떠 있었으면 이동만으로는 다시 읽지 않아 반영 창이 안 뜨므로, 화면 데이터를 다시 읽게 한다.
+ */
 export function useSeedReminderTap() {
   const response = Notifications.useLastNotificationResponse();
+  const { invalidate } = useSession();
   useEffect(() => {
     const request = response?.notification.request;
     if (request?.identifier !== ID) return;
@@ -58,5 +63,6 @@ export function useSeedReminderTap() {
     if (handled.has(key)) return;
     handled.add(key);
     router.navigate("/home");
-  }, [response]);
+    invalidate();
+  }, [response, invalidate]);
 }
