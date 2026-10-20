@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.server.resource.InvalidBearerTokenExc
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +32,18 @@ public class SecurityConfig {
 
 	private static final String UNAUTHORIZED_BODY = "{\"code\":\"UNAUTHORIZED\",\"message\":\""
 			+ ErrorCode.UNAUTHORIZED.message() + "\"}";
+
+	/** 웹 서버 전용 서버 간 API. 사용자 JWT가 아니라 서비스 키로만 연다. */
+	@Bean
+	@Order(1)
+	SecurityFilterChain internalFilterChain(HttpSecurity http, WebLinkProperties webLink) throws Exception {
+		http.securityMatcher("/internal/**")
+			.csrf(csrf -> csrf.disable())
+			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.addFilterBefore(new ServiceKeyFilter(webLink.usableKeys()), AuthorizationFilter.class)
+			.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+		return http.build();
+	}
 
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http, TokenService tokens, UserRepository users) throws Exception {

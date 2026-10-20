@@ -16,6 +16,8 @@ app:
     ttl-days: 30
   cors-origins: http://localhost:8081
   zone: Asia/Seoul
+  web-link:
+    service-keys: old-test-service-key-0123456789abcdef,test-service-key-0123456789abcdef0123
   oauth:
     callback-base-url: http://localhost:8080
     allowed-redirect-uris: flexable://oauth/callback,http://localhost:8081/oauth/callback,https://example.com/callback?source=app
