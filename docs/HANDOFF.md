@@ -20,14 +20,14 @@
 시드머니(10-20 사용자 결정, Flyway V7, 앱 1.3.0) — 코드만, 운영 반영 전:
 
 - 결정: 가입 때 **모아둔 돈**(`seedBase`)과 **매달 저축할 돈**(기존 '보호 금액' `protectedItems`를 이름만 바꿈)을 받는다. 수입일 전날 기기 알림 → 반영 창(매달 저축할 돈 / 실제로 모은 돈 전부 / 직접 입력). 옮긴 돈은 생활비 잔액에서 빠진다. 응답하지 않으면 다음 수입일 전날까지 기다린다. 이 값(확정 시드머니)을 웹 연동으로 보낸다
-- [ ] 순서: ① 백엔드 배포(V6·V7) → ② 앱 1.3.0 새 빌드(`expo-notifications` 네이티브 모듈, `app.json` 1.3.0) → Play 업로드. 이 PR을 머지하면 `main`은 runtime 1.3.0이라, 1.2.0 앱용 원격 업데이트를 `main`에서 더 낼 수 없다(필요하면 머지 전에 게시)
+- [ ] 순서: ① 백엔드 배포(V6·V7) **10-20 완료** → ② 앱 1.3.0 새 빌드(`expo-notifications` 네이티브 모듈, `app.json` 1.3.0) → Play 업로드. #83 머지(10-20)로 `main`은 runtime 1.3.0이라, 1.2.0 앱용 원격 업데이트는 #83 이전 커밋(`eae263a`)에서만 낼 수 있다. 10-20 preview 빌드(1.3.0)를 EAS에서 시작했다 — 실기기 확인 → production AAB → Play 업로드가 남았다
 - [ ] 1.2.0 앱(서버만 새로)은 그대로 동작한다: 예산 설정 저장 때 `seedBase`를 보내지 않아 저장값이 유지되고, 반영 창·알림은 1.3.0부터
 - [ ] 실기기 확인(1.3.0): 홈 첫 진입 때 알림 권한 요청, 수입일 전날 20시 알림 → 누르면 홈 → 반영 창, '나중에' 후 앱 재실행 시 다시 뜸, 반영 후 오늘 쓸 수 있는 돈 변화, 로그아웃 후 알림 취소
 - [x] 개인정보처리방침·이용약관: 수집 항목 문구를 '보호 금액' → '매달 저축할 돈, 모아둔 돈, 시드머니 반영 기록'으로 바꾸고 **시행일 2026-10-27**(머지일 10-20 + 7일, 사용자 결정)로 했다. 방침 첫머리 '개정 안내'와 11장·약관 부칙에 변경 내용을 적어 7일 전 고지를 대신한다. Play Console 데이터 보안 양식은 범주(기타 금융 정보)가 같아 바꾸지 않는다(제출 전 확인만)
 
 웹사이트 연동 API(`weblink`, Flyway V6) — 코드만 머지, 운영 반영 전:
 
-- [ ] 서버 `.env`에 `WEB_LINK_SERVICE_KEYS` 추가 → 백엔드 배포(`deploy.sh`, V6 적용). 키는 웹 서버 쪽에도 같은 값을 넣는다. 비워 두고 배포해도 기존 앱 기능은 그대로고 internal API만 401이다
+- [x] 서버 `.env`에 `WEB_LINK_SERVICE_KEYS` 추가 → 백엔드 배포(`deploy.sh`, V6·V7 적용) — 10-20 사용자 실행. 확인: `/actuator/health` UP, 키 없는 `POST /internal/v1/web-links` 401. 키 값은 서버 `.env`와 팀 비공개 공간에만 있다. 웹 서버가 앱 연동을 구현하면 같은 값을 그쪽 환경변수에 넣는다
 - [ ] 앱 설정 화면 [웹 연동 코드 받기]·연동 목록(프론트, 원격 업데이트로 반영 가능)
 - [ ] 사람 결정: 웹 연동으로 앱 이메일(·이후 유동자산 집계)을 웹 서비스에 넘기는 내용을 개인정보처리방침에 넣을지와 시행일. 앱 화면에 연동 메뉴를 열기 전에 정한다
 - 알려진 한계: 코드 실패 제한은 API 프로세스 메모리에 있다(API 서버 1대 운영 전제, 재시작하면 초기화)
@@ -219,7 +219,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 ```
 
 - 코드 변경 배포: 로컬에서 `backend/deploy/deploy.sh` (jar 빌드 → 업로드 → 재기동)
-- **EC2 루트 디스크가 6.7GB뿐이다.** Docker 빌드 캐시가 쌓이면 배포 빌드가 `apt-get update`(exit 100)에서 실패하는데 실제 원인은 디스크 부족이다(10-15 발생, 이슈 #31). `deploy.sh`가 배포마다 빌드 캐시·이전 이미지를 지우고 마지막에 `df` 결과를 보여 준다. 사용량이 90%를 넘으면 `docker system df`로 확인하고, 계속 부족하면 EBS 볼륨을 늘린다
+- **EC2 루트 디스크는 15GB다(10-20 확인, 사용 40%). 예전 6.7GB 때 문제였다.** Docker 빌드 캐시가 쌓이면 배포 빌드가 `apt-get update`(exit 100)에서 실패하는데 실제 원인은 디스크 부족이다(10-15 발생, 이슈 #31). `deploy.sh`가 배포마다 빌드 캐시·이전 이미지를 지우고 마지막에 `df` 결과를 보여 준다. 사용량이 90%를 넘으면 `docker system df`로 확인하고, 계속 부족하면 EBS 볼륨을 늘린다
 - **10-16 배포 전 디스크 96%(남은 271MB)였다.** 헬스 체크 기준(300MB 미만이면 DOWN)보다 적어 배포하면 바로 DOWN이 될 상태였다. 큰 항목은 swap 2GB(유지), Docker 이미지 0.7GB, Docker 빌드 캐시 0.65GB(`deploy.sh`가 지움), apt 패키지 캐시 0.4GB. `sudo apt-get clean`으로 apt 캐시를 지워(설치된 프로그램과 무관) 683MB를 만든 뒤 배포했고, 배포 뒤 84%(남은 1.2GB). apt 캐시는 자동 업데이트로 다시 쌓일 수 있다 → 감시 이슈에 `DOWN: diskSpace`가 뜨면 `sudo apt-get clean`부터 하고, 근본적으로는 EBS를 늘린다(§6)
 - 구성: `backend/deploy/` (Docker Compose: api + Caddy 자동 HTTPS), 절차는 `backend/README.md`
 - **외부 감시**(`.github/workflows/server-health.yml`, 10-16 추가): 15분마다 아래를 확인한다. 예약 실행은 `main`의 파일로만 돌고, GitHub 사정으로 몇 분씩 늦거나 한 번씩 빠질 수 있다. 일시적인 오류(연결 실패, 응답 중단, 502·503)는 10초 간격으로 3번 더 시도한 뒤 판단한다.
@@ -240,7 +240,7 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 ## 6. 미뤄 둔 일
 
 - [ ] 도메인 구매 → 서버 `.env`의 `API_DOMAIN`, `frontend/.env.production`, EAS 환경변수 `EXPO_PUBLIC_API_URL`(preview·production) 변경 → 앱 재빌드 또는 원격 업데이트
-- [ ] EBS 루트 볼륨 확장(지금 6.7GB, 10-16 배포 전 96%까지 참): AWS 콘솔 → EC2 → 볼륨 → 크기 수정(예: 16GB) 뒤 서버에서 `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1`(10-16 확인: 루트 파티션 p1이 디스크 맨 끝이라 늘릴 수 있다). 재부팅 없이 된다
+- [x] EBS 루트 볼륨 확장(10-20 기준 15GB 확인. 당시 6.7GB, 10-16 배포 전 96%까지 참): AWS 콘솔 → EC2 → 볼륨 → 크기 수정(예: 16GB) 뒤 서버에서 `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1`(10-16 확인: 루트 파티션 p1이 디스크 맨 끝이라 늘릴 수 있다). 재부팅 없이 된다
 - [ ] EC2 탄력적 IP 할당(지금은 자동 할당 IP라 인스턴스를 멈추면 바뀜 → DuckDNS 갱신 필요)
 - [x] 문의 이메일을 팀 계정으로 교체(10-16): `ucmnuniverse@gmail.com`. 앱은 원격 업데이트, 웹은 머지 후 Vercel 배포로 반영. Play Console 스토어 설명의 "문의:" 줄은 사람이 직접 바꾼다
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
