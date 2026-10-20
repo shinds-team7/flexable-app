@@ -29,6 +29,7 @@ public class LoginAttemptLimiter {
 
 	private final Map<String, Deque<Instant>> failures = new ConcurrentHashMap<>();
 	private final AtomicReference<Instant> lastSweep;
+	private Instant capacityRetryAt;
 	private final Clock clock;
 
 	public LoginAttemptLimiter(Clock clock) {
@@ -36,8 +37,9 @@ public class LoginAttemptLimiter {
 		this.lastSweep = new AtomicReference<>(clock.instant());
 	}
 
-	public void check(String email) {
+	public synchronized void check(String email) {
 		Instant now = clock.instant();
+		sweepIfDue(now);
 		Instant[] blockedSince = new Instant[1];
 		failures.computeIfPresent(email, (k, q) -> {
 			prune(q, now);
@@ -46,6 +48,7 @@ public class LoginAttemptLimiter {
 			}
 			return q.isEmpty() ? null : q;
 		});
+		ensureCapacity(email, now);
 		if (blockedSince[0] != null) {
 			long retryAfter = Math.max(1, Duration.between(now, blockedSince[0].plus(WINDOW)).toSeconds());
 			throw new ApiException(ErrorCode.TOO_MANY_ATTEMPTS, ErrorCode.TOO_MANY_ATTEMPTS.message(),
@@ -56,11 +59,8 @@ public class LoginAttemptLimiter {
 	public synchronized void recordFailure(String email) {
 		Instant now = clock.instant();
 		sweepIfDue(now);
+		ensureCapacity(email, now);
 		failures.compute(email, (k, q) -> {
-			if (q == null && failures.size() >= MAX_EMAILS) {
-				throw new ApiException(ErrorCode.TOO_MANY_ATTEMPTS, ErrorCode.TOO_MANY_ATTEMPTS.message(),
-						Map.of("retryAfterSeconds", WINDOW.toSeconds()));
-			}
 			Deque<Instant> d = q == null ? new ArrayDeque<>() : q;
 			prune(d, now);
 			// 이미 check를 통과한 동시 요청도 이메일당 기록 상한을 넘기지 않는다.
@@ -79,17 +79,39 @@ public class LoginAttemptLimiter {
 		return failures.size();
 	}
 
+	// check와 recordFailure의 잠금 안에서만 호출한다. 새 이메일은 비밀번호 확인 전에도 차단한다.
+	private void ensureCapacity(String email, Instant now) {
+		if (failures.containsKey(email) || failures.size() < MAX_EMAILS) {
+			return;
+		}
+		// 상한에서는 정리 주기와 무관하게 만료 기록을 회수한다. 다음 만료 전 반복 전체 순회는 피한다.
+		if (capacityRetryAt == null || !capacityRetryAt.isAfter(now)) {
+			sweep(now);
+		}
+		if (failures.size() >= MAX_EMAILS) {
+			long retryAfter = Math.max(1, Duration.between(now, capacityRetryAt).toSeconds());
+			throw new ApiException(ErrorCode.TOO_MANY_ATTEMPTS, ErrorCode.TOO_MANY_ATTEMPTS.message(),
+					Map.of("retryAfterSeconds", retryAfter));
+		}
+	}
+
 	private void sweepIfDue(Instant now) {
 		Instant last = lastSweep.get();
 		if (last.plus(WINDOW).isAfter(now) || !lastSweep.compareAndSet(last, now)) {
 			return;
 		}
+		sweep(now);
+	}
+
+	private void sweep(Instant now) {
 		for (String email : failures.keySet()) {
 			failures.computeIfPresent(email, (k, q) -> {
 				prune(q, now);
 				return q.isEmpty() ? null : q;
 			});
 		}
+		capacityRetryAt = failures.values().stream().map(Deque::peekFirst)
+			.min(Instant::compareTo).map(first -> first.plus(WINDOW)).orElse(null);
 	}
 
 	private static void prune(Deque<Instant> q, Instant now) {

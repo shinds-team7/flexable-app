@@ -124,8 +124,12 @@ class LoginAttemptLimiterTest {
 			});
 		assertThat(limiter.size()).isEqualTo(10_000);
 		assertThatThrownBy(() -> limiter.check("full-0@example.invalid")).isInstanceOf(ApiException.class);
-		// A full store must still allow credential checks and successful-login resets.
-		limiter.check("valid@example.invalid");
+		// An untracked email is rejected before credentials can be checked.
+		assertThatThrownBy(() -> limiter.check("valid@example.invalid"))
+			.isInstanceOfSatisfying(ApiException.class, ex -> {
+				assertThat(ex.code()).isEqualTo(ErrorCode.TOO_MANY_ATTEMPTS);
+				assertThat(ex.extra().get("retryAfterSeconds")).isEqualTo(600L);
+			});
 		limiter.reset("full-1@example.invalid");
 		limiter.recordFailure("new@example.invalid");
 		assertThat(limiter.size()).isEqualTo(10_000);
@@ -139,6 +143,41 @@ class LoginAttemptLimiterTest {
 		clock.advance(LoginAttemptLimiter.WINDOW);
 		limiter.recordFailure("fresh@example.invalid");
 		assertThat(limiter.size()).isEqualTo(1);
+	}
+
+	@Test
+	void fullStoreReclaimsExpiredKeysBeforePeriodicSweep() {
+		clock.advance(java.time.Duration.ofMinutes(9));
+		for (int i = 0; i < 10_000; i++) {
+			limiter.recordFailure("staggered-" + i + "@example.invalid");
+		}
+		clock.advance(java.time.Duration.ofMinutes(1));
+		limiter.recordFailure("staggered-0@example.invalid");
+		clock.advance(java.time.Duration.ofMinutes(9));
+		// The periodic sweep is not due until minute 20; these keys expired at minute 19.
+		limiter.check("fresh@example.invalid");
+		assertThat(limiter.size()).isEqualTo(1);
+		limiter.recordFailure("fresh@example.invalid");
+		assertThat(limiter.size()).isEqualTo(2);
+	}
+
+	@Test
+	void capacityRetryTracksEarliestExpiry() {
+		limiter.recordFailure("earliest@example.invalid");
+		clock.advance(java.time.Duration.ofMinutes(1));
+		for (int i = 1; i < 10_000; i++) {
+			limiter.recordFailure("later-" + i + "@example.invalid");
+		}
+		assertThatThrownBy(() -> limiter.check("new@example.invalid"))
+			.isInstanceOfSatisfying(ApiException.class, ex ->
+				assertThat(ex.extra().get("retryAfterSeconds")).isEqualTo(540L));
+		clock.advance(java.time.Duration.ofMinutes(9));
+		limiter.check("new@example.invalid");
+		limiter.recordFailure("new@example.invalid");
+		assertThat(limiter.size()).isEqualTo(10_000);
+		assertThatThrownBy(() -> limiter.check("overflow@example.invalid"))
+			.isInstanceOfSatisfying(ApiException.class, ex ->
+				assertThat(ex.extra().get("retryAfterSeconds")).isEqualTo(60L));
 	}
 
 	@Test

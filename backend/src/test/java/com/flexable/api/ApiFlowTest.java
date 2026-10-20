@@ -106,11 +106,14 @@ class ApiFlowTest {
 	}
 
 	@Test
-	void fullFailureStoreReturns429ButAllowsValidLogin() throws Exception {
+	void fullFailureStoreBlocksUntrackedCredentialsUntilCapacityIsReleased() throws Exception {
 		String prefix = "capacity-" + UUID.randomUUID();
 		String validEmail = prefix + "@example.com";
+		String trackedEmail = prefix + "-tracked@example.com";
 		signup(validEmail);
+		signup(trackedEmail);
 		try {
+			loginLimiter.recordFailure(trackedEmail);
 			for (int i = 0; i < 10_000; i++) {
 				try {
 					loginLimiter.recordFailure(prefix + "-" + i + "@example.invalid");
@@ -120,11 +123,21 @@ class ApiFlowTest {
 					break;
 				}
 			}
+			for (int i = 0; i < 6; i++) {
+				mvc.perform(json(post("/api/v1/auth/login"), null,
+						"{\"email\":\"" + validEmail + "\",\"password\":\"wrong1234\"}"))
+					.andExpect(status().isTooManyRequests())
+					.andExpect(jsonPath("$.code", is("TOO_MANY_ATTEMPTS")))
+					.andExpect(jsonPath("$.retryAfterSeconds").isNumber());
+			}
 			mvc.perform(json(post("/api/v1/auth/login"), null,
-					"{\"email\":\"" + validEmail + "\",\"password\":\"wrong1234\"}"))
+					"{\"email\":\"" + validEmail + "\",\"password\":\"abcd1234\"}"))
 				.andExpect(status().isTooManyRequests())
-				.andExpect(jsonPath("$.code", is("TOO_MANY_ATTEMPTS")))
-				.andExpect(jsonPath("$.retryAfterSeconds", is(600)));
+				.andExpect(jsonPath("$.code", is("TOO_MANY_ATTEMPTS")));
+			// A tracked, unblocked account can still log in and release its slot.
+			mvc.perform(json(post("/api/v1/auth/login"), null,
+					"{\"email\":\"" + trackedEmail + "\",\"password\":\"abcd1234\"}"))
+				.andExpect(status().isOk());
 			mvc.perform(json(post("/api/v1/auth/login"), null,
 					"{\"email\":\"" + validEmail + "\",\"password\":\"abcd1234\"}"))
 				.andExpect(status().isOk())
@@ -135,6 +148,7 @@ class ApiFlowTest {
 				loginLimiter.reset(prefix + "-" + i + "@example.invalid");
 			}
 			loginLimiter.reset(validEmail);
+			loginLimiter.reset(trackedEmail);
 		}
 	}
 
