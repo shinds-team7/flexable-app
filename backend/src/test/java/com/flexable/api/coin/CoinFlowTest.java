@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.jayway.jsonpath.JsonPath;
+import com.flexable.api.outfit.OutfitRepository;
 
 /** 코인·코스튬·추천 코드. 규칙은 docs/coin-plan.md §1. 적립·보너스가 날짜와 시각에 달려 있어 시계를 고정한다. */
 @SpringBootTest
@@ -86,6 +87,9 @@ class CoinFlowTest {
 
 	@Autowired
 	MutableClock clock;
+
+	@Autowired
+	OutfitRepository outfits;
 
 	private static final String SETTINGS = "{\"balance\":1000000,\"payday\":26,\"incomeAmount\":2000000,"
 			+ "\"cardUnpaid\":50000,\"fixedExpenses\":[],\"protectedItems\":[]}";
@@ -340,6 +344,23 @@ class CoinFlowTest {
 		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("COINS_NOT_ENOUGH"));
+	}
+
+	@Test
+	void salaryCatIsActiveAndCosts200Coins() throws Exception {
+		assertThat(outfits.findById("outfit-02").orElseThrow().isActive()).isTrue();
+		String token = signup();
+		checkIn(token);
+		mvc.perform(auth(get("/api/v1/outfits"), token, null))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].name").value("직장냥이"))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].price").value(200));
+		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.balance").value(0))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(true));
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-02"));
 	}
 
 	@Test

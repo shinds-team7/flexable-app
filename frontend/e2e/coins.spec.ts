@@ -117,11 +117,33 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   ).toBeDisabled();
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
+  const salary = page.getByRole("button", { name: "직장냥이", exact: true });
+  await expect(salary).toHaveText("200코인");
+  await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
+  await salary.click();
+  await expect(
+    page.getByLabel("직장냥이 미리보기", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("직장냥이", { exact: true })).toHaveCount(0);
+  // A real salary-cat video loads and plays, rather than the default fallback poster.
+  await expect
+    .poll(() =>
+      page
+        .getByLabel("직장냥이 미리보기", { exact: true })
+        .locator("video")
+        .evaluate(
+          (v: HTMLVideoElement) =>
+            v.readyState >= 2 && v.videoWidth === 1280 && v.currentTime > 0,
+        ),
+    )
+    .toBe(true);
   await page
     .getByRole("button", { name: "200코인으로 구매", exact: true })
     .click();
   await expect(page.getByText("구매했어요", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("잭팟 코스튬", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("직장냥이 코스튬", { exact: true }),
+  ).toBeVisible();
   // Buying does not apply it yet.
   expect((await api(page, "GET", "/coins")).equippedOutfitId).toBeNull();
   // The screen's own button now also reads 적용하기; the modal's is the last one.
@@ -135,13 +157,16 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await balance(page, 0);
   const wallet = await api(page, "GET", "/coins");
   expect(wallet.balance).toBe(0);
-  expect(wallet.equippedOutfitId).toBe("outfit-01");
+  expect(wallet.equippedOutfitId).toBe("outfit-02");
   await page.getByRole("button", { name: "꾸미기", exact: true }).click();
-  await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("직장냥이 미리보기", { exact: true }),
+  ).toBeVisible();
+  await expect(salary).toHaveText("200코인");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "상품 02", exact: true }).click();
+  await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
   ).toBeDisabled();

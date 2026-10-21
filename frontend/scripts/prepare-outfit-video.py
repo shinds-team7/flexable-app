@@ -9,6 +9,7 @@ H.264 · 소리 없음 · 1280x720 · 가장자리를 무대 색 #EEF2FA로 서�
 결과: assets/outfits/<id>.mp4, assets/outfits/<id>.jpg
 ffmpeg가 PATH에 없으면 `pip install imageio-ffmpeg`로 받은 것을 쓴다.
 """
+import argparse
 import os
 import re
 import shutil
@@ -35,10 +36,15 @@ def ffmpeg():
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    if len(sys.argv) not in (3, 4):
-        sys.exit(__doc__)
-    src, outfit_id = os.path.expanduser(sys.argv[1]), sys.argv[2]
-    thumbnail = os.path.expanduser(sys.argv[3]) if len(sys.argv) == 4 else None
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("source")
+    parser.add_argument("outfit_id")
+    parser.add_argument("thumbnail", nargs="?")
+    parser.add_argument("--clear-top-left", action="store_true",
+                        help="좌상단 배경색 텍스트 영역(240x90px)을 지우고 40px에 걸쳐 경계를 녹임")
+    args = parser.parse_args()
+    src, outfit_id = os.path.expanduser(args.source), args.outfit_id
+    thumbnail = os.path.expanduser(args.thumbnail) if args.thumbnail else None
     if not re.fullmatch(r"(costume-lv[1-5]|outfit-\d{2})", outfit_id):
         sys.exit("코스튬 id는 costume-lv1~5 또는 outfit-01~10 형식이에요")
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -50,11 +56,17 @@ def main():
     ty = f"clip(min(Y,H-1-Y)/{FADE_Y},0,1)"
     sx = f"({tx}*{tx}*(3-2*{tx}))"
     sy = f"({ty}*{ty}*(3-2*{ty}))"
+    alpha = f"1-{sx}*{sy}"
+    if args.clear_top_left:
+        # 캐릭터와 떨어진 좌상단 텍스트만 무대 색으로 덮고, 덮은 영역 경계도 부드럽게 잇는다.
+        lx, ly = "clip((X-240)/40,0,1)", "clip((Y-90)/40,0,1)"
+        label = f"(1-{lx}*{lx}*(3-2*{lx}))*(1-{ly}*{ly}*(3-2*{ly}))"
+        alpha = f"max({alpha},{label})"
     r, g, b = STAGE
     graph = (
         f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps=30,format=rgba[v];"
         f"color=c=0x{r:02X}{g:02X}{b:02X}:s={W}x{H}:r=30,format=rgba,"
-        f"geq=r={r}:g={g}:b={b}:a='255*(1-{sx}*{sy})'[edge];"
+        f"geq=r={r}:g={g}:b={b}:a='255*({alpha})'[edge];"
         "[v][edge]overlay=shortest=1,format=yuv420p"
     )
     ff = ffmpeg()

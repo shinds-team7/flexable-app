@@ -37,7 +37,7 @@ export function PurchaseModal({
             />
           )}
           <T size={14} color={colors.textSub} style={{ textAlign: "center" }}>
-            {outfit?.name} 코스튬을 얻었어요. 적용하면 홈 캐릭터가 바뀌어요
+            코스튬을 얻었어요. 적용하면 홈 캐릭터가 바뀌어요
           </T>
         </View>
       }
