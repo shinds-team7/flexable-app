@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, View } from "react-native";
 import { Button, Card, ConfirmModal, Screen, T } from "@/components/ui";
@@ -9,6 +9,21 @@ import { api, sessionGeneration } from "./api/client";
 import { ErrorNotice, Loading, parseTime, useResource } from "./ui";
 
 type LinkCode = { code: string; expiresAt: string };
+
+// Same items as section 4 of docs/play-store/privacy-policy.md; change both together.
+const CONSENT = [
+  ["받는 곳", "같은 운영자(텅장관리)의 웹사이트(solpa.shinhanacademy.co.kr)"],
+  [
+    "제공 항목",
+    "앱 이메일·로그인 방법, 시드머니 합계·모아둔 돈·매달 저축할 돈·시작일·마지막 갱신 시각, 주기별 반영 기록(주기 종료일·선택 방법·금액·반영 후 합계·반영 시각). 반영 대기 정보와 거래 내역은 제공하지 않아요",
+  ],
+  ["목적", "웹사이트에서 시드머니 표시와 투자·적금 실험"],
+  [
+    "보유 기간",
+    "연동 해제, 앱 탈퇴, 웹사이트 탈퇴 중 하나가 일어나면 웹사이트에서 바로 삭제",
+  ],
+  ["해제 방법", "이 화면의 [연동 해제], 또는 웹사이트의 내 정보 화면"],
+] as const;
 type WebLink = { id: number; createdAt: string };
 
 function linkedAt(value: string) {
@@ -167,12 +182,34 @@ function WebLinksContent({
         </T>
         <T color={colors.textSub} style={{ lineHeight: 22 }}>
           웹사이트에서 로그인한 뒤 [앱 연동하기]에 아래 코드를 입력해 주세요.
-          연동하면 앱 계정의 이메일·로그인 방법과 확정된 시드머니를 웹사이트에서
-          불러올 수 있어요
+          코드를 입력하면 아래 정보를 웹사이트에 제공해요
         </T>
+        <View
+          style={{
+            gap: 6,
+            padding: 14,
+            backgroundColor: colors.bg,
+            borderRadius: 12,
+          }}
+        >
+          {CONSENT.map(([label, text]) => (
+            <T key={label} size={13} style={{ lineHeight: 20 }}>
+              <T size={13} weight="700">
+                {label}
+              </T>
+              {"  "}
+              {text}
+            </T>
+          ))}
+        </View>
+        <Button
+          label="개인정보처리방침 보기"
+          variant="ghost"
+          onPress={() => router.push("/privacy")}
+        />
         <T size={13} color={colors.textMuted}>
           코드는 10분 동안 한 번만 사용할 수 있어요. 본인이 로그인한
-          웹사이트에만 입력해 주세요
+          웹사이트에만 입력해 주세요. 동의하지 않아도 앱은 그대로 쓸 수 있어요
         </T>
         {code && remaining > 0 && (
           <View
@@ -205,7 +242,11 @@ function WebLinksContent({
         )}
         <Button
           label={
-            busy ? "처리 중이에요" : code ? "새 코드 받기" : "웹 연동 코드 받기"
+            busy
+              ? "처리 중이에요"
+              : code
+                ? "동의하고 새 코드 받기"
+                : "동의하고 코드 받기"
           }
           disabled={busy}
           onPress={onIssue}

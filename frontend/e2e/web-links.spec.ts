@@ -52,18 +52,27 @@ test("settings entry, one-time code renewal, expiry and leaving the screen", asy
   await expect(
     page.getByText("연동된 웹사이트가 없어요", { exact: true }),
   ).toBeVisible();
+  // The provision notice is shown and nothing is issued until the user agrees.
+  await expect(
+    page.getByText(/^목적\s+웹사이트에서 시드머니 표시와 투자·적금 실험$/),
+  ).toBeVisible();
+  expect(issued).toBe(0);
   await page
-    .getByRole("button", { name: "웹 연동 코드 받기", exact: true })
+    .getByRole("button", { name: "동의하고 코드 받기", exact: true })
     .click();
   await expect(page.getByText("K7M2-Q9XB", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "새 코드 받기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "동의하고 새 코드 받기", exact: true })
+    .click();
   await page.getByRole("button", { name: "취소", exact: true }).click();
   await expect(
     page.getByText("새 코드를 받을까요?", { exact: true }),
   ).toHaveCount(0);
   expect(issued).toBe(1);
   await expect(page.getByText("K7M2-Q9XB", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "새 코드 받기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "동의하고 새 코드 받기", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "새 코드 받기", exact: true })
     .last()
@@ -71,14 +80,16 @@ test("settings entry, one-time code renewal, expiry and leaving the screen", asy
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.getByText("K7M2-Q9XB", { exact: true })).toHaveCount(0);
   await page
-    .getByRole("button", { name: "웹 연동 코드 받기", exact: true })
+    .getByRole("button", { name: "동의하고 코드 받기", exact: true })
     .click();
   await expect(page.getByText("A2B3-C4D5", { exact: true })).toBeVisible();
   await expect(
     page.getByText("코드가 만료됐어요. 새 코드를 받아 주세요", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("A2B3-C4D5", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "새 코드 받기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "동의하고 새 코드 받기", exact: true })
+    .click();
   await expect(page.getByText("A2B3-C4D5", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await page

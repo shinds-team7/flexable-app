@@ -551,7 +551,7 @@ test("expired token returns to start; public routes remain accessible", async ({
   expect(await token(page)).toBeNull();
   await page.goto("/privacy");
   await expect(
-    page.getByText("- 시행일: 2026년 10월 27일", { exact: true }),
+    page.getByText("- 시행일: 2026년 10월 28일(그 전에 웹사이트 연동에 동의한 이용자에게는 동의한 때부터)", { exact: true }),
   ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.1.0", { exact: true })).toBeVisible();
