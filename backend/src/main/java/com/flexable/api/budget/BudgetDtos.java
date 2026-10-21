@@ -67,7 +67,12 @@ public final class BudgetDtos {
 
 	/** 웹 연동으로 넘기는 시드머니. 반영 대기 정보는 넣지 않는다. */
 	public record WebSeedMoney(long total, long base, long monthlyGoal, SeedMoneyEntryItem lastEntry,
-			OffsetDateTime updatedAt) {
+			OffsetDateTime updatedAt, LocalDate startedOn, List<WebSeedMoneyEntry> entries) {
+	}
+
+	/** 조회 시점의 base를 기준으로 주기순 누적한 확정 기록. */
+	public record WebSeedMoneyEntry(LocalDate cycleEnd, SeedMoneyEntry.Choice choice, long amount,
+			long totalAfter, OffsetDateTime createdAt) {
 	}
 
 	public record TodayResponse(LocalDate date, LocalDate nextPayday, int daysLeft, long estimatedBalance,

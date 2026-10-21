@@ -363,7 +363,40 @@ POST 본문:
 - `DELETE /internal/v1/web-links/{linkId}` → 204
 - 연동이 없으면(해제·앱 탈퇴) 위 둘은 404 `LINK_NOT_FOUND` → 웹은 연동을 끊고 저장한 앱 정보를 지운다
 - `AppProfile` = `{ "email": string|null, "provider": "email"|"kakao"|"google" }`. 앱에는 닉네임이 없다. 소셜 계정은 `email`이 null일 수 있다
-- `GET /internal/v1/web-links/{linkId}/seed-money` → 200 `{ "total": 1450000, "base": 500000, "monthlyGoal": 300000, "lastEntry": { "cycleEnd", "choice", "amount", "createdAt" } | null, "updatedAt": "..." }`. 확정된 값만 준다(반영 대기·주기별 기록·거래는 주지 않음). `updatedAt`은 마지막 반영 또는 예산 설정 저장 시각 중 늦은 것. 앱에서 예산 설정을 아직 안 했으면 404 `BUDGET_NOT_SET`(연동 해제 `LINK_NOT_FOUND`와 코드로 구분)
+- `GET /internal/v1/web-links/{linkId}/seed-money` → 200. 기존 `total`, `base`, `monthlyGoal`, `lastEntry`, `updatedAt`을 유지하며 `startedOn`, `entries`를 추가한다. 앱에서 예산 설정을 아직 안 했으면 404 `BUDGET_NOT_SET`, 없는·해제된 연동은 404 `LINK_NOT_FOUND`, 서비스 키 없음·오류는 401 `UNAUTHORIZED`로 기존과 같다.
+
+```json
+{
+  "total": 1450000,
+  "base": 500000,
+  "monthlyGoal": 300000,
+  "lastEntry": {
+    "cycleEnd": "2026-09-25",
+    "choice": "ALL",
+    "amount": 950000,
+    "createdAt": "2026-09-26T20:10:00+09:00"
+  },
+  "updatedAt": "2026-09-26T20:10:00+09:00",
+  "startedOn": "2026-08-26",
+  "entries": [
+    {
+      "cycleEnd": "2026-09-25",
+      "choice": "ALL",
+      "amount": 950000,
+      "totalAfter": 1450000,
+      "createdAt": "2026-09-26T20:10:00+09:00"
+    }
+  ]
+}
+```
+
+- `entries`는 `POST /budget/seed-money/entries`로 저장된 **확정 기록 전부**, `cycleEnd` 오름차순이다. 앱 사용자 API(`GET /budget/seed-money`)의 최근 12건·최신순과 다르다. `choice`는 `GOAL` / `ALL` / `MANUAL`, `amount`는 저장된 원 단위 정수, `createdAt`은 실제 반영 시각(Asia/Seoul, `+09:00`)이다. `cycleEnd`는 주기 종료일이며 실제 반영일은 그 이후일 수 있다.
+- 사용자가 `MANUAL`로 **0원 반영을 완료한 기록도 포함**한다. 미반영 주기는 만들거나 0원으로 채우지 않는다. 기록이 없으면 `entries: []`, `lastEntry: null`, `total == base`다. 반영 대기(`pending`), 반영 후보 금액(`goalAmount`·`allAmount`), 거래 기록은 제공하지 않는다.
+- `totalAfter`는 **조회 시점의 `base` + 해당 주기까지 확정 금액의 합**이다. `total`은 같은 `base` + 전체 확정 금액의 합이므로 마지막 `totalAfter == total`이다. `base`는 `PUT /budget/settings`의 `seedBase`로 수정할 수 있다. 수정 후에는 모든 `totalAfter`를 현재 `base`로 다시 계산한다(반영 당시 base의 스냅숏이 아님). 저장된 `amount`·`choice`·`cycleEnd`·`createdAt`은 바꾸지 않는다. 웹은 누적 금액을 따로 계산하지 않는다.
+- `startedOn`은 사용자의 **`daily_budgets` 첫 `budget_date`**다. 설정의 `updatedAt`·잔액 기준일은 수정할 수 있고 설정 생성일은 별도로 저장하지 않아 선택하지 않았다. 첫 하루 예산 조회 전에는 `null`이고, 이후 설정·모아둔 돈을 고쳐도 시작일은 유지된다. 웹은 `null`이면 시작점 없이 표시한다. 조회로 하루 예산이나 반영 기록을 생성하지 않는다.
+- `lastEntry`는 마지막 주기의 기존 4개 필드를 그대로 유지한다. `updatedAt`은 기존과 같이 마지막 반영 또는 예산 설정 저장 시각 중 늦은 것이다. 그래프의 시작점은 (`startedOn`, `base`), 이후 점들은 (`cycleEnd`, `totalAfter`)를 쓴다.
+
+배포 후 전달 자료와 개인정보 제공 항목 협의안은 [주기별 반영 기록 인수인계](web-seed-entries-handoff.md).
 
 ## 기타
 

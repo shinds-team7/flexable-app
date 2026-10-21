@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import com.flexable.api.budget.BudgetDtos.SeedMoneyPending;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyResponse;
 import com.flexable.api.budget.BudgetDtos.WebSeedMoney;
+import com.flexable.api.budget.BudgetDtos.WebSeedMoneyEntry;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
@@ -91,13 +93,19 @@ public class SeedMoneyService {
 	@Transactional(readOnly = true)
 	public WebSeedMoney forWeb(long userId) {
 		BudgetSettings s = require(userId);
-		List<SeedMoneyEntry> list = entries.findByUserIdOrderByCycleEndDesc(userId);
-		long saved = list.stream().mapToLong(SeedMoneyEntry::getAmount).sum();
-		SeedMoneyEntryItem last = list.isEmpty() ? null : item(list.get(0));
-		Instant updatedAt = list.isEmpty() || list.get(0).getCreatedAt().isBefore(s.getUpdatedAt()) ? s.getUpdatedAt()
-				: list.get(0).getCreatedAt();
-		return new WebSeedMoney(s.getSeedBase() + saved, s.getSeedBase(), protectedTotal(userId), last,
-				Times.at(updatedAt, zone));
+		List<SeedMoneyEntry> list = entries.findByUserIdOrderByCycleEndAsc(userId);
+		long total = s.getSeedBase();
+		List<WebSeedMoneyEntry> history = new ArrayList<>(list.size());
+		for (SeedMoneyEntry e : list) {
+			total += e.getAmount();
+			history.add(new WebSeedMoneyEntry(e.getCycleEnd(), e.getChoice(), e.getAmount(), total,
+					Times.at(e.getCreatedAt(), zone)));
+		}
+		SeedMoneyEntry last = list.isEmpty() ? null : list.getLast();
+		Instant updatedAt = last == null || last.getCreatedAt().isBefore(s.getUpdatedAt()) ? s.getUpdatedAt()
+				: last.getCreatedAt();
+		return new WebSeedMoney(total, s.getSeedBase(), protectedTotal(userId), last == null ? null : item(last),
+				Times.at(updatedAt, zone), dailyBudgets.findFirstDate(userId), history);
 	}
 
 	private SeedMoneyResponse view(long userId, BudgetSettings s, LocalDate today) {
