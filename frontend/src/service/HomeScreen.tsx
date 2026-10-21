@@ -1,15 +1,16 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
   CharacterStage,
-  coinStage,
   pointsStatus,
   type Level,
   type PaceStatus,
 } from "@/components/CharacterStage";
+import { RewardModal } from "./RewardModal";
+import { ackRewards, checkIn, collectCoins } from "./coinApi";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors, floating, pressTransition } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
@@ -18,12 +19,51 @@ import { DayBudgets } from "@/components/DayBudgets";
 import { useSeedReminderSetting } from "./reminderSetting";
 import { cancelSeedReminder, scheduleSeedReminder } from "./seedReminder";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
-import type { Today } from "./types";
+import type { CoinReward, CoinWallet, Today } from "./types";
 export function HomeScreen() {
   const result = useResource<Today>("/budget/today");
   const [basis, setBasis] = useState(false);
   const [style] = useHomeStyle();
   const [remind] = useSeedReminderSetting();
+  const [wallet, setWallet] = useState<CoinWallet | null>(null);
+  const [rewards, setRewards] = useState<CoinReward[]>([]);
+  const [collecting, setCollecting] = useState(false);
+  const checking = useRef(false);
+  const characterHome = style === "character";
+  // Opening or returning to the home runs check-in; an older server without the endpoint just hides the coin row.
+  const runCheckIn = useCallback(() => {
+    if (!characterHome || checking.current) return;
+    checking.current = true;
+    checkIn()
+      .then((r) => {
+        setWallet(r.wallet);
+        if (r.rewards.length) setRewards((q) => [...q, ...r.rewards.filter((x) => !q.some((y) => y.id === x.id))]);
+      })
+      .catch(() => {})
+      .finally(() => {
+        checking.current = false;
+      });
+  }, [characterHome]);
+  useFocusEffect(runCheckIn);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") runCheckIn();
+    });
+    return () => sub.remove();
+  }, [runCheckIn]);
+  const closeReward = () => {
+    const [first] = rewards;
+    if (!first) return;
+    setRewards((q) => q.slice(1));
+    ackRewards([first.id]).catch(() => {});
+  };
+  const collect = () => {
+    setCollecting(true);
+    collectCoins()
+      .then((r) => setWallet(r.wallet))
+      .catch(() => {})
+      .finally(() => setCollecting(false));
+  };
   const s = result.data;
   const status = s && statusOf(s);
   const nextPayday = s?.nextPayday;
@@ -53,7 +93,19 @@ export function HomeScreen() {
             {style === "character" ? (
               <CharacterStage
                 level={status.level}
-                coins={coinStage(s.todayAvailable, s.dailyBudget)}
+                outfitId={wallet?.equippedOutfitId ?? null}
+                coin={
+                  wallet
+                    ? {
+                        balance: wallet.balance,
+                        collectable: wallet.passive.collectable,
+                        hint: collectHint(wallet),
+                        busy: collecting,
+                        onCollect: collect,
+                        onCustomize: () => router.push("/customize"),
+                      }
+                    : undefined
+                }
                 gauge={status}
                 message={messageOf(s, status.level)}
               >
@@ -134,6 +186,7 @@ export function HomeScreen() {
         {/* Keeps the last card scrollable past the floating record button. */}
         <View style={{ height: FAB_SPACE }} />
       </Screen>
+      <RewardModal reward={rewards[0] ?? null} onClose={closeReward} />
       <View style={styles.fabRow}>
         <Pressable
           accessibilityRole="button"
@@ -222,4 +275,11 @@ function statusOf(s: Today): PaceStatus {
         ? `오늘 예산을 넘어서 내일 -${down}%`
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
+}
+function collectHint(w: CoinWallet): string {
+  const { collectedToday, dailyLimit, nextAt } = w.passive;
+  if (collectedToday >= dailyLimit) return "오늘 코인을 모두 모았어요";
+  if (!nextAt) return "";
+  const at = new Date(nextAt).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit" });
+  return `다음 코인은 ${at}에 쌓여요`;
 }
