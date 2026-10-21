@@ -16,6 +16,10 @@ async function session(page: Page) {
       },
     }),
   );
+  // My page also asks for coins; answer like a server without them so the card stays hidden.
+  await page.route(/\/api\/v1\/(coins|referrals)/, (route) =>
+    route.fulfill({ status: 404, json: { code: "NOT_FOUND" } }),
+  );
 }
 
 test("settings entry, one-time code renewal, expiry and leaving the screen", async ({

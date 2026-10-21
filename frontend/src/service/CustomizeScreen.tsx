@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
@@ -8,7 +7,8 @@ import { SubHeader } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import { equipOutfit, getOutfits, purchaseOutfit } from "./coinApi";
-import { DEFAULT_OUTFIT_ID, hasAnimation, outfitSource } from "./outfits";
+import { DEFAULT_OUTFIT_ID, hasAnimation } from "./outfits";
+import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
 import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
@@ -93,22 +93,17 @@ export function CustomizeScreen() {
         {list && selected && (
           <>
             <Card style={{ alignItems: "center", gap: 12 }}>
-              <View
+              <OutfitView
+                outfitId={selected}
+                accessibilityLabel={`${current?.name ?? "캐릭터"} 미리보기`}
                 style={{
                   width: "100%",
-                  maxWidth: 260,
-                  aspectRatio: 1,
+                  aspectRatio: 16 / 9,
                   borderRadius: radius.soft,
+                  overflow: "hidden",
                   backgroundColor: colors.stage,
                 }}
-              >
-                <Image
-                  source={outfitSource(selected)}
-                  contentFit="contain"
-                  style={{ width: "100%", height: "100%" }}
-                  accessibilityLabel={`${current?.name ?? "캐릭터"} 미리보기`}
-                />
-              </View>
+              />
               <T size={17} weight="700">
                 {current?.name}
               </T>
@@ -244,7 +239,6 @@ function Grid({
             onPress={() => onSelect(o.id)}
             style={{
               width: "31%",
-              flexGrow: 1,
               padding: 10,
               gap: 6,
               alignItems: "center",
@@ -254,13 +248,18 @@ function Grid({
               borderColor: on ? colors.brand : colors.line,
             }}
           >
-            <View style={{ opacity: locked ? 0.4 : 1 }}>
-              <Image
-                source={outfitSource(o.id)}
-                contentFit="contain"
-                style={{ width: 72, height: 72 }}
-              />
-            </View>
+            <OutfitView
+              outfitId={o.id}
+              play={false}
+              style={{
+                width: "100%",
+                aspectRatio: 16 / 9,
+                borderRadius: radius.soft,
+                overflow: "hidden",
+                backgroundColor: colors.stage,
+                opacity: locked ? 0.4 : 1,
+              }}
+            />
             {locked && (
               <Ionicons
                 name="lock-closed"

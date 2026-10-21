@@ -62,7 +62,7 @@ function LoopVideo({
     <View style={style} {...a11y}>
       <VideoView
         player={player}
-        style={StyleSheet.absoluteFill}
+        style={styles.fill}
         contentFit="contain"
         nativeControls={false}
         playsInline
@@ -73,3 +73,8 @@ function LoopVideo({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // 웹 VideoView는 <video>라 top/left/right/bottom만으로는 늘어나지 않고 원본 크기(1280×720)로 그려진다.
+  fill: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
+});

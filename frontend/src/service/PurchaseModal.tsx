@@ -1,8 +1,7 @@
-import { Image } from "expo-image";
 import { View } from "react-native";
 import { ConfirmModal, T } from "@/components/ui";
-import { colors } from "@/theme";
-import { outfitSource } from "./outfits";
+import { colors, radius } from "@/theme";
+import { OutfitView } from "./OutfitView";
 
 /** 구매 완료 안내. [적용하기]를 눌러야 코스튬이 바뀐다 */
 export function PurchaseModal({
@@ -23,11 +22,18 @@ export function PurchaseModal({
       message={
         <View style={{ alignItems: "center", gap: 10 }}>
           {outfit && (
-            <Image
-              source={outfitSource(outfit.id)}
-              contentFit="contain"
-              style={{ width: 140, height: 140 }}
+            <OutfitView
+              outfitId={outfit.id}
+              play={false}
               accessibilityLabel={`${outfit.name} 코스튬`}
+              style={{
+                width: 240,
+                maxWidth: "100%",
+                aspectRatio: 16 / 9,
+                borderRadius: radius.soft,
+                overflow: "hidden",
+                backgroundColor: colors.stage,
+              }}
             />
           )}
           <T size={14} color={colors.textSub} style={{ textAlign: "center" }}>
