@@ -9,9 +9,16 @@ import com.flexable.api.budget.FixedExpenseRepository;
 import com.flexable.api.budget.ProtectedItemRepository;
 import com.flexable.api.budget.SettingsRepository;
 import com.flexable.api.category.CategoryRepository;
+import com.flexable.api.coin.CoinLedgerRepository;
+import com.flexable.api.coin.CoinWalletRepository;
+import com.flexable.api.outfit.UserOutfitRepository;
+import com.flexable.api.referral.ReferralRepository;
 import com.flexable.api.transaction.TransactionRepository;
 
-/** 계정과 모든 사용자 데이터를 즉시 영구 삭제한다. 거래가 카테고리를 참조하므로 거래부터 지운다. */
+/**
+ * 계정과 모든 사용자 데이터를 즉시 영구 삭제한다. 거래가 카테고리를 참조하므로 거래부터 지운다.
+ * 추천 기록은 내가 등록한 것만 지우고, 내가 초대한 사람의 기록은 초대한 사람만 비워 남긴다(다시 등록 못 하게).
+ */
 @Service
 public class AccountDeletionService {
 
@@ -22,12 +29,17 @@ public class AccountDeletionService {
 	private final ProtectedItemRepository protectedItems;
 	private final SettingsRepository settings;
 	private final DailyBudgetRepository dailyBudgets;
+	private final CoinLedgerRepository coinLedger;
+	private final CoinWalletRepository coinWallets;
+	private final UserOutfitRepository userOutfits;
+	private final ReferralRepository referrals;
 	private final UserRepository users;
 
 	public AccountDeletionService(TransactionRepository transactions, CategoryRepository categories,
 			FixedExpenseRepository fixed, FixedExpensePostingRepository fixedPostings,
 			ProtectedItemRepository protectedItems, SettingsRepository settings, DailyBudgetRepository dailyBudgets,
-			UserRepository users) {
+			CoinLedgerRepository coinLedger, CoinWalletRepository coinWallets, UserOutfitRepository userOutfits,
+			ReferralRepository referrals, UserRepository users) {
 		this.transactions = transactions;
 		this.categories = categories;
 		this.fixed = fixed;
@@ -35,6 +47,10 @@ public class AccountDeletionService {
 		this.protectedItems = protectedItems;
 		this.settings = settings;
 		this.dailyBudgets = dailyBudgets;
+		this.coinLedger = coinLedger;
+		this.coinWallets = coinWallets;
+		this.userOutfits = userOutfits;
+		this.referrals = referrals;
 		this.users = users;
 	}
 
@@ -49,6 +65,11 @@ public class AccountDeletionService {
 		protectedItems.deleteByUserId(userId);
 		settings.deleteByUserId(userId);
 		dailyBudgets.deleteByUserId(userId);
+		coinLedger.deleteByUserId(userId);
+		userOutfits.deleteByUserId(userId);
+		coinWallets.deleteByUserId(userId);
+		referrals.deleteByInviteeId(userId);
+		referrals.clearInviter(userId);
 		users.deleteById(userId);
 	}
 }

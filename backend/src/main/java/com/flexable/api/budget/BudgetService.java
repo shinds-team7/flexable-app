@@ -130,20 +130,42 @@ public class BudgetService {
 		return r.withCharacter(characterScore(userId, today));
 	}
 
+	/** 코인·코스튬이 쓰는 오늘 기준 캐릭터 점수(peak = 지금까지 최고 점수). 하루 예산 기록이 없으면 0점. */
+	@Transactional(readOnly = true)
+	public CharacterScore.Result characterScore(long userId) {
+		return characterScore(userId, LocalDate.now(clock.withZone(zone)));
+	}
+
+	/** 그날 예산을 지켰는지(캐릭터 점수와 같은 판정). 그날까지 하루 예산 기록이 없으면 false. */
+	@Transactional(readOnly = true)
+	public boolean keptBudget(long userId, LocalDate day) {
+		History h = history(userId);
+		return CharacterScore.kept(h.budgets(), h.spent(), day);
+	}
+
 	/** 하루 예산을 처음 기록한 날부터 어제까지 그날 예산을 지켰는지로 캐릭터 점수를 낸다. */
 	private CharacterScore.Result characterScore(long userId, LocalDate today) {
+		History h = history(userId);
+		return CharacterScore.compute(h.budgets(), h.spent(), today);
+	}
+
+	/** budgets: 날짜별 하루 예산, spent: 첫 기록일부터 날짜별 지출 합(고정지출 자동 기록 제외) */
+	private record History(NavigableMap<LocalDate, Long> budgets, Map<LocalDate, Long> spent) {
+	}
+
+	private History history(long userId) {
 		NavigableMap<LocalDate, Long> budgets = new TreeMap<>();
 		dailyBudgets.findOrdered(userId).forEach(d -> budgets.put(d.getDate(), d.getDailyBudget()));
-		if (budgets.isEmpty()) {
-			return new CharacterScore.Result(0, 0);
-		}
 		Map<LocalDate, Long> spent = new HashMap<>();
+		if (budgets.isEmpty()) {
+			return new History(budgets, spent);
+		}
 		for (var t : transactions.findSince(userId, budgets.firstKey().atStartOfDay(zone).toInstant())) {
 			if (t.getType() == TxType.EXPENSE && !t.isFromFixed()) {
 				spent.merge(t.getOccurredAt().atZone(zone).toLocalDate(), t.getAmount(), Long::sum);
 			}
 		}
-		return CharacterScore.compute(budgets, spent, today);
+		return new History(budgets, spent);
 	}
 
 	private BudgetSettings require(long userId) {

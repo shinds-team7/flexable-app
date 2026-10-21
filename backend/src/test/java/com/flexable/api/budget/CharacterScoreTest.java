@@ -16,8 +16,8 @@ class CharacterScoreTest {
 	@Test
 	void startsAtZeroOnFirstDay() {
 		var budgets = new TreeMap<>(Map.of(D1, 30_000L));
-		assertThat(CharacterScore.compute(budgets, Map.of(), D1)).isEqualTo(new CharacterScore.Result(0, 0));
-		assertThat(CharacterScore.compute(new TreeMap<>(), Map.of(), D1)).isEqualTo(new CharacterScore.Result(0, 0));
+		assertThat(CharacterScore.compute(budgets, Map.of(), D1)).isEqualTo(new CharacterScore.Result(0, 0, 0));
+		assertThat(CharacterScore.compute(new TreeMap<>(), Map.of(), D1)).isEqualTo(new CharacterScore.Result(0, 0, 0));
 	}
 
 	@Test
@@ -27,8 +27,8 @@ class CharacterScoreTest {
 		spent.put(D1, 30_000L); // 딱 맞게 쓴 날도 지킨 날
 		spent.put(D1.plusDays(1), 10_000L);
 		spent.put(D1.plusDays(2), 30_001L);
-		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(2))).isEqualTo(new CharacterScore.Result(30, 15));
-		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(3))).isEqualTo(new CharacterScore.Result(0, -30));
+		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(2))).isEqualTo(new CharacterScore.Result(30, 15, 30));
+		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(3))).isEqualTo(new CharacterScore.Result(0, -30, 30));
 	}
 
 	@Test
@@ -38,7 +38,7 @@ class CharacterScoreTest {
 		Map<LocalDate, Long> spent = Map.of(D1.plusDays(2), 40_000L, D1.plusDays(3), 40_000L);
 		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(2)).points()).isEqualTo(30);
 		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(3)).points()).isZero();
-		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(4))).isEqualTo(new CharacterScore.Result(15, 15));
+		assertThat(CharacterScore.compute(budgets, spent, D1.plusDays(4))).isEqualTo(new CharacterScore.Result(15, 15, 30));
 	}
 
 	@Test
@@ -47,5 +47,29 @@ class CharacterScoreTest {
 		var r = CharacterScore.compute(budgets, Map.of(), D1.plusDays(40));
 		assertThat(r.points()).isEqualTo(CharacterScore.MAX);
 		assertThat(r.delta()).isZero();
+	}
+
+	@Test
+	void peakStaysAfterDrop() {
+		// 7일 지켜 105점(Lv.2)까지 오른 뒤 3일 넘기면 0점(Lv.1). 최고 점수는 105점 그대로
+		var budgets = new TreeMap<>(Map.of(D1, 30_000L));
+		Map<LocalDate, Long> spent = new HashMap<>();
+		for (int i = 7; i < 10; i++) {
+			spent.put(D1.plusDays(i), 40_000L);
+		}
+		var r = CharacterScore.compute(budgets, spent, D1.plusDays(10));
+		assertThat(r.points()).isZero();
+		assertThat(r.peak()).isEqualTo(105);
+		assertThat(CharacterScore.level(r.points())).isEqualTo(1);
+		assertThat(CharacterScore.level(r.peak())).isEqualTo(2);
+		assertThat(CharacterScore.level(CharacterScore.MAX)).isEqualTo(5);
+	}
+
+	@Test
+	void keptNeedsBudgetRecord() {
+		var budgets = new TreeMap<>(Map.of(D1, 30_000L));
+		assertThat(CharacterScore.kept(budgets, Map.of(), D1.minusDays(1))).isFalse();
+		assertThat(CharacterScore.kept(budgets, Map.of(), D1)).isTrue(); // 0원도 지킨 날
+		assertThat(CharacterScore.kept(budgets, Map.of(D1.plusDays(5), 30_001L), D1.plusDays(5))).isFalse();
 	}
 }
