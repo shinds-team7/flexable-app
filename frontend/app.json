@@ -73,7 +73,14 @@
           }
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": false
+        }
+      ]
     ],
     "extra": {
       "router": {},
