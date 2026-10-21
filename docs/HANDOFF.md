@@ -1,10 +1,34 @@
 # 인수인계 — 서비스 1.0.0 Google Play 비공개 테스트
 
-마지막 갱신 2026-10-21(백엔드 배포·preview 원격 업데이트 기록). 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-21(코인·코스튬 1.4.0 배포 기록). 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
 ## 0. 다음에 이어서 할 일
+
+### 0-코인. 10-21 코인·코스튬·추천 코드(앱 1.4.0)
+
+규칙·파일 규격·작업 범위는 [`coin-plan.md`](coin-plan.md), API는 [`API.md` 코인·코스튬](API.md#코인코스튬), 화면별 근거는 [`FEATURES.md`](FEATURES.md).
+
+- [x] 백엔드 배포 **10-21 완료**(`deploy.sh`, V8 `coin_wallets`·`coin_ledger`·`outfits`·`user_outfits`·`referrals`). `/actuator/health` UP, 운영 `/outfits`에 광부·잭팟 2개만 나오는 것 확인
+- [x] 웹 배포 **10-21 완료**(PR #93 머지 `9bea6f3` → Vercel). 배포 번들에 코인 화면·잭팟 영상이 들어간 것 확인(브라우저로 눌러 보지는 않음)
+- [x] EAS 빌드 **10-21 완료**(커밋 `ea704dc`, PR #93과 내용 같음): preview APK versionCode 11, production AAB versionCode 12(`flexable-1.4.0-vc12.aab`). versionCode 11은 처음 production 시도가 업로드 단계에서 실패하면서 올라간 번호라 production AAB에는 없다
+- [ ] Play Console 업로드(사람) → 출시 노트는 [`play-store/README.md` §6](play-store/README.md)
+- [ ] 실기기 확인(preview APK): 홈 광부 영상 재생·반복 이음새(저가폰 포함), 가입 선물 모달 → [꾸미기]에서 잭팟 구매 → [적용하기] → 홈이 잭팟 영상, 마이 추천 코드 입력 → 100코인, 다른 탭으로 갔다 오면 영상이 멈췄다 다시 도는지
+- [ ] Play에 1.4.0이 보인 뒤 `app-version.json` `minVersion` 올리기(선택, 사람 결정)
+- 1.3.0 이하 앱은 코인 API를 부르지 않아 서버만 새로 바뀌어도 그대로 동작한다. 코인·영상은 `expo-video`·`expo-image` 네이티브 모듈이라 원격 업데이트로는 못 보내고 1.4.0 설치가 필요하다
+
+결정(10-21, 사용자):
+
+- 화폐 이름은 `coin`. 예전 캐릭터 2D 홈의 동전 더미(`coinStage`)는 코드에서 모두 지웠다
+- 처음 계획은 "레벨 코스튬 영상 5개가 들어온 뒤 출시"였지만, **광부(`costume-lv1`)·잭팟(`outfit-01`) 2개로 먼저 출시**한다. 나머지는 V8에서 `active=FALSE`라 화면에 나오지 않는다. 영상이 들어오는 대로 `coin-plan.md` "영상을 받았을 때" 절차로 하나씩 켠다
+- **잭팟은 원래 Lv.4 고양이**인데 코스튬이 목표 8개가 될 때까지 상점 상품(200코인)으로 판다. 8개가 되면 `V{n}`으로 `outfit-01`을 끄고 `costume-lv4`를 켜서 Lv.4 해금으로 옮긴다. 이미 산 사람은 계속 보유한다(코인을 돌려줄지는 그때 결정)
+- 첫 화면 이미지는 제작 쪽 썸네일(`cat-000-thumbnail.jpg`)을 `prepare-outfit-video.py` 세 번째 인자로 넣어 만든다. 두 영상 모두 오른쪽 아래에 Gemini 워터마크(✦)가 흐리게 남아 있다. 다음 영상부터는 워터마크 없이 받는 것이 좋다
+
+10-21 작업 중 생긴 일:
+
+- **로컬 E2E가 운영 API에 붙은 사고.** `EXPO_PUBLIC_API_URL=http://localhost:8080 npx expo export -p web`으로 만든 웹이 운영 주소를 그대로 쓰고 있었다. 여러 워크트리가 같이 쓰는 Metro 변환 캐시(OS 임시 폴더)에 운영 주소가 박힌 번들이 남아 있었기 때문이다. 그 상태로 기존 E2E를 돌려 운영에 테스트 계정(`@example.com`) 4~5개와 예산 설정이 생겼다(12:47~12:48 KST). 받을 수 없는 주소이고 남에게 보이지 않아 **그대로 두기로 했다**(사용자 결정). 재발 방지: 로컬 E2E용 웹 빌드는 `--clear`를 붙이고, 돌리기 전에 `grep -c duckdns dist/_expo/static/js/web/*.js`가 0인지 본다
+- EAS 빌드 업로드가 `EBUSY ... backend/build/localdb/flexable.mv.db`로 실패했다. 로컬 H2 백엔드(`bootRun`)가 DB 파일을 잡고 있었다. 빌드 전에 로컬 백엔드를 끈다(§4-2)
 
 ### 0-0. 10-20 소셜 계정 연결 후 이메일 로그인 안내
 
@@ -54,7 +78,7 @@
 
 1. [x] **앱 원격 업데이트 → PR #67 머지 순서 지키기(10-19 완료)**: #67(Play 경고 대응, 앱 1.2.0)보다 먼저 #64(탭바 위 + 버튼, 0원일 때 빨간 상단 패널)·#66(내역 탭 기록 버튼 삭제)을 1.1.0용으로 게시했다. main `c146127`에서 preview `1996d0c4` → production `5ed7d163`. #61(필수 업데이트 창)은 이전 그룹 `c3948c24`로 이미 나가 있었다. 이후 main의 원격 업데이트는 1.2.0 빌드만 받는다.
 
-5. [ ] **디자인 재작업 시작 전에 캐릭터 홈 3D 방식 결정.**
+5. [x] **캐릭터 홈 3D 방식 결정 → 영상 방식(10-21).** 16:9 MP4를 `expo-video`로 소리 없이 반복 재생, 앱 1.4.0에 넣었다(위 "0-코인"). 아래는 결정 전 검토 기록이다.
    - 권장안(새 빌드 불필요): 3D 렌더 결과를 지금처럼 프레임 이미지(WebP 8~12장, 레벨당 150~300KB)로 넣는다. 원격 업데이트로 반영되고 투명 배경도 유지된다.
    - 영상 방식: `expo-video`(네이티브 모듈)를 써야 해서 새 빌드가 필요하다. 이 방식으로 간다면 **1.2.0 빌드(#67)에 함께 넣어야** 네이티브 출시를 한 번 더 하지 않는다. 투명 배경이 어렵고, 3~5초 반복 영상 한 편을 1MB 이하로 맞춰야 한다.
    - [ ] **앱 디자인 3차 회의 제안 중 남은 것 — 대표 결정 대기(10-19 디자인 4차 점검).** 탭 라벨·터치 48·마이 설정 행 정리는 디자인 시스템 v2(#87)로 반영했다. 히어로는 파란 면 유지·0원 이하 빨강(#64 정본)으로 정했고 넘으면 마이너스 금액을 보여 준다(#87). 남은 제안: 추정 고지 상시 13px, 캐릭터 160dp·고양이 말투, 새 카테고리 5색, 플로팅 버튼(3h) 제외 여부. 구현 착수와 실기기 확인 담당도 정한다. 웹 디자인 결정 대기 항목은 flexable-web HANDOFF 7번에 있다.
@@ -184,7 +208,8 @@ npx eas-cli@latest build -p android --profile production
 
 - 10-13~14에 잠시 `apduis-team`으로 옮겼다가(PR #14) 원래 계정이 복구되어 `ucmnuniverse-developer/flexable`로 되돌렸다(PR #18). 서명 키가 프로젝트마다 달라서 `apduis-team` APK가 깔린 폰은 지우고 새로 설치한다. Play 업로드 키는 `ucmnuniverse-developer` 프로젝트의 키스토어(10-13 생성)다.
 - 날짜·시간 선택기(`@react-native-community/datetimepicker`)는 네이티브 모듈이라 Expo Go가 아닌 빌드에서 확인한다.
-- 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다.
+- 빌드 전에 `backend`에서 `./gradlew --stop`을 실행한다. Gradle 데몬이 잡은 `backend/.gradle` 잠금 파일 때문에 EAS 업로드가 `EBUSY`로 실패한다. 로컬 H2 백엔드(`bootRun`)가 켜져 있어도 `backend/build/localdb` 파일 잠금으로 같은 오류가 난다(10-21) → 먼저 끈다.
+- 명령이 2분 넘게 걸리면 Claude Code의 `!` 실행이 백그라운드로 넘어간다. `--no-wait`를 붙이면 업로드까지만 하고 끝난다. 빌드 진행은 아래 빌드 목록에서 본다.
 - 원격 업데이트로 바뀌지 않는 것: 앱 아이콘, 권한, 네이티브 설정. 이런 변경은 새 production 빌드를 Play에 올리고 사용자가 앱을 업데이트해야 반영된다. Play는 사용자에게 바뀐 부분만 내려받게 하므로 AAB는 매번 전체를 올린다.
 - **1.2.0부터** 릴리스 빌드에 R8 코드 축소(`expo-build-properties`의 `enableMinifyInReleaseBuilds`)를 켜고 화면 방향 고정(`orientation: portrait`)을 풀었다. Play Console의 'DEX 코드 최적화 기준 미만'·'대형 화면 크기 조절·방향 제한' 경고 대응이다. preview APK도 릴리스 빌드라 R8이 적용되니, 먼저 가입·로그인·거래 저장·날짜 선택기·가로 회전을 확인한다. AAB를 올린 뒤 App Bundle 탐색기에서 난독화 해제 파일이 등록됐는지 본다. 리소스 축소(`enableShrinkResourcesInReleaseBuilds`)는 JS에서 부르는 이미지가 지워질 수 있어 켜지 않았다.
 - Play의 'Android 15 지원 중단 API(setStatusBarColor 등)' 경고는 React Native(`StatusBarModule`, `WindowUtilKt`)와 Material 라이브러리(날짜 선택기가 사용) 안의 코드라 앱 설정으로 없앨 수 없다. 기한 없는 권장 사항이고, 라이브러리가 바뀌는 SDK 업그레이드 때 다시 본다.
