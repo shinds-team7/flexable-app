@@ -19,44 +19,46 @@ API 요청·응답은 [`API.md` "코인·코스튬"](API.md#코인코스튬), DB
 
 이름 주의: 기존 코드의 `coins`/`coinStage`는 **동전 더미 단계**다. 삭제하면서 새 화폐와 헷갈리지 않게 한다.
 
-## 2. 영상 파일 넣기 (파일이 아직 없음)
+## 2. 영상 파일 넣기
 
-캐릭터는 2초짜리 **MP4 영상을 소리 없이 반복 재생**한다(처음엔 WebP로 정했다가 바꿈: 용량이 작고 저가폰에서도 부드럽다). 영상은 아직 준비되지 않았다. **코드는 파일 없이 끝까지 만들고, 파일은 나중에 넣기만 하면 반영되게** 한다.
+캐릭터는 **16:9 MP4 영상을 소리 없이 반복 재생**한다(처음엔 WebP로 정했다가 바꿈: 용량이 작고 저가폰에서도 부드럽다). 기존 레벨 PNG 20장(`assets/characters/`)은 삭제했다.
+**받은 영상은 그대로 넣지 않고 `frontend/scripts/prepare-outfit-video.py`로 변환해서 넣는다.** 받은 영상은 배경이 무대 색과 달라서(조명 그라데이션), 스크립트가 가장자리를 무대 색으로 녹인다.
 
-### 파일 규격 (코스튬 하나에 파일 두 개)
+### 받는 영상 / 변환 결과
 
-- 영상 `frontend/assets/outfits/<id>.mp4`: H.264, 정사각 660×660px(화면 220pt × 3), 2초, 30fps, 소리 트랙 없음, 1MB 이하 목표. 첫 장면과 끝 장면이 이어지게(반복 이음새)
-- 첫 장면 `frontend/assets/outfits/<id>.png`: 영상 첫 프레임 그대로. 영상이 준비되는 동안과 목록 칸에 쓴다
-- **MP4는 투명 배경이 없다.** 배경을 무대 색 `#EEF2FA`(`colors.stage`, 앱은 라이트 모드만)로 칠해서 만든다
-- id: `costume-lv1` … `costume-lv5`, `outfit-01` … `outfit-10`
+| | 받는 영상(제작 쪽) | 저장소에 들어가는 파일(스크립트 결과) |
+|---|---|---|
+| 비율 | 16:9 가로형(예: 1280×720) | 1280×720 |
+| 길이 | 2~4초, 첫 장면과 끝 장면이 이어지게 | 그대로 |
+| 코덱·소리 | 상관없음(HEVC·소리 있어도 됨) | H.264, 소리 없음, 300KB 안팎 |
+| 배경 | 밝은 단색 계열이면 됨 | 가장자리 120×96px을 `#EEF2FA`로 녹임(가장자리 색 = 무대 색) |
+| 파일 | | `assets/outfits/<id>.mp4` + 첫 장면 `<id>.jpg` |
+
+id: `costume-lv1` … `costume-lv5`, `outfit-01` … `outfit-10`. 현재 들어온 파일: **`costume-lv1`(광부)**.
 
 ### 그리는 규칙
 
 - 코스튬 그림은 **`src/service/OutfitView.tsx`의 `<OutfitView outfitId play />`로만** 그린다. `play`면 `expo-video`로 반복 재생하고(다른 화면으로 가면 멈춤, 동작 줄이기 설정이면 정지 그림), 영상이 준비되기 전에는 첫 장면을 덮어 둔다
+- 칸은 **16:9**. 홈은 화면 폭을 꽉 채운다(`CharacterStage`의 `character` 칸, 최대 640). 가장자리가 무대 색이라 무대(`colors.stage`) 위에 올리면 경계가 보이지 않는다. 흰 카드 위에 올릴 때는 칸 배경을 `colors.stage`로 깐다
 - **재생 중인 영상은 화면당 하나.** 홈 캐릭터, 꾸미기 위쪽 미리보기만 `play`. 꾸미기 목록 칸과 구매 완료 모달은 `play={false}`(정지 그림)
-- 영상 배경색은 압축 때문에 `#EEF2FA`와 미세하게 다를 수 있다. 네모 테두리가 보이면 영상 칸을 무대 영역에 꽉 채우거나 둥근 모서리 칸으로 감싼다
 - 화면에서 `require`로 그림·영상 파일을 직접 부르지 않는다. 파일 연결은 `outfits.ts` 한 곳
-
-### 파일이 없을 때 (개발 중)
-
-- `outfits.ts`의 `outfitVideo(id)`가 `null`이라 `OutfitView`는 임시 정지 그림을 그린다: 레벨 코스튬은 기존 `assets/characters/lvN-1.png`, 그 밖에는 Lv.1 그림(`outfitSource(id)`)
-- `hasAnimation(id)`가 `false`면 꾸미기 화면 상품 칸에 "준비 중" 표시를 붙인다
+- 영상이 아직 없는 코스튬은 기본 캐릭터(광부) 첫 장면을 보여 주고, `hasAnimation(id)`가 `false`라 꾸미기 화면에 "준비 중"을 붙인다
 - 상점 상품 10개는 V8에서 `active=FALSE`라 운영에는 안 보인다. 로컬·CI는 `app.outfits.show-inactive=true`(`application-local.yml`)로 모두 보여서 구매 흐름을 시험할 수 있다
 
-### 파일이 저장소에 들어왔을 때 (반영 절차)
+### 영상을 받았을 때 (반영 절차)
 
-1. `frontend/assets/outfits/<id>.mp4`와 `<id>.png` 추가
-2. `outfits.ts`의 `VIDEOS`에 한 줄 추가: `"<id>": { video: require("../../assets/outfits/<id>.mp4"), poster: require("../../assets/outfits/<id>.png") },` → 화면 수정은 필요 없다
+1. `cd frontend && python scripts/prepare-outfit-video.py <받은 영상.mp4> <id>` (ffmpeg가 없으면 먼저 `pip install imageio-ffmpeg`)
+2. 스크립트가 출력한 한 줄을 `outfits.ts`의 `VIDEOS`에 추가 → 화면 수정은 필요 없다
 3. 상점 상품이면 백엔드에 `V{n}__outfits_<내용>.sql` 추가: `UPDATE outfits SET name = '<상품 이름>', active = TRUE WHERE id = 'outfit-0N';`
-4. 배포 순서: **앱(원격 업데이트 또는 1.4.0 빌드) 먼저, 서버(마이그레이션) 나중**. 서버를 먼저 켜면 옛 앱에서 임시 그림으로 팔린다
-5. 실기기(저가 Android 포함)에서 첫 화면 깜빡임·반복 이음새·배경 경계를 확인한다
+4. 배포 순서: **앱(원격 업데이트 또는 1.4.0 빌드) 먼저, 서버(마이그레이션) 나중**. 서버를 먼저 켜면 옛 앱에서 기본 캐릭터 그림으로 팔린다
+5. 실기기(저가 Android 포함)에서 첫 화면 깜빡임·반복 이음새를 확인한다
 
 ### 출시 조건
 
 | 바뀐 것 | 언제 머지·배포해도 되나 |
 |---|---|
 | 백엔드(코인 API, V8) | 언제든. API만 추가하고 상점 상품은 꺼져 있어 1.3.0 앱에 영향 없음 |
-| 프론트 PR | **레벨 코스튬 영상 5개(MP4+PNG)가 저장소에 들어온 뒤** main에 머지한다(main 머지 = 웹 즉시 배포, 홈 기본 캐릭터가 바뀜). 그 전에는 기능 브랜치에 둔다 |
+| 프론트 PR | **레벨 코스튬 영상 5개가 저장소에 들어온 뒤** main에 머지한다(main 머지 = 웹 즉시 배포, 홈 기본 캐릭터가 바뀜). 그 전에는 기능 브랜치에 둔다 |
 | 1.4.0 네이티브 빌드 | 프론트 PR 머지 + 백엔드 배포 뒤. `expo-video`·`expo-image`가 네이티브 모듈이라 원격 업데이트로는 안 된다 |
 | 상점 상품 | 파일이 들어오는 대로 위 반영 절차. 0개여도 출시 가능(꾸미기 화면은 레벨 코스튬 + "곧 새 코스튬이 나와요") |
 
@@ -81,7 +83,7 @@ API 요청·응답은 [`API.md` "코인·코스튬"](API.md#코인코스튬), DB
 | A 백엔드 | `SXXNHU/feat-coin-backend` | `backend/` 전부: 새 패키지 `coin`(지갑·내역·check-in·수집·보너스), `outfit`(목록·구매·적용), `referral`. `CharacterScore`에 최고 점수(peak) 추가, `ErrorCode`, `AccountDeletionService`, `application-local.yml`(`app.outfits.show-inactive`) | `budget/CharacterScore.java`, `budget/BudgetService.java`(`characterScore`), `weblink/`(패키지 구성 예), `common/ErrorCode.java`, `user/AccountDeletionService.java` |
 | B 홈·캐릭터 | `SXXNHU/feat-coin-home` | `src/components/CharacterStage.tsx`, `src/service/HomeScreen.tsx`, 새 파일 `src/service/RewardModal.tsx` | `CharacterStage.tsx`, `HomeScreen.tsx`, `coinApi.ts`, `outfits.ts` |
 | C 꾸미기·마이 | `SXXNHU/feat-coin-custom` | 새 파일 `src/app/(service)/customize.tsx`, `src/service/CustomizeScreen.tsx`, `src/service/PurchaseModal.tsx`. 수정 `src/service/MyScreen.tsx`(코인 잔액은 `getWallet`) | `MyScreen.tsx`, `WebLinksScreen.tsx`(하위 화면 예), `coinApi.ts`, `outfits.ts` |
-| D 통합 | 기반 브랜치 | 세 브랜치 합치기, **B·C의 `expo-image` `<Image source={outfitSource(..)}>` 4곳을 `<OutfitView>`로 교체**(`CharacterStage`·꾸미기 미리보기는 `play`, 꾸미기 목록·`PurchaseModal`은 `play={false}`. B·C는 WebP 기준으로 끝났다), 로컬 서버로 화면 확인·수정, E2E(`frontend/e2e/`), `docs/FEATURES.md`, 약관을 고치면 `docs/play-store/*.md`와 웹 약관 화면 | 이 문서 |
+| D 통합 | 기반 브랜치 | A·C 브랜치 합치기(**B는 기반 브랜치에 합쳤고 홈은 `OutfitView`로 바꿨다**). C의 `expo-image` `<Image source={outfitSource(..)}>` 3곳을 `<OutfitView>`로 교체: 꾸미기 미리보기는 `play`, 꾸미기 목록·`PurchaseModal`은 `play={false}`, 칸은 모두 16:9(C는 정사각 WebP 기준으로 끝났다). 로컬 서버로 화면 확인·수정, E2E(`frontend/e2e/`), `docs/FEATURES.md`, 약관을 고치면 `docs/play-store/*.md`와 웹 약관 화면 | 이 문서 |
 
 - 백엔드 테스트 필수: 가입 선물 두 번 안 줌, 시간 적립(시작 전 0·1시간 1개·10개 상한·자정 초기화), 어제 보너스(지킴·넘김·0원·기록 없음·이틀 전은 안 줌), 동시에 두 번 구매해도 한 번만 차감, 레벨 코스튬 구매 거절, 최고 레벨 유지, 추천(양쪽 100·두 번·내 코드·초대한 사람 탈퇴 뒤), 남의 내역 ack 무시. 시각은 `Clock` 주입으로 고정한다
 - 구매는 지갑 행을 잠그고(`PESSIMISTIC_WRITE` 또는 `version` 낙관적 잠금) 처리한다. 모든 지급은 `coin_ledger` 유니크 키로 막는다(`SIGNUP_GIFT`·`REFERRAL_INVITEE`=`once`, `BUDGET_BONUS`=날짜, `REFERRAL_INVITER`=초대받은 사람 id, `PASSIVE`=`날짜#받은 뒤 누적 개수`, `PURCHASE`=코스튬 id)

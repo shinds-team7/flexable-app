@@ -9,6 +9,7 @@ import {
   type Level,
   type PaceStatus,
 } from "@/components/CharacterStage";
+import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
 import { ackRewards, checkIn, collectCoins } from "./coinApi";
 import { TodayHeroView } from "@/components/TodayHeroView";
@@ -93,7 +94,13 @@ export function HomeScreen() {
             {style === "character" ? (
               <CharacterStage
                 level={status.level}
-                outfitId={wallet?.equippedOutfitId ?? null}
+                character={
+                  <OutfitView
+                    outfitId={wallet?.equippedOutfitId ?? null}
+                    style={{ flex: 1 }}
+                    accessibilityLabel={`Lv.${status.level} 캐릭터`}
+                  />
+                }
                 coin={
                   wallet
                     ? {

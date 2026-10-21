@@ -4,10 +4,8 @@
  */
 import { useEffect, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
 
 import { colors } from '@/theme';
-import { outfitSource } from '@/service/outfits';
 import { Button, T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5;
@@ -36,8 +34,11 @@ export type CoinBar = {
   onCustomize: () => void;
 };
 
-/** 적용 중인 코스튬 애니메이션 하나와 승급 게이지. 안내 문구·코인 값은 서비스가 전달한다. */
-export function CharacterStage({ level, outfitId, coin, gauge, message, children }: { level: Level; outfitId: string | null; coin?: CoinBar; gauge: PaceStatus; message: string; children: ReactNode }) {
+/**
+ * 적용 중인 코스튬 영상 하나와 승급 게이지. 캐릭터(character)·안내 문구·코인 값은 서비스가 전달한다.
+ * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
+ */
+export function CharacterStage({ level, character, coin, gauge, message, children }: { level: Level; character: ReactNode; coin?: CoinBar; gauge: PaceStatus; message: string; children: ReactNode }) {
   const accent = ACCENTS[level];
 
   return (
@@ -53,7 +54,7 @@ export function CharacterStage({ level, outfitId, coin, gauge, message, children
       </View>
 
       <View style={styles.stage}>
-        <Image source={outfitSource(outfitId)} style={styles.char} contentFit="contain" accessible accessibilityRole="image" accessibilityLabel={`Lv.${level} 캐릭터`} />
+        <View style={styles.char}>{character}</View>
       </View>
 
       {coin && (
@@ -148,8 +149,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     transform: [{ rotate: '45deg' }],
   },
-  stage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4, alignSelf: 'stretch' },
-  char: { width: 220, height: 220 },
+  // wrap 의 좌우 여백(16)을 상쇄해 화면 끝까지. 넓은 웹 화면에서는 640에서 멈춘다
+  stage: { alignItems: 'center', marginTop: 4, marginHorizontal: -16, alignSelf: 'stretch' },
+  char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
   coinRow: { alignSelf: 'stretch', alignItems: 'center', gap: 8, marginTop: 8 },
   balance: { backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
   coinBtns: { flexDirection: 'row', gap: 8 },
