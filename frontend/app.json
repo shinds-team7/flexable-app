@@ -2,7 +2,7 @@
   "expo": {
     "name": "텅장관리",
     "slug": "flexable",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -72,7 +72,8 @@
             "enableMinifyInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "expo-image"
     ],
     "extra": {
       "router": {},

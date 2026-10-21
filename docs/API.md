@@ -32,6 +32,12 @@
 | 409 | `CATEGORY_DUPLICATE` | 같은 종류에 같은 이름 카테고리 존재 |
 | 409 | `CATEGORY_DEFAULT` | 기본 카테고리는 삭제 불가 |
 | 409 | `SEED_NOT_PENDING` | 시드머니 반영: 이미 반영했거나 그 주기를 반영할 수 있는 기간이 지남 |
+| 409 | `OUTFIT_NOT_FOR_SALE` | 코스튬 구매: 레벨 코스튬이거나 판매하지 않는 상품 |
+| 409 | `OUTFIT_OWNED` | 코스튬 구매: 이미 가진 상품 |
+| 409 | `OUTFIT_LOCKED` | 코스튬 적용: 사지 않았거나 레벨이 안 된 코스튬 |
+| 409 | `COINS_NOT_ENOUGH` | 코스튬 구매: 코인 부족 |
+| 400 | `REFERRAL_CODE_INVALID` | 추천 코드 없음·내 코드 |
+| 409 | `REFERRAL_ALREADY` | 추천 코드를 이미 등록함 |
 | 400 | `LINK_CODE_INVALID` | 웹 연동 코드 없음·만료·이미 사용(웹 서버 전용 API) |
 | 404 | `LINK_NOT_FOUND` | 웹 연동이 해제됐거나 앱 계정이 탈퇴함(웹 서버 전용 API) |
 | 429 | `TOO_MANY_ATTEMPTS` | 로그인 연속 실패(10분 내 5회)·실패 기록 저장 상한, 웹 연동 코드 실패(서비스 전체 10분 내 30회). `retryAfterSeconds` 추가 |
@@ -343,6 +349,110 @@ POST 본문:
 - `byCategory`는 **지출만**, 금액 내림차순. `ratio`는 지출 합 대비(소수 3자리).
 - `daily`는 `from`~`to` 모든 날짜를 0 포함해 채운다. 최대 366일.
 - 이번 주/이번 정산 주기 탭은 클라이언트가 기간을 계산해 호출한다(정산 주기 시작은 `/budget/today.cycleStart`).
+
+## 코인·코스튬
+
+앱 안에서만 쓰는 코인(현금 가치 없음)과 캐릭터 코스튬. 잔액·지급·해금은 모두 서버가 정한다. 지급 규칙과 작업 범위는 [`coin-plan.md`](coin-plan.md). 코인은 정수.
+
+`CoinWallet`:
+
+```json
+{
+  "balance": 215,
+  "passive": { "collectable": 3, "collectedToday": 4, "dailyLimit": 10, "nextAt": "2026-10-21T15:12:00+09:00" },
+  "equippedOutfitId": "outfit-03"
+}
+```
+
+- `passive.collectable` = 지금 [모으기]로 받을 수 있는 개수. `nextAt` = 다음 1개가 쌓이는 시각(오늘 10개가 다 쌓였거나 오늘 check-in 전이면 `null`)
+- `equippedOutfitId` = 적용 중인 코스튬. `null`이면 기본 캐릭터(`costume-lv1`)
+
+### `POST /coins/check-in` → 200
+
+앱을 열 때·앞으로 돌아올 때 부른다(여러 번 불러도 안전). 서버는 이 요청에서 ① 가입 선물 200(1회) ② 어제 예산을 지켰으면 +5(어제 하루치만) ③ 오늘 첫 요청이면 시간 적립 시작을 처리한다.
+
+```json
+{
+  "wallet": { "...": "CoinWallet" },
+  "rewards": [
+    { "id": 31, "reason": "SIGNUP_GIFT", "amount": 200, "refDate": null, "createdAt": "2026-10-21T09:03:00+09:00" },
+    { "id": 32, "reason": "BUDGET_BONUS", "amount": 5, "refDate": "2026-10-20", "createdAt": "2026-10-21T09:03:00+09:00" },
+    { "id": 33, "reason": "REFERRAL_INVITER", "amount": 100, "refDate": null, "createdAt": "2026-10-21T08:40:00+09:00" }
+  ]
+}
+```
+
+- `rewards` = 아직 모달로 보여 주지 않은 보상(`notified_at`이 없는 내역), 오래된 순. 앱은 이 순서대로 모달을 띄우고 닫을 때 ack한다. ack 전에 다시 check-in하면 같은 보상이 또 온다(지급은 한 번).
+- `reason`: `SIGNUP_GIFT`(가입 선물) · `BUDGET_BONUS`(`refDate`의 예산을 지킴) · `REFERRAL_INVITER`(내 코드로 친구가 등록)
+- 초기 예산을 설정하기 전이면 ②는 건너뛴다(오류 아님).
+
+### `POST /coins/rewards/ack` → 204
+
+```json
+{ "ids": [31, 32] }
+```
+
+내 내역이 아닌 id는 무시한다.
+
+### `GET /coins` → 200 `CoinWallet`
+
+### `POST /coins/collect` → 200
+
+```json
+{ "collected": 3, "wallet": { "...": "CoinWallet" } }
+```
+
+받을 게 없으면 `collected: 0`(오류 아님).
+
+### `GET /outfits` → 200 `OutfitList`
+
+```json
+{
+  "balance": 215,
+  "equippedOutfitId": null,
+  "peakLevel": 2,
+  "items": [
+    { "id": "costume-lv1", "name": "광부", "price": null, "unlockLevel": 1, "owned": true, "equipped": true },
+    { "id": "costume-lv3", "name": "Lv.3 코스튬", "price": null, "unlockLevel": 3, "owned": false, "equipped": false },
+    { "id": "outfit-01", "name": "상품 01", "price": 200, "unlockLevel": null, "owned": false, "equipped": false }
+  ]
+}
+```
+
+- `items`는 `sort_order` 순. 레벨 코스튬이 먼저, 상점 상품이 뒤. `active=false` 상품은 빠진다(로컬·CI는 `app.outfits.show-inactive=true`로 모두 보인다).
+- 레벨 코스튬의 `owned` = `peakLevel` ≥ `unlockLevel`. `peakLevel` = 지금까지 도달한 최고 캐릭터 단계(1~5, `/budget/today`와 같은 점수 규칙). 레벨이 내려가도 한 번 열린 코스튬은 그대로다. 초기 예산 설정 전이면 1.
+- 상점 상품의 `owned` = 샀는지. `equipped`는 한 개만 `true`(`equippedOutfitId`가 `null`이면 `costume-lv1`).
+
+### `POST /outfits/{id}/purchase` → 200 `OutfitList`
+
+잔액에서 `price`를 빼고 상품을 준다. 409: `OUTFIT_NOT_FOR_SALE`(레벨 코스튬·비활성·없는 상품), `OUTFIT_OWNED`, `COINS_NOT_ENOUGH`. 산다고 바로 적용되지는 않는다.
+
+### `PUT /outfits/equipped` → 200 `OutfitList`
+
+```json
+{ "outfitId": "outfit-01" }
+```
+
+`null`이면 기본 캐릭터. 가지지 않은 코스튬은 409 `OUTFIT_LOCKED`.
+
+### `GET /referrals/me` → 200
+
+```json
+{ "code": "K7PQ2MXA", "invitedCount": 2, "registered": false, "rewardAmount": 100 }
+```
+
+- `code`는 처음 부를 때 만든다(영문 대문자·숫자 8자, 헷갈리는 `0 O 1 I L` 제외). `registered` = 내가 다른 사람 코드를 등록했는지.
+
+### `POST /referrals` → 200
+
+```json
+{ "code": "K7PQ2MXA" }
+```
+
+→ `{ "amount": 100, "wallet": { "...": "CoinWallet" } }`
+
+- 등록한 사람(`REFERRAL_INVITEE`, 바로 표시하므로 ack 불필요)과 코드 주인(`REFERRAL_INVITER`, 다음 check-in에서 모달)에게 각각 100.
+- 대소문자·앞뒤 공백 무시. 기간·인원 제한 없음. 400 `REFERRAL_CODE_INVALID`(없는 코드·내 코드), 409 `REFERRAL_ALREADY`(이미 등록함).
 
 ## 웹사이트 연동
 
