@@ -5,7 +5,7 @@
 import { Image } from "expo-image";
 import { useIsFocused } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Platform,
   StyleSheet,
@@ -90,8 +90,11 @@ function LoopVideo({
     p.muted = true;
     // 사용자가 듣던 음악을 멈추지 않는다.
     p.audioMixingMode = "mixWithOthers";
-    p.play();
   });
+  // 웹은 VideoView가 연결되기 전의 play를 저장하지 않아, 마운트 후 시작한다.
+  useEffect(() => {
+    player.play();
+  }, [player]);
   // 화면 이탈·코스튬 변경 시 useVideoPlayer가 플레이어를 해제한다.
   // 별도 cleanup에서 pause하면 이미 해제된 네이티브 객체를 호출할 수 있다.
   return (

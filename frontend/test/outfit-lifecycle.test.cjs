@@ -14,6 +14,9 @@ function loadOutfit() {
   const modules = {
     "react/jsx-runtime": { jsx: element, jsxs: element },
     react: {
+      useEffect: (effect) => {
+        cleanups.push(effect());
+      },
       useState: (initial) => [initial, () => {}],
       useCallback: (fn) => fn,
     },
