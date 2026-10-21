@@ -18,11 +18,25 @@ public final class CharacterScore {
 
 	public static final int MAX = 400;
 
+	/** 한 단계에 필요한 점수 */
+	public static final int PER_LEVEL = 100;
+
 	private CharacterScore() {
 	}
 
-	/** points: 어제까지 반영한 점수, delta: 어제 하루의 변화(반영한 날이 없으면 0) */
-	public record Result(int points, int delta) {
+	/** points: 어제까지 반영한 점수, delta: 어제 하루의 변화(반영한 날이 없으면 0), peak: 지금까지 가장 높았던 점수 */
+	public record Result(int points, int delta, int peak) {
+	}
+
+	/** 점수의 캐릭터 단계(1~5) */
+	public static int level(int points) {
+		return Math.min(points, MAX) / PER_LEVEL + 1;
+	}
+
+	/** 그날 예산을 지켰는지. 그날까지 하루 예산 기록이 하나도 없으면 false. */
+	public static boolean kept(NavigableMap<LocalDate, Long> budgets, Map<LocalDate, Long> spent, LocalDate day) {
+		Map.Entry<LocalDate, Long> budget = budgets.floorEntry(day);
+		return budget != null && spent.getOrDefault(day, 0L) <= budget.getValue();
 	}
 
 	/**
@@ -30,16 +44,17 @@ public final class CharacterScore {
 	 */
 	public static Result compute(NavigableMap<LocalDate, Long> budgets, Map<LocalDate, Long> spent, LocalDate today) {
 		if (budgets.isEmpty()) {
-			return new Result(0, 0);
+			return new Result(0, 0, 0);
 		}
 		int points = 0;
 		int delta = 0;
+		int peak = 0;
 		for (LocalDate d = budgets.firstKey(); d.isBefore(today); d = d.plusDays(1)) {
-			long budget = budgets.floorEntry(d).getValue();
 			int before = points;
-			points = spent.getOrDefault(d, 0L) <= budget ? Math.min(MAX, points + UP) : Math.max(0, points - DOWN);
+			points = kept(budgets, spent, d) ? Math.min(MAX, points + UP) : Math.max(0, points - DOWN);
 			delta = points - before;
+			peak = Math.max(peak, points);
 		}
-		return new Result(points, delta);
+		return new Result(points, delta, peak);
 	}
 }
