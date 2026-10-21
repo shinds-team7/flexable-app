@@ -77,6 +77,21 @@ async function closeReward(page: Page, title: string, amount: number) {
 const balance = (page: Page, n: number) =>
   expect(page.getByLabel(`코인 ${n}개`, { exact: true })).toBeVisible();
 
+async function expectVideoPlaying(page: Page) {
+  // Hidden routes must release their players instead of retaining a second video.
+  await expect(page.locator("video")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page
+        .locator("video")
+        .evaluate(
+          (v: HTMLVideoElement) =>
+            v.readyState >= 2 && !v.paused && v.currentTime > 0.05,
+        ),
+    )
+    .toBe(true);
+}
+
 test("signup gift, buy and apply a costume, the home shows it; a referral pays both people", async ({
   page,
 }) => {
@@ -103,6 +118,23 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   ).toHaveCount(0);
   // Nothing has accrued within the first hour, and collecting then is not an error.
   expect((await api(page, "POST", "/coins/collect")).collected).toBe(0);
+
+  // No purchase/equip needed: the default costume must resume after visiting customize.
+  for (let visit = 0; visit < 3; visit++) {
+    await expectVideoPlaying(page);
+    await page.getByRole("button", { name: "꾸미기", exact: true }).click();
+    await expect(
+      page.getByLabel("광부 미리보기", { exact: true }),
+    ).toBeVisible();
+    await expectVideoPlaying(page);
+    for (const name of ["직장냥이", "잭팟", "광부"]) {
+      await page.getByRole("button", { name, exact: true }).click();
+      await expectVideoPlaying(page);
+    }
+    await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+    await expect(page).toHaveURL(/\/home$/);
+    await expectVideoPlaying(page);
+  }
 
   // Customize: select a shop item, buy it, apply from the purchase modal.
   await page.getByRole("button", { name: "꾸미기", exact: true }).click();
