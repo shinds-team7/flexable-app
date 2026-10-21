@@ -11,6 +11,8 @@ public interface SeedMoneyEntryRepository extends JpaRepository<SeedMoneyEntry, 
 
 	List<SeedMoneyEntry> findByUserIdOrderByCycleEndDesc(Long userId);
 
+	List<SeedMoneyEntry> findByUserIdOrderByCycleEndAsc(Long userId);
+
 	boolean existsByUserIdAndCycleEnd(Long userId, LocalDate cycleEnd);
 
 	/** 잔액 기준 시각 뒤에 옮긴 돈. 통장 잔액에서 빠진 돈이라 추정 잔액에서 뺀다. */

@@ -18,6 +18,10 @@ public interface DailyBudgetRepository extends JpaRepository<DailyBudget, Long> 
 	@Query("select d from DailyBudget d where d.userId = :userId order by d.date")
 	List<DailyBudget> findOrdered(Long userId);
 
+	/** 설정 수정에 영향받지 않는 그래프 시작일. 아직 하루 예산을 조회하지 않았다면 null. */
+	@Query("select min(d.date) from DailyBudget d where d.userId = :userId")
+	LocalDate findFirstDate(Long userId);
+
 	@Modifying
 	@Query("delete from DailyBudget d where d.userId = :userId")
 	void deleteByUserId(Long userId);

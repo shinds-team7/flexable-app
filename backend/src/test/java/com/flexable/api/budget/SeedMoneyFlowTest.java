@@ -1,6 +1,8 @@
 package com.flexable.api.budget;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -10,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -77,6 +80,9 @@ class SeedMoneyFlowTest {
 	@Autowired
 	MutableClock clock;
 
+	@Autowired
+	SeedMoneyEntryRepository seedEntries;
+
 	private MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder b, String token, String body) {
 		b.header("Authorization", "Bearer " + token);
 		return body == null ? b : b.contentType(MediaType.APPLICATION_JSON).content(body);
@@ -96,6 +102,17 @@ class SeedMoneyFlowTest {
 
 	private static final String SETTINGS = "{\"balance\":1000000,\"payday\":26,\"incomeAmount\":2000000,"
 			+ "\"cardUnpaid\":50000,\"fixedExpenses\":[],\"protectedItems\":[{\"name\":\"적금\",\"amount\":300000}]";
+
+	private String link(String token) throws Exception {
+		String code = read(mvc.perform(auth(post("/api/v1/me/web-link-codes"), token, null)), "$.code");
+		return read(mvc.perform(post("/internal/v1/web-links").header("X-Service-Key", KEY)
+			.contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"" + code + "\"}"))
+			.andExpect(status().isCreated()), "$.linkId");
+	}
+
+	private ResultActions webSeed(String linkId) throws Exception {
+		return mvc.perform(get("/internal/v1/web-links/" + linkId + "/seed-money").header("X-Service-Key", KEY));
+	}
 
 	@Test
 	void confirmOncePerCycleAndWaitUntilNextCycle() throws Exception {
@@ -185,8 +202,23 @@ class SeedMoneyFlowTest {
 			.andExpect(jsonPath("$.code").value("BUDGET_NOT_SET"));
 
 		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}")).andExpect(status().isOk());
+		webSeed(linkId).andExpect(status().isOk())
+			.andExpect(jsonPath("$.entries", hasSize(0)))
+			.andExpect(jsonPath("$.startedOn").value(nullValue()))
+			.andExpect(jsonPath("$.total").value(500000))
+			.andExpect(jsonPath("$.base").value(500000))
+			.andExpect(jsonPath("$.lastEntry").value(nullValue()));
 		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(status().isOk());
 		clock.seoulNoon("2026-10-25");
+		mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null))
+			.andExpect(jsonPath("$.pending.cycleEnd").value("2026-10-25"));
+		webSeed(linkId).andExpect(jsonPath("$.entries", hasSize(0)))
+			.andExpect(jsonPath("$.startedOn").value("2026-10-01"))
+			.andExpect(jsonPath("$.total").value(500000))
+			.andExpect(jsonPath("$.pending").doesNotExist())
+			.andExpect(jsonPath("$.goalAmount").doesNotExist())
+			.andExpect(jsonPath("$.allAmount").doesNotExist())
+			.andExpect(jsonPath("$.transactions").doesNotExist());
 		mvc.perform(auth(post("/api/v1/budget/seed-money/entries"), token,
 				"{\"cycleEnd\":\"2026-10-25\",\"choice\":\"GOAL\"}"))
 			.andExpect(status().isCreated());
@@ -198,6 +230,112 @@ class SeedMoneyFlowTest {
 			.andExpect(jsonPath("$.monthlyGoal").value(300000))
 			.andExpect(jsonPath("$.lastEntry.cycleEnd").value("2026-10-25"))
 			.andExpect(jsonPath("$.lastEntry.choice").value("GOAL"))
+			.andExpect(jsonPath("$.entries[0].totalAfter").value(800000))
+			.andExpect(jsonPath("$.entries[0].createdAt").value("2026-10-25T12:00:00+09:00"))
 			.andExpect(jsonPath("$.updatedAt").exists());
+	}
+
+	@Test
+	void webHistoryKeepsConfirmedChoicesAndZeroButDoesNotFillSkippedCycles() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		String linkId = link(token);
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}"))
+			.andExpect(status().isOk());
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(status().isOk());
+		clock.seoulNoon("2026-10-25");
+		mvc.perform(auth(post("/api/v1/budget/seed-money/entries"), token,
+			"{\"cycleEnd\":\"2026-10-25\",\"choice\":\"ALL\"}"))
+			.andExpect(status().isCreated());
+		// 11월은 응답하지 않는다. 12월의 명시적인 0원만 기록으로 남긴다.
+		// 12/26은 토요일이라 수입일이 12/28로 밀린다. 주기 종료일은 12/27이다.
+		clock.seoulNoon("2026-12-27");
+		mvc.perform(auth(post("/api/v1/budget/seed-money/entries"), token,
+			"{\"cycleEnd\":\"2026-12-27\",\"choice\":\"MANUAL\",\"amount\":0}"))
+			.andExpect(status().isCreated());
+		clock.seoulNoon("2027-01-25");
+		mvc.perform(auth(post("/api/v1/budget/seed-money/entries"), token,
+			"{\"cycleEnd\":\"2027-01-25\",\"choice\":\"GOAL\"}"))
+			.andExpect(status().isCreated());
+
+		webSeed(linkId).andExpect(status().isOk())
+			.andExpect(jsonPath("$.entries", hasSize(3)))
+			.andExpect(jsonPath("$.entries[0].cycleEnd").value("2026-10-25"))
+			.andExpect(jsonPath("$.entries[0].choice").value("ALL"))
+			.andExpect(jsonPath("$.entries[0].amount").value(950000))
+			.andExpect(jsonPath("$.entries[0].totalAfter").value(1450000))
+			.andExpect(jsonPath("$.entries[1].cycleEnd").value("2026-12-27"))
+			.andExpect(jsonPath("$.entries[1].choice").value("MANUAL"))
+			.andExpect(jsonPath("$.entries[1].amount").value(0))
+			.andExpect(jsonPath("$.entries[1].totalAfter").value(1450000))
+			.andExpect(jsonPath("$.entries[2].cycleEnd").value("2027-01-25"))
+			.andExpect(jsonPath("$.entries[2].choice").value("GOAL"))
+			.andExpect(jsonPath("$.entries[2].amount").value(300000))
+			.andExpect(jsonPath("$.entries[2].totalAfter").value(1750000))
+			.andExpect(jsonPath("$.total").value(1750000));
+
+		// base를 바꾸면 과거 누적값도 같은 차액만큼 바뀐다. 시작일과 확정 금액은 유지한다.
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":100000}"))
+			.andExpect(status().isOk());
+		webSeed(linkId).andExpect(jsonPath("$.startedOn").value("2026-10-01"))
+			.andExpect(jsonPath("$.base").value(100000))
+			.andExpect(jsonPath("$.entries[0].totalAfter").value(1050000))
+			.andExpect(jsonPath("$.entries[1].totalAfter").value(1050000))
+			.andExpect(jsonPath("$.entries[2].totalAfter").value(1350000))
+			.andExpect(jsonPath("$.total").value(1350000))
+			.andExpect(jsonPath("$.lastEntry.cycleEnd").value("2027-01-25"))
+			.andExpect(jsonPath("$.updatedAt").value("2027-01-25T12:00:00+09:00"));
+	}
+
+	@Test
+	void webHistoryIncludesAllCyclesInOrderAndOnlyLinkedUser() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		String linkId = link(token);
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}"))
+			.andExpect(status().isOk());
+		long userId = Long.parseLong(read(mvc.perform(auth(get("/api/v1/me"), token, null)), "$.id"));
+		// 저장 순서와 무관하게 정렬하고, 앱의 12건 제한을 적용하지 않는지 확인한다.
+		for (int i = 12; i >= 0; i--) {
+			seedEntries.save(new SeedMoneyEntry(userId, LocalDate.of(2025, 9, 25).plusMonths(i),
+				SeedMoneyEntry.Choice.MANUAL, 100, clock.instant()));
+		}
+		String otherToken = signup();
+		long otherId = Long.parseLong(read(mvc.perform(auth(get("/api/v1/me"), otherToken, null)), "$.id"));
+		seedEntries.save(new SeedMoneyEntry(otherId, LocalDate.of(2025, 9, 25),
+			SeedMoneyEntry.Choice.MANUAL, 999, clock.instant()));
+		webSeed(linkId).andExpect(status().isOk())
+			.andExpect(jsonPath("$.entries", hasSize(13)))
+			.andExpect(jsonPath("$.entries[0].cycleEnd").value("2025-09-25"))
+			.andExpect(jsonPath("$.entries[0].totalAfter").value(500100))
+			.andExpect(jsonPath("$.entries[12].cycleEnd").value("2026-09-25"))
+			.andExpect(jsonPath("$.entries[12].totalAfter").value(501300))
+			.andExpect(jsonPath("$.total").value(501300));
+		mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null))
+			.andExpect(jsonPath("$.entries", hasSize(12)))
+			.andExpect(jsonPath("$.entries[0].cycleEnd").value("2026-09-25"));
+	}
+
+	@Test
+	void webSeedErrorsRemainUnchanged() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		String linkId = link(token);
+		webSeed(linkId).andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("BUDGET_NOT_SET"));
+		webSeed("unknown-link").andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"));
+		String path = "/internal/v1/web-links/" + linkId + "/seed-money";
+		for (String key : new String[] { null, "wrong-key-wrong-key-wrong-key-wrong" }) {
+			MockHttpServletRequestBuilder request = get(path);
+			if (key != null) request.header("X-Service-Key", key);
+			mvc.perform(request).andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+		}
+		mvc.perform(auth(get(path), token, null)).andExpect(status().isUnauthorized());
+		mvc.perform(delete("/internal/v1/web-links/" + linkId).header("X-Service-Key", KEY))
+			.andExpect(status().isNoContent());
+		webSeed(linkId).andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"));
 	}
 }
