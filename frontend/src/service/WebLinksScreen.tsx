@@ -1,28 +1,36 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, View } from "react-native";
+import { AppState, Pressable, View } from "react-native";
 import { Button, Card, ConfirmModal, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { useToast } from "@/components/Toast";
 import { colors } from "@/theme";
 import { api, sessionGeneration } from "./api/client";
+import { OPERATOR_NAME } from "./config";
 import { ErrorNotice, Loading, parseTime, useResource } from "./ui";
 
 type LinkCode = { code: string; expiresAt: string };
 
-// Same items as section 4 of docs/play-store/privacy-policy.md; change both together.
+// Same items as section 4 of docs/play-store/privacy-policy.md and the website's policy; change together.
 const CONSENT = [
-  ["받는 곳", "같은 운영자(텅장관리)의 웹사이트(solpa.shinhanacademy.co.kr)"],
   [
-    "제공 항목",
-    "앱 이메일·로그인 방법, 시드머니 합계·모아둔 돈·매달 저축할 돈·시작일·마지막 갱신 시각, 주기별 반영 기록(주기 종료일·선택 방법·금액·반영 후 합계·반영 시각). 반영 대기 정보와 거래 내역은 제공하지 않아요",
+    "처리자",
+    `강선후(운영 이름 ${OPERATOR_NAME}). 같은 운영자의 텅장관리 웹사이트(solpa.shinhanacademy.co.kr)에서 이용`,
   ],
   ["목적", "웹사이트에서 시드머니 표시와 투자·적금 실험"],
   [
-    "보유 기간",
-    "연동 해제, 앱 탈퇴, 웹사이트 탈퇴 중 하나가 일어나면 웹사이트에서 바로 삭제",
+    "항목",
+    "연동 코드, 앱 계정 이메일·가입 방법, 연동 식별값, 연동·조회 일시, 시드머니(합계·모아둔 돈·매달 저축할 돈·마지막 반영·갱신 일시), 앱 사용 시작일(첫 하루 예산 기록일), 주기별 반영 기록(주기 종료일·반영 방법·금액·반영 후 합계·반영 일시). 반영 대기 정보와 거래 내역은 넘기지 않아요",
   ],
-  ["해제 방법", "이 화면의 [연동 해제], 또는 웹사이트의 내 정보 화면"],
+  [
+    "보유 기간",
+    "연동 해제, 앱 탈퇴, 웹사이트 탈퇴 때까지. 앱에서 해제하거나 탈퇴하면 웹사이트는 늦어도 다음 날 새벽에 지워요",
+  ],
+  [
+    "거부할 권리",
+    "동의하지 않을 수 있어요. 동의하지 않으면 웹사이트 연동만 쓸 수 없고 앱의 다른 기능은 그대로 쓸 수 있어요",
+  ],
+  ["철회 방법", "이 화면의 [연동 해제], 또는 웹사이트의 내 정보 화면"],
 ] as const;
 type WebLink = { id: number; createdAt: string };
 
@@ -47,6 +55,8 @@ export function WebLinksScreen() {
   const [error, setError] = useState<unknown>();
   const [selected, setSelected] = useState<WebLink | null>(null);
   const [confirmCode, setConfirmCode] = useState(false);
+  // Optional consent starts unchecked and is asked again each time the screen opens.
+  const [agreed, setAgreed] = useState(false);
   const lock = useRef(false);
   const focus = useRef(0);
   useFocusEffect(
@@ -58,6 +68,7 @@ export function WebLinksScreen() {
         setCode(undefined);
         setSelected(null);
         setConfirmCode(false);
+        setAgreed(false);
       };
     }, []),
   );
@@ -131,6 +142,8 @@ export function WebLinksScreen() {
           busy={busy}
           error={error}
           links={links}
+          agreed={agreed}
+          onAgree={setAgreed}
           onIssue={() =>
             code && remaining > 0 ? setConfirmCode(true) : issueCode()
           }
@@ -163,9 +176,13 @@ function WebLinksContent({
   busy,
   error,
   links,
+  agreed,
+  onAgree,
   onIssue,
   onSelect,
 }: {
+  agreed: boolean;
+  onAgree: (agreed: boolean) => void;
   code?: LinkCode;
   remaining: number;
   busy: boolean;
@@ -182,7 +199,7 @@ function WebLinksContent({
         </T>
         <T color={colors.textSub} style={{ lineHeight: 22 }}>
           웹사이트에서 로그인한 뒤 [앱 연동하기]에 아래 코드를 입력해 주세요.
-          코드를 입력하면 아래 정보를 웹사이트에 제공해요
+          코드를 받으려면 아래 개인정보 수집·이용에 동의해 주세요
         </T>
         <View
           style={{
@@ -207,9 +224,21 @@ function WebLinksContent({
           variant="ghost"
           onPress={() => router.push("/privacy")}
         />
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityLabel="선택 웹사이트 연동 개인정보 수집·이용 동의"
+          accessibilityState={{ checked: agreed }}
+          aria-checked={agreed}
+          onPress={() => onAgree(!agreed)}
+          style={{ paddingVertical: 12 }}
+        >
+          <T>
+            {agreed ? "☑" : "☐"} (선택) 웹사이트 연동 개인정보 수집·이용 동의
+          </T>
+        </Pressable>
         <T size={13} color={colors.textMuted}>
           코드는 10분 동안 한 번만 사용할 수 있어요. 본인이 로그인한
-          웹사이트에만 입력해 주세요. 동의하지 않아도 앱은 그대로 쓸 수 있어요
+          웹사이트에만 입력해 주세요
         </T>
         {code && remaining > 0 && (
           <View
@@ -242,13 +271,9 @@ function WebLinksContent({
         )}
         <Button
           label={
-            busy
-              ? "처리 중이에요"
-              : code
-                ? "동의하고 새 코드 받기"
-                : "동의하고 코드 받기"
+            busy ? "처리 중이에요" : code ? "새 코드 받기" : "웹 연동 코드 받기"
           }
-          disabled={busy}
+          disabled={busy || !agreed}
           onPress={onIssue}
         />
       </Card>
