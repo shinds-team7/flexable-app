@@ -32,7 +32,8 @@ CREATE TABLE coin_ledger (
 );
 
 -- 코스튬 목록. 레벨 코스튬은 unlock_level(1~5)로 열리고 price가 없다. 상점 상품은 price가 있고 unlock_level이 없다.
--- active=false는 운영에서 숨긴다(애니메이션 파일이 저장소에 들어온 뒤 V{n} 마이그레이션으로 켠다).
+-- active=false는 운영에서 숨긴다(영상 파일이 저장소에 들어온 뒤 V{n} 마이그레이션으로 켠다).
+-- 출시 때 영상이 있는 것은 광부(costume-lv1)와 잭팟(outfit-01)뿐이다. 잭팟은 원래 Lv.4 고양이인데 코스튬이 모일 때까지 상점에서 판다(docs/coin-plan.md).
 CREATE TABLE outfits (
     id           VARCHAR(40) NOT NULL,
     name         VARCHAR(40) NOT NULL,
@@ -45,11 +46,11 @@ CREATE TABLE outfits (
 
 INSERT INTO outfits (id, name, price, unlock_level, sort_order, active) VALUES
     ('costume-lv1', '광부',     NULL, 1, 1, TRUE),
-    ('costume-lv2', 'Lv.2 코스튬', NULL, 2, 2, TRUE),
-    ('costume-lv3', 'Lv.3 코스튬', NULL, 3, 3, TRUE),
-    ('costume-lv4', 'Lv.4 코스튬', NULL, 4, 4, TRUE),
-    ('costume-lv5', '왕',       NULL, 5, 5, TRUE),
-    ('outfit-01', '상품 01', 200, NULL, 101, FALSE),
+    ('costume-lv2', 'Lv.2 코스튬', NULL, 2, 2, FALSE),
+    ('costume-lv3', 'Lv.3 코스튬', NULL, 3, 3, FALSE),
+    ('costume-lv4', 'Lv.4 코스튬', NULL, 4, 4, FALSE),
+    ('costume-lv5', '왕',       NULL, 5, 5, FALSE),
+    ('outfit-01', '잭팟',     200, NULL, 101, TRUE),
     ('outfit-02', '상품 02', 200, NULL, 102, FALSE),
     ('outfit-03', '상품 03', 200, NULL, 103, FALSE),
     ('outfit-04', '상품 04', 200, NULL, 104, FALSE),

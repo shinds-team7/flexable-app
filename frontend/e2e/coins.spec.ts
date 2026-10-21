@@ -115,17 +115,13 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByRole("button", { name: "Lv.5 달성 시 열림", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "상품 01", exact: true }).click();
-  await expect(
-    page.getByLabel("상품 01 미리보기", { exact: true }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "잭팟", exact: true }).click();
+  await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "200코인으로 구매", exact: true })
     .click();
   await expect(page.getByText("구매했어요", { exact: true })).toBeVisible();
-  await expect(
-    page.getByLabel("상품 01 코스튬", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByLabel("잭팟 코스튬", { exact: true })).toBeVisible();
   // Buying does not apply it yet.
   expect((await api(page, "GET", "/coins")).equippedOutfitId).toBeNull();
   // The screen's own button now also reads 적용하기; the modal's is the last one.
@@ -141,9 +137,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   expect(wallet.balance).toBe(0);
   expect(wallet.equippedOutfitId).toBe("outfit-01");
   await page.getByRole("button", { name: "꾸미기", exact: true }).click();
-  await expect(
-    page.getByLabel("상품 01 미리보기", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();

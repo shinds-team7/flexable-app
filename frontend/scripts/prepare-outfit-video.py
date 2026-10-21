@@ -3,8 +3,9 @@
 H.264 · 소리 없음 · 1280x720 · 가장자리를 무대 색 #EEF2FA로 서서히 녹임, 그리고 첫 장면 JPG를 만든다.
 받은 영상의 배경이 무대 색과 달라도 경계가 보이지 않게 하기 위한 것이다.
 
-사용: python scripts/prepare-outfit-video.py <받은 영상.mp4> <코스튬 id>
-  예) python scripts/prepare-outfit-video.py ~/Downloads/cat_mine.mp4 costume-lv1
+사용: python scripts/prepare-outfit-video.py <받은 영상.mp4> <코스튬 id> [첫 화면 이미지]
+  예) python scripts/prepare-outfit-video.py ~/Downloads/cat_mine.mp4 costume-lv1 ~/Downloads/cat-mine-thumbnail.jpg
+첫 화면 이미지를 주면 영상 첫 장면 대신 그 이미지를 같은 규격(1280x720, 가장자리 녹임)으로 만들어 쓴다.
 결과: assets/outfits/<id>.mp4, assets/outfits/<id>.jpg
 ffmpeg가 PATH에 없으면 `pip install imageio-ffmpeg`로 받은 것을 쓴다.
 """
@@ -34,9 +35,10 @@ def ffmpeg():
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         sys.exit(__doc__)
     src, outfit_id = os.path.expanduser(sys.argv[1]), sys.argv[2]
+    thumbnail = os.path.expanduser(sys.argv[3]) if len(sys.argv) == 4 else None
     if not re.fullmatch(r"(costume-lv[1-5]|outfit-\d{2})", outfit_id):
         sys.exit("코스튬 id는 costume-lv1~5 또는 outfit-01~10 형식이에요")
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -62,7 +64,14 @@ def main():
          "-movflags", "+faststart", video],
         check=True,
     )
-    subprocess.run([ff, "-v", "error", "-y", "-i", video, "-frames:v", "1", "-q:v", "3", poster], check=True)
+    if thumbnail:
+        subprocess.run(
+            [ff, "-v", "error", "-y", "-loop", "1", "-i", thumbnail, "-filter_complex", graph,
+             "-frames:v", "1", "-q:v", "3", poster],
+            check=True,
+        )
+    else:
+        subprocess.run([ff, "-v", "error", "-y", "-i", video, "-frames:v", "1", "-q:v", "3", poster], check=True)
     for path in (video, poster):
         print(f"{os.path.relpath(path)}  {os.path.getsize(path) // 1024}KB")
     print(f'outfits.ts VIDEOS에 추가: "{outfit_id}": {{ video: require("../../assets/outfits/{outfit_id}.mp4"), '

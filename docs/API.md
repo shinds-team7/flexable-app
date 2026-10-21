@@ -414,7 +414,7 @@ POST 본문:
   "items": [
     { "id": "costume-lv1", "name": "광부", "price": null, "unlockLevel": 1, "owned": true, "equipped": true },
     { "id": "costume-lv3", "name": "Lv.3 코스튬", "price": null, "unlockLevel": 3, "owned": false, "equipped": false },
-    { "id": "outfit-01", "name": "상품 01", "price": 200, "unlockLevel": null, "owned": false, "equipped": false }
+    { "id": "outfit-01", "name": "잭팟", "price": 200, "unlockLevel": null, "owned": false, "equipped": false }
   ]
 }
 ```

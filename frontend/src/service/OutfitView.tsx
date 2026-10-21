@@ -6,10 +6,17 @@ import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useState } from "react";
-import { StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from "react-native";
 
 import { useReducedMotion } from "@/components/ui";
 import { outfitSource, outfitVideo } from "./outfits";
+
+// 웹 expo-video는 <video>.play()의 Promise를 받지 않는다. 재생 직후 화면을 떠나 pause가 먼저 오면
+// 브라우저가 그 play를 AbortError로 끝내고 처리되지 않은 오류로 남는다. 동작에는 영향이 없어 이 경우만 무시한다.
+if (Platform.OS === "web" && typeof window !== "undefined")
+  window.addEventListener("unhandledrejection", (e) => {
+    if (e.reason?.name === "AbortError" && /play\(\) request was interrupted/.test(String(e.reason?.message))) e.preventDefault();
+  });
 
 type Props = {
   outfitId: string | null;
