@@ -104,3 +104,49 @@ export type Analysis = {
   })[];
   daily: { date: string; expense: number; income: number }[];
 };
+// Coins and costumes: docs/API.md "코인·코스튬". Servers before 1.4.0 do not have these endpoints.
+export type CoinWallet = {
+  balance: number;
+  passive: {
+    collectable: number;
+    collectedToday: number;
+    dailyLimit: number;
+    nextAt: string | null;
+  };
+  /** null이면 기본 캐릭터(costume-lv1) */
+  equippedOutfitId: string | null;
+};
+export type CoinRewardReason = "SIGNUP_GIFT" | "BUDGET_BONUS" | "REFERRAL_INVITER";
+export type CoinReward = {
+  id: number;
+  reason: CoinRewardReason;
+  amount: number;
+  /** BUDGET_BONUS일 때 예산을 지킨 날 */
+  refDate: string | null;
+  createdAt: string;
+};
+export type CheckIn = { wallet: CoinWallet; rewards: CoinReward[] };
+export type CollectResult = { collected: number; wallet: CoinWallet };
+export type Outfit = {
+  id: string;
+  name: string;
+  /** 상점 상품만 있다. 레벨 코스튬은 null */
+  price: number | null;
+  /** 레벨 코스튬만 있다(1~5). 상점 상품은 null */
+  unlockLevel: number | null;
+  owned: boolean;
+  equipped: boolean;
+};
+export type OutfitList = {
+  balance: number;
+  equippedOutfitId: string | null;
+  peakLevel: number;
+  items: Outfit[];
+};
+export type Referral = {
+  code: string;
+  invitedCount: number;
+  registered: boolean;
+  rewardAmount: number;
+};
+export type ReferralResult = { amount: number; wallet: CoinWallet };

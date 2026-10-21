@@ -12,3 +12,6 @@ app:
   web-link:
     # 로컬 웹 백엔드(flexable-web)가 이 서버를 부를 때 쓰는 개발용 키
     service-keys: local-dev-service-key-local-dev-service-key
+  outfits:
+    # 애니메이션 파일 전이라 꺼 둔 상점 상품도 보여 준다(구매 흐름 시험용). 운영은 기본값 false
+    show-inactive: true

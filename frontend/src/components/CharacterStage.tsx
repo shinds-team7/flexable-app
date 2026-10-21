@@ -3,77 +3,17 @@
  * 단계·게이지 값은 부르는 쪽(서비스 홈, 서버 점수 pointsStatus)이 계산해서 넘긴다.
  */
 import { useEffect, type ReactNode } from 'react';
-import { Animated, Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme';
-import { T, useAnimValue, useReducedMotion } from './ui';
+import { Button, T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5;
 
-/** 레벨별 캐릭터(광부 → 왕). img 는 뒤에 쌓인 동전이 적은 순 4장 — 오늘 남은 돈만큼 고른다(coinStage) */
-const LEVELS: Record<Level, { img: ImageSourcePropType[]; bg: string; accent: string }> = {
-  1: {
-    img: [
-      require('../../assets/characters/lv1-1.png'),
-      require('../../assets/characters/lv1-2.png'),
-      require('../../assets/characters/lv1-3.png'),
-      require('../../assets/characters/lv1-4.png'),
-    ],
-    bg: colors.stage,
-    accent: '#667085',
-  },
-  2: {
-    img: [
-      require('../../assets/characters/lv2-1.png'),
-      require('../../assets/characters/lv2-2.png'),
-      require('../../assets/characters/lv2-3.png'),
-      require('../../assets/characters/lv2-4.png'),
-    ],
-    bg: colors.stage,
-    accent: '#8A6A3B',
-  },
-  3: {
-    img: [
-      require('../../assets/characters/lv3-1.png'),
-      require('../../assets/characters/lv3-2.png'),
-      require('../../assets/characters/lv3-3.png'),
-      require('../../assets/characters/lv3-4.png'),
-    ],
-    bg: colors.stage,
-    accent: '#1D3A8A',
-  },
-  4: {
-    img: [
-      require('../../assets/characters/lv4-1.png'),
-      require('../../assets/characters/lv4-2.png'),
-      require('../../assets/characters/lv4-3.png'),
-      require('../../assets/characters/lv4-4.png'),
-    ],
-    bg: colors.stage,
-    accent: '#A11D2B',
-  },
-  5: {
-    img: [
-      require('../../assets/characters/lv5-1.png'),
-      require('../../assets/characters/lv5-2.png'),
-      require('../../assets/characters/lv5-3.png'),
-      require('../../assets/characters/lv5-4.png'),
-    ],
-    bg: colors.stage,
-    accent: '#B7791F',
-  },
-};
+/** 레벨별 게이지 강조색 */
+const ACCENTS: Record<Level, string> = { 1: '#667085', 2: '#8A6A3B', 3: '#1D3A8A', 4: '#A11D2B', 5: '#B7791F' };
 
 export type PaceStatus = { level: Level; progress: number; label: string };
-
-/** 캐릭터 뒤 동전 더미 단계(1 = 거의 없음, 4 = 가득) */
-export type CoinStage = 1 | 2 | 3 | 4;
-
-/** 오늘 남은 돈 ÷ 하루 예산 → 동전 단계. 아침엔 가득, 쓸수록 줄어든다(70% · 40% · 10% 경계) */
-export function coinStage(todayAvailable: number, dailyBudget: number): CoinStage {
-  const ratio = dailyBudget > 0 ? todayAvailable / dailyBudget : 0;
-  return ratio > 0.7 ? 4 : ratio > 0.4 ? 3 : ratio > 0.1 ? 2 : 1;
-}
 
 /** 서버 캐릭터 점수(0~400, 100점이 한 단계) → 단계와 게이지. 실서비스용 */
 export function pointsStatus(points: number, label: string): PaceStatus {
@@ -82,12 +22,27 @@ export function pointsStatus(points: number, label: string): PaceStatus {
   return { level, progress: level === 5 ? 1 : (p % 100) / 100, label };
 }
 
-/** 서버 점수에 따른 캐릭터·동전 단계·승급 게이지. 서비스가 안내 문구를 전달한다. */
-export function CharacterStage({ level, coins, gauge, message, children }: { level: Level; coins: CoinStage; gauge: PaceStatus; message: string; children: ReactNode }) {
-  const L = LEVELS[level];
+/** 홈 코인 줄 — 잔액과 [모으기]. 서버를 못 받았으면 부르는 쪽이 coin 을 넘기지 않는다 */
+export type CoinBar = {
+  balance: number;
+  /** 지금 받을 수 있는 개수 */
+  collectable: number;
+  /** collectable 이 0일 때 [모으기] 아래에 보일 안내(다음 적립 시각 등) */
+  hint: string;
+  busy: boolean;
+  onCollect: () => void;
+  onCustomize: () => void;
+};
+
+/**
+ * 적용 중인 코스튬 영상 하나와 승급 게이지. 캐릭터(character)·안내 문구·코인 값은 서비스가 전달한다.
+ * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
+ */
+export function CharacterStage({ level, character, coin, gauge, message, children }: { level: Level; character: ReactNode; coin?: CoinBar; gauge: PaceStatus; message: string; children: ReactNode }) {
+  const accent = ACCENTS[level];
 
   return (
-    <View style={[styles.wrap, { backgroundColor: L.bg }]}>
+    <View style={[styles.wrap, { backgroundColor: colors.stage }]}>
       {/* 오늘 쓸 수 있는 돈 — 기존 홈과 같은 파란 카드를 맨 위에 */}
       <View style={styles.heroSlot}>{children}</View>
 
@@ -99,10 +54,32 @@ export function CharacterStage({ level, coins, gauge, message, children }: { lev
       </View>
 
       <View style={styles.stage}>
-        <Image source={L.img[coins - 1]} style={styles.char} resizeMode="contain" accessible accessibilityRole="image" accessibilityLabel={`Lv.${level} 캐릭터, 오늘 예산 동전 ${coins}/4단계`} />
+        <View style={styles.char}>{character}</View>
       </View>
 
-      <Gauge status={gauge} accent={L.accent} />
+      {coin && (
+        <View style={styles.coinRow}>
+          <View style={styles.balance} accessible accessibilityLabel={`코인 ${coin.balance}개`}>
+            <T size={15} weight="800" num>{`🪙 ${coin.balance.toLocaleString('ko-KR')}`}</T>
+          </View>
+          <View style={styles.coinBtns}>
+            <Button
+              label={coin.collectable > 0 ? `모으기 +${coin.collectable}` : '모으기'}
+              disabled={coin.collectable <= 0 || coin.busy}
+              onPress={coin.onCollect}
+              style={styles.coinBtn}
+            />
+            <Button label="꾸미기" variant="soft" onPress={coin.onCustomize} style={styles.coinBtn} />
+          </View>
+          {coin.collectable <= 0 && coin.hint !== '' && (
+            <T size={12} color={colors.textMuted}>
+              {coin.hint}
+            </T>
+          )}
+        </View>
+      )}
+
+      <Gauge status={gauge} accent={accent} />
     </View>
   );
 }
@@ -172,8 +149,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     transform: [{ rotate: '45deg' }],
   },
-  stage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4, alignSelf: 'stretch' },
-  char: { width: 220, height: 220 },
+  // wrap 의 좌우 여백(16)을 상쇄해 화면 끝까지. 넓은 웹 화면에서는 640에서 멈춘다
+  stage: { alignItems: 'center', marginTop: 4, marginHorizontal: -16, alignSelf: 'stretch' },
+  char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
+  coinRow: { alignSelf: 'stretch', alignItems: 'center', gap: 8, marginTop: 8 },
+  balance: { backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
+  coinBtns: { flexDirection: 'row', gap: 8 },
+  coinBtn: { minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 },
   gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
   gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   track: { height: 10, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.08)', overflow: 'hidden' },

@@ -37,6 +37,13 @@ async function snapshot(page: Page, path: string) {
   expect(response.ok()).toBeTruthy();
   return response.json();
 }
+// A new account's first home visit shows the coin gift modal once (docs/coin-plan.md); close it before using the home.
+async function closeGift(page: Page) {
+  await expect(
+    page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "확인", exact: true }).click();
+}
 async function login(page: Page, address: string) {
   await page
     .getByRole("button", { name: "이메일로 로그인", exact: true })
@@ -95,6 +102,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   expect(budgetWrites).toBe(1);
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
+  await closeGift(page);
   await expect(
     page.getByText("아직 기록한 거래가 없어요", { exact: true }),
   ).toBeVisible();
@@ -360,6 +368,7 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
+  await closeGift(page);
   const auth = await token(page);
   const categories = await (
     await page.request.get(`${apiBase}/categories?type=EXPENSE`, {
@@ -421,6 +430,7 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
   expect((await snapshot(page, "/budget/settings")).seedBase).toBe(500000);
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
+  await closeGift(page);
   await expect(page.getByText("500,000원", { exact: true })).toBeVisible();
   // The real prompt needs a finished pay cycle, so the pending answer is mocked; the POST body is what matters.
   let posted: unknown;
