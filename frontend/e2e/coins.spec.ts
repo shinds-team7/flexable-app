@@ -118,6 +118,11 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(collect).toHaveCount(0);
   await openShop(page);
   await balance(page, 200);
+  await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
+  // Three locked slots wait after the level costumes.
+  await expect(
+    page.getByLabel("준비 중인 코스튬", { exact: true }),
+  ).toHaveCount(3);
   await expect(collect).toBeDisabled();
   await expect(page.getByText(/^다음 코인은 .+에 쌓여요$/)).toBeVisible();
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
@@ -159,7 +164,8 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   const salary = page.getByRole("button", { name: "직장냥이", exact: true });
-  await expect(salary).toHaveText("🪙 200");
+  // Not bought yet, so the lock icon sits over the picture next to the price.
+  await expect(salary).toContainText("🪙 200");
   await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
   await salary.click();
   await expect(
@@ -211,9 +217,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
   ).toBeDisabled();
-  await expect(
-    page.getByText("코인이 200개 모자라요", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(/모자라요/)).toHaveCount(0);
 
   // Referral: the invitee enters the code on My page.
   const { code } = await api(page, "GET", "/referrals/me");

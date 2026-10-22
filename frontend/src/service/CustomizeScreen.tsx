@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
@@ -157,6 +157,7 @@ export function CustomizeScreen() {
               items={list.items.filter((o) => o.unlockLevel !== null)}
               selected={selected}
               onSelect={setSelected}
+              empty={3}
             />
             <T size={14} weight="700" color={colors.textSub}>
               코인 코스튬
@@ -202,9 +203,6 @@ function CoinCard({
   return (
     <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
       <View style={{ flex: 1, gap: 2 }}>
-        <T size={13} color={colors.textSub}>
-          앱에서만 쓰는 코인
-        </T>
         <View accessible accessibilityLabel={`코인 ${balance}개`}>
           <T size={24} weight="800" num>
             🪙 {money(balance)}
@@ -264,37 +262,32 @@ function Action({
       />
     );
   const price = outfit.price ?? 0;
-  const short = price - balance;
   return (
-    <View style={[stretch, { gap: 6 }]}>
-      <Button
-        label={`${money(price)}코인으로 구매`}
-        disabled={busy || short > 0}
-        onPress={onBuy}
-      />
-      {short > 0 && (
-        <T size={13} color={colors.textMuted} style={{ textAlign: "center" }}>
-          코인이 {money(short)}개 모자라요
-        </T>
-      )}
-    </View>
+    <Button
+      label={`${money(price)}코인으로 구매`}
+      disabled={busy || price > balance}
+      onPress={onBuy}
+      style={stretch}
+    />
   );
 }
 
+/** 가지지 않은 코스튬(잠긴 레벨·안 산 상품)은 그림을 어둡게 덮고 자물쇠를 띄운다. empty 는 뒤에 붙일 준비 중 칸 수 */
 function Grid({
   items,
   selected,
   onSelect,
+  empty = 0,
 }: {
   items: Outfit[];
   selected: string;
   onSelect: (id: string) => void;
+  empty?: number;
 }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+    <View style={grid.wrap}>
       {items.map((o) => {
         const on = o.id === selected;
-        const locked = !o.owned && o.unlockLevel !== null;
         const caption =
           o.unlockLevel === null
             ? `🪙 ${money(o.price ?? 0)}`
@@ -310,46 +303,75 @@ function Grid({
             accessibilityLabel={o.name}
             accessibilityState={{ selected: on }}
             onPress={() => onSelect(o.id)}
-            style={{
-              width: "31%",
-              padding: 10,
-              gap: 6,
-              alignItems: "center",
-              borderRadius: radius.soft,
-              backgroundColor: on ? colors.brandSoft : colors.card,
-              borderWidth: on ? 2 : 1,
-              borderColor: on ? colors.brand : colors.line,
-            }}
+            style={[grid.cell, on && grid.on]}
           >
-            <OutfitView
-              outfitId={o.id}
-              play={false}
-              style={{
-                width: "100%",
-                aspectRatio: 16 / 9,
-                borderRadius: radius.soft,
-                overflow: "hidden",
-                backgroundColor: colors.stage,
-                opacity: locked ? 0.4 : 1,
-              }}
-            />
-            {locked && (
-              <Ionicons
-                name="lock-closed"
-                size={16}
-                color={colors.textSub}
-                style={{ position: "absolute", top: 8, right: 8 }}
-              />
-            )}
+            <View style={grid.thumbBox}>
+              <OutfitView outfitId={o.id} play={false} style={grid.thumb} />
+              {!o.owned && (
+                <View style={[StyleSheet.absoluteFill, grid.shade]}>
+                  <Ionicons name="lock-closed" size={18} color="#fff" />
+                </View>
+              )}
+            </View>
             <T size={12} color={colors.textMuted}>
               {caption}
             </T>
           </Pressable>
         );
       })}
+      {Array.from({ length: empty }, (_, i) => (
+        <View
+          key={`empty-${i}`}
+          accessible
+          accessibilityLabel="준비 중인 코스튬"
+          style={grid.cell}
+        >
+          <View style={[grid.thumb, grid.center]}>
+            <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+          </View>
+          {/* 이름 칸 높이를 맞춰 옆 칸과 줄이 어긋나지 않게 한다 */}
+          <T size={12} aria-hidden>
+            {"\u00A0"}
+          </T>
+        </View>
+      ))}
     </View>
   );
 }
+
+const grid = StyleSheet.create({
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  cell: {
+    width: "31%",
+    padding: 10,
+    gap: 6,
+    alignItems: "center",
+    borderRadius: radius.soft,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  on: {
+    backgroundColor: colors.brandSoft,
+    borderWidth: 2,
+    borderColor: colors.brand,
+  },
+  thumbBox: { width: "100%" },
+  thumb: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: radius.soft,
+    overflow: "hidden",
+    backgroundColor: colors.stage,
+  },
+  shade: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.soft,
+    backgroundColor: "rgba(16, 24, 40, 0.32)",
+  },
+  center: { alignItems: "center", justifyContent: "center" },
+});
 
 function collectHint(w: CoinWallet): string {
   const { collectedToday, dailyLimit, nextAt } = w.passive;
