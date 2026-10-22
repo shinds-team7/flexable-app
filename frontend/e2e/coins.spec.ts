@@ -159,7 +159,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   const salary = page.getByRole("button", { name: "직장냥이", exact: true });
-  await expect(salary).toHaveText("200코인");
+  await expect(salary).toHaveText("🪙 200");
   await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
   await salary.click();
   await expect(
@@ -203,7 +203,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByLabel("직장냥이 미리보기", { exact: true }),
   ).toBeVisible();
-  await expect(salary).toHaveText("200코인");
+  await expect(salary).toHaveText("🪙 200");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();

@@ -297,7 +297,7 @@ function Grid({
         const locked = !o.owned && o.unlockLevel !== null;
         const caption =
           o.unlockLevel === null
-            ? `${money(o.price ?? 0)}코인`
+            ? `🪙 ${money(o.price ?? 0)}`
             : o.equipped
               ? "적용 중"
               : o.owned
