@@ -93,19 +93,19 @@ public final class BudgetCalculator {
 		return ym.atDay(Math.min(payday, ym.lengthOfMonth()));
 	}
 
-	/** 그 달의 실제 수입일. 토·일이면 다음 월요일로 미룬다(공휴일은 반영하지 않음). 다음 달로 넘어갈 수 있다. */
+	/** 그 달의 실제 수입일. 토·일·공휴일(PublicHolidays)이면 다음 평일로 미룬다. 다음 달로 넘어갈 수 있다. */
 	static LocalDate incomeDayIn(YearMonth ym, int payday) {
 		LocalDate d = paydayIn(ym, payday);
-		return switch (d.getDayOfWeek()) {
-			case SATURDAY -> d.plusDays(2);
-			case SUNDAY -> d.plusDays(1);
-			default -> d;
-		};
+		while (d.getDayOfWeek() == DayOfWeek.SATURDAY || d.getDayOfWeek() == DayOfWeek.SUNDAY
+				|| PublicHolidays.contains(d)) {
+			d = d.plusDays(1);
+		}
+		return d;
 	}
 
 	/** 오늘 이후(오늘 제외) 가장 가까운 수입일 */
 	static LocalDate nextPayday(LocalDate today, int payday) {
-		// 지난달 수입일이 주말이라 이번 달로 밀렸을 수 있어서 앞뒤 달을 함께 본다
+		// 지난달 수입일이 주말·공휴일이라 이번 달로 밀렸을 수 있어서 앞뒤 달을 함께 본다
 		YearMonth ym = YearMonth.from(today);
 		for (int i = -1; i <= 1; i++) {
 			LocalDate d = incomeDayIn(ym.plusMonths(i), payday);
