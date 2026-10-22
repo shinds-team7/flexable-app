@@ -12,7 +12,7 @@ public final class OutfitDtos {
 			boolean equipped) {
 	}
 
-	/** equippedOutfitId가 null이면 기본 캐릭터(costume-lv1). peakLevel은 지금까지 도달한 최고 캐릭터 단계(1~5). */
+	/** equippedOutfitId가 null이면 기본 캐릭터(costume-lv1). peakLevel은 지금까지 도달한 최고 캐릭터 단계(1~3). */
 	public record OutfitList(long balance, String equippedOutfitId, int peakLevel, List<OutfitItem> items) {
 	}
 

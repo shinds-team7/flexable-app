@@ -119,7 +119,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await openShop(page);
   await balance(page, 200);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
-  // Locally all five level costumes are listed, so no locked slot is needed to reach three.
+  // Local mode also lists inactive reserve costumes, so no empty slot is needed.
   await expect(
     page.getByLabel("준비 중인 코스튬", { exact: true }),
   ).toHaveCount(0);
@@ -164,14 +164,17 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   const salary = page.getByRole("button", { name: "직장냥이", exact: true });
-  // Not bought yet, so the lock icon sits over the picture next to the price.
-  await expect(salary).toContainText("🪙 200");
+  // Converted costumes are unlocked by level and cannot be bought.
+  await expect(salary).toContainText("Lv.2");
   await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
   await salary.click();
   await expect(
     page.getByLabel("직장냥이 미리보기", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("직장냥이", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Lv.2 달성 시 열림", exact: true }),
+  ).toBeDisabled();
   // A real salary-cat video loads and plays, rather than the default fallback poster.
   await expect
     .poll(() =>
@@ -184,12 +187,14 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
         ),
     )
     .toBe(true);
+  // Inactive reserve products are available only in local mode for purchase coverage.
+  await page.getByRole("button", { name: "상품 03", exact: true }).click();
   await page
     .getByRole("button", { name: "200코인으로 구매", exact: true })
     .click();
   await expect(page.getByText("구매했어요", { exact: true })).toBeVisible();
   await expect(
-    page.getByLabel("직장냥이 코스튬", { exact: true }),
+    page.getByLabel("상품 03 코스튬", { exact: true }),
   ).toBeVisible();
   // Buying does not apply it yet.
   expect((await api(page, "GET", "/coins")).equippedOutfitId).toBeNull();
@@ -203,17 +208,19 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page).toHaveURL(/\/home$/);
   const wallet = await api(page, "GET", "/coins");
   expect(wallet.balance).toBe(0);
-  expect(wallet.equippedOutfitId).toBe("outfit-02");
+  expect(wallet.equippedOutfitId).toBe("outfit-03");
   await openShop(page);
   await balance(page, 0);
   await expect(
-    page.getByLabel("직장냥이 미리보기", { exact: true }),
+    page.getByLabel("상품 03 미리보기", { exact: true }),
   ).toBeVisible();
-  await expect(salary).toHaveText("🪙 200");
+  await expect(
+    page.getByRole("button", { name: "상품 03", exact: true }),
+  ).toHaveText("🪙 200");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "잭팟", exact: true }).click();
+  await page.getByRole("button", { name: "상품 04", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
   ).toBeDisabled();
@@ -262,6 +269,63 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await page.goto("/my");
   await expect(page.getByText(/\(지금까지 1명\)/)).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("level three caps the home gauge and a costume refund is acknowledged once", async ({
+  page,
+}) => {
+  await signup(page, email("refund"));
+  await onboard(page);
+  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+  const today = await api(page, "GET", "/budget/today");
+  const wallet = await api(page, "GET", "/coins");
+  await page.route("**/api/v1/budget/today", (route) =>
+    route.fulfill({
+      json: { ...today, characterPoints: 200, characterDelta: 0 },
+    }),
+  );
+  let pending = true;
+  await page.route("**/api/v1/coins/check-in", (route) =>
+    route.fulfill({
+      json: {
+        wallet: { ...wallet, balance: 400 },
+        rewards: pending
+          ? [
+              {
+                id: 987654,
+                reason: "REFUND",
+                amount: 200,
+                refDate: null,
+                createdAt: new Date().toISOString(),
+              },
+            ]
+          : [],
+      },
+    }),
+  );
+  await page.route("**/api/v1/coins/rewards/ack", (route) => {
+    expect(route.request().postDataJSON()).toEqual({ ids: [987654] });
+    pending = false;
+    return route.fulfill({ status: 204 });
+  });
+  await Promise.all([checkedIn(page), page.reload()]);
+  await expect(page.getByText(/코스튬은 계속 쓸 수 있어요/)).toBeVisible();
+  await closeReward(page, "코스튬 구매 코인을 돌려드려요", 200);
+  await expect.poll(() => pending).toBe(false);
+  const gauge = page.getByRole("progressbar");
+  await expect(gauge).toHaveAccessibleName(/최고 단계/);
+  await expect(gauge).toContainText("최고 단계");
+  await expect(gauge).toContainText("Lv.3");
+  await expect(gauge).not.toContainText("%");
+  await expect(
+    page.getByText("광부에서 시작! 예산을 지키면 조금씩 올라가요", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await Promise.all([checkedIn(page), page.reload()]);
+  await expect(
+    page.getByRole("heading", { name: "코스튬 구매 코인을 돌려드려요" }),
+  ).toHaveCount(0);
 });
 
 test("collect takes the coins that accrued since the first check-in (accrual mocked)", async ({
