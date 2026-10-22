@@ -20,6 +20,9 @@ import type { CoinWallet, Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
 
+// 레벨 코스튬은 모두 3개가 될 예정이라, 아직 열리지 않은(서버에 없는) 칸은 자물쇠로 채운다.
+const LEVEL_SLOTS = 3;
+
 export function CustomizeScreen() {
   const [list, setList] = useState<OutfitList>();
   const [loadError, setLoadError] = useState<unknown>();
@@ -82,6 +85,7 @@ export function CustomizeScreen() {
   };
 
   const current = list?.items.find((o) => o.id === selected);
+  const levels = list?.items.filter((o) => o.unlockLevel !== null) ?? [];
   // The outfit list carries the balance shown here; the shared wallet follows so the home and header stay in step.
   const buy = (outfit: Outfit) =>
     run(async () => {
@@ -154,10 +158,10 @@ export function CustomizeScreen() {
               레벨 코스튬
             </T>
             <Grid
-              items={list.items.filter((o) => o.unlockLevel !== null)}
+              items={levels}
               selected={selected}
               onSelect={setSelected}
-              empty={3}
+              empty={Math.max(0, LEVEL_SLOTS - levels.length)}
             />
             <T size={14} weight="700" color={colors.textSub}>
               코인 코스튬
