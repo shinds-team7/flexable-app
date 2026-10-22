@@ -1,5 +1,6 @@
 package com.flexable.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,7 +14,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -277,6 +285,43 @@ class ApiFlowTest {
 		mvc.perform(json(post("/api/v1/auth/login"), null, "{\"email\":\"flow@example.com\",\"password\":\"abcd1234\"}"))
 			.andExpect(status().isUnauthorized());
 		signup("flow@example.com");
+	}
+
+	@Test
+	void concurrentRetriesWithSameIdempotencyKeyCreateOneTransaction() throws Exception {
+		String token = signup("idem-race@example.com");
+		long food = categoryId(token, "EXPENSE", "식비");
+		String key = UUID.randomUUID().toString();
+		String txBody = "{\"type\":\"EXPENSE\",\"amount\":4500,\"categoryId\":" + food + ",\"title\":\"커피\"}";
+
+		int n = 6;
+		CountDownLatch start = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(n);
+		List<Future<MvcResult>> results = new ArrayList<>();
+		for (int i = 0; i < n; i++) {
+			Callable<MvcResult> send = () -> {
+				start.await();
+				return mvc.perform(json(post("/api/v1/transactions"), token, txBody).header("Idempotency-Key", key))
+					.andReturn();
+			};
+			results.add(pool.submit(send));
+		}
+		start.countDown();
+		List<Integer> statuses = new ArrayList<>();
+		List<Integer> ids = new ArrayList<>();
+		for (Future<MvcResult> f : results) {
+			MvcResult r = f.get();
+			statuses.add(r.getResponse().getStatus());
+			ids.add(JsonPath.read(body(r), "$.id"));
+		}
+		pool.shutdown();
+
+		// 하나만 만들고(201) 나머지는 그 거래를 돌려준다(200)
+		assertThat(statuses).filteredOn(s -> s == 201).hasSize(1);
+		assertThat(statuses).filteredOn(s -> s == 200).hasSize(n - 1);
+		assertThat(ids).containsOnly(ids.get(0));
+		mvc.perform(json(get("/api/v1/transactions?from=" + today + "&to=" + today), token, null))
+			.andExpect(jsonPath("$.items", hasSize(1)));
 	}
 
 	@Test
