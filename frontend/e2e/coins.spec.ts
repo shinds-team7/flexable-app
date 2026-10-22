@@ -118,6 +118,11 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(collect).toHaveCount(0);
   await openShop(page);
   await balance(page, 200);
+  await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
+  // Locally all five level costumes are listed, so no locked slot is needed to reach three.
+  await expect(
+    page.getByLabel("준비 중인 코스튬", { exact: true }),
+  ).toHaveCount(0);
   await expect(collect).toBeDisabled();
   await expect(page.getByText(/^다음 코인은 .+에 쌓여요$/)).toBeVisible();
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
@@ -159,7 +164,8 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   const salary = page.getByRole("button", { name: "직장냥이", exact: true });
-  await expect(salary).toHaveText("200코인");
+  // Not bought yet, so the lock icon sits over the picture next to the price.
+  await expect(salary).toContainText("🪙 200");
   await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
   await salary.click();
   await expect(
@@ -203,7 +209,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByLabel("직장냥이 미리보기", { exact: true }),
   ).toBeVisible();
-  await expect(salary).toHaveText("200코인");
+  await expect(salary).toHaveText("🪙 200");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
@@ -211,9 +217,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
   ).toBeDisabled();
-  await expect(
-    page.getByText("코인이 200개 모자라요", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(/모자라요/)).toHaveCount(0);
 
   // Referral: the invitee enters the code on My page.
   const { code } = await api(page, "GET", "/referrals/me");
@@ -285,6 +289,34 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
       },
     }),
   );
+  // Production lists only the miner among level costumes; two locked slots fill the row of three.
+  await page.route("**/api/v1/outfits", (route) =>
+    route.fulfill({
+      json: {
+        balance: 200,
+        equippedOutfitId: null,
+        peakLevel: 1,
+        items: [
+          {
+            id: "costume-lv1",
+            name: "광부",
+            price: null,
+            unlockLevel: 1,
+            owned: true,
+            equipped: true,
+          },
+          {
+            id: "outfit-01",
+            name: "잭팟",
+            price: 200,
+            unlockLevel: null,
+            owned: false,
+            equipped: false,
+          },
+        ],
+      },
+    }),
+  );
   // The shop reads the wallet again on its own.
   await page.route("**/api/v1/coins", (route) =>
     route.fulfill({
@@ -308,6 +340,9 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   await Promise.all([checkedIn(page), page.reload()]);
   await openShop(page);
   await balance(page, 200);
+  await expect(
+    page.getByLabel("준비 중인 코스튬", { exact: true }),
+  ).toHaveCount(2);
   await page.getByRole("button", { name: "모으기 +3", exact: true }).click();
   await balance(page, 203);
   await expect(
