@@ -231,9 +231,9 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await onboard(page);
   await closeReward(page, "업데이트 기념 200코인 선물", 200);
   await page.goto("/my");
-  await expect(
-    page.getByText("앱에서만 쓰는 코인 200개", { exact: true }),
-  ).toBeVisible();
+  // My page keeps only the referral; the shop is reached from the home header alone.
+  await expect(page.getByRole("button", { name: "상점" })).toHaveCount(0);
+  await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
   await page
     .getByLabel("친구에게 받은 추천 코드", { exact: true })
     .fill(` ${code.toLowerCase()} `);
@@ -243,9 +243,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByText("코인 100개를 받았어요", { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText("앱에서만 쓰는 코인 300개", { exact: true }),
-  ).toBeVisible();
+  expect((await api(page, "GET", "/coins")).balance).toBe(300);
   await expect(
     page.getByLabel("친구에게 받은 추천 코드", { exact: true }),
   ).toHaveCount(0);
