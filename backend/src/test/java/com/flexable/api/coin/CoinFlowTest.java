@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -27,6 +28,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,7 +37,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -90,6 +96,12 @@ class CoinFlowTest {
 
 	@Autowired
 	OutfitRepository outfits;
+
+	@Autowired
+	JdbcTemplate jdbc;
+
+	@Autowired
+	DataSource dataSource;
 
 	private static final String SETTINGS = "{\"balance\":1000000,\"payday\":26,\"incomeAmount\":2000000,"
 			+ "\"cardUnpaid\":50000,\"fixedExpenses\":[],\"protectedItems\":[]}";
@@ -317,7 +329,7 @@ class CoinFlowTest {
 		for (int i = 0; i < 2; i++) {
 			Callable<Integer> buy = () -> {
 				start.await();
-				return mvc.perform(auth(post("/api/v1/outfits/outfit-01/purchase"), token, null))
+				return mvc.perform(auth(post("/api/v1/outfits/outfit-03/purchase"), token, null))
 					.andReturn()
 					.getResponse()
 					.getStatus();
@@ -335,32 +347,82 @@ class CoinFlowTest {
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.balance").value(0))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].owned").value(true))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].equipped").value(false));
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-03')].owned").value(true))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-03')].equipped").value(false));
 		wallet(token).andExpect(jsonPath("$.balance").value(0));
-		mvc.perform(auth(post("/api/v1/outfits/outfit-01/purchase"), token, null))
+		mvc.perform(auth(post("/api/v1/outfits/outfit-03/purchase"), token, null))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("OUTFIT_OWNED"));
-		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null))
+		mvc.perform(auth(post("/api/v1/outfits/outfit-04/purchase"), token, null))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("COINS_NOT_ENOUGH"));
 	}
 
 	@Test
-	void salaryCatIsActiveAndCosts200Coins() throws Exception {
+	void salaryCatAndJackpotAreLevelTwoAndThreeCostumes() throws Exception {
 		assertThat(outfits.findById("outfit-02").orElseThrow().isActive()).isTrue();
+		assertThat(outfits.findById("outfit-01").orElseThrow().isActive()).isTrue();
 		String token = signup();
 		checkIn(token);
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].name").value("직장냥이"))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].price").value(200));
-		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null))
+			.andExpect(jsonPath("$.items[1].id").value("outfit-02"))
+			.andExpect(jsonPath("$.items[1].name").value("직장냥이"))
+			.andExpect(jsonPath("$.items[1].unlockLevel").value(2))
+			.andExpect(jsonPath("$.items[1].price").value(nullValue()))
+			.andExpect(jsonPath("$.items[1].owned").value(false))
+			.andExpect(jsonPath("$.items[2].id").value("outfit-01"))
+			.andExpect(jsonPath("$.items[2].unlockLevel").value(3))
+			.andExpect(jsonPath("$.items[2].price").value(nullValue()));
+		for (String id : List.of("outfit-01", "outfit-02")) {
+			mvc.perform(auth(post("/api/v1/outfits/" + id + "/purchase"), token, null))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("OUTFIT_NOT_FOR_SALE"));
+			mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"" + id + "\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("OUTFIT_LOCKED"));
+		}
+		wallet(token).andExpect(jsonPath("$.balance").value(200));
+	}
+
+	/** V10 전에 잭팟을 산 사람: 레벨이 낮아도 계속 보유하고, 낸 코인을 한 번 돌려받아 모달로 안내받는다. */
+	@Test
+	void buyersOfLevelCostumesKeepThemAndGetTheirCoinsBack() throws Exception {
+		clock.seoul("2026-10-21T09:00");
+		String token = signup();
+		ackAll(token); // 200
+		long userId = jdbc.queryForObject("select max(id) from users",
+				Long.class);
+		// V10 전 두 벌을 산 상황. 구매 전 400코인을 모았고 직장냥이를 적용했다.
+		Timestamp bought = Timestamp.from(clock.instant());
+		jdbc.update("update coin_wallets set balance = 400 where user_id = ?", userId);
+		for (String id : List.of("outfit-01", "outfit-02")) {
+			jdbc.update("insert into coin_ledger (user_id, amount, reason, ref_key, notified_at, created_at)"
+					+ " values (?, -200, 'PURCHASE', ?, ?, ?)", userId, id, bought, bought);
+			jdbc.update("insert into user_outfits (user_id, outfit_id, acquired_at) values (?, ?, ?)", userId, id,
+					bought);
+			jdbc.update("update coin_wallets set balance = balance - 200 where user_id = ?", userId);
+		}
+		jdbc.update("update coin_wallets set equipped_outfit_id = 'outfit-02' where user_id = ?", userId);
+		wallet(token).andExpect(jsonPath("$.balance").value(0));
+
+		new ResourceDatabasePopulator(new ClassPathResource("db/migration/V10__level_costumes.sql")).execute(dataSource);
+
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(400))
+			.andExpect(jsonPath("$.wallet.equippedOutfitId").value("outfit-02"))
+			.andExpect(jsonPath("$.rewards", hasSize(2)))
+			.andExpect(jsonPath("$.rewards[0].reason").value("REFUND"))
+			.andExpect(jsonPath("$.rewards[0].amount").value(200))
+			.andExpect(jsonPath("$.rewards[1].reason").value("REFUND"))
+			.andExpect(jsonPath("$.rewards[1].amount").value(200));
+		ackAll(token);
+		checkIn(token).andExpect(jsonPath("$.rewards", hasSize(0)));
+		mvc.perform(auth(get("/api/v1/outfits"), token, null))
+			.andExpect(jsonPath("$.peakLevel").value(1))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].unlockLevel").value(contains(3)))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].owned").value(contains(true)));
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-01\"}"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.balance").value(0))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(true));
-		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-02"));
+			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-01"));
 	}
 
 	@Test
@@ -380,10 +442,10 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.items[0].owned").value(true))
 			.andExpect(jsonPath("$.items[0].equipped").value(true))
 			.andExpect(jsonPath("$.items[1].owned").value(false))
-			.andExpect(jsonPath("$.items[5].id").value("outfit-01"))
-			.andExpect(jsonPath("$.items[5].price").value(200));
+			.andExpect(jsonPath("$.items[7].id").value("outfit-03"))
+			.andExpect(jsonPath("$.items[7].price").value(200));
 
-		for (String id : List.of("costume-lv1", "costume-lv2", "costume-lv5", "no-such-outfit")) {
+		for (String id : List.of("costume-lv1", "costume-lv2", "costume-lv5", "outfit-01", "no-such-outfit")) {
 			mvc.perform(auth(post("/api/v1/outfits/" + id + "/purchase"), token, null))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("OUTFIT_NOT_FOR_SALE"));
@@ -397,15 +459,15 @@ class CoinFlowTest {
 		}
 
 		// 사도 바로 적용되지 않고, 적용하면 하나만 equipped
-		mvc.perform(auth(post("/api/v1/outfits/outfit-01/purchase"), token, null))
+		mvc.perform(auth(post("/api/v1/outfits/outfit-03/purchase"), token, null))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.balance").value(0))
 			.andExpect(jsonPath("$.equippedOutfitId").value(nullValue()));
-		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-01\"}"))
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-03\"}"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-01"))
-			.andExpect(jsonPath("$.items[?(@.equipped == true)].id").value(contains("outfit-01")));
-		wallet(token).andExpect(jsonPath("$.equippedOutfitId").value("outfit-01"));
+			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-03"))
+			.andExpect(jsonPath("$.items[?(@.equipped == true)].id").value(contains("outfit-03")));
+		wallet(token).andExpect(jsonPath("$.equippedOutfitId").value("outfit-03"));
 		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":null}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.equippedOutfitId").value(nullValue()))
@@ -422,9 +484,9 @@ class CoinFlowTest {
 		clock.seoul("2026-10-08T12:00");
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(jsonPath("$.peakLevel").value(2))
-			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].owned").value(true))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(true))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv3')].owned").value(false));
-		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"costume-lv2\"}"))
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
 			.andExpect(status().isOk());
 
 		// 10/8·10/9 넘김 → 5점(Lv.1)으로 내려가도 Lv.2 코스튬은 그대로
@@ -435,10 +497,10 @@ class CoinFlowTest {
 		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(jsonPath("$.characterPoints").value(5));
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(jsonPath("$.peakLevel").value(2))
-			.andExpect(jsonPath("$.equippedOutfitId").value("costume-lv2"))
-			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].owned").value(true))
-			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].equipped").value(true));
-		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"costume-lv2\"}"))
+			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-02"))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(true))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].equipped").value(true));
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
 			.andExpect(status().isOk());
 	}
 

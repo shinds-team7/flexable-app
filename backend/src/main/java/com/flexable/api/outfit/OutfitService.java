@@ -84,8 +84,8 @@ public class OutfitService {
 		CoinWallet w = coins.lockWallet(userId);
 		if (outfitId != null) {
 			Outfit o = outfits.findById(outfitId).orElseThrow(() -> new ApiException(ErrorCode.OUTFIT_LOCKED));
-			boolean owned = o.getUnlockLevel() != null ? o.getUnlockLevel() <= peakLevel(userId)
-					: userOutfits.existsByUserIdAndOutfitId(userId, o.getId());
+			boolean owned = o.getUnlockLevel() != null && o.getUnlockLevel() <= peakLevel(userId)
+					|| userOutfits.existsByUserIdAndOutfitId(userId, o.getId());
 			if (!owned) {
 				throw new ApiException(ErrorCode.OUTFIT_LOCKED);
 			}
@@ -110,7 +110,7 @@ public class OutfitService {
 			.stream()
 			.filter(o -> o.isActive() || showInactive || bought.contains(o.getId()))
 			.map(o -> new OutfitItem(o.getId(), o.getName(), o.getPrice(), o.getUnlockLevel(),
-					o.getUnlockLevel() != null ? o.getUnlockLevel() <= peakLevel : bought.contains(o.getId()),
+					o.getUnlockLevel() != null && o.getUnlockLevel() <= peakLevel || bought.contains(o.getId()),
 					o.getId().equals(equipped)))
 			.toList();
 		return new OutfitList(balance, equippedId, peakLevel, items);

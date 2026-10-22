@@ -116,7 +116,8 @@ export type CoinWallet = {
   /** null이면 기본 캐릭터(costume-lv1) */
   equippedOutfitId: string | null;
 };
-export type CoinRewardReason = "SIGNUP_GIFT" | "BUDGET_BONUS" | "REFERRAL_INVITER";
+export type CoinRewardReason =
+  "SIGNUP_GIFT" | "BUDGET_BONUS" | "REFERRAL_INVITER" | "REFUND";
 export type CoinReward = {
   id: number;
   reason: CoinRewardReason;
@@ -132,7 +133,7 @@ export type Outfit = {
   name: string;
   /** 상점 상품만 있다. 레벨 코스튬은 null */
   price: number | null;
-  /** 레벨 코스튬만 있다(1~5). 상점 상품은 null */
+  /** 레벨 코스튬만 있다(현재 1~3, 비활성 예비 항목은 5까지). 상점 상품은 null */
   unlockLevel: number | null;
   owned: boolean;
   equipped: boolean;

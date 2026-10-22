@@ -62,7 +62,7 @@ class CharacterScoreTest {
 		assertThat(r.peak()).isEqualTo(105);
 		assertThat(CharacterScore.level(r.points())).isEqualTo(1);
 		assertThat(CharacterScore.level(r.peak())).isEqualTo(2);
-		assertThat(CharacterScore.level(CharacterScore.MAX)).isEqualTo(5);
+		assertThat(CharacterScore.level(CharacterScore.MAX)).isEqualTo(3);
 	}
 
 	@Test

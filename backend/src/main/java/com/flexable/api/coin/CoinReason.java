@@ -13,5 +13,7 @@ public enum CoinReason {
 	/** 친구가 내 코드를 등록함(초대받은 사람 id) */
 	REFERRAL_INVITER,
 	/** 코스튬 구매, 금액은 음수(코스튬 id) */
-	PURCHASE
+	PURCHASE,
+	/** 산 코스튬이 레벨 코스튬으로 바뀌어 돌려준 코인(코스튬 id). V10에서만 생긴다 */
+	REFUND
 }
