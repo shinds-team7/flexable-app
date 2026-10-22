@@ -7,7 +7,7 @@ import { SubHeader } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import { equipOutfit, getOutfits, purchaseOutfit } from "./coinApi";
-import { DEFAULT_OUTFIT_ID, hasAnimation } from "./outfits";
+import { DEFAULT_OUTFIT_ID } from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
 import type { Outfit, OutfitList } from "./types";
@@ -104,9 +104,6 @@ export function CustomizeScreen() {
                   backgroundColor: colors.stage,
                 }}
               />
-              <T size={17} weight="700">
-                {current?.name}
-              </T>
               <T size={14} num color={colors.textSub}>
                 앱에서만 쓰는 코인 {money(list.balance)}개
               </T>
@@ -223,13 +220,14 @@ function Grid({
       {items.map((o) => {
         const on = o.id === selected;
         const locked = !o.owned && o.unlockLevel !== null;
-        const caption = o.equipped
-          ? "적용 중"
-          : o.owned
-            ? "보유"
-            : o.unlockLevel !== null
-              ? `Lv.${o.unlockLevel}`
-              : `${money(o.price ?? 0)}코인`;
+        const caption =
+          o.unlockLevel === null
+            ? `${money(o.price ?? 0)}코인`
+            : o.equipped
+              ? "적용 중"
+              : o.owned
+                ? "보유"
+                : `Lv.${o.unlockLevel}`;
         return (
           <Pressable
             key={o.id}
@@ -268,14 +266,8 @@ function Grid({
                 style={{ position: "absolute", top: 8, right: 8 }}
               />
             )}
-            <T size={13} weight="600" numberOfLines={1}>
-              {o.name}
-            </T>
             <T size={12} color={colors.textMuted}>
               {caption}
-              {o.unlockLevel === null && !hasAnimation(o.id)
-                ? " · 준비 중"
-                : ""}
             </T>
           </Pressable>
         );

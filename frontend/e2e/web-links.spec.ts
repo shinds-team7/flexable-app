@@ -52,6 +52,20 @@ test("settings entry, one-time code renewal, expiry and leaving the screen", asy
   await expect(
     page.getByText("연동된 웹사이트가 없어요", { exact: true }),
   ).toBeVisible();
+  // The provision notice is shown and nothing is issued until the user agrees.
+  await expect(
+    page.getByText(/^목적\s+웹사이트에서 시드머니 표시와 투자·적금 실험$/),
+  ).toBeVisible();
+  const consent = page.getByRole("checkbox", {
+    name: "선택 웹사이트 연동 개인정보 수집·이용 동의",
+  });
+  await expect(consent).not.toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "웹 연동 코드 받기", exact: true }),
+  ).toBeDisabled();
+  expect(issued).toBe(0);
+  await consent.click();
+  await expect(consent).toBeChecked();
   await page
     .getByRole("button", { name: "웹 연동 코드 받기", exact: true })
     .click();
@@ -85,6 +99,8 @@ test("settings entry, one-time code renewal, expiry and leaving the screen", asy
     .getByRole("button", { name: "웹사이트 연동", exact: true })
     .click();
   await expect(page.getByText("A2B3-C4D5", { exact: true })).toHaveCount(0);
+  // Consent is asked again on every visit.
+  await expect(consent).not.toBeChecked();
 });
 
 test("list failure retry, refresh after linking, unlink cancellation and retry", async ({

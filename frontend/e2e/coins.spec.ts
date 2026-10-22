@@ -77,6 +77,21 @@ async function closeReward(page: Page, title: string, amount: number) {
 const balance = (page: Page, n: number) =>
   expect(page.getByLabel(`코인 ${n}개`, { exact: true })).toBeVisible();
 
+async function expectVideoPlaying(page: Page) {
+  // Hidden routes must release their players instead of retaining a second video.
+  await expect(page.locator("video")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page
+        .locator("video")
+        .evaluate(
+          (v: HTMLVideoElement) =>
+            v.readyState >= 2 && !v.paused && v.currentTime > 0.05,
+        ),
+    )
+    .toBe(true);
+}
+
 test("signup gift, buy and apply a costume, the home shows it; a referral pays both people", async ({
   page,
 }) => {
@@ -104,6 +119,23 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   // Nothing has accrued within the first hour, and collecting then is not an error.
   expect((await api(page, "POST", "/coins/collect")).collected).toBe(0);
 
+  // No purchase/equip needed: the default costume must resume after visiting customize.
+  for (let visit = 0; visit < 3; visit++) {
+    await expectVideoPlaying(page);
+    await page.getByRole("button", { name: "꾸미기", exact: true }).click();
+    await expect(
+      page.getByLabel("광부 미리보기", { exact: true }),
+    ).toBeVisible();
+    await expectVideoPlaying(page);
+    for (const name of ["직장냥이", "잭팟", "광부"]) {
+      await page.getByRole("button", { name, exact: true }).click();
+      await expectVideoPlaying(page);
+    }
+    await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+    await expect(page).toHaveURL(/\/home$/);
+    await expectVideoPlaying(page);
+  }
+
   // Customize: select a shop item, buy it, apply from the purchase modal.
   await page.getByRole("button", { name: "꾸미기", exact: true }).click();
   await expect(page).toHaveURL(/\/customize$/);
@@ -117,11 +149,33 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   ).toBeDisabled();
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
+  const salary = page.getByRole("button", { name: "직장냥이", exact: true });
+  await expect(salary).toHaveText("200코인");
+  await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
+  await salary.click();
+  await expect(
+    page.getByLabel("직장냥이 미리보기", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("직장냥이", { exact: true })).toHaveCount(0);
+  // A real salary-cat video loads and plays, rather than the default fallback poster.
+  await expect
+    .poll(() =>
+      page
+        .getByLabel("직장냥이 미리보기", { exact: true })
+        .locator("video")
+        .evaluate(
+          (v: HTMLVideoElement) =>
+            v.readyState >= 2 && v.videoWidth === 1280 && v.currentTime > 0,
+        ),
+    )
+    .toBe(true);
   await page
     .getByRole("button", { name: "200코인으로 구매", exact: true })
     .click();
   await expect(page.getByText("구매했어요", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("잭팟 코스튬", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("직장냥이 코스튬", { exact: true }),
+  ).toBeVisible();
   // Buying does not apply it yet.
   expect((await api(page, "GET", "/coins")).equippedOutfitId).toBeNull();
   // The screen's own button now also reads 적용하기; the modal's is the last one.
@@ -135,13 +189,16 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await balance(page, 0);
   const wallet = await api(page, "GET", "/coins");
   expect(wallet.balance).toBe(0);
-  expect(wallet.equippedOutfitId).toBe("outfit-01");
+  expect(wallet.equippedOutfitId).toBe("outfit-02");
   await page.getByRole("button", { name: "꾸미기", exact: true }).click();
-  await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("직장냥이 미리보기", { exact: true }),
+  ).toBeVisible();
+  await expect(salary).toHaveText("200코인");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "상품 02", exact: true }).click();
+  await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
   ).toBeDisabled();
