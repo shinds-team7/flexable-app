@@ -11,7 +11,8 @@ import {
 } from "@/components/CharacterStage";
 import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
-import { ackRewards, checkIn, collectCoins } from "./coinApi";
+import { sessionGeneration } from "./api/client";
+import { ackRewards, checkIn } from "./coinApi";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors, floating, pressTransition } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
@@ -20,24 +21,25 @@ import { DayBudgets } from "@/components/DayBudgets";
 import { useSeedReminderSetting } from "./reminderSetting";
 import { cancelSeedReminder, scheduleSeedReminder } from "./seedReminder";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
-import type { CoinReward, CoinWallet, Today } from "./types";
+import type { CoinReward, Today } from "./types";
+import { publishWallet, useWallet } from "./wallet";
 export function HomeScreen() {
   const result = useResource<Today>("/budget/today");
   const [basis, setBasis] = useState(false);
   const [style] = useHomeStyle();
   const [remind] = useSeedReminderSetting();
-  const [wallet, setWallet] = useState<CoinWallet | null>(null);
+  const wallet = useWallet();
   const [rewards, setRewards] = useState<CoinReward[]>([]);
-  const [collecting, setCollecting] = useState(false);
   const checking = useRef(false);
   const characterHome = style === "character";
-  // Opening or returning to the home runs check-in; an older server without the endpoint just hides the coin row.
+  // Opening or returning to the home runs check-in; the header shop button reads the wallet it returns.
   const runCheckIn = useCallback(() => {
     if (!characterHome || checking.current) return;
     checking.current = true;
+    const generation = sessionGeneration();
     checkIn()
       .then((r) => {
-        setWallet(r.wallet);
+        publishWallet(r.wallet, generation);
         if (r.rewards.length) setRewards((q) => [...q, ...r.rewards.filter((x) => !q.some((y) => y.id === x.id))]);
       })
       .catch(() => {})
@@ -57,13 +59,6 @@ export function HomeScreen() {
     if (!first) return;
     setRewards((q) => q.slice(1));
     ackRewards([first.id]).catch(() => {});
-  };
-  const collect = () => {
-    setCollecting(true);
-    collectCoins()
-      .then((r) => setWallet(r.wallet))
-      .catch(() => {})
-      .finally(() => setCollecting(false));
   };
   const s = result.data;
   const status = s && statusOf(s);
@@ -100,18 +95,6 @@ export function HomeScreen() {
                     style={{ flex: 1 }}
                     accessibilityLabel={`Lv.${status.level} 캐릭터`}
                   />
-                }
-                coin={
-                  wallet
-                    ? {
-                        balance: wallet.balance,
-                        collectable: wallet.passive.collectable,
-                        hint: collectHint(wallet),
-                        busy: collecting,
-                        onCollect: collect,
-                        onCustomize: () => router.push("/customize"),
-                      }
-                    : undefined
                 }
                 gauge={status}
                 message={messageOf(s, status.level)}
@@ -282,11 +265,4 @@ function statusOf(s: Today): PaceStatus {
         ? `오늘 예산을 넘어서 내일 -${down}%`
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
-}
-function collectHint(w: CoinWallet): string {
-  const { collectedToday, dailyLimit, nextAt } = w.passive;
-  if (collectedToday >= dailyLimit) return "오늘 코인을 모두 모았어요";
-  if (!nextAt) return "";
-  const at = new Date(nextAt).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit" });
-  return `다음 코인은 ${at}에 쌓여요`;
 }

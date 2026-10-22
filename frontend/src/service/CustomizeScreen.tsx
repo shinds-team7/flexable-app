@@ -6,12 +6,19 @@ import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
 import { sessionGeneration } from "./api/client";
-import { equipOutfit, getOutfits, purchaseOutfit } from "./coinApi";
+import {
+  collectCoins,
+  equipOutfit,
+  getOutfits,
+  getWallet,
+  purchaseOutfit,
+} from "./coinApi";
 import { DEFAULT_OUTFIT_ID } from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
-import type { Outfit, OutfitList } from "./types";
+import type { CoinWallet, Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
+import { publishWallet, useWallet } from "./wallet";
 
 export function CustomizeScreen() {
   const [list, setList] = useState<OutfitList>();
@@ -20,6 +27,7 @@ export function CustomizeScreen() {
   const [selected, setSelected] = useState<string>();
   const [bought, setBought] = useState<Outfit | null>(null);
   const [busy, setBusy] = useState(false);
+  const wallet = useWallet();
   const lock = useRef(false);
   const focus = useRef(0);
 
@@ -27,6 +35,10 @@ export function CustomizeScreen() {
     const seq = ++focus.current;
     const generation = sessionGeneration();
     setLoadError(undefined);
+    // Only the collect button needs the wallet; without it the shop still works from the outfit list.
+    getWallet()
+      .then((w) => publishWallet(w, generation))
+      .catch(() => {});
     getOutfits()
       .then((data) => {
         if (seq !== focus.current || generation !== sessionGeneration()) return;
@@ -70,15 +82,32 @@ export function CustomizeScreen() {
   };
 
   const current = list?.items.find((o) => o.id === selected);
+  // The outfit list carries the balance shown here; the shared wallet follows so the home and header stay in step.
   const buy = (outfit: Outfit) =>
     run(async () => {
+      const generation = sessionGeneration();
       const next = await purchaseOutfit(outfit.id);
       setList(next);
+      if (wallet)
+        publishWallet({ ...wallet, balance: next.balance }, generation);
       setBought(outfit);
+    });
+  const collect = () =>
+    run(async () => {
+      const generation = sessionGeneration();
+      const r = await collectCoins();
+      publishWallet(r.wallet, generation);
+      setList((l) => l && { ...l, balance: r.wallet.balance });
     });
   const apply = (id: string) =>
     run(async () => {
-      await equipOutfit(id);
+      const generation = sessionGeneration();
+      const next = await equipOutfit(id);
+      if (wallet)
+        publishWallet(
+          { ...wallet, equippedOutfitId: next.equippedOutfitId },
+          generation,
+        );
       setBought(null);
       // 홈은 돌아올 때 다시 불러 새 코스튬을 보여 준다
       router.replace("/home");
@@ -86,12 +115,18 @@ export function CustomizeScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="꾸미기" fallback="/my" />
+      <SubHeader title="상점" fallback="/home" />
       <Screen>
         <ErrorNotice error={loadError} retry={load} />
         {!list && !loadError && <Loading />}
         {list && selected && (
           <>
+            <CoinCard
+              balance={list.balance}
+              wallet={wallet}
+              busy={busy}
+              onCollect={collect}
+            />
             <Card style={{ alignItems: "center", gap: 12 }}>
               <OutfitView
                 outfitId={selected}
@@ -104,9 +139,6 @@ export function CustomizeScreen() {
                   backgroundColor: colors.stage,
                 }}
               />
-              <T size={14} num color={colors.textSub}>
-                앱에서만 쓰는 코인 {money(list.balance)}개
-              </T>
               {current && (
                 <Action
                   outfit={current}
@@ -127,7 +159,7 @@ export function CustomizeScreen() {
               onSelect={setSelected}
             />
             <T size={14} weight="700" color={colors.textSub}>
-              상점
+              코인 코스튬
             </T>
             {list.items.some((o) => o.unlockLevel === null) ? (
               <Grid
@@ -150,6 +182,49 @@ export function CustomizeScreen() {
         onClose={() => setBought(null)}
       />
     </View>
+  );
+}
+
+/** 잔액과 [모으기]. 지갑을 못 받았으면(코인 API가 없는 서버) 잔액만 보인다 */
+function CoinCard({
+  balance,
+  wallet,
+  busy,
+  onCollect,
+}: {
+  balance: number;
+  wallet: CoinWallet | null;
+  busy: boolean;
+  onCollect: () => void;
+}) {
+  const ready = wallet?.passive.collectable ?? 0;
+  const hint = wallet && ready <= 0 ? collectHint(wallet) : "";
+  return (
+    <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <T size={13} color={colors.textSub}>
+          앱에서만 쓰는 코인
+        </T>
+        <View accessible accessibilityLabel={`코인 ${balance}개`}>
+          <T size={24} weight="800" num>
+            🪙 {money(balance)}
+          </T>
+        </View>
+        {hint !== "" && (
+          <T size={12} color={colors.textMuted}>
+            {hint}
+          </T>
+        )}
+      </View>
+      {wallet && (
+        <Button
+          label={ready > 0 ? `모으기 +${ready}` : "모으기"}
+          disabled={busy || ready <= 0}
+          onPress={onCollect}
+          style={{ minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 }}
+        />
+      )}
+    </Card>
   );
 }
 
@@ -274,4 +349,16 @@ function Grid({
       })}
     </View>
   );
+}
+
+function collectHint(w: CoinWallet): string {
+  const { collectedToday, dailyLimit, nextAt } = w.passive;
+  if (collectedToday >= dailyLimit) return "오늘 코인을 모두 모았어요";
+  if (!nextAt) return "";
+  const at = new Date(nextAt).toLocaleTimeString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `다음 코인은 ${at}에 쌓여요`;
 }

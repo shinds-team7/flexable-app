@@ -6,7 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme';
-import { Button, T, useAnimValue, useReducedMotion } from './ui';
+import { T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5;
 
@@ -22,23 +22,12 @@ export function pointsStatus(points: number, label: string): PaceStatus {
   return { level, progress: level === 5 ? 1 : (p % 100) / 100, label };
 }
 
-/** 홈 코인 줄 — 잔액과 [모으기]. 서버를 못 받았으면 부르는 쪽이 coin 을 넘기지 않는다 */
-export type CoinBar = {
-  balance: number;
-  /** 지금 받을 수 있는 개수 */
-  collectable: number;
-  /** collectable 이 0일 때 [모으기] 아래에 보일 안내(다음 적립 시각 등) */
-  hint: string;
-  busy: boolean;
-  onCollect: () => void;
-  onCustomize: () => void;
-};
-
 /**
- * 적용 중인 코스튬 영상 하나와 승급 게이지. 캐릭터(character)·안내 문구·코인 값은 서비스가 전달한다.
+ * 적용 중인 코스튬 영상 하나와 승급 게이지. 캐릭터(character)·안내 문구는 서비스가 전달한다.
+ * 코인·[모으기]·코스튬은 헤더의 상점 버튼 → 상점 화면에 있다.
  * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
  */
-export function CharacterStage({ level, character, coin, gauge, message, children }: { level: Level; character: ReactNode; coin?: CoinBar; gauge: PaceStatus; message: string; children: ReactNode }) {
+export function CharacterStage({ level, character, gauge, message, children }: { level: Level; character: ReactNode; gauge: PaceStatus; message: string; children: ReactNode }) {
   const accent = ACCENTS[level];
 
   return (
@@ -56,28 +45,6 @@ export function CharacterStage({ level, character, coin, gauge, message, childre
       <View style={styles.stage}>
         <View style={styles.char}>{character}</View>
       </View>
-
-      {coin && (
-        <View style={styles.coinRow}>
-          <View style={styles.balance} accessible accessibilityLabel={`코인 ${coin.balance}개`}>
-            <T size={15} weight="800" num>{`🪙 ${coin.balance.toLocaleString('ko-KR')}`}</T>
-          </View>
-          <View style={styles.coinBtns}>
-            <Button
-              label={coin.collectable > 0 ? `모으기 +${coin.collectable}` : '모으기'}
-              disabled={coin.collectable <= 0 || coin.busy}
-              onPress={coin.onCollect}
-              style={styles.coinBtn}
-            />
-            <Button label="꾸미기" variant="soft" onPress={coin.onCustomize} style={styles.coinBtn} />
-          </View>
-          {coin.collectable <= 0 && coin.hint !== '' && (
-            <T size={12} color={colors.textMuted}>
-              {coin.hint}
-            </T>
-          )}
-        </View>
-      )}
 
       <Gauge status={gauge} accent={accent} />
     </View>
@@ -152,10 +119,6 @@ const styles = StyleSheet.create({
   // wrap 의 좌우 여백(16)을 상쇄해 화면 끝까지. 넓은 웹 화면에서는 640에서 멈춘다
   stage: { alignItems: 'center', marginTop: 4, marginHorizontal: -16, alignSelf: 'stretch' },
   char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
-  coinRow: { alignSelf: 'stretch', alignItems: 'center', gap: 8, marginTop: 8 },
-  balance: { backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
-  coinBtns: { flexDirection: 'row', gap: 8 },
-  coinBtn: { minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 },
   gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
   gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   track: { height: 10, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.08)', overflow: 'hidden' },

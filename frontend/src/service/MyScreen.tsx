@@ -15,14 +15,15 @@ import {
 import { useToast } from "@/components/Toast";
 import { colors } from "@/theme";
 import { api, sessionGeneration } from "./api/client";
-import { getReferral, getWallet, registerReferral } from "./coinApi";
+import { getReferral, registerReferral } from "./coinApi";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config";
 import { useHomeStyle } from "./homeStyle";
 import { useSeedReminderSetting } from "./reminderSetting";
 import { useSession } from "./Session";
-import { ErrorNotice, Field, money } from "./ui";
+import { ErrorNotice, Field } from "./ui";
 import { PROVIDER_NAME } from "./oauth";
-import type { CoinWallet, Referral, User } from "./types";
+import type { Referral, User } from "./types";
+import { publishWallet } from "./wallet";
 /** 이메일, 그리고 카카오·Google 계정이면 어느 계정으로 로그인했는지 */
 export function AccountLine({ user }: { user: User }) {
   const social =
@@ -40,10 +41,9 @@ export function AccountLine({ user }: { user: User }) {
     </>
   );
 }
-/** 앱에서만 쓰는 코인 잔액, 꾸미기 진입, 추천 코드. 코인 API가 없는 서버(1.4.0 이전)에서는 보이지 않는다 */
-function CoinCard() {
+/** 내 추천 코드와 친구 코드 입력. 코인·상점은 캐릭터 홈 헤더의 상점 버튼에만 있다. 코인 API가 없는 서버(1.4.0 이전)에서는 보이지 않는다 */
+function ReferralCard() {
   const toast = useToast();
-  const [wallet, setWallet] = useState<CoinWallet>();
   const [referral, setReferral] = useState<Referral>();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,9 +56,6 @@ function CoinCard() {
       const generation = sessionGeneration();
       const fresh = () =>
         seq === focus.current && generation === sessionGeneration();
-      getWallet()
-        .then((w) => fresh() && setWallet(w))
-        .catch(() => {});
       getReferral()
         .then((r) => fresh() && setReferral(r))
         .catch(() => {});
@@ -67,9 +64,8 @@ function CoinCard() {
       };
     }, []),
   );
-  if (!wallet) return null;
+  if (!referral) return null;
   const share = async () => {
-    if (!referral) return;
     try {
       await Share.share({
         message: `텅장관리 앱에서 내 추천 코드 ${referral.code}를 입력하면 앱에서만 쓰는 코인 ${referral.rewardAmount}개를 받아요`,
@@ -87,7 +83,7 @@ function CoinCard() {
     try {
       const result = await registerReferral(code.trim());
       if (generation !== sessionGeneration()) return;
-      setWallet(result.wallet);
+      publishWallet(result.wallet, generation);
       setReferral((r) => r && { ...r, registered: true });
       setCode("");
       toast(`코인 ${result.amount}개를 받았어요`);
@@ -106,52 +102,36 @@ function CoinCard() {
         color={colors.textSub}
         style={styles.groupTitle}
       >
-        코인
+        추천 코드
       </T>
-      <Row
-        first
-        label={`앱에서만 쓰는 코인 ${money(wallet.balance)}개`}
-        caption="꾸미기에서 캐릭터 코스튬을 살 수 있어요"
-        onPress={() => router.push("/customize")}
-        right={
-          <T size={14} weight="700" color={colors.brand}>
-            꾸미기
-          </T>
-        }
-      />
-      {referral && (
-        <View style={styles.referral}>
-          <T size={15} weight="700">
-            내 추천 코드
-          </T>
-          <T size={22} weight="800" num selectable>
-            {referral.code}
-          </T>
-          <T size={13} color={colors.textMuted}>
-            친구가 코드를 입력하면 나와 친구가 코인 {referral.rewardAmount}개씩
-            받아요 (지금까지 {referral.invitedCount}명)
-          </T>
-          <Button label="추천 코드 공유" variant="soft" onPress={share} />
-          {!referral.registered && (
-            <View style={{ gap: 10, marginTop: 8 }}>
-              <Field
-                label="친구에게 받은 추천 코드"
-                value={code}
-                onChangeText={setCode}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={12}
-              />
-              <ErrorNotice error={error} />
-              <Button
-                label={busy ? "등록 중이에요" : "추천 코드 등록"}
-                disabled={busy || !code.trim()}
-                onPress={register}
-              />
-            </View>
-          )}
-        </View>
-      )}
+      <View style={styles.referral}>
+        <T size={22} weight="800" num selectable>
+          {referral.code}
+        </T>
+        <T size={13} color={colors.textMuted}>
+          친구가 코드를 입력하면 나와 친구가 코인 {referral.rewardAmount}개씩
+          받아요 (지금까지 {referral.invitedCount}명)
+        </T>
+        <Button label="추천 코드 공유" variant="soft" onPress={share} />
+        {!referral.registered && (
+          <View style={{ gap: 10, marginTop: 8 }}>
+            <Field
+              label="친구에게 받은 추천 코드"
+              value={code}
+              onChangeText={setCode}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={12}
+            />
+            <ErrorNotice error={error} />
+            <Button
+              label={busy ? "등록 중이에요" : "추천 코드 등록"}
+              disabled={busy || !code.trim()}
+              onPress={register}
+            />
+          </View>
+        )}
+      </View>
     </Card>
   );
 }
@@ -232,7 +212,7 @@ export function MyScreen() {
           ))}
         </View>
       </Card>
-      <CoinCard />
+      <ReferralCard />
       {Platform.OS !== "web" && (
         <Card style={styles.group}>
           <Row
@@ -308,11 +288,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   group: { padding: 0, overflow: "hidden" },
-  referral: {
-    gap: 8,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-  },
+  referral: { gap: 8, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 },
   groupTitle: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
 });
