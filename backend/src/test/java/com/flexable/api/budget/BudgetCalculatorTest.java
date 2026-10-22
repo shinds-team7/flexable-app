@@ -51,6 +51,30 @@ class BudgetCalculatorTest {
 	}
 
 	@Test
+	void holidayPaydayMovesToNextWeekday() {
+		// 2026-12-25 (Fri) Christmas
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 12, 10), 25)).isEqualTo(LocalDate.of(2026, 12, 28));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 12, 27), 25)).isEqualTo(LocalDate.of(2026, 11, 25));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 12, 28), 25)).isEqualTo(LocalDate.of(2026, 12, 28));
+		// 2027-01-01 (Fri) New Year's Day
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2026, 12, 20), 1)).isEqualTo(LocalDate.of(2027, 1, 4));
+		// Seollal 2027-02-06 (Sat) ~ 02-09 (Tue, substitute holiday)
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2027, 2, 1), 6)).isEqualTo(LocalDate.of(2027, 2, 10));
+		// Chuseok 2027-09-14 ~ 09-16 (Thu)
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2027, 9, 1), 15)).isEqualTo(LocalDate.of(2027, 9, 17));
+		// Hangul Day 2027-10-09 (Sat) -> Sunday -> substitute holiday 10-11 (Mon)
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2027, 10, 1), 9)).isEqualTo(LocalDate.of(2027, 10, 12));
+	}
+
+	@Test
+	void holidaysBeforeNovember2026KeepPastPaydays() {
+		// 2026-10-09 (Fri) Hangul Day and 2026-03-02 (Mon) substitute holiday stay paydays,
+		// so cycles and seed money entries recorded before the holiday rule do not move
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 10, 20), 9)).isEqualTo(LocalDate.of(2026, 10, 9));
+		assertThat(BudgetCalculator.previousPayday(LocalDate.of(2026, 3, 10), 31)).isEqualTo(LocalDate.of(2026, 3, 2));
+	}
+
+	@Test
 	void fixedExpenseCountedOnlyInsideWindow() {
 		LocalDate today = LocalDate.of(2026, 10, 13);
 		LocalDate next = LocalDate.of(2026, 10, 25);
