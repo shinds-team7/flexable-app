@@ -28,7 +28,7 @@
 | 계정 삭제 | 앱 `/account/delete`, 웹 공개 `/delete-account` → `service/DeleteAccountScreen.tsx` | `DELETE /me` (`user/AccountDeletionService.java`) | E2E `public deletion…` |
 | 공개 페이지 | `/privacy`, `/terms`, `/support` | 원문은 `docs/play-store/privacy-policy.md`·`terms.md` | E2E `approved legal copy…`(웹 화면과 원문 일치 검사) |
 | 접근 제어 | 로그인 후 모든 API | JWT 서명·사용자·토큰 버전 확인(`config/SecurityConfig.java`), 거래·카테고리는 소유자 조건으로 조회(남의 것은 404). CORS는 서버 `.env`의 허용 출처만 | 백엔드 `SecurityTest`(비로그인 401, 위조·서명 없는 토큰 401, 다른 사용자 데이터 차단, 허용 안 된 출처 403) |
-| 원격 업데이트 안내 | 앱 탭 화면 상단 배너 → `components/UpdateBanner.tsx` (웹에서는 안 뜸) | `expo-updates` | Android 실기기 |
+| 원격 업데이트 적용 | 안내 없이 적용: 실행 때 스플래시 3초 안에 받으면 바로, 늦으면 다음에 앱을 새로 켤 때. 켜 둔 채 돌아오면 10분 간격으로 미리 받음 → `service/LaunchUpdate.ts` (10-22 "지금 적용" 배너 삭제, 웹 해당 없음) | `expo-updates` | Android 실기기 |
 
 ## 시연 (`https://flexable-web-delta.vercel.app/m`, 이 저장소 밖)
 

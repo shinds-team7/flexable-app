@@ -6,10 +6,12 @@ import { Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ToastProvider } from "@/components/Toast";
-import { UpdateBanner } from "@/components/UpdateBanner";
 import { BudgetDraftProvider } from "@/service/BudgetDraft";
 import { ForceUpdate } from "@/service/ForceUpdate";
-import { useLaunchUpdateSettled } from "@/service/LaunchUpdate";
+import {
+  useFetchUpdateOnResume,
+  useLaunchUpdateSettled,
+} from "@/service/LaunchUpdate";
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 
@@ -34,8 +36,9 @@ function SplashGate() {
   return null;
 }
 
-/** 공통 틀(안전영역·폰 프레임·토스트·업데이트 배너)과 세션을 둔다. */
+/** 공통 틀(안전영역·폰 프레임·토스트)과 세션을 둔다. */
 export default function RootLayout() {
+  useFetchUpdateOnResume();
   return (
     <SafeAreaProvider>
       <View style={styles.outer}>
@@ -45,7 +48,6 @@ export default function RootLayout() {
             <SessionProvider>
               <SplashGate />
               <BudgetDraftProvider>
-                {Platform.OS !== "web" && <UpdateBanner />}
                 {Platform.OS === "android" && <ForceUpdate />}
                 <Stack
                   screenOptions={{
