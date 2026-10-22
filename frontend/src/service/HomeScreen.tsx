@@ -6,7 +6,6 @@ import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
   CharacterStage,
   pointsStatus,
-  type Level,
   type PaceStatus,
 } from "@/components/CharacterStage";
 import { OutfitView } from "./OutfitView";
@@ -97,7 +96,6 @@ export function HomeScreen() {
                   />
                 }
                 gauge={status}
-                message={messageOf(s, status.level)}
               >
                 {hero}
               </CharacterStage>
@@ -227,42 +225,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandDark,
   },
 });
-// Mirrors the server rule in docs/API.md: a kept day adds 15 points, an overspent day takes 50, within 0-400.
+// Mirrors the server rule in docs/API.md: a kept day adds 15 points, an overspent day takes 50, within 0-200 (Lv.3 for now).
 const UP = 15;
 const DOWN = 50;
-const MAX = 400;
-// The level is earned over days, so warnings come from today's numbers and the rest describe progression.
-const LEVEL_MESSAGES: Record<Level, string> = {
-  1: "광부에서 시작! 예산을 지키면 조금씩 올라가요",
-  2: "한 단계 올라왔어요. 오늘도 한도 안에서 써요",
-  3: "잘 버티는 중! 꾸준히 지키면 더 올라가요",
-  4: "예산을 잘 지키고 있어요. 이 정도면 플렉스 가능!",
-  5: "완벽해요! 예산 관리의 왕이에요",
-};
-function messageOf(s: Today, level: Level): string {
-  if (s.remaining < 0) return "남은 생활비가 모자라요. 예산 설정을 확인해요";
-  if (s.todaySpent > s.dailyBudget)
-    return "오늘 예산을 넘었어요. 내일은 한도 안에서 써요";
-  return LEVEL_MESSAGES[level];
-}
+const MAX = 200;
 function statusOf(s: Today): PaceStatus {
   const points = Math.min(MAX, Math.max(0, s.characterPoints ?? 0));
   const delta = s.characterDelta ?? 0;
   const yesterday =
     delta > 0
-      ? `어제 지켜서 +${delta}%`
+      ? `어제 지켜서 +${delta}점`
       : delta < 0
-        ? `어제 넘어서 ${delta}%`
+        ? `어제 넘어서 ${delta}점`
         : null;
   const up = Math.min(UP, MAX - points);
   const down = Math.min(DOWN, points);
   const today =
     s.todaySpent <= s.dailyBudget
       ? up > 0
-        ? `오늘 지키면 내일 +${up}%`
+        ? `오늘 지키면 내일 +${up}점`
         : "오늘도 지키면 최고 단계 유지"
       : down > 0
-        ? `오늘 예산을 넘어서 내일 -${down}%`
+        ? `오늘 예산을 넘어서 내일 -${down}점`
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
 }

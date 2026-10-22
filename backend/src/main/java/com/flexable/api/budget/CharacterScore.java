@@ -5,7 +5,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 
 /**
- * 캐릭터 단계 점수. 100점이 한 단계: 0~99 Lv.1, 100~199 Lv.2 … 400 Lv.5(최대). 규칙은 docs/API.md "GET /budget/today".
+ * 캐릭터 단계 점수. 100점이 한 단계: 0~99 Lv.1, 100~199 Lv.2, 200 Lv.3(최대). 규칙은 docs/API.md "GET /budget/today".
+ * 점수는 저장하지 않고 기록에서 매번 다시 계산하므로, 단계를 늘릴 때 MAX만 올리면 그동안의 기록대로 점수가 돌아온다.
  * 하루 예산을 처음 기록한 날 0점(Lv.1 0%)에서 시작해 어제까지 하루씩 반영한다. 오늘은 내일 반영한다.
  */
 public final class CharacterScore {
@@ -16,7 +17,8 @@ public final class CharacterScore {
 	/** 예산을 넘긴 날 내려가는 점수. 강등은 빠르게(이틀이면 한 단계) */
 	public static final int DOWN = 50;
 
-	public static final int MAX = 400;
+	/** 지금은 3단계까지(10-22). 예전에는 400(5단계) */
+	public static final int MAX = 200;
 
 	/** 한 단계에 필요한 점수 */
 	public static final int PER_LEVEL = 100;
@@ -28,7 +30,7 @@ public final class CharacterScore {
 	public record Result(int points, int delta, int peak) {
 	}
 
-	/** 점수의 캐릭터 단계(1~5) */
+	/** 점수의 캐릭터 단계(1~3) */
 	public static int level(int points) {
 		return Math.min(points, MAX) / PER_LEVEL + 1;
 	}

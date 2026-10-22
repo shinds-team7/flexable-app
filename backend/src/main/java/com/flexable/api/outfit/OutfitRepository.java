@@ -7,6 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface OutfitRepository extends JpaRepository<Outfit, String> {
 
-	@Query("select o from Outfit o order by o.sortOrder")
+	@Query("select o from Outfit o order by o.sortOrder, o.id")
 	List<Outfit> findOrdered();
 }

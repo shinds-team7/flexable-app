@@ -224,9 +224,9 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 - `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
 - `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈
 - `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
-- 캐릭터 단계 점수(`characterPoints`, 0~400, 100점이 한 단계: 0~99 Lv.1 … 400 Lv.5):
+- 캐릭터 단계 점수(`characterPoints`, 0~200, 100점이 한 단계: 0~99 Lv.1, 100~199 Lv.2, 200 Lv.3):
   - 이 요청마다 오늘의 `dailyBudget`을 날짜별로 저장한다(`daily_budgets`, 같은 날은 덮어씀 → 그날 마지막 값).
-  - 처음 저장한 날 0점(Lv.1 0%)에서 시작해 그날부터 **어제까지** 하루씩 반영한다. 그날 지출 합(고정지출 자동 기록 제외)이 그날 하루 예산 이하면 +15, 넘으면 −50(0~400으로 자름). 저장이 없는 날(앱을 안 연 날)은 그 전 마지막 하루 예산으로 판단한다. 오늘은 내일 반영한다.
+  - 처음 저장한 날 0점(Lv.1)에서 시작해 그날부터 **어제까지** 하루씩 반영한다. 그날 지출 합(고정지출 자동 기록 제외)이 그날 하루 예산 이하면 +15, 넘으면 −50(0~200으로 자름). 저장이 없는 날(앱을 안 연 날)은 그 전 마지막 하루 예산으로 판단한다. 오늘은 내일 반영한다.
   - `characterDelta` = 어제 하루의 점수 변화(반영한 날이 없으면 0)
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
@@ -383,8 +383,10 @@ POST 본문:
 ```
 
 - `rewards` = 아직 모달로 보여 주지 않은 보상(`notified_at`이 없는 내역), 오래된 순. 앱은 이 순서대로 모달을 띄우고 닫을 때 ack한다. ack 전에 다시 check-in하면 같은 보상이 또 온다(지급은 한 번).
-- `reason`: `SIGNUP_GIFT`(가입 선물) · `BUDGET_BONUS`(`refDate`의 예산을 지킴) · `REFERRAL_INVITER`(내 코드로 친구가 등록)
+- `reason`: `SIGNUP_GIFT`(가입 선물) · `BUDGET_BONUS`(`refDate`의 예산을 지킴) · `REFERRAL_INVITER`(내 코드로 친구가 등록) · `REFUND`(레벨 코스튬 전환으로 구매 코인을 돌려줌)
 - 초기 예산을 설정하기 전이면 ②는 건너뛴다(오류 아님).
+
+V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `REFUND`로 한 번 돌려준다. `check-in`의 `rewards`에 `reason: "REFUND"`, `refDate: null`로 포함하며, 앱에서 안내를 닫으면 다른 보상과 같이 ack한다. 구매 기록·적용 상태는 유지한다.
 
 ### `POST /coins/rewards/ack` → 204
 
@@ -413,14 +415,14 @@ POST 본문:
   "peakLevel": 2,
   "items": [
     { "id": "costume-lv1", "name": "광부", "price": null, "unlockLevel": 1, "owned": true, "equipped": true },
-    { "id": "costume-lv3", "name": "Lv.3 코스튬", "price": null, "unlockLevel": 3, "owned": false, "equipped": false },
-    { "id": "outfit-01", "name": "잭팟", "price": 200, "unlockLevel": null, "owned": false, "equipped": false }
+    { "id": "outfit-02", "name": "직장냥이", "price": null, "unlockLevel": 2, "owned": true, "equipped": false },
+    { "id": "outfit-01", "name": "잭팟", "price": null, "unlockLevel": 3, "owned": false, "equipped": false }
   ]
 }
 ```
 
 - `items`는 `sort_order` 순. 레벨 코스튬이 먼저, 상점 상품이 뒤. `active=false` 상품은 빠진다(로컬·CI는 `app.outfits.show-inactive=true`로 모두 보인다).
-- 레벨 코스튬의 `owned` = `peakLevel` ≥ `unlockLevel`. `peakLevel` = 지금까지 도달한 최고 캐릭터 단계(1~5, `/budget/today`와 같은 점수 규칙). 레벨이 내려가도 한 번 열린 코스튬은 그대로다. 초기 예산 설정 전이면 1.
+- 레벨 코스튬의 `owned` = `peakLevel` ≥ `unlockLevel` 또는 전환 전 구매 기록이 있음. `peakLevel` = 지금까지 도달한 최고 캐릭터 단계(1~3, `/budget/today`와 같은 점수 규칙). 레벨이 내려가도 한 번 열린 코스튬은 그대로다. 초기 예산 설정 전이면 1.
 - 상점 상품의 `owned` = 샀는지. `equipped`는 한 개만 `true`(`equippedOutfitId`가 `null`이면 `costume-lv1`).
 
 ### `POST /outfits/{id}/purchase` → 200 `OutfitList`
