@@ -1,6 +1,6 @@
 # 인수인계 — 서비스 1.0.0 Google Play 비공개 테스트
 
-마지막 갱신 2026-10-21(코인·코스튬 1.4.0 배포 기록). 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-22(남은 일 정리, #105 미게시·V9 배포 기록, 공휴일·Idempotency PR). 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 비밀값(키 파일, 비밀번호)은 이 문서와 저장소에 없다. "§2 따로 챙길 것"을 보고 안전한 경로로 옮긴다.
 **저장소는 공개(PUBLIC)다.** 개인 계정 경위·제출 서류·결제 정보·사용자 이메일은 여기에 적지 않는다.
 
@@ -13,7 +13,7 @@
 - [x] 백엔드 배포 **10-21 완료**(`deploy.sh`, V8 `coin_wallets`·`coin_ledger`·`outfits`·`user_outfits`·`referrals`). `/actuator/health` UP, 운영 `/outfits`에 광부·잭팟 2개만 나오는 것 확인
 - [x] 웹 배포 **10-21 완료**(PR #93 머지 `9bea6f3` → Vercel). 배포 번들에 코인 화면·잭팟 영상이 들어간 것 확인(브라우저로 눌러 보지는 않음)
 - [x] EAS 빌드 **10-21 완료**(커밋 `ea704dc`, PR #93과 내용 같음): preview APK versionCode 11, production AAB versionCode 12(`flexable-1.4.0-vc12.aab`). versionCode 11은 처음 production 시도가 업로드 단계에서 실패하면서 올라간 번호라 production AAB에는 없다
-- [x] Play Console 업로드 **10-21 완료**(사람, vc12). 출시 노트는 [`play-store/README.md` §6](play-store/README.md). 남은 것: App Bundle 탐색기에서 난독화 해제 파일 등록 확인, 검토 통과 뒤 테스터 Play 스토어에 1.4.0이 보이는지
+- [x] Play Console 업로드 **10-21 완료**(사람, vc12). 출시 노트는 [`play-store/README.md` §6](play-store/README.md). 검토 통과 뒤 테스터 Play 스토어에 1.4.0이 보이는 것 확인(아래 minVersion 항목). 남은 것: App Bundle 탐색기에서 난독화 해제 파일 등록 확인
 - **1.4.0이 1.3.0 남은 일을 대신한다.** 1.4.0 AAB(`ea704dc`)에 #87 디자인 시스템 v2·#88 시드머니 반영 모달·#91 웹 연동 설정이 모두 들어 있다. 그래서 아래 0-1의 "1.3.0 AAB Play 업로드"와 "preview 그룹 `68048ca1` production 승격"(`update:promote`)은 **하지 않는다**. 1.3.0 production AAB(vc10, 10-20 빌드)는 EAS에만 있다
 - [ ] **웹 연동 메뉴가 1.4.0에 이미 열려 있다.** 원래는 개인정보처리방침 결정 뒤에 열기로 했던 메뉴다(아래 0-1 "사람 결정"). 사용자가 코드를 발급해 웹에 입력해야 정보가 넘어가므로, 웹 쪽 연동이 운영에 없는 동안은 실제로 넘어가는 정보가 없다. 둘 중 하나를 정한다: ① 방침에 넣고 고친다(시행 7일 전 고지) ② 정할 때까지 1.4.0용 원격 업데이트로 메뉴를 숨긴다(JS만 바뀜)
   - **→ 10-21 ①로 정했다(웹 요청).** 방침 4장에 웹사이트 연동(받는 곳·제공 항목·목적·보유·해제)을 넣고 시행 10-28, 그 전에는 앱 연동 화면에서 동의한 사람에게 동의한 때부터 적용한다. 연동 화면은 [동의하고 코드 받기]를 눌러야 코드를 발급한다. 근거 [`web-seed-entries-handoff.md`](web-seed-entries-handoff.md)
@@ -23,6 +23,8 @@
   - [x] 1.4.0(runtime 1.4.0) production 원격 업데이트 **10-21 17:51 KST 게시**(사람, 그룹 `5822362e-5688-4c1e-a22b-ced4e06e0bf0`, 커밋 `7097b55`). #97(방침 개정·연동 선택 동의)과 #98(직장냥이) 포함, 실기기 반영 확인(사용자). #100(카카오 연결 끊기 문구 '요청합니다')은 이 커밋 뒤라 앱 `/privacy`에는 다음 원격 업데이트 때 들어간다(웹 `/privacy`는 반영됨). 웹 요청서의 '1.3.0 승격'은 1.4.0이 대신하므로 하지 않았다
   - [x] 10-21 18:10 KST production `22bd14e6-5022-4aec-b02d-16740bd53d41`(커밋 `6633b85`): #102 꾸미기 이동 후 영상 오류 수정, #100 방침 문구 포함
   - [x] **10-22 14:57 KST production `582479c0-e282-4268-b966-390bb28f5e5f` 게시**(사람, 커밋 `bb7e4e4`, `--clear-cache`): #103 코인·상점을 캐릭터 홈 헤더 상점 버튼으로 옮김(홈 코인 줄·마이 코인 줄 삭제, [모으기]는 상점 위쪽), #96 앱 안 이용약관 10-28 개정. 올린 번들의 API 주소가 운영(`flex-able-sh.duckdns.org`)이고 `localhost`가 없는 것 확인. 되돌릴 때는 `22bd14e6`을 production에 다시 게시한다. 실기기 반영 확인 전
+  - [ ] **#105는 운영 앱에 아직 없다.** 14:57 게시(`bb7e4e4`) 뒤 15:21에 머지됐다(상점 목록 가격을 코인 그림+숫자로, 가지지 않은 코스튬 자물쇠·레벨 준비 중 빈 칸, '지금 적용' 배너 삭제와 다음 실행 때 조용히 적용). 다음 production 원격 업데이트(사람)로 나간다. 지금 앱에는 배너 코드가 있어 이 업데이트를 받을 때 배너가 마지막으로 한 번 뜰 수 있다
+  - [x] 백엔드 V9(직장냥이 `outfit-02` 판매 켜기) 운영 배포 완료(사용자 확인, 10-22 기록. 배포 시각은 기록 없음). 운영 상점 코스튬은 광부·잭팟·직장냥이 3개
   - [ ] 웹 담당에게 게시 그룹 ID·시각 전달
   - [ ] 웹 담당에게 알릴 사실: `APP_LINK_BASE_URL`은 `https://flex-able-sh.duckdns.org`(키 없이 `/internal/v1/...` 401 확인). 앱 서버(Caddy·Spring)에는 IP 허용 목록이 없다(AWS 보안 그룹은 콘솔에서 사람이 확인). `WEB_LINK_SERVICE_KEYS`는 10-20 서버 `.env`에 넣었다(값은 팀 비공개 공간)
 - [ ] 실기기 확인(preview APK): 홈 광부 영상 재생·반복 이음새(저가폰 포함), 가입 선물 모달 → 홈 헤더 셔츠 버튼(받을 코인이 있으면 빨간 점) → 상점에서 [모으기]·잭팟 구매 → [적용하기] → 홈이 잭팟 영상, 마이 추천 코드 입력 → 100코인, 다른 탭으로 갔다 오면 영상이 멈췄다 다시 도는지
@@ -96,6 +98,7 @@
 
 
 6. [ ] **1.2.0 AAB를 Play에 올리고 실기기 확인(사람).** #67 머지와 production 빌드 시작까지는 10-19 밤에 끝냈다.
+   - **→ 10-21: 1.4.0(vc12)을 Play에 올렸으므로 1.2.0 AAB를 따로 올릴 필요는 없다.** 아래 휴대폰 확인 항목(R8·가로 회전 포함)은 1.4.0 앱으로 한다
    - 빌드 완료(10-19 밤): 1.2.0 / versionCode 9 / 커밋 `0b5a66b` / Play 업로드 키스토어(EAS 원격). AAB 안에 R8 매핑(`BUNDLE-METADATA/.../proguard.map`)이 들어 있다.
      https://expo.dev/accounts/ucmnuniverse-developer/projects/flexable/builds/3b5f443c-c818-45c9-9138-dd4e9f47e185
    - 위 페이지에 `ucmnuniverse-developer` 계정으로 로그인해 AAB를 받는다(어느 PC든 된다). 집 PC에는 `Downloads/flexable-1.2.0-vc9.aab`(75MB)로 받아 두었다. 다시 빌드하면 versionCode는 10이 된다.
@@ -160,7 +163,7 @@
 | 앱 서비스 화면 | 완료, 1차 피드백 반영(PR #15), E2E 13개를 CI에서 실행 | `frontend/src/service/`, `frontend/src/app/` (기능별 상태는 `docs/FEATURES.md`) |
 | Play 제출 자료 | 초안·그래픽·스크린샷 완료 | `docs/play-store/` |
 | 심사용 계정 | 운영 서버에 생성 완료 | `play.review@flexable.app` (비밀번호는 §2) |
-| Android 빌드 | 비공개 테스트에 1.1.0 출시. 1.2.0 AAB(versionCode 9, R8·화면 회전) 빌드 완료(10-19), Play 업로드·실기기 확인 전(§0-1 P1 6번) | §4-2 |
+| Android 빌드 | 비공개 테스트에 1.4.0(versionCode 12, 코인·영상·R8·화면 회전) 출시(10-21). `minVersion` 1.4.0이라 1.3.0 이하는 필수 업데이트 창. 실기기 확인 전(§0 0-코인) | §4-2 |
 | Play Console | 개발자 계정 `ucmnuniverse`. 비공개 테스트 출시·스토어 아이콘 교체 완료, 테스터 모집 중(10-16) | §4-3, `docs/play-store/README.md` |
 
 ## 2. 따로 챙길 것 (저장소에 없음)
@@ -300,13 +303,14 @@ cd /opt/flexable && docker compose ps && docker compose logs api --tail 100
 - [ ] EC2 탄력적 IP 할당(지금은 자동 할당 IP라 인스턴스를 멈추면 바뀜 → DuckDNS 갱신 필요)
 - [x] 문의 이메일을 팀 계정으로 교체(10-16): `ucmnuniverse@gmail.com`. 앱은 원격 업데이트, 웹은 머지 후 Vercel 배포로 반영. Play Console 스토어 설명의 "문의:" 줄은 사람이 직접 바꾼다
 - [x] API 요청(Codex): `GET /budget/today`에 `weekDaysLeft`·`weekAvailable`·`hasTransactions` 추가, 홈에 "이번 주 쓸 수 있는 돈"과 "아직 기록한 거래가 없어요" 반영(2026-10-13 운영 배포)
-- [ ] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상). 드문 경우라 보류
+- [x] 같은 `Idempotency-Key`로 동시에 들어온 요청은 하나가 500을 받는다(재전송하면 정상): PR #107로 수정(10-22, 머지·운영 배포 전). 진 쪽은 새 트랜잭션에서 먼저 저장된 거래를 200으로 받는다
 - [x] RDS 자동 백업 보관 기간이 7일 이하인지 확인(개인정보처리방침에 "최대 7일"이라고 적음). 2026-10-14 보관 기간 7일로 설정, 리전 간 복제 없음, 수동 스냅샷 없음, AWS Backup 미사용 확인
 - [ ] 수입 저장·거래 수정 저장 후 빈 화면 → 뒤로가기 시 앱 종료(이슈 #24): PR #23·#25로 수정, `production` 원격 업데이트 게시 완료, 실기기 확인 대기. 원인·재발 방지 규칙·검증 체크리스트는 `docs/bug-transaction-edit-blank-screen.md`
 - [x] R8 난독화 켜기(Play가 "가독화 파일 없음" 경고, 10-14 versionCode 5 업로드 시): 1.2.0(#67, versionCode 9)에서 `enableMinifyInReleaseBuilds`로 켰고 AAB에 매핑 파일이 들어 있다. 남은 것은 Play 업로드와 실기기 확인으로, §0-1 P1 6번에서 한다
-- [ ] 수입일 공휴일 처리(지금은 토·일만 다음 월요일로 미룸)
+- [x] 수입일 공휴일 처리: PR #106(10-22, 머지·운영 배포 전). 토·일·공휴일이면 다음 평일. 공휴일 목록 `budget/PublicHolidays.java`는 2026-12-25부터라 지난 주기·시드머니 반영 기록이 바뀌지 않는다 → **12-24까지 배포**하면 바뀌는 사용자가 없다
+- [ ] 2027년 6월쯤 우주항공청 2028 월력요항이 나오면 `PublicHolidays.java`에 2028 공휴일을 더한다(임시공휴일은 지정될 때). 목록이 끝나면 토·일만 미룬다
 - [x] 캐릭터 홈 단계를 하루 단위 점수로 변경(이슈 #29, PR #30): 처음 쓴 날 광부 0%에서 시작, 예산을 지킨 날 +15·넘긴 날 −50(100점이 한 단계). 날짜별 하루 예산은 `daily_budgets`(V4)에 저장. 규칙은 `docs/API.md` "GET /budget/today"
 - [ ] 홈 진행 바에 달리는 캐릭터(1차 피드백, 다음 버전)
 - [x] 웹 개발 모드 "Invalid DOM property transform-origin" 경고: `Donut`의 `rotation`·`origin`을 `transform="rotate(-90 cx cy)"`로 바꿔 해결. 이 경고 토스트가 탭 바를 가려 실패하던 E2E도 통과(PR #49)
-- [ ] 다 쓴 로컬 브랜치 정리(`SXXNHU/*` 여러 개가 남아 있음)
-- [ ] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 rebase 전 원본이다. 원격과 PR은 `SXXNHU/service-frontend`를 쓴다.
+- [x] 다 쓴 브랜치 정리(10-22): 로컬은 `main`만, 원격은 머지된 브랜치와 닫힌 #78 브랜치를 지우고 `SXXNHU/release-1.0.0-force-update`(§4-2 1.0.0 필수 업데이트)만 남겼다
+- [x] 개발 도구 정리: Codex 작업 브랜치 `SXXNHU/feat-service-frontend`는 로컬·원격 모두 없다(10-22 확인)
