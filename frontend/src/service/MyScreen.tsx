@@ -40,7 +40,7 @@ export function AccountLine({ user }: { user: User }) {
     </>
   );
 }
-/** 앱에서만 쓰는 코인 잔액, 꾸미기 진입, 추천 코드. 코인 API가 없는 서버(1.4.0 이전)에서는 보이지 않는다 */
+/** 앱에서만 쓰는 코인 잔액, 상점 진입, 추천 코드. 코인 API가 없는 서버(1.4.0 이전)에서는 보이지 않는다 */
 function CoinCard() {
   const toast = useToast();
   const [wallet, setWallet] = useState<CoinWallet>();
@@ -111,11 +111,11 @@ function CoinCard() {
       <Row
         first
         label={`앱에서만 쓰는 코인 ${money(wallet.balance)}개`}
-        caption="꾸미기에서 캐릭터 코스튬을 살 수 있어요"
+        caption="상점에서 코인을 모으고 캐릭터 코스튬을 살 수 있어요"
         onPress={() => router.push("/customize")}
         right={
           <T size={14} weight="700" color={colors.brand}>
-            꾸미기
+            상점
           </T>
         }
       />

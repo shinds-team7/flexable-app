@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, type Href } from "expo-router";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
 import { T } from "./ui";
@@ -12,7 +12,14 @@ export function Logo({ size = 30 }: { size?: number }) {
     />
   );
 }
-export function AppHeaderView({ homeHref }: { homeHref: Href }) {
+/** right: 오른쪽 끝에 놓을 버튼(없으면 로고 줄만) */
+export function AppHeaderView({
+  homeHref,
+  right,
+}: {
+  homeHref: Href;
+  right?: ReactNode;
+}) {
   return (
     <View style={styles.wrap}>
       <View style={styles.top}>
@@ -35,6 +42,7 @@ export function AppHeaderView({ homeHref }: { homeHref: Href }) {
             flex-able
           </T>
         </Pressable>
+        {right}
       </View>
     </View>
   );
