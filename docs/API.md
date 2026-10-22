@@ -314,7 +314,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 | 요청 | 설명 |
 |---|---|
 | `GET /transactions?from=2026-10-01&to=2026-10-31&type=&categoryId=` | `{ "items": Transaction[] }`, `occurredAt` 내림차순. `from`/`to` 필수(포함), 최대 366일 |
-| `POST /transactions` | 201. 헤더 `Idempotency-Key: <uuid>` 권장 — 같은 키 재전송 시 처음 만든 거래를 200으로 돌려준다 |
+| `POST /transactions` | 201. 헤더 `Idempotency-Key: <uuid>` 권장 — 같은 키 재전송 시(동시에 온 요청 포함) 처음 만든 거래를 200으로 돌려준다 |
 | `GET /transactions/{id}` | 200 |
 | `PATCH /transactions/{id}` | 200. 보낸 필드만 수정 |
 | `DELETE /transactions/{id}` | 204 |

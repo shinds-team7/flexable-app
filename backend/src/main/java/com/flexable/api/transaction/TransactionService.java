@@ -9,8 +9,11 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.flexable.api.category.Category;
 import com.flexable.api.category.CategoryDtos.CategoryRef;
@@ -31,14 +34,16 @@ public class TransactionService {
 	private final TransactionRepository transactions;
 	private final CategoryRepository categoryRepository;
 	private final CategoryService categories;
+	private final TransactionTemplate tx;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public TransactionService(TransactionRepository transactions, CategoryRepository categoryRepository,
-			CategoryService categories, Clock clock, AppProperties props) {
+			CategoryService categories, PlatformTransactionManager txManager, Clock clock, AppProperties props) {
 		this.transactions = transactions;
 		this.categoryRepository = categoryRepository;
 		this.categories = categories;
+		this.tx = new TransactionTemplate(txManager);
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -46,22 +51,40 @@ public class TransactionService {
 	public record Created(TransactionResponse body, boolean replayed) {
 	}
 
-	@Transactional
 	public Created create(long userId, CreateRequest req, String idempotencyKey) {
 		String key = normalizeKey(idempotencyKey);
+		try {
+			return tx.execute(status -> createOnce(userId, req, key));
+		}
+		catch (DataIntegrityViolationException e) {
+			// 같은 키로 동시에 들어온 요청은 unique 제약으로 하나만 저장된다. 진 쪽은 롤백된 뒤 새 트랜잭션에서 먼저 저장된 거래를 돌려준다.
+			Created replayed = key == null ? null : tx.execute(status -> replay(userId, key));
+			if (replayed == null) {
+				throw e;
+			}
+			return replayed;
+		}
+	}
+
+	private Created createOnce(long userId, CreateRequest req, String key) {
 		if (key != null) {
-			var existing = transactions.findByUserIdAndIdempotencyKey(userId, key);
-			if (existing.isPresent()) {
-				return new Created(toResponse(existing.get()), true);
+			Created replayed = replay(userId, key);
+			if (replayed != null) {
+				return replayed;
 			}
 		}
 		Category category = categories.requireForType(userId, req.categoryId(), req.type());
 		Instant now = clock.instant();
 		Instant occurredAt = req.occurredAt() == null ? now : req.occurredAt().toInstant();
-		// 같은 키로 동시에 들어온 요청은 unique 제약으로 하나만 저장된다. 진 쪽이 재전송하면 위에서 기존 거래를 받는다.
 		Transaction saved = transactions.save(new Transaction(userId, category.getId(), req.type(), req.amount(),
 				cleanTitle(req.title()), cleanMemo(req.memo()), occurredAt, key, now));
 		return new Created(TransactionResponse.of(saved, CategoryRef.of(category), zone), false);
+	}
+
+	private Created replay(long userId, String key) {
+		return transactions.findByUserIdAndIdempotencyKey(userId, key)
+			.map(t -> new Created(toResponse(t), true))
+			.orElse(null);
 	}
 
 	@Transactional(readOnly = true)
