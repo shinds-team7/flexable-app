@@ -573,7 +573,7 @@ test("approved legal copy and public terms link preserve signup input", async ({
     .click();
   await expect(page).toHaveURL(/\/terms$/);
   await expect(
-    page.getByText("이 약관은 2026년 10월 27일부터 시행합니다.", {
+    page.getByText("이 약관은 2026년 10월 28일부터 시행합니다.", {
       exact: true,
     }),
   ).toBeVisible();
