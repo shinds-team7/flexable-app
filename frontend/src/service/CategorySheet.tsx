@@ -6,6 +6,7 @@ import { CategoryIcon, ErrorNotice, Field } from "./ui";
 import { useSession } from "./Session";
 import type { Category, Kind } from "./types";
 import { colors } from "@/theme";
+// Grays stay with the default 고정지출·기타 categories, so new ones pick from these six (design decision 10-22).
 const palette = [
   "#12B76A",
   "#F79009",
@@ -13,8 +14,6 @@ const palette = [
   "#2E90FA",
   "#EE46BC",
   "#15B79E",
-  "#667085",
-  "#98A2B3",
 ];
 const icons = [
   "restaurant",
