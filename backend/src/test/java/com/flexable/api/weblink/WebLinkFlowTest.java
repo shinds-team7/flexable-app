@@ -84,7 +84,7 @@ class WebLinkFlowTest {
 		Account a = signup();
 		String code = issueCode(a.token());
 		// 사용자가 소문자·하이픈을 섞어 입력해도 받아들인다.
-		String typed = (code.substring(0, 4) + "-" + code.substring(4)).toLowerCase();
+		String typed = (code.substring(0, 3) + "-" + code.substring(3)).toLowerCase();
 		MvcResult r = mvc.perform(internal(post("/internal/v1/web-links"), KEY, "{\"code\":\"" + typed + "\"}"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.profile.email").value(a.email()))
@@ -138,8 +138,8 @@ class WebLinkFlowTest {
 		long userId = ((Number) JsonPath.read(body(mvc.perform(user(get("/api/v1/me"), b.token())).andReturn()), "$.id"))
 			.longValue();
 		Instant past = Instant.now().minusSeconds(60);
-		codes.save(new WebLinkCode(userId, WebLinkService.sha256("EXPRD234"), past, past.minusSeconds(600)));
-		mvc.perform(internal(post("/internal/v1/web-links"), KEY, "{\"code\":\"EXPRD234\"}"))
+		codes.save(new WebLinkCode(userId, WebLinkService.sha256("EXPRD2"), past, past.minusSeconds(600)));
+		mvc.perform(internal(post("/internal/v1/web-links"), KEY, "{\"code\":\"EXPRD2\"}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("LINK_CODE_INVALID"));
 

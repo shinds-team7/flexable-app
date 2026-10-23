@@ -1,10 +1,9 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, usePathname } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
-import { T } from "@/components/ui";
 import { colors } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
-import { money } from "./ui";
 import { useWallet } from "./wallet";
 const tabs = [
   {
@@ -52,7 +51,7 @@ export function ServiceHeader() {
     />
   );
 }
-/** Shows the coin balance and opens the shop, where collecting and costumes live; the dot says coins are waiting there. */
+/** Coins, collecting and costumes all live in the shop; the dot says coins are waiting there. The balance itself shows on the character stage. */
 function ShopButton() {
   const wallet = useWallet();
   const waiting = (wallet?.passive.collectable ?? 0) > 0;
@@ -60,14 +59,11 @@ function ShopButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="상점"
-      accessibilityHint={`코인 ${money(wallet?.balance ?? 0)}개`}
       onPress={() => router.push("/customize")}
       hitSlop={6}
       style={({ pressed }) => [styles.shop, pressed && { opacity: 0.6 }]}
     >
-      <T size={16} weight="800" num>
-        🪙 {money(wallet?.balance ?? 0)}
-      </T>
+      <Ionicons name="shirt-outline" size={24} color={colors.text} />
       {waiting && <View style={styles.dot} />}
     </Pressable>
   );
@@ -79,9 +75,8 @@ export function ServiceTabBar() {
 const styles = StyleSheet.create({
   // The negative margin lines the icon up with the logo row's padding while keeping a 44pt target.
   shop: {
-    minWidth: 44,
+    width: 44,
     height: 44,
-    paddingHorizontal: 10,
     marginRight: -10,
     alignItems: "center",
     justifyContent: "center",
@@ -89,7 +84,7 @@ const styles = StyleSheet.create({
   dot: {
     position: "absolute",
     top: 8,
-    right: 2,
+    right: 7,
     width: 9,
     height: 9,
     borderRadius: 5,
