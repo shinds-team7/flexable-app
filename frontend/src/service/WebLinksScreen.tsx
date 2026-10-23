@@ -256,7 +256,7 @@ function WebLinksContent({
               selectable
               style={{ textAlign: "center" }}
             >
-              {code.code.slice(0, 4)}-{code.code.slice(4)}
+              {code.code}
             </T>
             <T size={13} num style={{ textAlign: "center" }}>
               {Math.floor(remaining / 60)}분{" "}

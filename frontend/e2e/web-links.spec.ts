@@ -37,7 +37,7 @@ test("settings entry, one-time code renewal, expiry and leaving the screen", asy
     return route.fulfill({
       status: 201,
       json: {
-        code: issued === 1 ? "K7M2Q9XB" : "A2B3C4D5",
+        code: issued === 1 ? "K7M2Q9" : "A2B3C4",
         expiresAt: new Date(
           Date.now() + (issued === 1 ? 600000 : 2000),
         ).toISOString(),
@@ -69,36 +69,36 @@ test("settings entry, one-time code renewal, expiry and leaving the screen", asy
   await page
     .getByRole("button", { name: "웹 연동 코드 받기", exact: true })
     .click();
-  await expect(page.getByText("K7M2-Q9XB", { exact: true })).toBeVisible();
+  await expect(page.getByText("K7M2Q9", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "새 코드 받기", exact: true }).click();
   await page.getByRole("button", { name: "취소", exact: true }).click();
   await expect(
     page.getByText("새 코드를 받을까요?", { exact: true }),
   ).toHaveCount(0);
   expect(issued).toBe(1);
-  await expect(page.getByText("K7M2-Q9XB", { exact: true })).toBeVisible();
+  await expect(page.getByText("K7M2Q9", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "새 코드 받기", exact: true }).click();
   await page
     .getByRole("button", { name: "새 코드 받기", exact: true })
     .last()
     .click();
   await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.getByText("K7M2-Q9XB", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("K7M2Q9", { exact: true })).toHaveCount(0);
   await page
     .getByRole("button", { name: "웹 연동 코드 받기", exact: true })
     .click();
-  await expect(page.getByText("A2B3-C4D5", { exact: true })).toBeVisible();
+  await expect(page.getByText("A2B3C4", { exact: true })).toBeVisible();
   await expect(
     page.getByText("코드가 만료됐어요. 새 코드를 받아 주세요", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("A2B3-C4D5", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("A2B3C4", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "새 코드 받기", exact: true }).click();
-  await expect(page.getByText("A2B3-C4D5", { exact: true })).toBeVisible();
+  await expect(page.getByText("A2B3C4", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await page
     .getByRole("button", { name: "웹사이트 연동", exact: true })
     .click();
-  await expect(page.getByText("A2B3-C4D5", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("A2B3C4", { exact: true })).toHaveCount(0);
   // Consent is asked again on every visit.
   await expect(consent).not.toBeChecked();
 });

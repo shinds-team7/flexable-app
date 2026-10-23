@@ -40,8 +40,8 @@ import com.flexable.api.weblink.WebLinkDtos.LinkItem;
 public class WebLinkService {
 
 	static final Duration CODE_TTL = Duration.ofMinutes(10);
-	static final int CODE_LENGTH = 8;
-	/** 헷갈리는 글자(숫자 0·1, 영문 I·L·O)를 뺀 31자. 8자리면 약 8,500억 가지. */
+	static final int CODE_LENGTH = 6;
+	/** 헷갈리는 글자(숫자 0·1, 영문 I·L·O)를 뺀 31자. 6자리면 약 8억 8,750만 가지(웹이 하이픈 없는 6자리로 바꿔 맞췄다). */
 	static final String CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 	private final SecureRandom random = new SecureRandom();
