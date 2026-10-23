@@ -44,7 +44,7 @@ id: `costume-lv1` … `costume-lv5`, `outfit-01` … `outfit-10`. 현재 들어�
 
 ### 그리는 규칙
 
-**유령냥이 추가(2026-10-23, V11):** `cat-ghost.mp4`·`cat-ghost.png`를 `outfit-03`으로 연결한다(`python scripts/prepare-outfit-video.py <cat-ghost.mp4> outfit-03 <cat-ghost.png>`, 보정 옵션 없음). V11이 이름을 유령냥이, 가격을 200코인으로 설정하고 판매를 켠다. 레벨 코스튬 전환(V10) 뒤 첫 코인 구매 코스튬이다. 반영 순서는 **앱 원격 업데이트 수신 확인 → 서버 V11 적용**(먼저 켜면 옛 앱이 기본 캐릭터 그림으로 판다).
+**선비냥이·유령냥이 추가(2026-10-23, V11):** `cat-seonbi.mp4`는 `outfit-03`, `cat-ghost.mp4`·`cat-ghost.png`는 `outfit-04`로 연결한다(`python scripts/prepare-outfit-video.py <영상> <id> [첫 화면 이미지]`, 보정 옵션 없음). 선비냥이가 상점 앞칸(정렬 순서 103)이고 유령냥이가 뒤(104)다. V11이 이름·가격(각 200코인)을 정하고 판매를 켠다. 레벨 코스튬 전환(V10) 뒤 첫 코인 구매 코스튬이다. 선비냥이 영상 오른쪽 아래(모자 챙 부근)에 Gemini 워터마크(✦)가 흐리게 남아 있다. 반영 순서는 **앱 원격 업데이트 수신 확인 → 서버 V11 적용**(먼저 켜면 옛 앱이 기본 캐릭터 그림으로 판다).
 
 **직장냥이 추가(2026-10-21):** `cat_salary.mp4`·`cat_salary.jpg`를 `outfit-02`로 연결한다. V9가 이름을 직장냥이, 가격을 200코인으로 설정하고 판매를 켠다. 변환 명령은 `python scripts/prepare-outfit-video.py <cat_salary.mp4> outfit-02 <cat_salary.jpg> --clear-top-left`. 이 옵션은 1280×720 기준 좌상단 240×90px을 무대 색으로 덮고 바깥 40px 경계를 녹여 배경색 텍스트를 영상·정지 그림 모두에서 지운다. 다른 코스튬에는 기본 보정을 그대로 쓴다.
 
