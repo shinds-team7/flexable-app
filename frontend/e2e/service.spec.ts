@@ -554,7 +554,7 @@ test("expired token returns to start; public routes remain accessible", async ({
     page.getByText("- 시행일: 2026년 10월 28일(웹사이트 연동은 그 전에 동의한 이용자에게 동의한 때부터)", { exact: true }),
   ).toBeVisible();
   await page.goto("/support");
-  await expect(page.getByText("앱 버전 1.1.0", { exact: true })).toBeVisible();
+  await expect(page.getByText("앱 버전 1.4.0", { exact: true })).toBeVisible();
   // 시연은 웹사이트 저장소(flexable-web)의 /m 으로 옮겼다. 시작 화면에는 링크만 남는다.
   await page.goto("/");
   await expect(page.getByText("시연 보기", { exact: true })).toBeVisible();
