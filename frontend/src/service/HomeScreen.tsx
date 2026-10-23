@@ -265,7 +265,7 @@ function statusOf(s: Today): PaceStatus {
 /** Coin balance floating over the character video; the shop is reached from the header button. */
 function CoinChip({ balance }: { balance: number }) {
   return (
-    <View style={styles.coinChip} accessible accessibilityLabel={`코인 ${money(balance)}개`}>
+    <View style={styles.coinChip} accessible accessibilityLabel={`보유 코인 ${money(balance)}개`}>
       <T size={14} weight="800" num>
         🪙 {money(balance)}
       </T>
