@@ -27,22 +27,25 @@ export function pointsStatus(points: number, label: string): PaceStatus {
 
 /**
  * 적용 중인 코스튬 영상 하나와 승급 게이지. 캐릭터(character)는 서비스가 전달한다(말풍선은 10-22에 뺐다).
- * 코인·[모으기]·코스튬은 헤더의 상점 버튼 → 상점 화면에 있다.
+ * 코인 잔액(coin)은 영상 우측 상단에 띄운다. [모으기]·코스튬은 헤더의 상점 버튼 → 상점 화면에 있다.
  * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
  */
-export function CharacterStage({ level, character, gauge, children }: { level: Level; character: ReactNode; gauge: PaceStatus; children: ReactNode }) {
+export function CharacterStage({ level, character, coin, gauge, children }: { level: Level; character: ReactNode; coin?: ReactNode; gauge: PaceStatus; children: ReactNode }) {
   const accent = ACCENTS[level];
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.stage }]}>
-      {/* 오늘 쓸 수 있는 돈 — 기존 홈과 같은 파란 카드를 맨 위에 */}
-      <View style={styles.heroSlot}>{children}</View>
-
       <View style={styles.stage}>
-        <View style={styles.char}>{character}</View>
+        <View style={styles.char}>
+          {character}
+          {coin && <View style={styles.coin}>{coin}</View>}
+        </View>
       </View>
 
       <Gauge status={gauge} accent={accent} />
+
+      {/* 오늘 쓸 수 있는 돈 — 캐릭터와 게이지 아래 */}
+      <View style={styles.heroSlot}>{children}</View>
     </View>
   );
 }
@@ -102,9 +105,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: 'center',
   },
-  heroSlot: { alignSelf: 'stretch' },
+  heroSlot: { alignSelf: 'stretch', marginTop: 12 },
   // wrap 의 좌우 여백(16)을 상쇄해 화면 끝까지. 넓은 웹 화면에서는 640에서 멈춘다
-  stage: { alignItems: 'center', marginTop: 12, marginHorizontal: -16, alignSelf: 'stretch' },
+  stage: { alignItems: 'center', marginHorizontal: -16, alignSelf: 'stretch' },
+  coin: { position: 'absolute', top: 12, right: 16 },
   char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
   gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
   gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
