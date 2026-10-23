@@ -188,13 +188,13 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
     )
     .toBe(true);
   // Inactive reserve products are available only in local mode for purchase coverage.
-  await page.getByRole("button", { name: "상품 03", exact: true }).click();
+  await page.getByRole("button", { name: "선비냥이", exact: true }).click();
   await page
     .getByRole("button", { name: "200코인으로 구매", exact: true })
     .click();
   await expect(page.getByText("구매했어요", { exact: true })).toBeVisible();
   await expect(
-    page.getByLabel("상품 03 코스튬", { exact: true }),
+    page.getByLabel("선비냥이 코스튬", { exact: true }),
   ).toBeVisible();
   // Buying does not apply it yet.
   expect((await api(page, "GET", "/coins")).equippedOutfitId).toBeNull();
@@ -212,15 +212,15 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await openShop(page);
   await balance(page, 0);
   await expect(
-    page.getByLabel("상품 03 미리보기", { exact: true }),
+    page.getByLabel("선비냥이 미리보기", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "상품 03", exact: true }),
+    page.getByRole("button", { name: "선비냥이", exact: true }),
   ).toHaveText("🪙 200");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "상품 04", exact: true }).click();
+  await page.getByRole("button", { name: "유령냥이", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
   ).toBeDisabled();
