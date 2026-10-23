@@ -186,7 +186,7 @@
 3. [x] Play Console 스토어 등록정보 → 앱 아이콘을 `docs/play-store/icon-512.png`(새 광부 고양이, 32비트 PNG)로 교체
 4. [x] 실기기 확인(Play에서 versionCode 7로 업데이트한 앱): 홈 화면 아이콘이 원형·둥근 사각형 런처에서 잘리지 않는지, 테마 아이콘, 동전 4단계, 게이지 퍼센트 표시, 거래 완료 알림이 상단에 뜨는지, 다음 원격 업데이트 때 업데이트 배너가 뜨고 "지금 적용"이 동작하는지, 거래 수정·수입 저장 후 빈 화면이 다시 나오지 않는지(PR #23·#25, `docs/bug-transaction-edit-blank-screen.md`) — 10-23 사용자 실기기 확인 완료
 5. [ ] 팀원 2차 피드백 수집(노션)
-6. [ ] `docs/play-store/` 스크린샷 교체 검토(예전 홈 화면·아이콘 기준)
+6. [x] `docs/play-store/` 스크린샷을 1.4.0 기준 8장으로 교체(10-23, `play-store/README.md` §2 그래픽). 남은 것: Play Console 스토어 등록정보에 올리기(사람)
 7. [ ] 운영 DB에 남은 테스트성 계정 3개(`test1@`·`test@`·`baeh@` 로 시작) 정리 여부 결정. 목록은 §5의 조회로 확인. `play.review@flexable.app`은 지우지 않는다
 8. [x] production AAB를 Play Console 내부/비공개 테스트 트랙에 업로드(10-14, versionCode 5)
 
