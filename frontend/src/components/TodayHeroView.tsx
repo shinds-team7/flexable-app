@@ -21,9 +21,9 @@ export function TodayHeroView({
 }) {
   const over = s.todayAvailable < 0;
   const empty = s.todayAvailable <= 0;
-  // Translucent white drops below 4.5:1 on the red panel, so small text goes solid white there.
+  // Small text goes solid white on the navy panel.
   const sub = empty ? colors.onBrand : colors.onBrandSub;
-  // Overspending shows as a negative amount on the red panel, so the number itself says how much went over.
+  // Overspending shows as a negative amount, so the number itself says how much went over.
   const shown = useRollingNumber(s.todayAvailable);
   return (
     <View style={[styles.hero, empty && styles.heroEmpty]}>
@@ -56,6 +56,14 @@ export function TodayHeroView({
         <T size={13} weight="600" color={colors.onBrand} style={{ marginTop: 2 }} num>
           남은 {s.daysLeft - 1}일에 나눠서 반영할게요
         </T>
+      )}
+
+      {empty && (
+        <View style={styles.heroChip}>
+          <T size={12} weight="700" color={colors.onBrand}>
+            {over ? "오늘 예산을 넘었어요" : "오늘 예산을 다 썼어요"}
+          </T>
+        </View>
       )}
 
       <Pressable
