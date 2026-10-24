@@ -38,7 +38,10 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `category` | 기본 카테고리 생성, 사용자 카테고리 CRUD |
 | `transaction` | 수동 입력 거래 CRUD, `Idempotency-Key` |
 | `analysis` | 기간별 카테고리·일별 합계 |
-| `user` | 사용자, 계정·데이터 일괄 삭제 |
+| `user` | 사용자, 소셜 identity, 계정·데이터 일괄 삭제(`AccountDeletionService`) |
+| `coin` | 앱에서만 쓰는 코인: 지갑·내역, check-in(가입 선물·어제 예산 보너스·시간 적립 시작), 보상 확인(ack), 시간 적립 모으기 |
+| `outfit` | 캐릭터 코스튬 목록·구매(지갑 행 잠금)·적용, 레벨 코스튬 해금(최고 단계) |
+| `referral` | 추천 코드 발급·등록(양쪽 100코인) |
 | `weblink` | 웹사이트 [앱 연동하기]: 연동 코드 발급, 연동 목록·해제, 웹 서버 전용 `/internal/v1/web-links` |
 | `common` | 오류 코드·응답 형식, 기간·시각 도우미, 헬스 체크 |
 | `config` | 보안(JWT 검증·CORS, `/internal/**` 서비스 키), 설정값 바인딩, 시간대(Asia/Seoul) |
@@ -50,6 +53,7 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | 메서드·경로 | 내용 |
 |---|---|
 | `POST /auth/signup`, `POST /auth/login` | 가입, 로그인(토큰 발급). 인증 없이 호출 |
+| `GET /auth/oauth/providers`, `GET /auth/oauth/{provider}/start·callback`, `POST /auth/oauth/exchange` | 카카오·Google 로그인. 인증 없이 호출 |
 | `POST /auth/logout` | 토큰 폐기 |
 | `GET /me`, `DELETE /me` | 내 정보, 계정·데이터 삭제 |
 | `GET·PUT /budget/settings` | 초기 예산 설정 조회·전체 교체 |
@@ -58,6 +62,9 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `GET·POST /categories`, `PATCH·DELETE /categories/{id}` | 카테고리 |
 | `GET·POST /transactions`, `GET·PATCH·DELETE /transactions/{id}` | 거래(직접 입력). 생성은 `Idempotency-Key`로 중복 방지 |
 | `GET /analysis/summary` | 기간별 카테고리·일별 합계 |
+| `POST /coins/check-in`, `POST /coins/rewards/ack`, `GET /coins`, `POST /coins/collect` | 코인 지급·보상 확인·지갑·시간 적립 모으기 |
+| `GET /outfits`, `POST /outfits/{id}/purchase`, `PUT /outfits/equipped` | 코스튬 목록·구매·적용 |
+| `GET /referrals/me`, `POST /referrals` | 내 추천 코드, 추천 코드 등록 |
 | `POST /me/web-link-codes`, `GET /me/web-links`, `DELETE /me/web-links/{id}` | 웹 연동 코드 발급, 연동 목록·해제 |
 | `GET /health` | 상태 확인. 인증 없이 호출 |
 
@@ -73,6 +80,9 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `SecurityTest` | 접근 제어: 비로그인 401, 내용을 바꾼 토큰·서명 없는 토큰 401, 다른 사용자의 거래·카테고리 접근 차단, 허용 안 된 출처의 CORS 403 |
 | `auth/LoginAttemptLimiterTest` | 로그인 실패 제한과 만료 기록 정리 |
 | `auth/OAuthFlowTest`·`OAuthUnavailableTest`·`MemoryOAuthStoreTest`·`RestOAuthProviderClientTest` | 카카오·Google 로그인(start·callback·exchange), 키 없을 때 안내, state·1회용 코드 저장, 공급자 HTTP 호출 |
+| `budget/SeedMoneyFlowTest` | 시드머니 조회·반영(GOAL·ALL·MANUAL), 웹 연동용 시드머니 응답 |
+| `coin/CoinFlowTest` | 가입 선물·어제 예산 보너스·시간 적립, 코스튬 구매·적용·레벨 해금·환급, 추천 코드 |
+| `weblink/WebLinkFlowTest`·`WebLinkAttemptLimiterTest` | 웹 연동 코드 발급·연동·해제·서비스 키, 코드 실패 제한 |
 
 ## 운영 배포 (EC2 + RDS)
 

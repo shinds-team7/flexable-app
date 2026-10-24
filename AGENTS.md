@@ -10,7 +10,7 @@
 ## 구조
 
 ```text
-backend/                  Spring Boot 4 · Java 21 · MySQL(Flyway). 패키지별: auth, budget, category, transaction, analysis, user
+backend/                  Spring Boot 4 · Java 21 · MySQL(Flyway). 패키지별: auth, budget, category, transaction, analysis, user, coin, outfit, referral, weblink (구성은 backend/README.md)
 frontend/                 Expo(React Native) · Expo Router. 한 코드로 Android·웹
   src/app/                화면 경로(파일 하나 = 화면 하나). Expo Router 규칙상 경로 파일은 여기에만 둔다
   src/service/            실제 서비스 화면·세션·API 클라이언트(api/client.ts)
@@ -37,6 +37,7 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 | API 요청·응답, 예산 계산식 | [`docs/API.md`](docs/API.md) |
 | 프론트엔드·백엔드 실행 | [`frontend/README.md`](frontend/README.md), [`backend/README.md`](backend/README.md) |
 | 배포·출시 현황, 다음 할 일 | [`docs/HANDOFF.md`](docs/HANDOFF.md) |
+| 코인·코스튬 규칙, 영상 넣는 절차 | [`docs/coin-plan.md`](docs/coin-plan.md) |
 | Android 저장 후 빈 화면 버그와 재발 방지 규칙 | [`docs/bug-transaction-edit-blank-screen.md`](docs/bug-transaction-edit-blank-screen.md) |
 
 ## 검증 명령
@@ -45,6 +46,7 @@ docs/                     API 계약, 기능 기준표, 운영 인수인계, Pla
 # 프론트엔드 (frontend/)
 npx tsc --noEmit
 npx expo lint
+npm run test:unit                          # 프론트 단위 테스트(test/*.test.cjs)
 npx expo export -p web                     # 웹 빌드
 npx playwright test                        # 로컬 백엔드(8080)와 웹(8081)을 먼저 띄운 뒤
 
@@ -71,7 +73,7 @@ PR을 올리면 GitHub Actions(`.github/workflows/ci.yml`)가 위 검사를 모�
 
 - 브랜치: `SXXNHU/<종류>-<내용>`(예: `SXXNHU/fix-dow-ui`), `main`에서 따서 PR로 머지
 - 커밋 메시지: `feat(frontend): 한국어 요약` 형식
-- DB 스키마는 `backend/src/main/resources/db/migration/V{n}__*.sql`을 **추가**한다. 이미 있는 마이그레이션(V1~V4, `src/main/java/db/migration/V3`)은 운영 DB에 적용됐으니 고치거나 지우지 않는다
+- DB 스키마는 `backend/src/main/resources/db/migration/V{n}__*.sql`을 **추가**한다. 이미 있는 마이그레이션(지금 `V1`~`V11` SQL과 Java `src/main/java/db/migration/V3__fixed_posting_cutover.java`)은 고치거나 지우지 않는다. HANDOFF 기록상 V11까지 운영 DB에 적용됐다(10-23). 다음 번호는 V12
 - 예산 금액은 서버(`BudgetCalculator`)가 최종값이다. 원 단위 정수, 나눗셈은 내림. 클라이언트에서 따로 계산하지 않는다
 - 화면 문구: "입력한 잔액·기록 기준 추정"으로 설명한다. "계좌 연결", "최근 6개월 거래", "소비 패턴 분석"처럼 없는 기능을 암시하는 말과 개발 용어는 쓰지 않는다
 - 버전: 서비스는 `frontend/app.json`의 `version`. 시연 버전은 웹사이트 저장소에서 관리한다
