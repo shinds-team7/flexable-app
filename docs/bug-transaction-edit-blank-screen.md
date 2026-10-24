@@ -110,6 +110,6 @@ ANDROID_HOME=$LOCALAPPDATA/Android/Sdk EXPO_PUBLIC_API_URL=http://10.0.2.2:8080 
 adb logcat -d | grep "already has a parent"
 ```
 
-- 로컬 H2는 재시작하면 비므로 API로 가입 → `PUT /budget/settings` → 거래 2건부터 다시 만든다(한글 제목은 Git Bash curl에서 인코딩 오류가 나니 영문으로).
+- 로컬 H2는 `backend/build/localdb/`의 파일 DB라 재시작해도 데이터가 남는다. 빈 상태에서 재현하려면 서버를 끄고 `build/localdb/`를 지운 뒤, API로 가입 → `PUT /budget/settings` → 거래 2건부터 다시 만든다(한글 제목은 Git Bash curl에서 인코딩 오류가 나니 영문으로).
 - `CI=1`로 띄운 Metro는 파일 변경을 반영하지 않는다. 코드를 바꾸면 Metro를 다시 띄운다(`npx expo start --dev-client --port 8082`).
 - **끝나면 `frontend/android/`를 지우고 `package.json`의 `android`/`ios` 스크립트 변경을 되돌린다.** 남아 있으면 EAS Update/Build가 bare 프로젝트로 보고 `runtimeVersion` 정책이 어긋날 수 있다.

@@ -16,6 +16,7 @@
 - 홈: 오늘·이번 주 쓸 수 있는 돈, 다음 수입일까지 남은 생활비, 예산을 지킨 만큼 성장하는 캐릭터
 - 거래 직접 기록·수정·삭제, 카테고리 관리, 고정지출 자동 기록
 - 소비 분석(기간별 카테고리 합계), 계정·데이터 삭제
+- 시드머니(모아둔 돈 + 수입일 전날 반영 기록), 앱에서만 쓰는 코인·코스튬 상점·추천 코드, 웹사이트 연동(선택 동의)
 
 계좌 연결, AI 분석, 알림 자동 기록은 시연(웹사이트 저장소의 `/m`)에만 있다. 전체 목록과 구현 근거는 [`docs/FEATURES.md`](docs/FEATURES.md).
 
@@ -54,7 +55,7 @@ npm run web
 
 검증 명령(타입 검사, 린트, 백엔드 테스트, E2E)은 [`AGENTS.md`](AGENTS.md) "검증 명령".
 
-웹 제품의 기능·화면·데이터 계획과 개발 책임은 [flexable-web 제품 문서](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/README.md)에서 관리한다. 웹 서버는 flexable-web `backend/`에 따로 있고, 이 저장소 `backend/`는 앱 API와 웹 연동용 서버 간 API(미구현)를 맡는다([앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md)).
+웹 제품의 기능·화면·데이터 계획과 개발 책임은 [flexable-web 제품 문서](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/README.md)에서 관리한다. 웹 서버는 flexable-web `backend/`에 따로 있고, 이 저장소 `backend/`는 앱 API와 웹 연동 API(`weblink` 패키지: 앱의 연동 코드 발급·연동 목록·해제, 웹 서버 전용 `/internal/v1/web-links/*`의 연동 생성·회원 정보·시드머니 조회·해제)를 맡는다([앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md)).
 
 ## 처음 보는 사람이 읽는 순서
 

@@ -1,6 +1,6 @@
-# Flex-able 서비스 API v1 (MVP)
+# Flex-able 서비스 API v1
 
-서비스 1.0.0 비공개 테스트(Google Play 12명)용 최소 API. 서버 코드는 `backend/`(Spring Boot 4.1, Java 21, MySQL 8).
+앱(Android·웹) API. 경로의 `v1`은 API 버전이고 앱 버전과 따로다(지금 앱은 `frontend/app.json` 기준 1.4.0). 1.0.0 비공개 테스트용 최소 API로 시작해 소셜 로그인·시드머니·코인·코스튬·추천 코드·웹사이트 연동이 더해졌다. 서버 코드는 `backend/`(Spring Boot 4.1, Java 21, MySQL 8).
 이 문서가 프론트·백엔드 사이의 계약이다. 바꿀 때는 이 문서를 먼저 고친다.
 
 웹사이트 API는 웹 서버(flexable-web `backend/`)에 있고 이 문서에 적지 않는다. 이 문서에는 웹 연동용 API만 적는다([웹사이트 연동](#웹사이트-연동)). 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
@@ -22,7 +22,7 @@
 | HTTP | code | 의미 |
 |---|---|---|
 | 400 | `VALIDATION_FAILED` | 입력 형식 오류. `fields: { "email": "이메일 형식을 확인해 주세요" }` 추가 |
-| 401 | `UNAUTHORIZED` | 토큰 없음·만료·탈퇴 계정 → 로그인 화면으로 |
+| 401 | `UNAUTHORIZED` | 토큰 없음·만료·폐기·탈퇴 계정 → 앱은 저장한 토큰을 지우고 시작 화면(`/`)으로 보낸 뒤 "다시 로그인해 주세요" 안내(`service/Session.tsx`) |
 | 401 | `INVALID_CREDENTIALS` | 로그인·탈퇴 시 이메일/비밀번호 불일치 |
 | 401 | `SOCIAL_ACCOUNT` | 카카오·Google이 붙은 계정에 이메일 로그인 시도. 본문에 `provider`(`kakao`·`google`) |
 | 401 | `OAUTH_CODE_INVALID` | 일회용 코드 없음·만료·재사용·verifier 불일치. "로그인 시간이 지났어요. 다시 시도해 주세요" |
@@ -83,7 +83,7 @@
 }
 ```
 
-- 토큰 유효기간 30일, refresh token 없음. 만료·401이면 로그인 화면으로 보낸다.
+- 토큰 유효기간 30일, refresh token 없음. 만료·401이면 앱은 세션을 지우고 시작 화면(`/`)으로 보낸다(시작 화면에서 로그인·가입·소셜 로그인을 고른다).
 - 앱은 `expo-secure-store`, 웹은 `localStorage`에 저장한다.
 - `onboarded=false`면 초기 예산 설정(`/onboarding`)으로, `true`면 홈으로 보낸다.
 
@@ -151,7 +151,10 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 - 사용자 행을 잠근 뒤 토큰의 `tv`를 다시 비교한다. 인증 후 연결·로그아웃으로 폐기된 토큰이면 401 `UNAUTHORIZED`.
 - `hasPassword=false`: `{ "confirm": "탈퇴" }` 필수. 누락·불일치는 400 `VALIDATION_FAILED`, field `confirm`, "확인 문구 '탈퇴'를 입력해 주세요".
 - 카카오 identity와 `KAKAO_ADMIN_KEY`가 있으면 삭제 전 카카오 연결 끊기를 시도한다. 실패해도 탈퇴는 진행하고 로그만 남긴다.
-- 성공하면 사용자·소셜 identity·예산 설정·카테고리·거래를 **즉시 영구 삭제**하고 이후 기존 토큰은 401을 받는다.
+- 성공하면 아래를 한 트랜잭션에서 **즉시 영구 삭제**하고 이후 기존 토큰은 401을 받는다(`user/AccountDeletionService.java`).
+  - 직접 지우는 것: 거래, 카테고리, 고정지출과 자동 기록 이력, 매달 저축할 돈 항목, 예산 설정, 하루 예산 기록(`daily_budgets`), 코인 내역·지갑, 가진 코스튬, 사용자 행
+  - 사용자 행을 지울 때 함께 지워지는 것(FK `ON DELETE CASCADE`): 소셜 identity, 시드머니 반영 기록, 웹 연동 코드, 웹 연동
+  - 추천 관계: **본인이 코드를 등록한 관계는 지운다.** 본인이 초대한 관계는 남기고 초대한 사람 정보만 비운다(상대가 다시 등록하지 못하게)
 - 이메일 계정은 이메일 로그인, 소셜 계정은 소셜 로그인으로 인증한 뒤 `DELETE /me`를 호출한다.
 
 ## 초기 예산 설정
@@ -176,14 +179,16 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 | 필드 | 규칙 |
 |---|---|
 | `balance` | 0 이상 1조 미만. `balanceAt` 시점의 통장 잔액 |
-| `balanceAt` | 생략 시 서버 현재 시각. 이 시각 **이후** 거래만 잔액에 더하고 뺀다 |
+| `balanceAt` | 생략 시 서버 현재 시각. 이 시각 **이후** 거래만 잔액에 더하고 뺀다. 서버 시각보다 5분 넘게 미래면 400(field `balanceAt`), 5분 이내 미래면 서버 현재 시각으로 저장한다(기기 시계 오차 허용) |
 | `payday` | 1~31. 31은 "매달 말일"(달마다 말일로 맞춤). 그날이 토·일·공휴일이면 다음 평일에 들어온 것으로 계산. 공휴일(대체공휴일 포함)은 2026-11 이후만 반영(`budget/PublicHolidays.java`, 지난 주기가 바뀌지 않게) |
-| `incomeAmount`, `cardUnpaid` | 0 이상 |
-| `fixedExpenses[]` | 0~30개. `day` 1~31(31=말일), `amount` 1 이상 |
-| `protectedItems[]` | **매달 저축할 돈**(화면 이름. 예전 이름 '보호 금액'). 0~30개, `amount` 1 이상. 합계를 오늘 쓸 수 있는 돈에서 미리 빼고, 수입일 전날 시드머니 반영의 기준 금액이 된다 |
+| `incomeAmount` | 필수. 0 이상 1조 미만 |
+| `cardUnpaid` | 0 이상 1조 미만. 생략하면 0 |
+| `fixedExpenses[]` | 0~30개. `name` 1~40자, `day` 1~31(31=말일), `amount` 1 이상 1조 미만. 생략하면 빈 목록 |
+| `protectedItems[]` | **매달 저축할 돈**(화면 이름. 예전 이름 '보호 금액'). 0~30개, `name` 1~40자, `amount` 1 이상 1조 미만. 생략하면 빈 목록. 합계를 오늘 쓸 수 있는 돈에서 미리 빼고, 수입일 전날 시드머니 반영의 기준 금액이 된다 |
 | `seedBase` | 모아둔 돈(시드머니 시작 금액, 생활비 잔액과 별도). 0 이상 1조 미만. **생략하면 저장된 값을 유지**(1.3.0 이전 앱 호환) |
 
 응답은 같은 모양에 `fixedExpenses[].id`, `protectedItems[].id`, `updatedAt`이 붙고 `seedBase`는 항상 온다(설정 전 기본 0).
+고정지출·매달 저축할 돈 목록은 저장할 때마다 기존 항목을 모두 지우고 새로 만든다. 요청에 `id`를 보내도 쓰지 않으며, 저장 후 `id`는 바뀐다.
 잔액만 다시 맞출 때도 PUT으로 전체를 보낸다(`balanceAt`을 지금으로).
 
 ### `GET /budget/today` → 200 | 404 `BUDGET_NOT_SET`
@@ -261,7 +266,8 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 ```
 
 - `cycleEnd`는 지금 `pending.cycleEnd`와 같아야 한다. 다르거나 이미 반영했으면 409 `SEED_NOT_PENDING`
-- `GOAL`·`ALL`의 금액은 서버가 정한다(보낸 `amount`는 무시). `MANUAL`은 `amount` 필수(0 이상, 없으면 400 field `amount`)
+- `GOAL`·`ALL`의 금액은 서버가 정한다(보낸 `amount`는 무시). `MANUAL`은 `amount` 필수(0 이상 1조 미만, 없으면 400 field `amount`)
+- 조회·반영 모두 먼저 날짜가 된 고정지출을 자동 기록한다(아래 "고정지출 자동 기록")
 - 주기당 한 번만 반영된다(설정 행 잠금 + `(user_id, cycle_end)` 고유 키)
 
 ## 카테고리
@@ -282,7 +288,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 | `GET /categories?type=EXPENSE` | 목록(`type` 생략 시 전체). 기본 → 사용자 생성 순, 생성 순 |
 | `POST /categories` `{ "name", "type", "color"?, "icon"? }` | 201. 이름 1~20자. 색·아이콘 생략 시 `#98A2B3`/`pricetag` |
 | `PATCH /categories/{id}` `{ "name"?, "color"?, "icon"? }` | 200. `type`은 변경 불가. 기본 카테고리도 이름·색 변경 가능 |
-| `DELETE /categories/{id}` | 204. 기본은 409 `CATEGORY_DEFAULT`. 쓰던 거래는 같은 종류의 "기타"/"기타 수입"으로 옮겨진다 |
+| `DELETE /categories/{id}` | 204. 기본은 409 `CATEGORY_DEFAULT`. 쓰던 거래는 같은 종류의 기본 "기타"/"기타 수입"으로 옮겨진다. 그 기본 카테고리 이름을 바꿔 찾지 못하면 같은 종류의 첫 기본 카테고리(목록 순서)로 옮긴다 |
 
 ## 거래(수동 입력)
 
@@ -303,7 +309,9 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 }
 ```
 
-고정지출 자동 기록: `GET /budget/today`, `GET /transactions`, `GET /analysis/summary`를 부르면 먼저 잔액 기준일(`balanceAt`의 날짜) ~ 오늘 사이에 날짜가 된 고정지출을 지출 거래로 만든다.
+고정지출 자동 기록: `GET /budget/today`, `GET /budget/seed-money`, `POST /budget/seed-money/entries`, `GET /transactions`, `GET /analysis/summary`를 부르면 먼저 잔액 기준일(`balanceAt`의 날짜) ~ 오늘 사이에 날짜가 된 고정지출을 지출 거래로 만든다(`budget/FixedExpensePoster.java`).
+
+- 실패했을 때: 내역(`GET /transactions`)·분석은 기록을 별도 트랜잭션으로 먼저 커밋하고, DB 오류로 실패하면 경고 로그만 남기고 조회를 계속한다(다음 조회 때 다시 시도). 오늘 쓸 수 있는 돈과 시드머니 조회·반영은 설정 행을 잠근 같은 트랜잭션에서 기록하고 계산하므로, 기록이 실패하면 그 요청도 실패한다
 
 - 카테고리 기본 "고정지출"(이름을 바꿨으면 아이콘 `repeat`인 기본, 없으면 "기타"), `title` = 고정지출 이름, `memo` = "고정지출 자동 기록", `fromFixed` = true, `occurredAt` = 그 날짜 0시(잔액 기준일 당일이면 기준 시각 직후)
 - 날짜·항목(일자·이름·순번)마다 한 번만 만든다. 사용자가 거래를 지우거나 설정을 다시 저장해도 같은 날짜는 다시 만들지 않는다
@@ -316,7 +324,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 | `GET /transactions?from=2026-10-01&to=2026-10-31&type=&categoryId=` | `{ "items": Transaction[] }`, `occurredAt` 내림차순. `from`/`to` 필수(포함), 최대 366일 |
 | `POST /transactions` | 201. 헤더 `Idempotency-Key: <uuid>` 권장 — 같은 키 재전송 시(동시에 온 요청 포함) 처음 만든 거래를 200으로 돌려준다 |
 | `GET /transactions/{id}` | 200 |
-| `PATCH /transactions/{id}` | 200. 보낸 필드만 수정 |
+| `PATCH /transactions/{id}` | 200. 보낸 필드만 수정. `memo`는 생략하면 유지, `"memo": null`이면 삭제. 그 밖의 필드(`type`, `amount`, `categoryId`, `title`, `occurredAt`)는 생략하거나 null이면 유지. `type`이나 `categoryId`를 바꾸면 바뀐 조합으로 카테고리 종류를 다시 검사한다 |
 | `DELETE /transactions/{id}` | 204 |
 
 POST 본문:
@@ -364,12 +372,12 @@ POST 본문:
 }
 ```
 
-- `passive.collectable` = 지금 [모으기]로 받을 수 있는 개수. `nextAt` = 다음 1개가 쌓이는 시각(오늘 10개가 다 쌓였거나 오늘 check-in 전이면 `null`)
+- `passive.collectable` = 지금 [모으기]로 받을 수 있는 개수. `nextAt` = 다음 1개가 쌓이는 시각(오늘 10개가 다 쌓였거나, 오늘 check-in 전이거나, 다음 적립 시각이 오늘 자정 이후면 `null`)
 - `equippedOutfitId` = 적용 중인 코스튬. `null`이면 기본 캐릭터(`costume-lv1`)
 
 ### `POST /coins/check-in` → 200
 
-앱을 열 때·앞으로 돌아올 때 부른다(여러 번 불러도 안전). 서버는 이 요청에서 ① 가입 선물 200(1회) ② 어제 예산을 지켰으면 +5(어제 하루치만) ③ 오늘 첫 요청이면 시간 적립 시작을 처리한다.
+앱은 **캐릭터 홈일 때** 홈에 들어올 때·앱이 앞으로 돌아올 때 부른다(`service/HomeScreen.tsx`, 기본 홈에서는 부르지 않음). 여러 번 불러도 안전하다. 서버는 이 요청에서 ① 가입 선물 200(1회) ② 어제 예산을 지켰으면 +5(어제 하루치만) ③ 오늘 첫 요청이면 시간 적립 시작을 처리한다.
 
 ```json
 {
@@ -421,13 +429,13 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 }
 ```
 
-- `items`는 `sort_order` 순. 레벨 코스튬이 먼저, 상점 상품이 뒤. `active=false` 상품은 빠진다(로컬·CI는 `app.outfits.show-inactive=true`로 모두 보인다).
+- `items`는 `sort_order` 순. 레벨 코스튬이 먼저, 상점 상품이 뒤. `active=false` 상품은 빠지지만 **이미 산 상품은 꺼져 있어도 목록에 나온다**(로컬·CI는 `app.outfits.show-inactive=true`로 모두 보인다).
 - 레벨 코스튬의 `owned` = `peakLevel` ≥ `unlockLevel` 또는 전환 전 구매 기록이 있음. `peakLevel` = 지금까지 도달한 최고 캐릭터 단계(1~3, `/budget/today`와 같은 점수 규칙). 레벨이 내려가도 한 번 열린 코스튬은 그대로다. 초기 예산 설정 전이면 1.
 - 상점 상품의 `owned` = 샀는지. `equipped`는 한 개만 `true`(`equippedOutfitId`가 `null`이면 `costume-lv1`).
 
 ### `POST /outfits/{id}/purchase` → 200 `OutfitList`
 
-잔액에서 `price`를 빼고 상품을 준다. 409: `OUTFIT_NOT_FOR_SALE`(레벨 코스튬·비활성·없는 상품), `OUTFIT_OWNED`, `COINS_NOT_ENOUGH`. 산다고 바로 적용되지는 않는다.
+잔액에서 `price`를 빼고 상품을 준다. 409: `OUTFIT_NOT_FOR_SALE`(레벨 코스튬·비활성·없는 상품), `OUTFIT_OWNED`, `COINS_NOT_ENOUGH`. 비활성 상품은 기본 설정에서 거절하고, `app.outfits.show-inactive=true`인 로컬·CI에서는 살 수 있다. 산다고 바로 적용되지는 않는다.
 
 ### `PUT /outfits/equipped` → 200 `OutfitList`
 
