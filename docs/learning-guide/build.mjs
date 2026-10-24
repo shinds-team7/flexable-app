@@ -251,7 +251,7 @@ const BADGES = {
   config: ["설정 파일", "설정·배포 파일에 정의된 구성(실제 운영 상태는 별도)"],
   doc: ["문서 기록", "문서(HANDOFF·FEATURES 등)에만 기록된 운영 현황. 이번에 확인하지 않음"],
   test: ["테스트 코드", "테스트 코드가 검증하도록 작성된 내용(읽은 것)"],
-  ran: ["직접 실행", "이번 분석에서 직접 실행해 결과를 확인함(2026-10-24, 로컬)"],
+  ran: ["직접 실행", "이번 분석에서 직접 실행해 결과를 확인함(2026-10-24~25, 로컬; 항목별 실행 날짜 참고)"],
   ci: ["CI 확인", "2026-10-24 GitHub Actions에서 PR #128·#129·#130의 검사 통과를 확인함. 로컬 실행·머지·운영 배포를 뜻하지 않음"],
   infer: ["추론", "코드·설정을 근거로 한 설계 의도·동작 추론"],
   suggest: ["개선 제안", "검토해 볼 만한 제안(팀 결정 아님)"],
@@ -414,7 +414,7 @@ const meta = {
   commitDate: COMMIT_DATE,
   dirty: DIRTY ? "있음" : "없음",
   built: new Date().toISOString(),
-  analysisDate: "2026-10-24",
+  analysisDate: "2026-10-25",
   counts: {
     snippets: Object.keys(snippets).length,
     links: Object.values(backlinks).reduce((a, s) => a + s.size, 0),

@@ -1,14 +1,14 @@
 import { h2, h3, p, basic, deep, note, snip, ul, ol, table, quiz, topic, steps } from "./h.mjs";
 import { archSvg, deploySvg } from "./diagrams.mjs";
 
-export function viewsA({ SC, SHA }) {
+export function viewsA({ SC, SHA, BRANCH, DIRTY }) {
   const S = SC.s;
   const home = {
     id: "home", title: "처음 보는 사람을 위한 시작", group: "시작",
     summary: "텅장관리 앱이 무엇이고 어디부터 읽을지",
     html: `<div class="hero"><p class="eyebrow">텅장관리(Flex-able) · 팀 학습 자료</p><h1>텅장관리 학습 가이드</h1>
 <p class="lead">사회초년생용 생활비 관리 앱이다. 사용자가 <b>직접 입력한</b> 잔액·수입일·고정지출·거래로 서버가 <b>오늘 쓸 수 있는 돈</b>을 계산해 보여 준다. 이 가이드는 그 계산과 저장이 화면 → 서버 → DB를 어떻게 지나가는지 실제 코드로 따라간다.</p>
-<p class="meta-line">기준: <code>main</code> <code>${SHA.slice(0, 7)}</code> · 분석 2026-10-24 · 커밋 안 된 변경 없음 · {{v:scope|분석 기준과 검증 범위}}</p></div>
+<p class="meta-line">기준: <code>${BRANCH || "detached HEAD"}</code> <code>${SHA.slice(0, 7)}</code> · 갱신 2026-10-25 · 분석 대상 코드의 커밋 안 된 변경 ${DIRTY ? "있음" : "없음"} · {{v:scope|분석 기준과 검증 범위}}</p></div>
 ${h2("home.q", "질문으로 바로 들어가기")}
 <div class="qgrid">
 <a class="qcard" href="#arch.inputs" data-go="arch.inputs"><b>우리 앱은 무엇을 하는가?</b><span>입력한 값과 서버가 계산하는 값</span></a>

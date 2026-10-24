@@ -126,7 +126,7 @@ ${topic({
       next: "{{v:back.packages|패키지 전체}}",
     })}
 ${h2("back.packages", "실제 패키지 전체와 기능별 진입점")}
-${p("<code>backend/src/main/java</code> 아래를 직접 조사한 결과다. AGENTS.md의 목록(auth … weblink 10개)에 <b><code>common</code>, <code>config</code></b>가 빠져 있고, 패키지 밖에 Flyway Java 마이그레이션 <code>db.migration</code>이 하나 있다 {{b:code}}.")}
+${p("<code>backend/src/main/java</code> 아래를 직접 조사한 결과다. 기능 패키지 auth … weblink 10개와 공통 <b><code>common</code>·<code>config</code></b>가 있다. 패키지 밖에 Flyway Java 마이그레이션 <code>db.migration</code>이 하나 있다. AGENTS.md 목록도 #130에서 이에 맞췄다 {{b:code}}.")}
 ${table(["패키지", "진입점(컨트롤러)", "주 서비스", "주로 쓰는 테이블"], [
   ["<code>auth</code>", "{{c:AuthController}}, {{c:OAuthController}}", "{{c:AuthService}}, {{c:OAuthService}}, {{c:TokenService}}", "{{t:users}}, {{t:user_identities}}"],
   ["<code>user</code>", "(AuthController의 /me)", "{{c:AccountDeletionService}}", "{{t:users}}"],

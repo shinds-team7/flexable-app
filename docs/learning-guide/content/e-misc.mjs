@@ -43,20 +43,21 @@ export const SCREENS = {
 };
 
 const X = (path, kind, summary, methods, run, o = {}) => ({ path, kind, summary, methods, run, ...o });
-const RAN_BE = (n) => `직접 실행: 2026-10-24 로컬 <code>./gradlew test</code> — 이 클래스 ${n}개 모두 통과`;
+const RAN_BE = (n) => `직접 실행: 2026-10-25 로컬 <code>./gradlew test</code> — 이 클래스 ${n}개 모두 통과`;
 export const TESTS = {
   ApiFlowTest: X(T + "ApiFlowTest.java", "통합(Spring Boot + MockMvc + H2)", "가입부터 탈퇴까지 실제 컨트롤러·서비스·DB를 통째로 띄워 HTTP 요청 모양으로 검사한다.", [
     ["fullFlow", "카테고리 11개, 예산 미설정 404, 설정 저장, 거래 등록 201 → 같은 키 재전송 200(같은 id), 수정·메모 삭제, 카테고리 삭제 시 거래 이동, 남의 거래 404, 탈퇴"],
     ["concurrentRetriesWithSameIdempotencyKeyCreateOneTransaction", "같은 키로 6개 요청을 동시에 → 201 하나, 200 다섯, 거래 1건"],
     ["fixedExpensesArePostedAsTransactions", "40일 전 잔액 + 오늘 날짜 월세 → 자동 기록 2건, 잔액에서 빠지고 오늘 쓴 돈에는 안 들어감, 지워도·다시 저장해도 다시 안 만듦"],
     ["fixedExpensePostingEdgeCases", "같은 이름 여러 개, 직접 기록이 자동 기록을 대신, 다른 카테고리로 옮기면 일반 지출, 도입 전 사용자"],
+    ["renamingAFixedExpenseDoesNotPostItsPastDatesAgain", "이름만 바꿔도 지난 날짜를 다시 빼지 않음, 자동 기록 삭제 후 또 이름을 바꿔도 삭제한 날짜를 다시 만들지 않음"],
     ["logoutRevokesToken", "로그아웃 후 같은 토큰은 401"],
     ["requiresToken", "토큰 없거나 엉터리면 401, health는 공개"],
     ["signupValidationAndDuplicates", "가입 검증·중복"],
     ["loginIsRateLimited", "로그인 실패 제한"],
     ["loginRejectsOverlongEmail", "너무 긴 이메일"],
     ["fullFailureStoreBlocksUntrackedCredentialsUntilCapacityIsReleased", "실패 기록 저장 공간이 가득 찼을 때"],
-  ], RAN_BE(10), { rel: ["a.tx-create", "a.tx-update", "a.auth-logout", "f.tx", "f.fixed"] }),
+  ], RAN_BE(11), { rel: ["a.tx-create", "a.tx-update", "a.auth-logout", "f.tx", "f.fixed"] }),
   SecurityTest: X(T + "SecurityTest.java", "통합", "접근 제어: 비로그인 401, 위조·서명 없는 토큰 401, 남의 거래·카테고리 차단(404), 허용 안 된 출처의 CORS 403.", [
     ["privateEndpointsRequireLogin", "로그인 없이 부르면 401"],
     ["forgedAndUnsignedTokensAreRejected", "내용을 바꾼 토큰·서명 없는 토큰 401"],

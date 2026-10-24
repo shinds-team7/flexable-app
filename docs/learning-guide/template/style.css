@@ -335,6 +335,7 @@ pre.code-log { font-size: 12px; }
 .sim-warn { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
 
 /* ---------- 발표 모드 ---------- */
+.present[hidden] { display: none; }
 .present { position: fixed; inset: 0; z-index: 90; background: var(--bg); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 .p-bar { display: flex; align-items: center; gap: 10px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); border-bottom: 1px solid var(--line); background: var(--surface); flex-wrap: wrap; }
 .p-k { font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }

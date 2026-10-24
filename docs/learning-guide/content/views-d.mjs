@@ -60,27 +60,28 @@ ${design({
       rules: "잔액을 다시 입력하는 화면은 반드시 기준 시각도 함께 보내야 한다. 시각 비교는 모두 <code>Instant</code>(UTC 순간)로 한다.",
       tests: "{{x:BudgetCalculatorTest}} <code>computesDocumentedExample</code>(09:00 지출은 잔액에서 안 뺌) {{b:ran}}, E2E <code>re-entering the balance in settings does not subtract earlier spending again</code>({{b:test}}, 이번에 실행 안 함).",
       effect: "사용자는 언제든 실제 통장 잔액을 다시 입력해 추정값을 바로잡을 수 있고, 그 전 기록은 다시 빠지지 않는다.",
-      limits: "잔액을 바꾸지 않고 다른 설정만 고치면 옛 기준 시각이 남는다. 이것이 아래 3번의 이름 변경 문제와 겹친다.",
+      limits: "잔액을 바꾸지 않고 다른 설정만 고치면 옛 기준 시각이 남는다. 따라서 고정지출 설정만 고쳐도 이미 기록한 날짜가 다시 빠지지 않아야 한다(아래 3번, #129).",
     })}
 ${design({
       id: "design.fixed", title: "3. 고정지출 자동 기록과 중복 방지",
       problem: "월세가 빠지는 날 잔액에서 자동으로 빠져야 한다. 그런데 서버에 예약 작업이 없고, 사용자가 같은 지출을 직접 기록했을 수도 있고, 같은 날을 두 번 빼면 안 되며, 사용자가 자동 기록을 지워도 다시 생기면 안 된다.",
-      code: snip("be-poster-entry") + snip("be-poster-ctor") + snip("be-poster-post") + snip("be-poster-manual") + snip("be-settings-repo"),
+      code: snip("be-poster-entry") + snip("be-poster-ctor") + snip("be-poster-post") + snip("be-poster-orphans") + snip("be-poster-manual") + snip("be-settings-repo"),
       how: ol([
         "설정 행을 <code>SELECT … FOR UPDATE</code>로 잠근다. 같은 사용자의 동시 조회가 같은 날짜를 두 번 기록하지 않게 줄을 세운다.",
         "기록 시작일 = 잔액 기준일(도입 전 사용자는 도입 시각 이후).",
         "항목 키 = SHA-256(<code>일자:이름:순번</code>) 앞 32자. 같은 일자·이름이 여럿이면 순번으로 구분.",
         "달마다 그 날짜(31이면 말일) <code>d</code>가 시작일~오늘 사이이고 <code>d:항목키</code>가 {{t:fixed_expense_postings}}에 없으면 기록 대상.",
+        "현재 설정에 없는 항목의 기록을 날짜별로 모은다(<code>orphans</code>). 이미 현재 항목이 이어받은 거래와 중복 거래 id는 제외한다. 새 키가 없을 때 같은 날짜의 이 기록을 먼저 이어받고 거래는 다시 만들지 않는다.",
         "같은 날 같은 이름·금액의 직접 기록(아직 다른 항목을 맡지 않은 것)이 있으면 그 거래를 이 항목의 기록으로 삼는다(새로 만들지 않음).",
         "없으면 '고정지출' 카테고리로 <code>fromFixed=true</code> 거래를 만들고, 기록 표시 행을 남긴다.",
       ]),
       rules: ul(["기록 표시 행은 거래를 지워도 지우지 않는다(다시 만들지 않으려고).", "오늘 예산·시드머니는 같은 트랜잭션(MANDATORY), 내역·분석은 따로 commit(REQUIRES_NEW, 실패해도 조회 계속).", "남은 고정지출은 <b>내일부터</b>만 센다. 오늘까지는 이미 거래가 됐으므로."]),
-      tests: "{{x:ApiFlowTest}} <code>fixedExpensesArePostedAsTransactions</code>(지워도·다시 저장해도 다시 안 만듦), <code>fixedExpensePostingEdgeCases</code>(같은 이름 여러 개, 직접 기록이 대신, 다른 카테고리로 옮기면 일반 지출, 도입 전 사용자), {{x:BudgetCalculatorTest}} <code>fixedExpenseNoLongerComesBackAfterItsDay</code> — 모두 직접 실행 통과 {{b:ran}}." + snip("t-fixed-posted"),
+      tests: "{{x:ApiFlowTest}} <code>fixedExpensesArePostedAsTransactions</code>(지워도·다시 저장해도 다시 안 만듦), <code>fixedExpensePostingEdgeCases</code>(같은 이름 여러 개, 직접 기록이 대신, 다른 카테고리로 옮기면 일반 지출, 도입 전 사용자), {{x:BudgetCalculatorTest}} <code>fixedExpenseNoLongerComesBackAfterItsDay</code> 및 <code>renamingAFixedExpenseDoesNotPostItsPastDatesAgain</code>(이름 변경과 거래 삭제 후 재변경) — 모두 2026-10-25 직접 실행 통과 {{b:ran}}." + snip("t-fixed-posted") + snip("t-fixed-rename"),
       effect: "스케줄러·별도 작업 서버 없이 단일 서버에서 동작한다. 오늘 예산 계산과 기록이 한 트랜잭션이라 '기록은 됐는데 계산엔 빠진' 상태가 없다.",
       why: "서버가 EC2 한 대이고 값이 필요한 때가 '사용자가 앱을 열 때'뿐이라 예약 작업을 두지 않은 것으로 보인다 {{b:infer}}.",
       limits: ul([
         "<b>GET 요청이 DB에 쓴다</b>(오늘 예산·내역·분석·시드머니 조회). HTTP 관례상 GET은 읽기만 하는 요청이라, 캐시·미리 읽기 같은 동작과 만날 때 예상 밖일 수 있다 {{b:infer}}.",
-        `<b>이미 기록된 고정지출의 이름만 바꿔 다시 저장하면 같은 날짜가 한 번 더 기록된다.</b> 로컬 서버로 재현했다 {{b:ran}}: 잔액 기준 10-20, 22일 월세 450,000 → 자동 기록 1건(추정 잔액 550,000). 잔액·기준 시각은 그대로 두고 이름만 '집세'로 바꿔 <code>PUT /budget/settings</code> → 10-22에 '집세' 450,000이 한 건 더 생겨 추정 잔액 100,000. 원인: 항목 키에 이름이 들어가 새 항목으로 보고, 원래 자동 기록 거래는 이미 '월세'를 맡고 있어(<code>taken</code>) 대신하지 못한다 {{b:code}}. 앱의 '예산 설정 수정'은 잔액을 안 바꾸면 기준 시각을 유지하므로 화면 조작으로도 같은 상황이 될 수 있다 {{b:infer}}(화면으로는 재현하지 않음). #129에서 <code>renamingAFixedExpenseDoesNotPostItsPastDatesAgain</code> 회귀 테스트를 추가하고 사라진 항목의 기록을 같은 날짜의 새 항목이 이어받도록 수정했다. 수정 전 실패·수정 후 백엔드 86개 통과 {{b:ran}}, CI 통과 {{b:ci}}. 아직 머지 대기 중이며 위 발췌에는 미반영이다. 같은 저장에서 삭제·추가한 항목도 이름 변경처럼 처리하는 한계가 남는다. {{v:scope.pending|PR 상태}}.`,
+        `<b>#129에서 고친 문제</b>: 예전에는 이미 기록된 고정지출의 이름만 바꿔 다시 저장하면 같은 날짜가 한 번 더 기록됐다. 로컬 재현은 잔액 기준 10-20, 22일 월세 450,000 → 추정 잔액 550,000 → 이름만 '집세'로 바꿔 저장 → 같은 날짜의 거래가 추가돼 100,000이 되는 순서였다(2026-10-24 {{b:ran}}). 현재는 사라진 항목의 기록을 같은 날짜의 새 항목이 이어받으므로 거래를 다시 만들지 않는다. 키 형식은 유지해 기존 기록과 호환되며 마이그레이션은 없다 {{b:code}}. <b>남은 한계</b>: 같은 저장에서 항목 하나를 지우고 같은 날짜의 다른 항목을 넣어도 이름 변경으로 다룬다. 항목 id가 저장마다 바뀌므로 수정과 추가를 구분할 정보가 없다. 변하지 않는 항목 id를 쓰는 설계를 검토할 만하다 {{b:suggest}}. 이미 중복된 사용자 거래는 자동 정리하지 않는다. 운영 반영에는 사람의 백엔드 배포가 필요하다(HANDOFF {{b:doc}}). {{v:scope.pending|변경 반영 상태}}.`,
         "사용자가 오래 앱을 열지 않으면 그동안의 고정지출이 다음 조회 때 한꺼번에 기록된다(동작은 맞지만 기록 시점이 늦다).",
       ]),
     })}
@@ -186,8 +187,8 @@ ${table(["#", "현재 구현", "근거", "검토할 점"], [
   ["4", "거래 수정이 모든 열을 다시 쓰고 잠금·버전이 없다", "UPDATE 로그 {{b:ran}}, 엔티티에 <code>@Version</code> 없음 {{b:code}}", "같은 거래를 두 기기에서 동시에 고치면 나중 것이 이긴다(개인 데이터라 괜찮은가)"],
   ["5", "엔티티에 연관관계 없이 ID만, 소유자 조건은 사람이 챙김", "{{b:code}}", "새 기능에서 <code>user_id</code> 조건을 빠뜨리지 않게 하는 장치(테스트 패턴 등)"],
   ["6", "오늘 예산 계산이 기준 시각 이후 거래를 모두 읽는다", "{{c:BudgetService}} <code>findSince</code> {{b:code}}", "기록이 쌓였을 때의 비용(측정 안 함)"],
-  ["7", "고정지출 이름만 바꾸면 지난 날짜가 다시 기록된다", "로컬 재현 {{b:ran}}", "#129 수정·CI 통과, 머지 대기. 수정과 추가를 구분할 고정 id가 필요한가"],
-  ["8", "분석 지출 합에는 고정지출 자동 기록이 들어가고, 오늘 쓴 돈에는 안 들어간다", "{{c:AnalysisController}}, {{c:BudgetCalculator}} {{b:code}}", "화면 문구로 이 차이를 설명하고 있는가(API.md에는 분석 쪽 언급 없음)"],
+  ["7", "고정지출 설정 변경 시 사라진 항목의 기록을 이어받는다(#129)", "{{c:FixedExpensePoster}} <code>orphans</code> {{b:code}}", "수정과 추가를 구분할 고정 id가 필요한가"],
+  ["8", "분석 지출 합에는 고정지출 자동 기록이 들어가고, 오늘 쓴 돈에는 안 들어간다", "{{c:AnalysisController}}, {{c:BudgetCalculator}} {{b:code}}", "화면 문구로 이 차이를 설명하고 있는가(API.md에는 #130에서 명시)"],
   ["9", "테스트 DB는 H2, 운영은 MySQL", "{{b:config}}", "시간대 저장·격리 수준 차이를 운영 전에 확인할 방법"],
   ["10", "분석만 서비스 계층 없이 컨트롤러에서 처리", "{{c:AnalysisController}} {{b:code}}", "계층 규칙을 통일할지"],
   ["11", "<code>income_amount</code>는 계산에 안 쓰인다", "{{c:BudgetCalculator}} 입력에 없음 {{b:code}}", "입력을 받는 이유"],
@@ -281,7 +282,7 @@ ${snip("cfg-app-yml-app")}
 ${h2("ops.tests", "단위·통합·E2E 테스트의 차이")}
 ${table(["종류", "무엇을 띄우나", "이 저장소", "개수(소스 기준)", "이번 실행"], [
   ["백엔드 단위", "클래스 하나(스프링 없음)", "<code>BudgetCalculatorTest</code>, <code>CharacterScoreTest</code>, 제한기 테스트 등", "—", "아래 합계에 포함"],
-  ["백엔드 통합", "스프링 전체 + H2 메모리 + MockMvc(가짜 HTTP)", "<code>ApiFlowTest</code>, <code>SecurityTest</code>, <code>CoinFlowTest</code> …", "13개 클래스 85개", "<code>./gradlew test</code> 85개 통과(2026-10-24) {{b:ran}}"],
+  ["백엔드 통합", "스프링 전체 + H2 메모리 + MockMvc(가짜 HTTP)", "<code>ApiFlowTest</code>, <code>SecurityTest</code>, <code>CoinFlowTest</code> …", "13개 클래스 86개", "<code>./gradlew test</code> 86개 통과(2026-10-25) {{b:ran}}"],
   ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "6개", "<code>npm run test:unit</code> 6개 통과 {{b:ran}}"],
   ["타입 검사·린트", "—", "<code>tsc</code>, <code>expo lint</code>", "—", "둘 다 오류 없음(종료 코드 0) {{b:ran}}"],
   ["E2E", "실제 브라우저(Playwright) + 실제 백엔드(H2) + 정적 웹", "<code>e2e/*.spec.ts</code>", "20개(service 15·coins 3·web-links 2)", "로컬 실행 안 함. PR #128·#129·#130의 CI 통과 {{b:ci}}"],
