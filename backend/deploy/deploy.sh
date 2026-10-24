@@ -8,7 +8,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 (cd "$DIR/.." && ./gradlew bootJar -q)
 scp -i "$KEY" "$DIR/../build/libs/app.jar" "$DIR/Dockerfile" "$DIR/docker-compose.yml" "$DIR/Caddyfile" \
   "$DIR/.env.example" "$DIR/setup-db.sh" "$HOST:/opt/flexable/"
-# 루트 디스크가 6.7GB라 빌드 캐시가 쌓이면 다음 빌드가 no space left로 실패한다(apt-get update exit 100으로 보임).
+# 루트 디스크가 작아서(이슈 #31 당시 6.7GB, 10-20 기준 15GB — HANDOFF §5) 빌드 캐시가 쌓이면 다음 빌드가 no space left로 실패한다(apt-get update exit 100으로 보임).
 # 빌드 전에 캐시를 지워 이미 디스크가 찬 상태에서도 다시 실행하면 복구되게 하고, 빌드 뒤 이전 이미지·새 캐시를 지운다.
 ssh -i "$KEY" "$HOST" 'set -e; cd /opt/flexable && chmod +x setup-db.sh
 if ! { test -s .env && grep -q "^DB_PASSWORD=." .env; }; then
