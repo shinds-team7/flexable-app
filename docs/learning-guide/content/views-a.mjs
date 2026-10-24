@@ -27,7 +27,7 @@ ${h2("home.real", "실제 앱에 있는 것과 없는 것")}
 <div class="box-no"><b>시연에만 있거나 아직 없음</b>${ul(["계좌 연결(오픈뱅킹)", "AI 소비 분석·추천", "결제 알림·문자 자동 기록, 서버 푸시", "예정 지출·고액 지출 계획, 정산", "비밀번호 찾기, 이메일 인증", "오프라인 저장(앱은 온라인 전용)"])}</div></div>
 ${h2("home.legend", "표기 읽는 법")}
 <p>문장마다 근거의 종류를 배지로 붙였다. 코드에 있다고 운영에 배포됐다는 뜻이 아니고, 테스트를 읽었다고 통과했다는 뜻이 아니다.</p>
-<div class="legend">{{b:code}} 구현 코드에서 확인 · {{b:config}} 설정·배포 파일 · {{b:doc}} 문서에만 기록된 운영 현황 · {{b:test}} 테스트가 검증하도록 작성된 내용 · {{b:ran}} 이번에 직접 실행해 확인 · {{b:infer}} 설계 의도 추론 · {{b:suggest}} 개선 제안 · {{b:unknown}} 미확인</div>
+<div class="legend">{{b:code}} 구현 코드에서 확인 · {{b:config}} 설정·배포 파일 · {{b:doc}} 문서에만 기록된 운영 현황 · {{b:test}} 테스트가 검증하도록 작성된 내용 · {{b:ran}} 이번에 직접 실행해 확인 · {{b:ci}} GitHub Actions 결과 확인 · {{b:infer}} 설계 의도 추론 · {{b:suggest}} 개선 제안 · {{b:unknown}} 미확인</div>
 ${h2("home.use", "이 가이드 쓰는 법")}
 ${ul([
   "위쪽 검색(<kbd>/</kbd>)에 기능·파일·함수·API·테이블·컬럼·용어를 치면 바로 그 설명으로 간다. 예: <code>idempotency</code>, <code>postDue</code>, <code>token_version</code>, <code>PATCH</code>.",

@@ -134,7 +134,7 @@ for (const sp of SNIPPETS) {
 }
 
 // ---------- 내용 ----------
-const ctx = { lineOf, permalink, snippets, SHA };
+const ctx = { lineOf, permalink, snippets, SHA, BRANCH, DIRTY };
 const ent = await import("./content/entities.mjs");
 const { _stats: ENT_STATS, ...ENTITIES } = ent.build(ctx);
 const { SCENARIO, simTests, SIM_SOURCE } = await import("./content/sim.mjs");
@@ -252,6 +252,7 @@ const BADGES = {
   doc: ["문서 기록", "문서(HANDOFF·FEATURES 등)에만 기록된 운영 현황. 이번에 확인하지 않음"],
   test: ["테스트 코드", "테스트 코드가 검증하도록 작성된 내용(읽은 것)"],
   ran: ["직접 실행", "이번 분석에서 직접 실행해 결과를 확인함(2026-10-24, 로컬)"],
+  ci: ["CI 확인", "2026-10-24 GitHub Actions에서 PR #128·#129·#130의 검사 통과를 확인함. 로컬 실행·머지·운영 배포를 뜻하지 않음"],
   infer: ["추론", "코드·설정을 근거로 한 설계 의도·동작 추론"],
   suggest: ["개선 제안", "검토해 볼 만한 제안(팀 결정 아님)"],
   unknown: ["미확인", "이번에 확인하지 못한 사항"],

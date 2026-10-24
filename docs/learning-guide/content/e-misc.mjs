@@ -102,7 +102,7 @@ export const TESTS = {
     ["re-entering the balance in settings does not subtract earlier spending again", "잔액 재입력 시 이전 지출을 두 번 빼지 않음"],
     ["expired token returns to start; public routes remain accessible", "만료 토큰 → 시작 화면"],
     ["social login binds the code to this tab's verifier and signs in once (exchange answer mocked)", "소셜 로그인(교환 응답 mock)"],
-  ], "<span class='badge b-unknown'>이번에 실행하지 않음</span> 로컬 백엔드(8080)와 웹(8081)을 띄워야 한다. CI가 PR마다 실행한다(<code>ci.yml</code> e2e 작업). 소스 기준 20개(service 15·coins 3·web-links 2).", { title: "e2e/service.spec.ts", testAnchor: "test(\"", rel: ["f.tx", "f.auth", "s.txnew", "s.txedit"] }),
+  ], "{{b:ci}} PR #128·#129·#130에서 통과(2026-10-24 확인). 로컬에서는 실행하지 않았다. 직접 실행하려면 로컬 백엔드(8080)와 웹(8081)을 띄워야 한다. CI가 PR마다 실행한다(<code>ci.yml</code> e2e 작업). 소스 기준 20개(service 15·coins 3·web-links 2).", { title: "e2e/service.spec.ts", testAnchor: "test(\"", rel: ["f.tx", "f.auth", "s.txnew", "s.txedit"] }),
 };
 
 const G = (title, def, where = "", o = {}) => ({ title, def, where, ...o });

@@ -78,7 +78,7 @@ ${p("코드를 분석한 결과에서 골랐다. 형식: <b>현재 구현</b> �
 <div class="mqi"><b>4. 재시도 중복 방지의 범위</b><p><span class="mql">현재</span> <code>Idempotency-Key</code>는 거래 등록에만 있다. 다른 POST는 행 잠금과 UNIQUE로 '한 번만'을 보장하고 재시도하면 409를 받는다.</p><p><span class="mql">효과·한계</span> 가장 자주 쓰는 저장은 안전하다. 다른 요청은 재시도 때 사용자에게 '이미 했어요'가 보인다.</p><p><span class="mql">질문</span> 키를 더 넓힐 필요가 있는지, 지금 경계가 합리적인지.</p></div>
 <div class="mqi"><b>5. 거래 수정의 동시성</b><p><span class="mql">현재</span> PATCH가 모든 열을 다시 쓰고(로그 확인) 잠금·버전이 없다. 앱도 화면의 모든 필드를 보낸다.</p><p><span class="mql">효과·한계</span> 단순하다. 같은 거래를 두 기기에서 동시에 고치면 나중 요청이 이긴다.</p><p><span class="mql">질문</span> 개인 가계부에서 이 정도면 충분한지, <code>@Version</code>을 둘 가치가 있는지.</p></div>
 <div class="mqi"><b>6. 서버 메모리에 있는 상태</b><p><span class="mql">현재</span> 로그인 실패 제한, 웹 연동 실패 제한, 소셜 로그인 state·코드가 메모리에 있다. API.md에 '여러 인스턴스 전 공유 저장소로 교체'라고 적혀 있다.</p><p><span class="mql">효과·한계</span> 서버 한 대에서는 단순하고 빠르다. 재시작하면 사라지고, 두 대가 되면 따로 센다.</p><p><span class="mql">질문</span> 언제 Redis 같은 공유 저장소로 옮기는 것이 맞는지.</p></div>
-<div class="mqi"><b>7. 고정지출 이름 변경 시 다시 기록</b><p><span class="mql">현재</span> 기록 키에 이름이 들어간다. 로컬에서 이름만 바꿔 다시 저장했더니 같은 날짜가 한 번 더 기록됐다({{v:design.fixed|재현 내용}}).</p><p><span class="mql">효과·한계</span> 같은 날 같은 이름 항목 여러 개를 구분한다. 이름을 고치면 지난 날짜를 다시 뺀다.</p><p><span class="mql">질문</span> 키를 무엇으로 잡는 것이 맞는지(항목 id는 저장마다 바뀜), 이런 '설정 변경 후 재계산' 문제를 보통 어떻게 다루는지.</p></div>
+<div class="mqi"><b>7. 고정지출 이름 변경 시 다시 기록</b><p><span class="mql">현재</span> 기록 키에 이름이 들어간다. 로컬에서 이름만 바꿔 다시 저장했더니 같은 날짜가 한 번 더 기록됐다({{v:design.fixed|재현 내용}}).</p><p><span class="mql">효과·한계</span> 같은 날 같은 이름 항목 여러 개를 구분한다. 이름을 고치면 지난 날짜를 다시 뺀다.</p><p><span class="mql">질문</span> #129는 사라진 항목의 기록을 새 항목이 이어받게 수정했고 CI 통과·머지 대기 중이다. 항목 id가 저장마다 바뀌어 수정과 추가를 구분하지 못하는 한계가 남는다. 이런 '설정 변경 후 재계산' 문제를 보통 어떻게 다루는지.</p></div>
 <div class="mqi"><b>8. 테스트 DB와 운영 DB</b><p><span class="mql">현재</span> 테스트·로컬은 H2(MySQL 모드), 운영은 MySQL. 로컬 H2에서는 시각이 한국 시각으로 저장되는 것을 확인했고, 운영은 UTC 설정이다. 코드 주석이 MySQL 격리 수준을 전제로 잠금 순서를 정한 곳이 있다.</p><p><span class="mql">효과·한계</span> 설치 없이 빠르게 테스트한다. MySQL에서만 생기는 문제는 테스트가 못 잡는다.</p><p><span class="mql">질문</span> Testcontainers 같은 MySQL 테스트를 어느 범위까지 들이면 좋을지.</p></div>
 </div>
 ${h2("mentor.quiz", "이해도 점검 질문과 해설")}
@@ -104,31 +104,39 @@ ${quiz([
     html: `${h2("scope.basis", "분석 기준")}
 ${table(["항목", "값"], [
   ["저장소", "<code>shinds-team7/flexable-app</code>(공개 저장소)"],
-  ["브랜치·커밋", `<code>main</code> · <code>${SHA}</code>`],
-  ["원격 최신 여부", `<code>git ls-remote origin refs/heads/main</code> 결과가 같은 SHA(2026-10-24 확인). 로컬이 원격 최신과 같다`],
-  ["커밋 안 된 변경", "없음(<code>git status</code> 깨끗). 분석·실행 뒤에도 저장소 파일은 바뀌지 않았다"],
+  ["브랜치·커밋", `<code>${ctx.BRANCH || "detached HEAD"}</code> · <code>${SHA}</code>`],
+  ["원격 최신 여부", `원본 분석은 main 35e5804 기준. 현재 코드 발췌는 위 빌드 커밋 기준이며, 원격 main과 같은 상태라는 뜻은 아니다`],
+  ["커밋 안 된 변경", ctx.DIRTY ? "분석 대상 코드에 커밋되지 않은 변경 있음. 고정 링크와 다를 수 있다" : "분석 대상 코드에 없음(가이드 자체 변경 제외)"],
   ["분석 날짜", "2026-10-24"],
-  ["접근하지 못한 자료", "별도 저장소 flexable-web(웹 서버·DB·시연), 운영 서버(EC2)·RDS·로그, EAS·Play Console·Vercel 대시보드, GitHub Actions 실행 기록. 이것들에 관한 내용은 저장소 문서의 기록만 옮겼다"],
+  ["접근하지 못한 자료", "별도 저장소 flexable-web(웹 서버·DB·시연), 운영 서버(EC2)·RDS·로그, EAS·Play Console·Vercel 대시보드. 이것들에 관한 내용은 저장소 문서의 기록만 옮겼다. GitHub Actions는 PR #128·#129·#130의 통과 결과를 확인했다"],
 ])}
 ${h2("scope.legend", "표기")}
-<div class="legend">{{b:code}} {{b:config}} {{b:doc}} {{b:test}} {{b:ran}} {{b:infer}} {{b:suggest}} {{b:unknown}}</div>
+<div class="legend">{{b:code}} {{b:config}} {{b:doc}} {{b:test}} {{b:ran}} {{b:ci}} {{b:infer}} {{b:suggest}} {{b:unknown}}</div>
 ${p("각 배지 위에 마우스를 올리면 뜻이 보인다.")}
 ${h2("scope.ran", "직접 실행해 확인한 것(2026-10-24, 이 PC)")}
 ${table(["명령·작업", "결과"], [
-  ["<code>cd backend && ./gradlew test</code>", "BUILD SUCCESSFUL. 13개 클래스 85개 테스트, 실패·오류·건너뜀 0(XML 보고서 집계)"],
+  ["<code>cd backend && ./gradlew test</code>", "원본 분석: 13개 클래스 85개 통과. 별도 #129 브랜치: 회귀 테스트 추가 후 86개 통과(2026-10-24 이전 세션 실행 기록, 실패·오류 0)"],
   ["<code>cd frontend && npm run test:unit</code>", "6개 통과, 실패 0"],
   ["<code>npx tsc --noEmit</code>, <code>npx expo lint</code>", "둘 다 종료 코드 0"],
   ["로컬 백엔드(local 프로필, 포트 18080, 임시 H2 파일, SQL·트랜잭션 로그 켬)", "Flyway V1~V11 적용 로그 확인"],
   ["curl로 가입 → 예산 설정 → 거래 등록(Idempotency-Key) → 같은 키 재전송 → 금액 수정 → 오늘 예산", "201 → 200(같은 id) → 200, SQL·commit 순서 로그 캡처, 하루 예산 유지·오늘 남은 돈 감소 확인"],
   ["실패 분기: 다른 사용자 PATCH, 수입 카테고리로 PATCH, amount 0, 토큰 없음·변조, 로그아웃 후", "404(rollback) · 400(rollback-only → rollback) · 400 · 401 · 401 · 401"],
-  ["고정지출 이름만 바꿔 다시 저장", "같은 날짜가 한 번 더 기록됨(추정 잔액 550,000 → 100,000)"],
+  ["고정지출 이름만 바꿔 다시 저장(수정 전)", "같은 날짜가 한 번 더 기록됨(추정 잔액 550,000 → 100,000). #129 회귀 테스트는 수정 전 실패·수정 후 통과"],
   ["H2 Shell로 SELECT·JOIN·SUM·information_schema", "결과를 {{v:db-lab.sql|실습}}에 그대로 실음. 최종 스키마를 CSV로 뽑아 ERD 데이터와 대조"],
   ["로컬 서버·Gradle 데몬 종료", "완료. 저장소 <code>git status</code> 깨끗"],
 ])}
-${note("warn", "실행하지 않은 것: E2E(Playwright 20개), CI, 운영 서버·DB 접속, 배포 명령, 실기기 앱. 이것들은 '실행했다'고 쓰지 않았다.")}
+${note("warn", "직접 실행하지 않은 것: 로컬 E2E, 운영 서버·DB 접속, 배포 명령, 실기기 앱. E2E는 PR #128·#129·#130의 GitHub Actions에서 통과를 확인했다 {{b:ci}}.")}
 ${h2("scope.build", "이 가이드 자체의 검증")}
 <div id="build-report"></div>
-${h2("scope.mismatch", "문서와 코드가 다르거나 주의할 점")}
+${h2("scope.pending", "수정 PR과 머지 대기 상태(2026-10-24 확인)")}
+${note("warn", "#129·#130은 CI를 통과했지만 아직 OPEN이다. 아래 코드 발췌와 기존 문제 설명은 수정 전 코드 기준이며, 수정 PR의 동작을 현재 main·운영 동작으로 읽으면 안 된다.")}
+${table(["PR", "변경·검증", "남은 일"], [
+  ["<a href=\"https://github.com/shinds-team7/flexable-app/pull/129\">#129 고정지출 이름 변경</a>", "설정에서 사라진 항목의 기록을 같은 날짜의 새 항목이 이어받는다. 기존 키 형식을 유지하며 마이그레이션은 없다. 회귀 테스트 포함 백엔드 86개 통과 {{b:ran}}, CI 통과 {{b:ci}}", "사람이 머지 후 백엔드 배포. 같은 저장에서 삭제·추가한 항목과 이름 변경을 구분하지 못하는 한계는 남는다"],
+  ["<a href=\"https://github.com/shinds-team7/flexable-app/pull/130\">#130 문서·주석 정리</a>", "패키지 목록, 디스크 15GB 주석, 가입 선물과 업데이트 기념 선물의 관계, 분석 합계의 고정지출 포함 여부를 명시. 동작 변경 없음. CI 통과 {{b:ci}}", "사람이 머지"],
+  ["<a href=\"https://github.com/shinds-team7/flexable-app/pull/128\">#128 학습 가이드</a>", "기존 PR의 CI 통과 {{b:ci}}. 이후 가이드 수정의 검증 결과는 별도로 확인해야 한다", "#129·#130 머지 뒤 최신 코드 발췌·설명·테스트 목록을 갱신하고 공유 아티팩트를 다시 게시"],
+])}
+${h2("scope.mismatch", "수정 전 코드의 불일치와 주의할 점")}
+${p("앞의 수정 PR 상태를 함께 읽는다. 아래 첫 네 항목은 #130에서 정리했으며, 고정지출 이름 변경은 #129에서 수정했다. 둘 다 이 빌드의 코드에는 아직 반영하지 않았다.")}
 ${table(["위치", "내용", "근거"], [
   ["AGENTS.md 구조 설명", "백엔드 패키지 목록에 <code>common</code>, <code>config</code>가 빠져 있다(backend README에는 있음). <code>db.migration</code>(V3 Java)도 별도로 있다", "{{b:code}}"],
   ["<code>deploy.sh</code>·<code>application.yml</code> 주석", "'루트 디스크 6.7GB'라고 적혀 있지만 HANDOFF는 10-20에 15GB로 확인했다고 기록", "{{b:config}} {{b:doc}}"],
@@ -146,8 +154,8 @@ ${ul([
   "flexable-web 서버가 internal API를 부르는 실제 코드·키 관리.",
   "MySQL에서의 동시성 테스트 결과(테스트는 H2).",
   "성능·응답 시간·사용자 수.",
-  "E2E 20개의 현재 통과 여부(CI 기록을 보지 않았고 직접 실행하지 않음).",
-  "고정지출 이름 변경 문제가 화면 조작으로도 생기는지(API로만 재현).",
+  "로컬 E2E 실행 결과(CI에서는 #128·#129·#130 통과 확인).",
+  "고정지출 이름 변경 수정의 실기기 동작과 운영 배포 여부(API 회귀 테스트로만 확인).",
 ])}
 ${h2("scope.update", "프로젝트 코드가 바뀌면 이 가이드를 갱신하는 방법")}
 ${ol([
