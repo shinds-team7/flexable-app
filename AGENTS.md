@@ -10,7 +10,7 @@
 ## 구조
 
 ```text
-backend/                  Spring Boot 4 · Java 21 · MySQL(Flyway). 패키지별: auth, budget, category, transaction, analysis, user, coin, outfit, referral, weblink (구성은 backend/README.md)
+backend/                  Spring Boot 4 · Java 21 · MySQL(Flyway). 패키지별: auth, budget, category, transaction, analysis, user, coin, outfit, referral, weblink, 공통 common·config(오류 형식·보안·설정값). Flyway Java 마이그레이션은 src/main/java/db/migration (구성은 backend/README.md)
 frontend/                 Expo(React Native) · Expo Router. 한 코드로 Android·웹
   src/app/                화면 경로(파일 하나 = 화면 하나). Expo Router 규칙상 경로 파일은 여기에만 둔다
   src/service/            실제 서비스 화면·세션·API 클라이언트(api/client.ts)

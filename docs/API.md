@@ -356,6 +356,7 @@ POST 본문:
 ```
 
 - `byCategory`는 **지출만**, 금액 내림차순. `ratio`는 지출 합 대비(소수 3자리).
+- 고정지출 자동 기록(`fromFixed`)도 지출로 센다(`expenseTotal`·`expenseCount`·`byCategory`·`daily`). `GET /budget/today`의 오늘·이번 주 쓴 돈에서는 빠지는 것과 다르다.
 - `daily`는 `from`~`to` 모든 날짜를 0 포함해 채운다. 최대 366일.
 - 이번 주/이번 정산 주기 탭은 클라이언트가 기간을 계산해 호출한다(정산 주기 시작은 `/budget/today.cycleStart`).
 
