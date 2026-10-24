@@ -35,7 +35,7 @@ management:
       show-components: always
   health:
     diskspace:
-      # EC2 루트 디스크가 6.7GB라 가득 차기 전에 DOWN으로 알린다(이슈 #31). 기본값 10MB는 이미 늦다.
+      # EC2 루트 디스크가 작아서(이슈 #31 당시 6.7GB, 10-20 기준 15GB) 가득 차기 전에 DOWN으로 알린다. 기본값 10MB는 이미 늦다.
       threshold: 300MB
 
 app:

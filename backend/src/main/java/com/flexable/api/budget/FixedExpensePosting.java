@@ -40,4 +40,12 @@ public class FixedExpensePosting {
 		this.transactionId = transactionId;
 		this.createdAt = now;
 	}
+
+	public String getPostingKey() {
+		return postingKey;
+	}
+
+	public Long getTransactionId() {
+		return transactionId;
+	}
 }
