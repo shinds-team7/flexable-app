@@ -8,7 +8,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -37,7 +39,7 @@ import com.flexable.api.transaction.TransactionRepository;
 
 /**
  * 날짜가 된 고정지출을 지출 거래로 기록한다. 잔액 기준일부터 오늘까지의 날짜만, 날짜·항목마다 한 번만 기록하고 사용자가 그 거래를
- * 지워도 다시 만들지 않는다. 오늘·내역·분석을 조회할 때 먼저 호출한다.
+ * 지워도 다시 만들지 않는다. 설정에서 항목 이름을 바꿔도 이미 기록한 날짜는 다시 만들지 않는다. 오늘·내역·분석을 조회할 때 먼저 호출한다.
  */
 @Service
 public class FixedExpensePoster {
@@ -45,6 +47,8 @@ public class FixedExpensePoster {
 	private static final Logger log = LoggerFactory.getLogger(FixedExpensePoster.class);
 
 	static final String MEMO = "고정지출 자동 기록";
+	/** 기록 키 앞의 날짜 "yyyy-MM-dd" 길이. 키 = 날짜 + ":" + 항목 해시 */
+	private static final int KEY_DATE_LENGTH = 10;
 	private static final String CATEGORY = "고정지출";
 	private static final String FALLBACK = "기타";
 
@@ -105,7 +109,17 @@ public class FixedExpensePoster {
 			LocalDate since = s.getFixedPostingSince().atZone(zone).toLocalDate();
 			from = since.isAfter(from) ? since : from;
 		}
-		Set<String> posted = new HashSet<>(postings.findKeysFrom(userId, from.toString()));
+		// 일자·이름이 같은 항목이 여럿이면 순번으로 구분한다.
+		List<String> itemHashes = new ArrayList<>();
+		Map<String, Integer> seen = new HashMap<>();
+		for (FixedExpense f : items) {
+			String item = f.getDay() + ":" + f.getName();
+			itemHashes.add(hash(item + ":" + seen.merge(item, 1, Integer::sum)));
+		}
+		List<FixedExpensePosting> existing = postings.findFrom(userId, from.toString());
+		Set<String> posted = new HashSet<>();
+		existing.forEach(p -> posted.add(p.getPostingKey()));
+		Map<LocalDate, Deque<FixedExpensePosting>> orphans = orphans(existing, new HashSet<>(itemHashes));
 		// 이미 어떤 고정지출을 맡은 거래(자동 기록을 다른 카테고리로 옮긴 것 포함)는 다시 쓰지 않는다.
 		Set<Long> taken = new HashSet<>(postings.findTransactionIds(userId));
 		List<Transaction> manual = new ArrayList<>(transactions
@@ -114,15 +128,19 @@ public class FixedExpensePoster {
 			.filter(t -> !t.isFromFixed() && !taken.contains(t.getId()))
 			.toList());
 		Long categoryId = null;
-		Map<String, Integer> seen = new HashMap<>();
-		for (FixedExpense f : items) {
-			// 일자·이름이 같은 항목이 여럿이면 순번으로 구분한다.
-			String item = f.getDay() + ":" + f.getName();
-			String itemHash = hash(item + ":" + seen.merge(item, 1, Integer::sum));
+		for (int i = 0; i < items.size(); i++) {
+			FixedExpense f = items.get(i);
+			String itemHash = itemHashes.get(i);
 			for (YearMonth ym = YearMonth.from(from); !ym.isAfter(YearMonth.from(today)); ym = ym.plusMonths(1)) {
 				LocalDate d = BudgetCalculator.paydayIn(ym, f.getDay());
 				String key = d + ":" + itemHash;
 				if (d.isBefore(from) || d.isAfter(today) || !posted.add(key)) {
+					continue;
+				}
+				// 이름을 바꾸는 등으로 설정에서 사라진 항목이 이 날짜를 이미 기록했으면 그 기록을 이어받고 다시 빼지 않는다.
+				Deque<FixedExpensePosting> stale = orphans.get(d);
+				if (stale != null && !stale.isEmpty()) {
+					postings.save(new FixedExpensePosting(userId, key, stale.poll().getTransactionId(), now));
 					continue;
 				}
 				Long manualId = takeManual(manual, d, f);
@@ -141,6 +159,34 @@ public class FixedExpensePoster {
 				postings.save(new FixedExpensePosting(userId, key, created.getId(), now));
 			}
 		}
+	}
+
+	/**
+	 * 지금 항목 어디에도 맞지 않는 기록(이름을 바꾸거나 지운 항목의 것)을 날짜별로 모은다. 그 거래를 지금 항목의 기록이 이미
+	 * 맡고 있으면(앞서 이어받은 경우) 빼고, 같은 거래를 가리키는 기록은 한 번만 넣는다.
+	 */
+	private static Map<LocalDate, Deque<FixedExpensePosting>> orphans(List<FixedExpensePosting> existing,
+			Set<String> currentHashes) {
+		Set<Long> kept = new HashSet<>();
+		List<FixedExpensePosting> stale = new ArrayList<>();
+		for (FixedExpensePosting p : existing) {
+			if (currentHashes.contains(p.getPostingKey().substring(KEY_DATE_LENGTH + 1))) {
+				kept.add(p.getTransactionId());
+			}
+			else {
+				stale.add(p);
+			}
+		}
+		Map<LocalDate, Deque<FixedExpensePosting>> byDate = new HashMap<>();
+		Set<Long> seenTx = new HashSet<>();
+		for (FixedExpensePosting p : stale) {
+			if (kept.contains(p.getTransactionId()) || !seenTx.add(p.getTransactionId())) {
+				continue;
+			}
+			byDate.computeIfAbsent(LocalDate.parse(p.getPostingKey().substring(0, KEY_DATE_LENGTH)),
+					k -> new ArrayDeque<>()).add(p);
+		}
+		return byDate;
 	}
 
 	/**

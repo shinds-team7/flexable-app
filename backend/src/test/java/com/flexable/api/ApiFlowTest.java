@@ -419,6 +419,40 @@ class ApiFlowTest {
 	}
 
 	@Test
+	void renamingAFixedExpenseDoesNotPostItsPastDatesAgain() throws Exception {
+		String token = signup("fixed-rename@example.com");
+		int day = todayDate.getDayOfMonth();
+		String range = "?from=" + todayDate.minusDays(40) + "&to=" + today;
+		OffsetDateTime balanceAt = OffsetDateTime.now(SEOUL).minusDays(40);
+		String settings = """
+				{"balance":1000000,"balanceAt":"%s","payday":25,"incomeAmount":2400000,
+				 "fixedExpenses":[{"name":"%s","amount":450000,"day":%d}]}
+				""";
+		// 40일 전 잔액, 오늘 날짜 월세 → 지난달과 오늘 두 번 기록
+		mvc.perform(json(put("/api/v1/budget/settings"), token, settings.formatted(balanceAt, "월세", day)))
+			.andExpect(status().isOk());
+		MvcResult list = mvc.perform(json(get("/api/v1/transactions" + range), token, null))
+			.andExpect(jsonPath("$.items", hasSize(2)))
+			.andReturn();
+		mvc.perform(json(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance", is(1000000 - 900000)));
+
+		// 잔액·기준 시각은 그대로 두고 이름만 바꿔 다시 저장해도 이미 기록한 날짜를 다시 빼지 않는다
+		mvc.perform(json(put("/api/v1/budget/settings"), token, settings.formatted(balanceAt, "집세", day)))
+			.andExpect(status().isOk());
+		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(2)));
+		mvc.perform(json(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance", is(1000000 - 900000)));
+
+		// 자동 기록을 지운 뒤 또 이름을 바꿔도 지운 날짜를 다시 만들지 않는다
+		int older = JsonPath.read(body(list), "$.items[1].id");
+		mvc.perform(json(delete("/api/v1/transactions/" + older), token, null)).andExpect(status().isNoContent());
+		mvc.perform(json(put("/api/v1/budget/settings"), token, settings.formatted(balanceAt, "관리비", day)))
+			.andExpect(status().isOk());
+		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(1)));
+	}
+
+	@Test
 	void logoutRevokesToken() throws Exception {
 		String token = signup("logout@example.com");
 		mvc.perform(json(post("/api/v1/auth/logout"), token, null)).andExpect(status().isNoContent());
