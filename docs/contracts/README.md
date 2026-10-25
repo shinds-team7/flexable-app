@@ -18,5 +18,5 @@
 
 1. 이 폴더의 스펙을 먼저 고치는 PR을 올린다(`spec-change` 라벨 + `docs/CHANGELOG.md` 한 줄, CODEOWNERS 리뷰). 같은 PR에서 `npm run gen:api` 결과도 커밋한다.
 2. 백엔드는 `ContractTest`가 통과하도록 구현하고, 프론트는 새 타입·목 서버로 동시에 작업한다.
-3. `web-link-api.yaml`을 바꾸면 웹 저장소(flexable-web)에도 알린다. 웹 백엔드 `applink.AppApiClient`가 이 형식을 기대한다.
+3. `web-link-api.yaml`을 바꿀 일이 생기면 구현 전에 이 스펙 PR(`spec-change`)부터 올리고 웹 저장소(flexable-web)에도 알린다. 웹 백엔드 `applink.AppApiClient`(구현 `applink/http/RestAppApiClient`)가 이 형식을 기대하므로 같이 맞춰야 한다. 웹 쪽 문서도 이 파일을 계약으로 가리킨다(웹 #73).
 4. 형식은 OpenAPI 3.0.3이다. 비어 있을 수 있는 값은 `nullable: true`, 응답 객체는 `additionalProperties: false`로 적는다.
