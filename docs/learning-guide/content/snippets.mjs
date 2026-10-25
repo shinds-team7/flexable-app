@@ -34,7 +34,7 @@ export const SNIPPETS = [
   { id: "fe-useresource", path: F + "service/ui.tsx", from: "export function useResource<T>", to: "}, [identity, path, revision, nonce]),", toOffset: 1, title: "useResource — 화면 데이터 읽기" },
   { id: "fe-guard", path: F + "service/ui.tsx", from: "export function Guard({", to: "return <>{children}</>;", toOffset: 1, title: "로그인·예산 설정 검사" },
   { id: "fe-goback", path: F + "components/SubHeader.tsx", from: "export function goBack", lines: 4, title: "뒤로 가기(기록 없으면 대체 경로)" },
-  { id: "fe-types-tx", path: F + "service/types.ts", from: "export type Transaction = {", to: "};", title: "거래 응답 타입" },
+  { id: "fe-types-tx", path: F + "service/types.ts", from: "// 서버 응답 타입.", to: 'export type Transaction = S["Transaction"];', title: "계약에서 만든 타입을 다시 내보내는 types.ts" },
   // ---------- 다른 화면 ----------
   { id: "fe-home-top", path: F + "service/HomeScreen.tsx", from: "export function HomeScreen()", lines: 2, title: "홈이 오늘 예산을 읽는 줄" },
   { id: "fe-home-checkin", path: F + "service/HomeScreen.tsx", from: "const runCheckIn = useCallback", to: "}, [runCheckIn]);", title: "캐릭터 홈의 check-in" },

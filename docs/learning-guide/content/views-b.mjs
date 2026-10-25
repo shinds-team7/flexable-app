@@ -42,7 +42,7 @@ ${topic({
         ["<code>Session.tsx</code>, <code>BudgetDraft.tsx</code>, <code>wallet.ts</code>", "여러 화면이 함께 쓰는 상태(Context)", "{{c:Session}}, {{c:BudgetDraft}}"],
         ["<code>storage.ts</code>, <code>homeStyle.ts</code>, <code>reminderSetting.ts</code>", "기기 저장", "{{c:storage}}"],
         ["<code>ui.tsx</code>", "서비스 공통(useResource, Guard, Page, 금액 표시)", "{{c:serviceUi}}"],
-        ["<code>types.ts</code>", "서버 응답 타입(손으로 맞춤)", "{{c:types}}"],
+        ["<code>types.ts</code>", "서버 응답 타입(계약에서 만든 <code>api/schema.d.ts</code>를 다시 내보냄)", "{{c:types}}"],
       ]),
       code: snip("fe-home-top") + snip("fe-useresource"),
       io: "화면 진입 → useResource(GET) → state → 그리기 → 버튼 → api(POST/PATCH) → invalidate → 다시 GET",

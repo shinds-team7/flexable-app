@@ -215,7 +215,7 @@ ${steps([
   ["엔티티", "{{c:Transaction}} 필드 + <code>@Column</code>, 생성자, <code>update()</code>. <code>ddl-auto: validate</code>라 DB에 열이 없으면 서버가 뜨지 않는다."],
   ["DTO", "{{c:TransactionDtos}} <code>CreateRequest</code>(검증 어노테이션), <code>UpdateRequest</code>, <code>TransactionResponse.of</code>."],
   ["서비스", "{{c:TransactionService}} <code>createOnce</code>·<code>update</code>에서 값 넘기기."],
-  ["프론트", "{{c:types}} <code>Transaction</code>, {{c:TransactionForm}} state·입력칸·<code>body</code>."],
+  ["프론트", "{{c:TransactionForm}} state·입력칸·<code>body</code>. 타입은 손으로 고치지 않는다({{c:types}}는 생성 타입의 별칭)."],
   ["계약", "구현보다 먼저 <code>docs/contracts/app-api.yaml</code>의 <code>Transaction</code>·요청 스키마에 필드를 더한다(계약 변경은 먼저 알리고 <code>spec-change</code>). 응답에 스펙에 없는 필드가 나오면 {{x:ContractTest}}가 실패하므로 순서를 바꿀 수 없다."],
   ["프론트 타입·테스트", "<code>npm run gen:api</code>로 <code>schema.d.ts</code>를 다시 만든다(CI <code>check:api</code>가 검사). {{x:ApiFlowTest}}에 검사 추가, E2E에 입력 추가."],
   ["배포 순서", "백엔드(마이그레이션 포함) 먼저 → 앱. 반대로 하면 옛 서버가 모르는 필드를 받거나 새 앱이 없는 필드를 기다린다 {{b:infer}}."],
@@ -226,7 +226,7 @@ ${table(["볼 파일", "같이 흔들리는 것", "확인"], [
 ])}
 ${p("과거 날짜의 하루 예산은 이미 저장돼 있으므로 식을 바꿔도 지난 점수는 그대로이고, 바꾼 날부터 새 식의 값이 쌓인다 {{b:infer}}. 앱은 계산하지 않으므로 프론트는 보통 바꿀 것이 없다.")}
 ${h2("change.response", "API 응답 필드 추가")}
-${ul(["백엔드: 응답 record(예: <code>BudgetDtos.TodayResponse</code>)에 필드 추가, 만드는 곳(<code>compute</code>, <code>withCharacter</code>) 수정.", "프론트: {{c:types}}에 필드 추가. 옛 서버가 아직 안 주는 기간이 있으면 선택(<code>?</code>)으로 둔다(<code>User.provider?</code>가 그런 예, 주석 '소셜 로그인 전 서버').", "계약: <code>docs/contracts/app-api.yaml</code>에 먼저 적는다. 스키마가 <code>additionalProperties: false</code>라 적지 않은 필드를 내보내면 {{x:ContractTest}}가 실패한다. 그다음 <code>npm run gen:api</code>(프론트 타입 재생성). 테스트: <code>jsonPath(\"$.새필드\")</code>.", "옛 앱은 모르는 필드를 무시하므로 백엔드를 먼저 내도 된다 {{b:infer}}."])}
+${ul(["백엔드: 응답 record(예: <code>BudgetDtos.TodayResponse</code>)에 필드 추가, 만드는 곳(<code>compute</code>, <code>withCharacter</code>) 수정.", "계약: <code>docs/contracts/app-api.yaml</code>에 먼저 적는다. 스키마가 <code>additionalProperties: false</code>라 적지 않은 필드를 내보내면 {{x:ContractTest}}가 실패한다. 테스트: <code>jsonPath(\"$.새필드\")</code>.", "프론트: <code>npm run gen:api</code>로 타입을 다시 만들면 {{c:types}}를 거쳐 화면에 바로 반영된다. 옛 서버가 아직 안 주는 기간이 있으면 계약에서 그 필드를 필수(<code>required</code>)에 넣지 않으면 된다.", "옛 앱은 모르는 필드를 무시하므로 백엔드를 먼저 내도 된다 {{b:infer}}."])}
 ${snip("cfg-contract-tx")}
 ${h2("change.column", "DB 컬럼 추가")}
 ${ol(["<code>backend/src/main/resources/db/migration/V12__설명.sql</code>을 <b>추가</b>(V1~V11과 V3 Java는 수정·삭제 금지). 시각 값을 넣는 데이터 변경처럼 DB 세션 시간대에 기대면 안 되는 것은 Java 마이그레이션.", "NOT NULL 열은 기존 행 때문에 DEFAULT가 필요하다(<code>from_fixed BOOLEAN NOT NULL DEFAULT FALSE</code>가 예).", "엔티티에 <code>@Column</code>. 로컬 <code>bootRun</code>으로 Flyway 적용·검증 통과 확인 → <code>./gradlew test</code>(H2에서도 같은 SQL이 돌아야 한다).", "배포하면 새 <code>app.jar</code>가 켜질 때 운영 RDS에 적용된다. Flyway는 자동으로 되돌리지 않는다. 되돌리려면 새 번호의 마이그레이션을 만든다.", "HANDOFF에 적용 기록을 남긴다(지금 'V11까지 운영 적용' 기록이 있음)."])}
@@ -290,8 +290,8 @@ ${table(["종류", "무엇을 띄우나", "이 저장소", "개수(소스 기준
   ["백엔드 정책", "<code>tests/policy/*.json</code>의 표 한 줄 = 테스트 하나", "<code>BudgetPolicyTest</code>·<code>CharacterPolicyTest</code>(단위), <code>SeedMoneyPolicyTest</code>(API)", "3개 클래스 25개", "아래 합계에 포함"],
   ["백엔드 계약", "스프링 전체 + MockMvc, 응답을 OpenAPI 스펙으로 검사", "<code>ContractTest</code>", "5개", "아래 합계에 포함"],
   ["백엔드 통합", "스프링 전체 + H2 메모리 + MockMvc(가짜 HTTP)", "<code>ApiFlowTest</code>, <code>SecurityTest</code>, <code>CoinFlowTest</code> …", "백엔드 전체 17개 클래스 116개", "<code>./gradlew test</code> 116개 통과(2026-10-25) {{b:ran}}"],
-  ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "6개", "<code>npm run test:unit</code> 6개 통과(10-24) {{b:ran}}"],
-  ["타입 검사·린트·계약 타입", "—", "<code>tsc</code>, <code>expo lint</code>, <code>check:api</code>", "—", "<code>tsc</code>·<code>lint</code> 오류 없음(10-24) {{b:ran}}. <code>check:api</code>는 CI에서 돈다"],
+  ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "6개", "<code>npm run test:unit</code> 6개 통과(10-25) {{b:ran}}"],
+  ["타입 검사·린트·계약 타입", "—", "<code>tsc</code>, <code>expo lint</code>, <code>check:api</code>", "—", "#148 코드로 <code>check:api</code>·<code>tsc</code>·<code>lint</code> 모두 통과(10-25) {{b:ran}}"],
   ["E2E", "실제 브라우저(Playwright) + 실제 백엔드(H2) + 정적 웹", "<code>e2e/*.spec.ts</code>", "20개(service 15·coins 3·web-links 2)", "로컬 실행 안 함. PR #128·#129·#130의 CI 통과 {{b:ci}}"],
 ])}
 ${p("<b>시계를 고정하는 테스트</b>: 시드머니·코인처럼 날짜에 달린 규칙은 테스트가 주입 <code>Clock</code>을 특정 날짜로 고정한다. 그런데 토큰 만료 검사는 실제 시각을 쓴다. 그래서 고정 시각(예: 10-01)에 가입하면 그 토큰의 30일 만료가 실제 날짜 10-31에 닥쳐 테스트가 401로 깨질 뻔했다. #138에서 가입만 지금 시각에 하고 고정 시각으로 돌아오게 고쳤다({{x:SeedMoneyFlowTest}}, {{x:CoinFlowTest}}. 새로 생긴 {{x:ContractTest}}·{{x:SeedMoneyPolicyTest}}는 처음부터 같은 방식) {{b:code}}.")}

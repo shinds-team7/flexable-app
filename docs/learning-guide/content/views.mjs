@@ -80,7 +80,7 @@ ${p("코드를 분석한 결과에서 골랐다. 형식: <b>현재 구현</b> �
 <div class="mqi"><b>6. 서버 메모리에 있는 상태</b><p><span class="mql">현재</span> 로그인 실패 제한, 웹 연동 실패 제한, 소셜 로그인 state·코드가 메모리에 있다. API.md에 '여러 인스턴스 전 공유 저장소로 교체'라고 적혀 있다.</p><p><span class="mql">효과·한계</span> 서버 한 대에서는 단순하고 빠르다. 재시작하면 사라지고, 두 대가 되면 따로 센다.</p><p><span class="mql">질문</span> 언제 Redis 같은 공유 저장소로 옮기는 것이 맞는지.</p></div>
 <div class="mqi"><b>7. 고정지출 설정 변경 시 기록을 이어받는 규칙</b><p><span class="mql">현재</span> 기록 키는 날짜·일자·이름·순번을 사용한다. #129는 이름 변경으로 사라진 항목의 기록을 같은 날짜의 새 항목이 이어받게 고쳤다({{v:design.fixed|코드와 회귀 테스트}}).</p><p><span class="mql">효과·한계</span> 기존 기록 키와 호환되고 이름만 바꿔도 지난 날짜를 다시 빼지 않는다. 같은 저장에서 삭제한 항목과 새로 추가한 항목도 이름 변경처럼 다룬다.</p><p><span class="mql">질문</span> 항목 id가 저장마다 바뀌는 현재 구조에서, 변하지 않는 id로 수정과 추가를 구분하도록 바꿀 필요가 있는지.</p></div>
 <div class="mqi"><b>8. 테스트 DB와 운영 DB</b><p><span class="mql">현재</span> 테스트·로컬은 H2(MySQL 모드), 운영은 MySQL. 로컬 H2에서는 시각이 한국 시각으로 저장되는 것을 확인했고, 운영은 UTC 설정이다. 코드 주석이 MySQL 격리 수준을 전제로 잠금 순서를 정한 곳이 있다.</p><p><span class="mql">효과·한계</span> 설치 없이 빠르게 테스트한다. MySQL에서만 생기는 문제는 테스트가 못 잡는다.</p><p><span class="mql">질문</span> Testcontainers 같은 MySQL 테스트를 어느 범위까지 들이면 좋을지.</p></div>
-<div class="mqi"><b>9. 손으로 쓴 API 계약과 손으로 맞춘 앱 타입</b><p><span class="mql">현재</span> 10-25부터 OpenAPI 계약(<code>docs/contracts/*.yaml</code>)을 사람이 먼저 쓰고, {{x:ContractTest}}가 실제 응답이 계약과 같은지(스펙에 없는 필드까지) 검사한다. 계약에서 만든 프론트 타입 <code>schema.d.ts</code>는 있지만 화면 코드는 아직 손으로 맞춘 {{c:types}}를 쓴다.</p><p><span class="mql">효과·한계</span> 서버 응답이 계약을 벗어나면 CI가 막는다. 앱 쪽 타입과 계약의 차이는 아직 아무것도 검사하지 않는다.</p><p><span class="mql">질문</span> 화면 코드를 생성 타입으로 옮기는 게 좋을지, 아니면 코드에서 스펙을 만드는 방식(springdoc 등)이 이 규모에 더 맞을지.</p></div>
+<div class="mqi"><b>9. 사람이 먼저 쓰는 API 계약</b><p><span class="mql">현재</span> OpenAPI 계약(<code>docs/contracts/*.yaml</code>)을 사람이 먼저 쓰고, 서버 쪽은 {{x:ContractTest}}가 실제 응답이 계약과 같은지(스펙에 없는 필드까지), 앱 쪽은 계약에서 만든 타입({{c:types}})을 타입 검사가 확인한다. 화면 코드를 생성 타입으로 옮기자 손으로 맞춘 타입이 놓친 차이(거래 <code>category</code>가 null일 수 있음)가 바로 드러났다(#148).</p><p><span class="mql">효과·한계</span> 앱·서버·웹이 같은 문서를 기준으로 삼는다. 대신 컨트롤러를 바꿀 때마다 YAML도 사람이 고쳐야 한다(테스트가 빠뜨림을 잡아 줄 뿐 대신 써 주지는 않는다).</p><p><span class="mql">질문</span> 이 규모에서 계약을 먼저 쓰는 방식이 맞는지, 코드에서 스펙을 만드는 방식(springdoc 등)이 더 나은지.</p></div>
 </div>
 ${h2("mentor.quiz", "이해도 점검 질문과 해설")}
 ${quiz([
@@ -106,7 +106,7 @@ ${quiz([
 ${table(["항목", "값"], [
   ["저장소", "<code>shinds-team7/flexable-app</code>(공개 저장소)"],
   ["브랜치·커밋", `<code>${ctx.BRANCH || "detached HEAD"}</code> · <code>${SHA}</code>`],
-  ["원격 최신 여부", `원본 분석은 main 35e5804 기준. #129·#130 머지 후 main 5e31651, 10-25 작업 방식·정책·계약 PR(#132~#142) 머지 후 main 4b7b2e8을 반영했다. 현재 코드 발췌와 링크는 위 빌드 커밋 기준이다`],
+  ["원격 최신 여부", `원본 분석은 main 35e5804 기준. #129·#130 머지 후 main 5e31651, 10-25 작업 방식·정책·계약 PR(#132~#142) 머지 후 main 4b7b2e8에, 아직 머지 전인 #148(앱 타입을 생성 타입으로 전환)을 얹어 빌드했다. 현재 코드 발췌와 링크는 위 빌드 커밋 기준이다`],
   ["커밋 안 된 변경", ctx.DIRTY ? "분석 대상 코드에 커밋되지 않은 변경 있음. 고정 링크와 다를 수 있다" : "분석 대상 코드에 없음(가이드 자체 변경 제외)"],
   ["분석·갱신 날짜", "최초 분석 2026-10-24, #129·#130 반영 및 백엔드 재검증 2026-10-25 새벽, 정책·계약 테스트와 작업 방식 반영 및 백엔드 재검증 2026-10-25 오후"],
   ["접근하지 못한 자료", "별도 저장소 flexable-web(웹 서버·DB·시연), 운영 서버(EC2)·RDS·로그, EAS·Play Console·Vercel 대시보드. 이것들에 관한 내용은 저장소 문서의 기록만 옮겼다. GitHub Actions는 PR #128·#129·#130의 통과 결과를 확인했다"],
@@ -117,8 +117,8 @@ ${p("각 배지 위에 마우스를 올리면 뜻이 보인다.")}
 ${h2("scope.ran", "직접 실행해 확인한 것(2026-10-24~25, 이 PC)")}
 ${table(["명령·작업", "결과"], [
   ["<code>cd backend && ./gradlew test</code>", "2026-10-25 main 4b7b2e8: 17개 클래스 116개 통과, 실패·오류·건너뜀 0(XML 보고서 집계). 새로 생긴 정책 테스트 3개 클래스 25개와 {{x:ContractTest}} 5개를 포함한다. 최초 분석 85개 → #129 반영 86개 → 지금 116개"],
-  ["<code>cd frontend && npm run test:unit</code>", "6개 통과, 실패 0"],
-  ["<code>npx tsc --noEmit</code>, <code>npx expo lint</code>", "둘 다 종료 코드 0"],
+  ["<code>cd frontend && npm run test:unit</code>", "6개 통과, 실패 0(10-25 #148 코드로 다시 실행)"],
+  ["<code>npm run check:api</code>, <code>npx tsc --noEmit</code>, <code>npx expo lint</code>, <code>npx expo export -p web</code>", "모두 종료 코드 0(10-25 #148 코드). 생성 타입에 틀린 값 6개를 넣은 임시 파일은 6개 모두 타입 오류(검사가 실제로 동작함을 확인하고 삭제)"],
   ["로컬 백엔드(local 프로필, 포트 18080, 임시 H2 파일, SQL·트랜잭션 로그 켬)", "Flyway V1~V11 적용 로그 확인"],
   ["curl로 가입 → 예산 설정 → 거래 등록(Idempotency-Key) → 같은 키 재전송 → 금액 수정 → 오늘 예산", "201 → 200(같은 id) → 200, SQL·commit 순서 로그 캡처, 하루 예산 유지·오늘 남은 돈 감소 확인"],
   ["실패 분기: 다른 사용자 PATCH, 수입 카테고리로 PATCH, amount 0, 토큰 없음·변조, 로그아웃 후", "404(rollback) · 400(rollback-only → rollback) · 400 · 401 · 401 · 401"],
@@ -140,6 +140,7 @@ ${table(["PR", "변경·검증", "상태·남은 일"], [
   ["#136 API 계약", "OpenAPI <code>docs/contracts/*.yaml</code>, {{x:ContractTest}}, 프론트 <code>gen:api</code>·<code>check:api</code>·<code>mock:api</code>. <code>docs/API.md</code>는 요약이 됨", "main 머지 완료. 응답 형식은 그대로"],
   ["#138 테스트 시계", "고정 시각에 가입해 10-31부터 토큰 만료로 깨질 테스트를, 가입만 실제 시각에 하도록 수정", "main 머지 완료"],
   ["#140·#142 문서", "<code>main</code> 보호 설정 완료(승인·병합은 리드만), HANDOFF 남은 일 합침", "main 머지 완료"],
+  ["#148 앱 타입 전환", "{{c:types}}를 계약 생성 타입의 별칭으로 바꾸고, 내역 화면의 null 카테고리와 코인 안내의 모르는 사유를 처리. <code>tsc</code>·<code>lint</code>·단위 6개·웹 빌드·<code>check:api</code> 통과 {{b:ran}}", "PR 열림(머지 전). 이 가이드는 #148을 얹은 코드로 빌드했다. 앱 반영은 원격 업데이트"],
 ])}
 ${h2("scope.mismatch", "분석 중 찾은 어긋남과 처리 결과")}
 ${table(["위치", "내용", "처리"], [
@@ -150,7 +151,7 @@ ${table(["위치", "내용", "처리"], [
   ["API.md 고정지출 자동 기록", "이름 변경 시 지난 날짜가 다시 기록되던 문제(수정 전 로컬 재현)", "#129에서 수정하고 기록 이어받기 규칙 명시"],
   ["ApiFlowTest 주석 '저장은 UTC'", "로컬 H2에서는 한국 시각으로 저장되는 것을 확인. 이 차이가 그 테스트의 결과를 바꾸지는 않는다 {{b:ran}} {{b:infer}}", "운영 MySQL 저장값은 미확인"],
   ["FEATURES.md·HANDOFF 머리말", "기준 커밋 83c7981로 적혀 있다 {{b:doc}}", "문서 머리말의 기준 시점이며 이 가이드 빌드 커밋과 구분"],
-  ["frontend/AGENTS.md “API 응답 타입은 schema.d.ts에서”", "계약에서 만든 <code>src/service/api/schema.d.ts</code>는 있지만 10-25 기준 어느 화면 코드도 import하지 않는다. 화면은 여전히 손으로 맞춘 {{c:types}}를 쓴다 {{b:code}}", "새 코드에 대한 지침으로 읽힌다 {{b:infer}}. <code>check:api</code>는 생성 파일이 스펙과 같은지만 보고, <code>types.ts</code>와 스펙의 차이는 잡지 못한다"],
+  ["frontend/AGENTS.md “API 응답 타입은 schema.d.ts에서”", "계약에서 만든 <code>schema.d.ts</code>를 어느 화면 코드도 import하지 않고, 손으로 맞춘 <code>types.ts</code>를 쓰고 있었다. #136이 화면 전환을 범위 밖으로 남긴 것. 그 사이 <code>Transaction.category</code>가 계약(null 가능)과 달리 null 불가로 적혀 있었다", "#148에서 {{c:types}}를 생성 타입의 별칭으로 바꾸고, 내역 화면이 null 카테고리를 '카테고리 없음'으로 보이게 고침"],
 ])}
 ${h2("scope.unknown", "확인하지 못한 사항")}
 ${ul([
@@ -161,7 +162,8 @@ ${ul([
   "MySQL에서의 동시성 테스트 결과(테스트는 H2).",
   "성능·응답 시간·사용자 수.",
   "로컬 E2E 실행 결과(CI에서는 #128·#129·#130 통과 확인).",
-  "<code>npm run mock:api</code>(Prism 목 서버)와 <code>npm run check:api</code>의 로컬 실행 결과(이번에 돌리지 않음, check:api는 CI에서 돈다).",
+  "<code>npm run mock:api</code>(Prism 목 서버)의 로컬 실행 결과(이번에 돌리지 않음).",
+  "#148의 E2E·실기기 확인(로컬 미실행, CI E2E로 확인 예정).",
   "고정지출 이름 변경 수정의 실기기 동작과 운영 배포 여부(API 회귀 테스트로만 확인).",
 ])}
 ${h2("scope.update", "프로젝트 코드가 바뀌면 이 가이드를 갱신하는 방법")}
