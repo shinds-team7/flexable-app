@@ -2,7 +2,7 @@
   "expo": {
     "name": "텅장관리",
     "slug": "flexable",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,9 +12,8 @@
     "android": {
       "package": "com.flexable.app",
       "adaptiveIcon": {
-        "backgroundColor": "#F9BB8B",
+        "backgroundColor": "#0046FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -49,12 +48,18 @@
       ],
       "@react-native-community/datetimepicker",
       [
+        "./plugins/withSplashBranding",
+        {
+          "image": "./assets/splash-branding.png"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
-          "image": "./assets/android-icon-foreground.png",
+          "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#F9BB8B"
+          "backgroundColor": "#0046FF"
         }
       ],
       "expo-web-browser",
