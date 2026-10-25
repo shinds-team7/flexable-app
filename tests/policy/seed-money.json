@@ -1,0 +1,50 @@
+{
+  "policy": "docs/policies.md §3 시드머니 반영",
+  "note": "API로 검사한다. start 날 정오(서울)에 예산을 설정하고 오늘 쓸 수 있는 돈을 한 번 조회(앱 사용 시작)한 뒤, date 날 정오에 시드머니를 조회·반영한다.",
+  "cases": [
+    {
+      "name": "수입일 전날: 매달 저축할 돈 / 남은 돈 전부(잔액 − 카드 미결제액)",
+      "settings": { "balance": 1000000, "payday": 26, "cardUnpaid": 50000, "fixed": [], "protected": [300000], "seedBase": 500000 },
+      "start": "2026-10-01", "date": "2026-10-25",
+      "pending": { "cycleEnd": "2026-10-25", "payday": "2026-10-26", "goalAmount": 300000, "allAmount": 950000 },
+      "confirm": { "choice": "ALL" },
+      "after": { "total": 1450000, "saved": 950000, "estimatedBalance": 50000 }
+    },
+    {
+      "name": "응답하지 않으면 다음 주기 중에도 기다림(금액은 주기 마지막 날 기준)",
+      "settings": { "balance": 1000000, "payday": 26, "cardUnpaid": 50000, "fixed": [], "protected": [300000], "seedBase": 500000 },
+      "start": "2026-10-01", "date": "2026-10-28",
+      "pending": { "cycleEnd": "2026-10-25", "payday": "2026-10-26", "goalAmount": 300000, "allAmount": 950000 },
+      "confirm": { "choice": "GOAL" },
+      "after": { "total": 800000, "saved": 300000, "estimatedBalance": 700000 }
+    },
+    {
+      "name": "날짜가 된 고정지출은 남은 돈 전부에서 빠짐, 직접 입력",
+      "settings": { "balance": 1000000, "payday": 26, "cardUnpaid": 50000, "fixed": [{ "day": 15, "amount": 200000 }], "protected": [300000], "seedBase": 500000 },
+      "start": "2026-10-01", "date": "2026-10-25",
+      "pending": { "cycleEnd": "2026-10-25", "payday": "2026-10-26", "goalAmount": 300000, "allAmount": 750000 },
+      "confirm": { "choice": "MANUAL", "amount": 100000 },
+      "after": { "total": 600000, "saved": 100000, "estimatedBalance": 700000 }
+    },
+    {
+      "name": "카드 미결제액이 더 크면 남은 돈 전부는 0원, 직접 입력 0원도 반영",
+      "settings": { "balance": 30000, "payday": 26, "cardUnpaid": 50000, "fixed": [], "protected": [300000], "seedBase": 0 },
+      "start": "2026-10-01", "date": "2026-10-25",
+      "pending": { "cycleEnd": "2026-10-25", "payday": "2026-10-26", "goalAmount": 300000, "allAmount": 0 },
+      "confirm": { "choice": "MANUAL", "amount": 0 },
+      "after": { "total": 0, "saved": 0, "estimatedBalance": 30000 }
+    },
+    {
+      "name": "응답하지 않은 주기는 다음 수입일 전날에 넘어감",
+      "settings": { "balance": 1000000, "payday": 26, "cardUnpaid": 50000, "fixed": [], "protected": [300000], "seedBase": 500000 },
+      "start": "2026-10-01", "date": "2026-11-25",
+      "pending": { "cycleEnd": "2026-11-25", "payday": "2026-11-26", "goalAmount": 300000, "allAmount": 950000 }
+    },
+    {
+      "name": "주기 마지막 날에 처음 쓰기 시작했으면 반영할 주기 없음",
+      "settings": { "balance": 1000000, "payday": 26, "cardUnpaid": 50000, "fixed": [], "protected": [300000], "seedBase": 500000 },
+      "start": "2026-10-25", "date": "2026-10-25",
+      "pending": null
+    }
+  ]
+}
