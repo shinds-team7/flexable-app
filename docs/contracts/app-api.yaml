@@ -1,0 +1,963 @@
+openapi: 3.0.3
+info:
+  title: 텅장관리 앱 API
+  version: 1.0.0
+  description: |
+    앱 화면(Android·웹, frontend/) ↔ 앱 서버(backend/) 계약. 이 파일이 정본이다. docs/API.md는 요약과 동작 설명이다.
+    - 백엔드 `contract.ContractTest`가 실제 응답을 이 스펙으로 검사한다(정의되지 않은 필드·상태 코드도 실패).
+    - 프론트 타입은 `npm run gen:api`로 `frontend/src/service/api/schema.d.ts`에 만들고, 목 서버는 `npm run mock:api`.
+    - 바꿀 때는 구현보다 먼저 이 파일을 고치는 PR(`spec-change` 라벨 + docs/CHANGELOG.md)을 올린다.
+    - 금액은 원 단위 정수, 날짜는 YYYY-MM-DD, 시각은 +09:00이 붙은 ISO-8601이다. 계산 규칙은 docs/policies.md.
+    - 웹 서버가 부르는 `/internal/v1/web-links/*`는 web-link-api.yaml에 따로 있다.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+tags:
+  - name: auth
+  - name: budget
+  - name: category
+  - name: transaction
+  - name: analysis
+  - name: coin
+  - name: outfit
+  - name: referral
+  - name: web-link
+  - name: health
+
+paths:
+  /auth/signup:
+    post:
+      tags: [auth]
+      summary: 이메일 가입(기본 카테고리 자동 생성)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, agreeTerms, agreePrivacy]
+              properties:
+                email: { type: string, maxLength: 254 }
+                password: { type: string, minLength: 8, maxLength: 64, description: '영문과 숫자를 모두 포함' }
+                agreeTerms: { type: boolean, description: 'true여야 한다' }
+                agreePrivacy: { type: boolean, description: 'true여야 한다' }
+      responses:
+        '201': { $ref: '#/components/responses/Auth' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: 이메일 로그인
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Auth' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/oauth/providers:
+    get:
+      tags: [auth]
+      summary: 키가 설정된 소셜 로그인 공급자
+      security: []
+      responses:
+        '200':
+          description: 공급자 목록(모두 미설정이면 빈 배열)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                additionalProperties: false
+                properties:
+                  providers: { type: array, items: { type: string, enum: [kakao, google] } }
+  /auth/oauth/{provider}/start:
+    get:
+      tags: [auth]
+      summary: 공급자 로그인 화면으로 이동
+      security: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+        - { name: redirectUri, in: query, required: false, schema: { type: string }, description: '허용 목록과 정확히 같아야 한다' }
+        - { name: codeChallenge, in: query, required: false, schema: { type: string }, description: 'base64url(SHA-256(codeVerifier)), 43자' }
+      responses:
+        '302': { description: '공급자 로그인 화면 또는 redirectUri?error=failed|provider_unavailable' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /auth/oauth/{provider}/callback:
+    get:
+      tags: [auth]
+      summary: 공급자가 돌려보내는 주소
+      security: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+        - { name: code, in: query, required: false, schema: { type: string } }
+        - { name: state, in: query, required: false, schema: { type: string } }
+        - { name: error, in: query, required: false, schema: { type: string } }
+      responses:
+        '302': { description: 'redirectUri?code=(2분, 한 번) 또는 ?error=cancelled|email_in_use|failed' }
+        '400':
+          description: 'state 없음·만료·재사용. 안내 문장 한 줄(HTML)'
+          content:
+            text/html:
+              schema: { type: string }
+  /auth/oauth/exchange:
+    post:
+      tags: [auth]
+      summary: 일회용 코드 + verifier를 토큰으로 교환
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                codeVerifier: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Auth' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: 이 회원의 토큰을 모든 기기에서 폐기
+      responses:
+        '204': { description: 폐기함 }
+        '401': { $ref: '#/components/responses/Error' }
+  /me:
+    get:
+      tags: [auth]
+      summary: 내 정보
+      responses:
+        '200':
+          description: 내 정보
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [auth]
+      summary: 계정과 모든 데이터를 즉시 삭제
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password: { type: string, description: 'hasPassword=true면 필수' }
+                confirm: { type: string, description: "hasPassword=false면 '탈퇴'" }
+      responses:
+        '204': { description: 삭제함 }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /budget/settings:
+    get:
+      tags: [budget]
+      summary: 초기 예산 설정
+      responses:
+        '200': { $ref: '#/components/responses/Settings' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [budget]
+      summary: 초기 예산 설정 전체 교체(성공하면 user.onboarded=true)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettingsRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Settings' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /budget/today:
+    get:
+      tags: [budget]
+      summary: 오늘·이번 주 쓸 수 있는 돈과 캐릭터 점수(docs/policies.md §1·§2·§4)
+      responses:
+        '200':
+          description: 서버 계산 최종값
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Today' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /budget/seed-money:
+    get:
+      tags: [budget]
+      summary: 시드머니와 반영할 주기(docs/policies.md §3)
+      responses:
+        '200': { $ref: '#/components/responses/SeedMoney' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /budget/seed-money/entries:
+    post:
+      tags: [budget]
+      summary: 반영할 주기를 시드머니로 반영(주기당 한 번)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cycleEnd, choice]
+              properties:
+                cycleEnd: { type: string, format: date, description: '지금 pending.cycleEnd와 같아야 한다' }
+                choice: { $ref: '#/components/schemas/SeedChoice' }
+                amount: { type: integer, format: int64, minimum: 0, description: 'MANUAL만. GOAL·ALL은 서버가 정함' }
+      responses:
+        '201': { $ref: '#/components/responses/SeedMoney' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /categories:
+    get:
+      tags: [category]
+      summary: 카테고리 목록(기본 → 사용자 생성 순)
+      parameters:
+        - { name: type, in: query, required: false, schema: { $ref: '#/components/schemas/TxType' } }
+      responses:
+        '200':
+          description: 목록
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [category]
+      summary: 카테고리 추가
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 20 }
+                type: { $ref: '#/components/schemas/TxType' }
+                color: { type: string, pattern: '^#[0-9A-Fa-f]{6}$', description: '생략하면 #98A2B3' }
+                icon: { type: string, pattern: '^[a-z0-9-]{1,40}$', description: 'Ionicons 이름. 생략하면 pricetag' }
+      responses:
+        '201': { $ref: '#/components/responses/Category' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /categories/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      tags: [category]
+      summary: 이름·색·아이콘 변경(type은 못 바꿈)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 20 }
+                color: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+                icon: { type: string, pattern: '^[a-z0-9-]{1,40}$' }
+      responses:
+        '200': { $ref: '#/components/responses/Category' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [category]
+      summary: 삭제(쓰던 거래는 같은 종류의 기본 '기타'로). 기본 카테고리는 409
+      responses:
+        '204': { description: 삭제함 }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /transactions:
+    get:
+      tags: [transaction]
+      summary: 기간 거래 목록(occurredAt 내림차순, 최대 366일). 먼저 날짜가 된 고정지출을 기록한다
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: type, in: query, required: false, schema: { $ref: '#/components/schemas/TxType' } }
+        - { name: categoryId, in: query, required: false, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                additionalProperties: false
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Transaction' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [transaction]
+      summary: 거래 기록. 같은 Idempotency-Key를 다시 보내면 처음 만든 거래를 200으로
+      parameters:
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, amount, categoryId, title]
+              properties:
+                type: { $ref: '#/components/schemas/TxType' }
+                amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+                categoryId: { type: integer, format: int64, description: '본인 카테고리이고 type이 같아야 한다' }
+                title: { type: string, minLength: 1, maxLength: 40 }
+                memo: { type: string, maxLength: 200, nullable: true }
+                occurredAt: { type: string, format: date-time, description: '생략하면 지금' }
+      responses:
+        '200': { $ref: '#/components/responses/Transaction' }
+        '201': { $ref: '#/components/responses/Transaction' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /transactions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      tags: [transaction]
+      summary: 거래 하나
+      responses:
+        '200': { $ref: '#/components/responses/Transaction' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [transaction]
+      summary: 보낸 필드만 수정. memo는 null이면 지움, 그 밖의 필드는 null이면 유지
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { $ref: '#/components/schemas/TxType' }
+                amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+                categoryId: { type: integer, format: int64 }
+                title: { type: string, minLength: 1, maxLength: 40 }
+                memo: { type: string, maxLength: 200, nullable: true }
+                occurredAt: { type: string, format: date-time }
+      responses:
+        '200': { $ref: '#/components/responses/Transaction' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [transaction]
+      summary: 거래 삭제
+      responses:
+        '204': { description: 삭제함 }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /analysis/summary:
+    get:
+      tags: [analysis]
+      summary: 기간별 카테고리(지출만)·일별 합계. 고정지출 자동 기록도 지출로 센다
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: 합계
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalysisSummary' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /coins/check-in:
+    post:
+      tags: [coin]
+      summary: 가입 선물·어제 예산 보너스·시간 적립 시작 처리(여러 번 불러도 안전)
+      responses:
+        '200':
+          description: 지갑과 아직 보여 주지 않은 보상(오래된 순)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [wallet, rewards]
+                additionalProperties: false
+                properties:
+                  wallet: { $ref: '#/components/schemas/Wallet' }
+                  rewards: { type: array, items: { $ref: '#/components/schemas/Reward' } }
+        '401': { $ref: '#/components/responses/Error' }
+  /coins/rewards/ack:
+    post:
+      tags: [coin]
+      summary: 보상 모달을 보여 줬다고 표시(내 내역이 아닌 id는 무시)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { type: integer, format: int64 } }
+      responses:
+        '204': { description: 표시함 }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /coins:
+    get:
+      tags: [coin]
+      summary: 지갑
+      responses:
+        '200': { $ref: '#/components/responses/Wallet' }
+        '401': { $ref: '#/components/responses/Error' }
+  /coins/collect:
+    post:
+      tags: [coin]
+      summary: 쌓인 시간 적립 코인 모으기(받을 게 없으면 collected 0)
+      responses:
+        '200':
+          description: 모은 개수와 지갑
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [collected, wallet]
+                additionalProperties: false
+                properties:
+                  collected: { type: integer }
+                  wallet: { $ref: '#/components/schemas/Wallet' }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /outfits:
+    get:
+      tags: [outfit]
+      summary: 코스튬 목록(레벨 코스튬 먼저, 상점 상품 뒤)
+      responses:
+        '200': { $ref: '#/components/responses/OutfitList' }
+        '401': { $ref: '#/components/responses/Error' }
+  /outfits/{id}/purchase:
+    post:
+      tags: [outfit]
+      summary: 코인으로 상점 코스튬 구매(바로 적용하지 않음)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/OutfitList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /outfits/equipped:
+    put:
+      tags: [outfit]
+      summary: 코스튬 적용(null이면 기본 캐릭터)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outfitId: { type: string, nullable: true }
+      responses:
+        '200': { $ref: '#/components/responses/OutfitList' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /referrals/me:
+    get:
+      tags: [referral]
+      summary: 내 추천 코드(처음 부를 때 만든다)
+      responses:
+        '200':
+          description: 내 추천 코드
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, invitedCount, registered, rewardAmount]
+                additionalProperties: false
+                properties:
+                  code: { type: string, description: '영문 대문자·숫자 8자' }
+                  invitedCount: { type: integer, format: int64 }
+                  registered: { type: boolean, description: '내가 다른 사람 코드를 등록했는지' }
+                  rewardAmount: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+  /referrals:
+    post:
+      tags: [referral]
+      summary: 다른 사람 추천 코드 등록(양쪽 코인, 한 번만)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, description: '대소문자·앞뒤 공백 무시' }
+      responses:
+        '200':
+          description: 받은 코인과 지갑
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [amount, wallet]
+                additionalProperties: false
+                properties:
+                  amount: { type: integer }
+                  wallet: { $ref: '#/components/schemas/Wallet' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /me/web-link-codes:
+    post:
+      tags: [web-link]
+      summary: 웹 연동 코드 발급(6자리, 10분, 한 번만. 새로 받으면 이전 코드 무효)
+      responses:
+        '201':
+          description: 연동 코드
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, expiresAt]
+                additionalProperties: false
+                properties:
+                  code: { type: string, pattern: '^[A-Z2-9]{6}$' }
+                  expiresAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/web-links:
+    get:
+      tags: [web-link]
+      summary: 내 웹 연동 목록(최신순)
+      responses:
+        '200':
+          description: 연동 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, createdAt]
+                  additionalProperties: false
+                  properties:
+                    id: { type: integer, format: int64 }
+                    createdAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/web-links/{id}:
+    delete:
+      tags: [web-link]
+      summary: 웹 연동 해제
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: 해제함 }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /health:
+    get:
+      tags: [health]
+      summary: 서버가 떠 있는지
+      security: []
+      responses:
+        '200':
+          description: 정상
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                additionalProperties: false
+                properties:
+                  status: { type: string, enum: [UP] }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Error:
+      description: '오류. 분기는 code로, message는 화면에 그대로 보여 줄 문장'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Auth:
+      description: 토큰(30일)과 계정
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AuthResponse' }
+    Settings:
+      description: 초기 예산 설정
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Settings' }
+    SeedMoney:
+      description: 시드머니
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SeedMoney' }
+    Category:
+      description: 카테고리
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Category' }
+    Transaction:
+      description: 거래
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Transaction' }
+    Wallet:
+      description: 코인 지갑
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Wallet' }
+    OutfitList:
+      description: 코스튬 목록
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OutfitList' }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum: [VALIDATION_FAILED, UNAUTHORIZED, INVALID_CREDENTIALS, SOCIAL_ACCOUNT, OAUTH_CODE_INVALID, NOT_FOUND,
+            BUDGET_NOT_SET, EMAIL_UNAVAILABLE, CATEGORY_DUPLICATE, CATEGORY_DEFAULT, SEED_NOT_PENDING,
+            OUTFIT_NOT_FOR_SALE, OUTFIT_OWNED, OUTFIT_LOCKED, COINS_NOT_ENOUGH, REFERRAL_CODE_INVALID,
+            REFERRAL_ALREADY, LINK_CODE_INVALID, LINK_NOT_FOUND, TOO_MANY_ATTEMPTS, INTERNAL_ERROR]
+        message: { type: string }
+        fields:
+          type: object
+          description: VALIDATION_FAILED에서 필드별 문장
+          additionalProperties: { type: string }
+        retryAfterSeconds: { type: integer, format: int64, description: 'TOO_MANY_ATTEMPTS' }
+        provider: { type: string, enum: [kakao, google], description: 'SOCIAL_ACCOUNT의 가입 공급자' }
+
+    TxType:
+      type: string
+      enum: [EXPENSE, INCOME]
+    SeedChoice:
+      type: string
+      enum: [GOAL, ALL, MANUAL]
+      description: 'GOAL 매달 저축할 돈, ALL 남은 돈 전부, MANUAL 직접 입력'
+
+    User:
+      type: object
+      required: [id, email, onboarded, createdAt, provider, hasPassword]
+      additionalProperties: false
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, nullable: true, description: '소셜 계정은 null일 수 있다' }
+        onboarded: { type: boolean, description: 'false면 초기 예산 설정으로' }
+        createdAt: { type: string, format: date-time }
+        provider: { type: string, enum: [email, kakao, google] }
+        hasPassword: { type: boolean }
+    AuthResponse:
+      type: object
+      required: [accessToken, expiresAt, user]
+      additionalProperties: false
+      properties:
+        accessToken: { type: string }
+        expiresAt: { type: string, format: date-time }
+        user: { $ref: '#/components/schemas/User' }
+
+    FixedExpenseInput:
+      type: object
+      required: [name, amount, day]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 40 }
+        amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+        day: { type: integer, minimum: 1, maximum: 31, description: '31 = 말일' }
+    SavingInput:
+      type: object
+      required: [name, amount]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 40 }
+        amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+    SettingsRequest:
+      type: object
+      required: [balance, payday, incomeAmount]
+      properties:
+        balance: { type: integer, format: int64, minimum: 0, maximum: 999999999999 }
+        balanceAt: { type: string, format: date-time, description: '생략하면 서버 현재 시각. 5분 넘게 미래면 400' }
+        payday: { type: integer, minimum: 1, maximum: 31, description: '31 = 말일' }
+        incomeAmount: { type: integer, format: int64, minimum: 0, maximum: 999999999999 }
+        cardUnpaid: { type: integer, format: int64, minimum: 0, maximum: 999999999999, description: '생략하면 0' }
+        fixedExpenses: { type: array, maxItems: 30, items: { $ref: '#/components/schemas/FixedExpenseInput' } }
+        protectedItems: { type: array, maxItems: 30, items: { $ref: '#/components/schemas/SavingInput' }, description: '매달 저축할 돈' }
+        seedBase: { type: integer, format: int64, minimum: 0, maximum: 999999999999, description: '모아둔 돈. 생략하면 저장된 값 유지' }
+    Settings:
+      type: object
+      required: [balance, balanceAt, payday, incomeAmount, cardUnpaid, fixedExpenses, protectedItems, seedBase, updatedAt]
+      additionalProperties: false
+      properties:
+        balance: { type: integer, format: int64 }
+        balanceAt: { type: string, format: date-time }
+        payday: { type: integer }
+        incomeAmount: { type: integer, format: int64 }
+        cardUnpaid: { type: integer, format: int64 }
+        fixedExpenses:
+          type: array
+          items:
+            type: object
+            required: [id, name, amount, day]
+            additionalProperties: false
+            properties:
+              id: { type: integer, format: int64, description: '저장할 때마다 바뀐다' }
+              name: { type: string }
+              amount: { type: integer, format: int64 }
+              day: { type: integer }
+        protectedItems:
+          type: array
+          items:
+            type: object
+            required: [id, name, amount]
+            additionalProperties: false
+            properties:
+              id: { type: integer, format: int64, description: '저장할 때마다 바뀐다' }
+              name: { type: string }
+              amount: { type: integer, format: int64 }
+        seedBase: { type: integer, format: int64 }
+        updatedAt: { type: string, format: date-time }
+    Today:
+      type: object
+      required: [date, nextPayday, daysLeft, estimatedBalance, reservedFixed, cardUnpaid, protectedTotal, remaining,
+        todaySpent, dailyBudget, todayAvailable, shortage, weekSpent, weekDaysLeft, weekAvailable, cycleStart,
+        hasTransactions, characterPoints, characterDelta]
+      additionalProperties: false
+      properties:
+        date: { type: string, format: date }
+        nextPayday: { type: string, format: date }
+        daysLeft: { type: integer, minimum: 1 }
+        estimatedBalance: { type: integer, format: int64 }
+        reservedFixed: { type: integer, format: int64 }
+        cardUnpaid: { type: integer, format: int64 }
+        protectedTotal: { type: integer, format: int64 }
+        remaining: { type: integer, format: int64, description: '음수 가능' }
+        todaySpent: { type: integer, format: int64 }
+        dailyBudget: { type: integer, format: int64, minimum: 0 }
+        todayAvailable: { type: integer, format: int64, description: '오늘 예산을 넘으면 음수' }
+        shortage: { type: integer, format: int64, minimum: 0 }
+        weekSpent: { type: integer, format: int64 }
+        weekDaysLeft: { type: integer, minimum: 1 }
+        weekAvailable: { type: integer, format: int64, minimum: 0 }
+        cycleStart: { type: string, format: date }
+        hasTransactions: { type: boolean }
+        characterPoints: { type: integer, minimum: 0, maximum: 200 }
+        characterDelta: { type: integer }
+      example:
+        # docs/policies.md §2 예시 ①(목 서버 응답)
+        date: '2026-10-13'
+        nextPayday: '2026-10-26'
+        daysLeft: 13
+        estimatedBalance: 1268000
+        reservedFixed: 450000
+        cardUnpaid: 0
+        protectedTotal: 300000
+        remaining: 518000
+        todaySpent: 70000
+        dailyBudget: 45230
+        todayAvailable: -24770
+        shortage: 24770
+        weekSpent: 70000
+        weekDaysLeft: 6
+        weekAvailable: 201380
+        cycleStart: '2026-09-25'
+        hasTransactions: true
+        characterPoints: 130
+        characterDelta: 15
+    SeedMoney:
+      type: object
+      required: [base, saved, total, monthlyGoal, pending, entries]
+      additionalProperties: false
+      properties:
+        base: { type: integer, format: int64, description: '모아둔 돈(seedBase)' }
+        saved: { type: integer, format: int64, description: '주기마다 옮긴 돈의 합' }
+        total: { type: integer, format: int64 }
+        monthlyGoal: { type: integer, format: int64, description: '매달 저축할 돈 합' }
+        pending:
+          type: object
+          nullable: true
+          description: 반영할 주기. 없으면 null
+          required: [cycleEnd, payday, goalAmount, allAmount]
+          additionalProperties: false
+          properties:
+            cycleEnd: { type: string, format: date }
+            payday: { type: string, format: date }
+            goalAmount: { type: integer, format: int64 }
+            allAmount: { type: integer, format: int64 }
+        entries:
+          type: array
+          description: 최근 12개, 최신순
+          items: { $ref: '#/components/schemas/SeedEntry' }
+      example:
+        # docs/policies.md §3 첫 행(목 서버 응답)
+        base: 500000
+        saved: 0
+        total: 500000
+        monthlyGoal: 300000
+        pending: { cycleEnd: '2026-10-25', payday: '2026-10-26', goalAmount: 300000, allAmount: 950000 }
+        entries: []
+    SeedEntry:
+      type: object
+      required: [cycleEnd, choice, amount, createdAt]
+      additionalProperties: false
+      properties:
+        cycleEnd: { type: string, format: date }
+        choice: { $ref: '#/components/schemas/SeedChoice' }
+        amount: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+
+    Category:
+      type: object
+      required: [id, name, type, color, icon, isDefault]
+      additionalProperties: false
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/TxType' }
+        color: { type: string, description: '#RRGGBB' }
+        icon: { type: string, description: 'Ionicons 이름' }
+        isDefault: { type: boolean }
+    Transaction:
+      type: object
+      required: [id, type, amount, categoryId, category, title, memo, occurredAt, createdAt, fromFixed]
+      additionalProperties: false
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { type: integer, format: int64, minimum: 1 }
+        categoryId: { type: integer, format: int64 }
+        category:
+          type: object
+          nullable: true
+          required: [id, name, color, icon]
+          additionalProperties: false
+          properties:
+            id: { type: integer, format: int64 }
+            name: { type: string }
+            color: { type: string }
+            icon: { type: string }
+        title: { type: string }
+        memo: { type: string, nullable: true }
+        occurredAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        fromFixed: { type: boolean, description: '고정지출 자동 기록' }
+    AnalysisSummary:
+      type: object
+      required: [from, to, expenseTotal, incomeTotal, expenseCount, byCategory, daily]
+      additionalProperties: false
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        expenseTotal: { type: integer, format: int64 }
+        incomeTotal: { type: integer, format: int64 }
+        expenseCount: { type: integer }
+        byCategory:
+          type: array
+          description: 지출만, 금액 내림차순
+          items:
+            type: object
+            required: [categoryId, name, color, icon, amount, count, ratio]
+            additionalProperties: false
+            properties:
+              categoryId: { type: integer, format: int64 }
+              name: { type: string }
+              color: { type: string }
+              icon: { type: string }
+              amount: { type: integer, format: int64 }
+              count: { type: integer }
+              ratio: { type: number, description: '지출 합 대비, 소수 3자리' }
+        daily:
+          type: array
+          description: from~to 모든 날짜(0 포함)
+          items:
+            type: object
+            required: [date, expense, income]
+            additionalProperties: false
+            properties:
+              date: { type: string, format: date }
+              expense: { type: integer, format: int64 }
+              income: { type: integer, format: int64 }
+
+    Wallet:
+      type: object
+      required: [balance, passive, equippedOutfitId]
+      additionalProperties: false
+      properties:
+        balance: { type: integer, format: int64 }
+        passive:
+          type: object
+          required: [collectable, collectedToday, dailyLimit, nextAt]
+          additionalProperties: false
+          properties:
+            collectable: { type: integer }
+            collectedToday: { type: integer }
+            dailyLimit: { type: integer }
+            nextAt: { type: string, format: date-time, nullable: true }
+        equippedOutfitId: { type: string, nullable: true, description: 'null이면 기본 캐릭터(costume-lv1)' }
+    Reward:
+      type: object
+      required: [id, reason, amount, refDate, createdAt]
+      additionalProperties: false
+      properties:
+        id: { type: integer, format: int64 }
+        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND] }
+        amount: { type: integer }
+        refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
+        createdAt: { type: string, format: date-time }
+    OutfitList:
+      type: object
+      required: [balance, equippedOutfitId, peakLevel, items]
+      additionalProperties: false
+      properties:
+        balance: { type: integer, format: int64 }
+        equippedOutfitId: { type: string, nullable: true }
+        peakLevel: { type: integer, minimum: 1, maximum: 3 }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, name, price, unlockLevel, owned, equipped]
+            additionalProperties: false
+            properties:
+              id: { type: string }
+              name: { type: string }
+              price: { type: integer, nullable: true, description: '레벨 코스튬은 null' }
+              unlockLevel: { type: integer, nullable: true, description: '상점 상품은 null' }
+              owned: { type: boolean }
+              equipped: { type: boolean }

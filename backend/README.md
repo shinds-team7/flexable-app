@@ -1,6 +1,6 @@
 # Flex-able 텅장관리 — Backend
 
-앱 API 서버. Spring Boot 4.1, Java 21, MySQL 8(Flyway). API 계약은 [`docs/API.md`](../docs/API.md).
+앱 API 서버. Spring Boot 4.1, Java 21, MySQL 8(Flyway). API 계약은 [`docs/contracts/`](../docs/contracts/README.md)(OpenAPI, 정본), 요약은 [`docs/API.md`](../docs/API.md), 계산 규칙은 [`docs/policies.md`](../docs/policies.md).
 
 웹사이트는 별도 서버(flexable-web `backend/`)다. 이 서버는 웹에 [앱 연동하기]용 API(앱의 연동 코드 발급, 서버 간 `/internal/v1/web-links/*`, 서비스 키 인증)만 제공한다(`weblink` 패키지. 웹에 주는 앱 정보는 회원 이메일·로그인 방법과 시드머니). 경계와 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 
@@ -75,6 +75,8 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | 파일 | 다루는 것 |
 |---|---|
 | `ApiFlowTest` | 가입 검증·중복, 로그인 제한, 토큰 필수, 전체 흐름, 고정지출 자동 기록, 로그아웃 후 토큰 거절 |
+| `contract/ContractTest` | 엔드포인트마다 정상·오류 응답이 `docs/contracts/*.yaml`과 같은지(정의되지 않은 필드·상태 코드도 실패) |
+| `budget/BudgetPolicyTest`·`SeedMoneyPolicyTest`·`CharacterPolicyTest` | `docs/policies.md` 예시 표 = `tests/policy/*.json` |
 | `budget/BudgetCalculatorTest` | 오늘 쓸 수 있는 돈 계산 |
 | `budget/CharacterScoreTest` | 캐릭터 점수(하루 예산 지키면 +15, 넘기면 −50) |
 | `SecurityTest` | 접근 제어: 비로그인 401, 내용을 바꾼 토큰·서명 없는 토큰 401, 다른 사용자의 거래·카테고리 접근 차단, 허용 안 된 출처의 CORS 403 |

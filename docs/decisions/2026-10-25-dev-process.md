@@ -15,14 +15,14 @@
 
 | 웹 문서 §2의 항목 | 앱 저장소 | 상태 |
 |---|---|---|
-| 공통 `AGENTS.md`(`CLAUDE.md`는 `@AGENTS.md`) | 루트 `AGENTS.md`. 구조·요청 경로·배포 갈래는 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)로 옮김 | 1단계 |
-| 파트별 `AGENTS.md` | `frontend/AGENTS.md`(Expo 명령·컨벤션), `backend/AGENTS.md` | 1단계 |
-| Issue·PR 템플릿, CODEOWNERS(리드 @SXXNHU), 라벨 `spec-change`·`no-issue`, `pr-rules` | `.github/`. `pr-rules`의 기준 문서 경로에 `frontend/AGENTS.md`를 더함 | 1단계 |
-| `docs/CHANGELOG.md`, `docs/decisions/` | 같은 경로 | 1단계 |
-| `docs/PRD.md` | `docs/FEATURES.md`를 근거로 요약 | 2단계 |
-| `docs/policies.md` + `tests/policy/` | `docs/API.md`의 예산 계산식을 옮기고 백엔드 `*PolicyTest`가 검사 | 2단계 |
-| `docs/contracts/*.yaml` | `app-api.yaml`(앱 화면 ↔ 앱 서버), `web-link-api.yaml`(웹 서버가 부르는 `/internal/v1/web-links/*`). 백엔드 `ContractTest`, 프론트 `gen:api`·`check:api`·`mock:api` | 3단계 |
+| 공통 `AGENTS.md`(`CLAUDE.md`는 `@AGENTS.md`) | 루트 `AGENTS.md`. 구조·요청 경로·배포 갈래는 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)로 옮김 | 1단계 #132 |
+| 파트별 `AGENTS.md` | `frontend/AGENTS.md`(Expo 명령·컨벤션), `backend/AGENTS.md` | 1단계 #132 |
+| Issue·PR 템플릿, CODEOWNERS(리드 @SXXNHU), 라벨 `spec-change`·`no-issue`, `pr-rules` | `.github/`. `pr-rules`의 기준 문서 경로에 `frontend/AGENTS.md`를 더함 | 1단계 #132 |
+| `docs/CHANGELOG.md`, `docs/decisions/` | 같은 경로 | 1단계 #132 |
+| `docs/PRD.md` | `docs/FEATURES.md`를 근거로 요약 | 2단계 #134 |
+| `docs/policies.md` + `tests/policy/` | `docs/API.md`의 예산 계산식을 옮기고 백엔드 `BudgetPolicyTest`·`SeedMoneyPolicyTest`·`CharacterPolicyTest`가 검사 | 2단계 #134 |
+| `docs/contracts/*.yaml` | `app-api.yaml`(앱 화면 ↔ 앱 서버), `web-link-api.yaml`(웹 서버가 부르는 `/internal/v1/web-links/*`). 백엔드 `ContractTest`, 프론트 `gen:api`·`check:api`·`mock:api` | 3단계 #136 |
 | `main` 보호 | PR 필수, CI 필수, CODEOWNERS 경로 리드 리뷰 필수, 관리자 우회 가능 | 4단계(관리자 설정) |
 
-- 2·3단계가 병합되기 전까지 API 계약과 계산식의 정본은 `docs/API.md`다.
+- 프론트 타입 생성기 `openapi-typescript`는 TypeScript 5만 지원한다고 선언해 앱(TypeScript 6) 의존성에 넣지 않고 `npx`로 버전을 고정해 실행한다(EAS `npm ci`가 peer 불일치로 깨지지 않게, HANDOFF §3).
 - `web-link-api.yaml`은 웹 백엔드(`applink.AppApiClient`)가 기대하는 계약이라, 바꿀 때는 웹 저장소에도 알린다.

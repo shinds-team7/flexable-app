@@ -32,12 +32,15 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	// docs/contracts/*.yaml로 실제 응답을 검사하는 계약 테스트(contract.ContractTest)
+	testImplementation 'com.atlassian.oai:swagger-request-validator-core:2.44.9'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
-	// 정책 테스트가 읽는 저장소 파일. 바뀌면 테스트를 다시 돌린다(*PolicyTest)
+	// 계약·정책 테스트가 읽는 저장소 파일. 바뀌면 테스트를 다시 돌린다(ContractTest·*PolicyTest)
+	inputs.dir('../docs/contracts').withPropertyName('contracts')
 	inputs.dir('../tests/policy').withPropertyName('policyCases')
 }
 

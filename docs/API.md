@@ -1,7 +1,7 @@
 # Flex-able 서비스 API v1
 
 앱(Android·웹) API. 경로의 `v1`은 API 버전이고 앱 버전과 따로다(지금 앱은 `frontend/app.json` 기준 1.4.0). 1.0.0 비공개 테스트용 최소 API로 시작해 소셜 로그인·시드머니·코인·코스튬·추천 코드·웹사이트 연동이 더해졌다. 서버 코드는 `backend/`(Spring Boot 4.1, Java 21, MySQL 8).
-이 문서가 프론트·백엔드 사이의 계약이다. 바꿀 때는 이 문서를 먼저 고친다.
+**요청·응답 형식의 정본은 OpenAPI 스펙이다**: 앱 화면 ↔ 앱 서버는 [`contracts/app-api.yaml`](contracts/app-api.yaml), 웹 서버가 부르는 `/internal/v1/web-links/*`는 [`contracts/web-link-api.yaml`](contracts/web-link-api.yaml)(사용법 [README](contracts/README.md)). 백엔드 `ContractTest`가 실제 응답을 검사한다. 이 문서는 요약과 동작 설명이고, 계산 규칙은 [`policies.md`](policies.md)다. API를 바꿀 때는 스펙을 먼저 고치고 이 문서도 맞춘다.
 
 웹사이트 API는 웹 서버(flexable-web `backend/`)에 있고 이 문서에 적지 않는다. 이 문서에는 웹 연동용 API만 적는다([웹사이트 연동](#웹사이트-연동)). 절차는 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md).
 

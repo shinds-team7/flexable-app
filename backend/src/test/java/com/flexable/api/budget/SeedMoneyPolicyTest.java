@@ -63,6 +63,11 @@ class SeedMoneyPolicyTest {
 		void seoulNoon(String date) {
 			now = Instant.parse(date + "T03:00:00Z");
 		}
+
+		/** 토큰 만료는 실제 시각으로 검사하므로 가입(토큰 발급)은 지금 시각에 한다. */
+		void realNow() {
+			now = Instant.now();
+		}
 	}
 
 	@TestConfiguration
@@ -87,8 +92,9 @@ class SeedMoneyPolicyTest {
 	}
 
 	private void run(JsonNode c) throws Exception {
-		clock.seoulNoon(c.get("start").asString());
+		clock.realNow();
 		String token = signup();
+		clock.seoulNoon(c.get("start").asString());
 		call(put("/api/v1/budget/settings"), token, settings(c.get("settings")), 200);
 		call(get("/api/v1/budget/today"), token, null, 200);
 

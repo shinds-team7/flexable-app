@@ -9,7 +9,7 @@
 | 서비스 목적·사용자·기능·범위 | [docs/PRD.md](docs/PRD.md) (기능별 화면·API·확인 방법은 [docs/FEATURES.md](docs/FEATURES.md)) |
 | 계산·상태 규칙과 예시 표 | [docs/policies.md](docs/policies.md) = [tests/policy/](tests/policy/) 테스트 |
 | 폴더 구조·요청 경로·배포 갈래 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| API 계약 | [docs/API.md](docs/API.md) |
+| API 계약(OpenAPI) | 앱 [docs/contracts/app-api.yaml](docs/contracts/app-api.yaml), 웹 연동 [docs/contracts/web-link-api.yaml](docs/contracts/web-link-api.yaml)(정본, 사용법 [README](docs/contracts/README.md)). 요약·동작 설명은 [docs/API.md](docs/API.md) |
 | 코인·코스튬 규칙 | [docs/coin-plan.md](docs/coin-plan.md) |
 | 결정 기록 | [docs/decisions/](docs/decisions/README.md) |
 | 문서 변경 이력 | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
@@ -22,7 +22,7 @@
 ## 작업 시작 전
 
 - 이번 Issue의 목표·참고 자료·범위·완료 조건을 읽는다. Issue가 없으면 범위와 완료 조건부터 확인한다.
-- `docs/PRD.md`에서 목적과 범위를, Issue와 관련된 `docs/policies.md` 항목과 API(`docs/API.md`)를 저장소에서 직접 읽는다.
+- `docs/PRD.md`에서 목적과 범위를, Issue와 관련된 `docs/policies.md` 항목과 API 계약(`docs/contracts/`)을 저장소에서 직접 읽는다.
 - `docs/CHANGELOG.md` 최근 항목을 확인한다.
 - 구현 전에 작업 범위, 참고한 문서, 완료 조건을 요약한다.
 
@@ -30,7 +30,7 @@
 
 - 문서끼리 충돌하거나 정책이 없으면 임의로 확정하지 않고 알린다.
 - 작업 요청 없이 `docs/` 문서를 고치지 않는다. 기능을 추가하거나 바꾸면 `docs/FEATURES.md` 표는 같은 PR에서 고친다.
-- API 요청·응답은 `docs/API.md`와 맞춘다. 계약을 바꿔야 하면 구현하지 말고 먼저 알린다.
+- API 응답은 `docs/contracts/*.yaml`과 맞춘다(백엔드 `ContractTest`가 검사). 계약을 바꿔야 하면 구현하지 말고 먼저 알린다. 프론트 타입은 `npm run gen:api`로 만들고, 백엔드 없이 화면을 만들 때는 `npm run mock:api`(frontend/).
 - 정책에 없는 결정은 PR의 "새로 내린 결정" 칸에 적는다. 다른 파트(앱 화면·앱 서버·웹)에 영향을 주면 `docs/decisions/`에 기록한다.
 - 제품 공통 규칙:
   - **예산 금액은 서버(`BudgetCalculator`)가 최종값이다.** 원 단위 정수, 나눗셈은 내림. 클라이언트에서 따로 계산하지 않는다.
@@ -58,6 +58,7 @@ Node 22, Java 21. PR마다 GitHub Actions(`.github/workflows/ci.yml`)가 모두 
 ```bash
 # 프론트엔드 (frontend/)
 npm ci
+npm run check:api                          # 프론트 타입이 docs/contracts/app-api.yaml과 같은지
 npx tsc --noEmit
 npx expo lint
 npm run test:unit                          # 단위 테스트(test/*.test.cjs)
@@ -65,7 +66,7 @@ npx expo export -p web                     # 웹 빌드
 npx playwright test                        # 로컬 백엔드(8080)와 웹(8081)을 먼저 띄운 뒤
 
 # 백엔드 (backend/)
-./gradlew test
+./gradlew test                             # 계약(ContractTest)·정책(*PolicyTest) 테스트 포함
 ```
 
 로컬 실행은 [README](README.md) "로컬에서 실행"을 본다.

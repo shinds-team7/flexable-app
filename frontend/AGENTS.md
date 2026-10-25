@@ -6,6 +6,8 @@
 
 ```bash
 npm ci
+npm run check:api           # API 타입(src/service/api/schema.d.ts)이 스펙과 같은지. 스펙을 바꿨으면 npm run gen:api
+npm run mock:api            # 백엔드 없이 화면 개발: 목 서버 4010(docs/contracts/README.md)
 npx tsc --noEmit            # 타입 검사
 npx expo lint               # 린트
 npm run test:unit           # 단위 테스트(test/*.test.cjs)
@@ -21,7 +23,7 @@ npx expo-doctor             # 의존성·설정 진단
 
 - **Expo는 SDK마다 API가 바뀐다. 기억에 기대지 않는다.** `package.json`의 `expo` 주 버전을 보고 그 버전 문서(`https://docs.expo.dev/versions/v<major>.0.0/`)를, 그 밖은 https://docs.expo.dev/llms.txt 를 읽고 쓴다.
 - 경로: 모든 화면 이동은 Expo Router다. 화면 파일은 `src/app/`에만 두고(파일 하나 = 화면 하나, `_layout.tsx`는 네비게이터), 화면 구현·세션·API 호출은 `src/service/`, 공통 UI는 `src/components/`에 둔다. `Link`·`router`·`useLocalSearchParams`는 `expo-router`에서 가져온다.
-- 공통 UI(`src/components`)는 값을 props로 받아 표시만 한다. API 호출은 `src/service/api/client.ts`를 거친다.
+- 공통 UI(`src/components`)는 값을 props로 받아 표시만 한다. API 호출은 `src/service/api/client.ts`를 거친다. API 응답 타입은 생성 파일 `src/service/api/schema.d.ts`(직접 고치지 않음)에서 가져온다.
 - 금액은 서버가 준 값을 그대로 표시하고 화면에서 다시 계산하지 않는다.
 - 저장 → 화면 이동이 있는 화면은 [Android 빈 화면 버그의 재발 방지 규칙](../docs/bug-transaction-edit-blank-screen.md#재발-방지-규칙)을 지킨다(plain `View`에 조건부 prop 주지 않기, 떠나는 성공 경로에서 상태 바꾸지 않기). 영상은 [코스튬 영상 오류 기록](../docs/bug-outfit-video-lifecycle.md)처럼 해제된 플레이어를 다시 부르지 않는다.
 - `ios/`·`android/`는 자동 생성 폴더라 직접 만들거나 고치지 않는다. 네이티브 설정은 `app.json`과 config plugin으로 한다. 네이티브 모듈을 더하면 Expo Go가 아니라 개발 빌드(`npx expo run:android`)에서 확인하고, 앱 배포는 새 빌드가 필요하다(루트 [ARCHITECTURE](../docs/ARCHITECTURE.md#배포-갈래)).
