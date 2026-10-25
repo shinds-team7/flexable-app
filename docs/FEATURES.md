@@ -22,6 +22,7 @@
 | 웹사이트 연동 | 설정 → 웹사이트 연동: 처리 내용 안내 → 미리 체크되지 않은 "(선택) 웹사이트 연동 개인정보 수집·이용 동의" 체크 → [웹 연동 코드 받기](받은 뒤에는 [새 코드 받기]와 재발급 확인) → 코드 표시·만료 안내, 연동 목록·새로고침·해제 확인. 화면을 다시 열면 체크가 풀린다. 앱 1.4.0으로 배포됨, 개인정보처리방침 4장(10-28 시행). 코드는 6자리·하이픈 없음(#124, 머지됐지만 **운영 미배포** — HANDOFF 0-홈리디자인). 앱 실기기 확인 10-23, 웹 서버와의 실서버 전체 흐름은 확인 기록 없음 | `POST /me/web-link-codes`, `GET·DELETE /me/web-links`, 웹 서버 전용 `/internal/v1/web-links/*`(서비스 키, 회원 정보·시드머니) | `WebLinksScreen.tsx`, `e2e/web-links.spec.ts`(API 모의 응답으로 화면 검증); 백엔드 `WebLinkFlowTest`, `SeedMoneyFlowTest.webLinkReadsConfirmedSeedMoney` |
 | 고정지출 자동 기록 | 화면 없음(내역에 거래로 나타남) | 날짜가 된 고정지출을 서버가 지출 거래로 기록(`budget/FixedExpensePoster.java`) | 백엔드 `ApiFlowTest.fixedExpenses…` |
 | 거래 직접 입력·수정·삭제 | `/transactions`, `/transactions/new`, `/transactions/[id]` → `service/TransactionForm.tsx` | `GET·POST·PATCH·DELETE /transactions`, 재시도 시 같은 `Idempotency-Key` | E2E `real service lifecycle…`, 백엔드 `ApiFlowTest.fullFlow` |
+| 기록 알림 | 화면 없음. 기기 알림을 누르면 `/transactions/new`. 예약은 `service/entryReminder.ts`(시각 계산 `entryReminderTimes.ts`, 권한·채널 `localNotifications.ts`), 마이 '기록 알림'으로 끄기(기기별). 웹은 알림 없음 | 서버 변경 없음. 가장 최근 거래의 `createdAt`(고정지출 자동 기록 포함, 거래 날짜 앞뒤 30일 `GET /transactions`), 없으면 가입 시각부터 24시간마다 알림. 22시~9시에 걸리면 9시로 미루고, 앞으로 7번까지 기기에 예약한다. 앱을 열 때·돌아올 때·화면 데이터를 다시 읽을 때(거래 저장 등) 다시 예약하고, 끄거나 로그아웃하면 취소. 웹·다른 기기에서 한 기록은 이 기기에서 앱을 열어야 반영 | 단위 `test/entry-reminder.test.cjs`(시각 계산). 알림은 웹·E2E로 확인할 수 없어 실기기 확인 필요(#143) |
 | 카테고리 관리 | `/categories` → `service/CategoriesScreen.tsx` | `GET·POST·PATCH·DELETE /categories` (삭제하면 거래는 같은 종류의 기본 '기타'/'기타 수입'으로, 그 이름을 바꿔 찾지 못하면 같은 종류의 첫 기본 카테고리로) | E2E `real service lifecycle…` |
 | 소비 분석 | `/analysis` → `service/AnalysisScreen.tsx` | `GET /analysis/summary` | E2E `real service lifecycle…`(분석 탭 진입) |
 | 예산 다시 설정 | 마이 → 예산 설정 수정 | `PUT /budget/settings` (잔액 기준 시각을 지금으로) | E2E `re-entering the balance…` |
@@ -40,7 +41,7 @@
 문서나 시연에 나와도 실제 앱에는 없다. 스토어 문구·앱 화면에 쓰지 않는다.
 
 - 계좌 연결(오픈뱅킹), AI 소비 분석·추천
-- 결제 알림·문자 자동 기록, 서버 푸시 알림(기기 안에서 예약하는 시드머니 알림만 있음)
+- 결제 알림·문자 자동 기록, 서버 푸시 알림(기기 안에서 예약하는 시드머니·기록 알림만 있음)
 - 예정 지출·고액 지출 계획, 정산
 - 비밀번호 찾기, 이메일 인증
 - 오프라인 저장(SQLite·outbox) — 앱은 온라인 전용

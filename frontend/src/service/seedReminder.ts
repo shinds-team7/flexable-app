@@ -1,32 +1,16 @@
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import { ensureChannel, notificationsAllowed } from "./localNotifications";
 import { useSession } from "./Session";
 
 // 수입일 전날 시드머니 반영 알림. 기기 안에서만 예약하고 서버로 보내는 정보는 없다.
 const ID = "seed-money";
 const CHANNEL = "seed-money";
-// 앱이 열려 있을 때 알림이 와도 배너로 보여 준다.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
 /** 다음 수입일 전날 20시에 알림을 하나만 예약한다(다시 부르면 바꿔 예약). 권한은 처음 한 번만 묻는다. */
 export async function scheduleSeedReminder(nextPayday: string) {
-  let { status } = await Notifications.getPermissionsAsync();
-  if (status === "undetermined")
-    ({ status } = await Notifications.requestPermissionsAsync());
-  if (status !== "granted") return;
-  // 진동 권한은 막아 두었으므로(app.json blockedPermissions) 채널도 진동 없이 만든다.
-  await Notifications.setNotificationChannelAsync(CHANNEL, {
-    name: "시드머니 반영 알림",
-    importance: Notifications.AndroidImportance.DEFAULT,
-    enableVibrate: false,
-  });
+  if (!(await notificationsAllowed())) return;
+  await ensureChannel(CHANNEL, "시드머니 반영 알림");
   const [y, m, d] = nextPayday.split("-").map(Number);
   const at = new Date(y, m - 1, d - 1, 20, 0, 0);
   await Notifications.cancelScheduledNotificationAsync(ID);

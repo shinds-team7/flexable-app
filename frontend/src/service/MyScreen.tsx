@@ -18,7 +18,7 @@ import { api, sessionGeneration } from "./api/client";
 import { getReferral, registerReferral } from "./coinApi";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config";
 import { useHomeStyle } from "./homeStyle";
-import { useSeedReminderSetting } from "./reminderSetting";
+import { useEntryReminderSetting, useSeedReminderSetting } from "./reminderSetting";
 import { useSession } from "./Session";
 import { ErrorNotice, Field } from "./ui";
 import { PROVIDER_NAME } from "./oauth";
@@ -145,6 +145,8 @@ export function MyScreen() {
   const [homeStyle, setHomeStyle] = useHomeStyle();
   // Turning it off cancels the scheduled reminder; the home screen reschedules when it is back on.
   const [remind, setRemind] = useSeedReminderSetting();
+  // Same for the reminder to record; the service layout reschedules it.
+  const [remindEntry, setRemindEntry] = useEntryReminderSetting();
   const logout = async () => {
     if (lock.current) return;
     lock.current = true;
@@ -224,6 +226,15 @@ export function MyScreen() {
             aria-checked={remind}
             right={<SwitchMark on={remind} />}
             onPress={() => setRemind(!remind)}
+          />
+          <Row
+            label="기록 알림"
+            caption="24시간 동안 기록이 없으면 알려 드려요"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: remindEntry }}
+            aria-checked={remindEntry}
+            right={<SwitchMark on={remindEntry} />}
+            onPress={() => setRemindEntry(!remindEntry)}
           />
         </Card>
       )}

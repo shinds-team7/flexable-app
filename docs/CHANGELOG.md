@@ -6,6 +6,7 @@
 
 ## 2026-10-25
 
+- [#146] 기록 알림 추가: 거래 기록이 24시간 없으면 기기 안에서 예약한 알림을 보낸다(가장 최근 거래 `createdAt` 또는 가입 시각부터 24시간마다, 22시~9시면 9시, 7번까지 예약, 마이에서 끄기). PRD §3·§5와 FEATURES "미구현"의 "기기 안에서 예약하는 알림"에 기록 알림을 더했다. 서버 푸시는 여전히 없다 — 영향: 앱 화면(Android, 원격 업데이트로 반영)
 - [#140] `main` 보호 규칙 설정 완료(PR 필수, 백엔드·프론트·E2E CI와 `issue-link`·`spec-change` 통과 필수, CODEOWNERS 경로 리드 승인, 관리자 우회)를 작업 방식 결정 기록에 반영했다. 승인·병합은 리드만 하고(리드 본인 PR은 CI 통과 후 관리자 우회), gowon0은 절차에서 제외했다. 웹 연동 스펙을 바꿀 때 웹 `RestAppApiClient`도 같이 맞춘다고 계약 README에 적었다 — 영향: 전체(이제 `main`에 직접 push 불가, PR에 Issue 번호 필요)
 - [#136] API 계약을 OpenAPI로 옮겼다: `docs/contracts/app-api.yaml`(앱 화면 ↔ 앱 서버), `web-link-api.yaml`(웹 서버가 부르는 `/internal/v1/web-links/*`). `docs/API.md`는 요약이 됐다. 백엔드 `ContractTest`가 응답을 검사하고, 프론트 타입(`npm run gen:api`, CI `check:api`)·목 서버(`npm run mock:api`)를 추가했다. 응답 형식은 바뀌지 않았다 — 영향: 앱 화면·앱 서버(응답을 바꿀 때 스펙 먼저), 웹(`web-link-api.yaml`이 웹 백엔드 `applink`의 기준)
 - [#134] `docs/PRD.md`(목표·사용자·기능 현재 상태·범위·하지 않는 것)와 `docs/policies.md`(수입일·정산 주기, 오늘 쓸 수 있는 돈, 시드머니 반영, 캐릭터 점수 규칙 + 예시 표)를 추가하고, 예시 표를 `tests/policy/*.json` + `BudgetPolicyTest`·`SeedMoneyPolicyTest`·`CharacterPolicyTest`로 묶었다. `docs/API.md`의 계산식은 policies로 옮기고 링크만 남겼다. 계산 규칙 자체는 바뀌지 않았다. 예정 지출·취소·정산(1/N)은 서비스에 없어 정책을 적지 않았다 — 영향: 앱 서버·앱 화면(참고 문서)
