@@ -22,7 +22,9 @@
 | `docs/PRD.md` | `docs/FEATURES.md`를 근거로 요약 | 2단계 #134 |
 | `docs/policies.md` + `tests/policy/` | `docs/API.md`의 예산 계산식을 옮기고 백엔드 `BudgetPolicyTest`·`SeedMoneyPolicyTest`·`CharacterPolicyTest`가 검사 | 2단계 #134 |
 | `docs/contracts/*.yaml` | `app-api.yaml`(앱 화면 ↔ 앱 서버), `web-link-api.yaml`(웹 서버가 부르는 `/internal/v1/web-links/*`). 백엔드 `ContractTest`, 프론트 `gen:api`·`check:api`·`mock:api` | 3단계 #136 |
-| `main` 보호 | PR 필수, CI 필수, CODEOWNERS 경로 리드 리뷰 필수, 관리자 우회 가능 | 4단계(관리자 설정) |
+| `main` 보호 | 저장소 규칙 "main 보호"(웹과 같은 구성). `main` 직접 push·강제 push·삭제 금지, PR 필수, CI `백엔드 테스트`·`프론트엔드 타입 검사·린트`·`웹 빌드·E2E`·`issue-link`·`spec-change` 통과 필수, CODEOWNERS 경로는 리드(@SXXNHU) 승인 필수(그 밖은 승인 없이 CI만 통과하면 병합), 저장소 관리자는 우회 가능 | 4단계 설정 완료(10-25) |
+
+- 승인·병합 절차는 리드(SXXNHU)만 한다. 리드가 올린 CODEOWNERS 경로 PR은 본인이 승인할 수 없으므로, CI 통과를 확인한 뒤 리드가 관리자 우회로 병합한다. gowon0은 팀원이 아니어서 이 절차에서 제외한다(10-25 리드 결정).
 
 - 프론트 타입 생성기 `openapi-typescript`는 TypeScript 5만 지원한다고 선언해 앱(TypeScript 6) 의존성에 넣지 않고 `npx`로 버전을 고정해 실행한다(EAS `npm ci`가 peer 불일치로 깨지지 않게, HANDOFF §3).
 - `web-link-api.yaml`은 웹 백엔드(`applink.AppApiClient`)가 기대하는 계약이라, 바꿀 때는 웹 저장소에도 알린다.
