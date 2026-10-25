@@ -154,7 +154,7 @@ expo-updates를 빼면 위 두 항목(기기 ID, 비정상 종료 로그)과 개
 ### 3.8 기타
 - 정부 앱: 아니요 / 건강 앱: 아니요 / 뉴스 앱: 아니요
 - 권한(1.4.0 코드 기준):
-  - **알림 표시 권한을 요청한다.** 1.3.0부터 `expo-notifications`로 수입일 전날 20시 시드머니 알림을 기기에서 예약하며, 홈 첫 진입 때 권한을 묻는다(`src/service/seedReminder.ts`, 거부해도 홈의 반영 창은 뜬다). Android 13 이상에서는 실행 중 허용을 받는 권한이다
+  - **알림 표시 권한을 요청한다.** 1.3.0부터 `expo-notifications`로 수입일 전날 20시 시드머니 알림을 기기에서 예약하며, 홈 첫 진입 때 권한을 묻는다(`src/service/seedReminder.ts`, 거부해도 홈의 반영 창은 뜬다). 24시간 동안 거래 기록이 없을 때의 기록 알림(`src/service/entryReminder.ts`, #143)도 같은 권한으로 기기에서 예약한다. 둘 다 서버 푸시가 아니라 서버로 보내는 정보가 없다. Android 13 이상에서는 실행 중 허용을 받는 권한이다
   - **다른 앱의 알림을 읽는 알림 접근 권한은 요청하지 않는다.** SMS·위치·연락처도 요청하지 않는다(알림·문자 자동 기록 기능 없음)
   - 1.4.0 AAB의 최종 선언 권한 목록은 아직 App Bundle 탐색기로 확인한 기록이 없다. 아래 목록은 1.3.0 이전 기록이다(TODO: 1.4.0 목록으로 갱신)
   - versionCode 6부터 선언 권한: `INTERNET`, `ACCESS_NETWORK_STATE`, `com.android.vending.CHECK_LICENSE`, `com.flexable.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`(AndroidX 내부용). Expo 기본값·라이브러리가 넣던 저장소 읽기·쓰기, `SYSTEM_ALERT_WINDOW`, `USE_BIOMETRIC`·`USE_FINGERPRINT`, `VIBRATE`는 `app.json`의 `android.blockedPermissions`로 뺐다(이슈 #35). versionCode 5에는 남아 있다
