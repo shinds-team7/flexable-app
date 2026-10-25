@@ -124,7 +124,12 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
     page.getByLabel("준비 중인 코스튬", { exact: true }),
   ).toHaveCount(0);
   await expect(collect).toBeDisabled();
-  await expect(page.getByText(/^다음 코인은 .+에 쌓여요$/)).toBeVisible();
+  // When the next coin would land after midnight (from 23:00 KST) the server sends no nextAt
+  // and the shop shows no hint, so expect what the server actually answered (#157).
+  const hint = page.getByText(/^다음 코인은 .+에 쌓여요$/);
+  if ((await api(page, "GET", "/coins")).passive.nextAt)
+    await expect(hint).toBeVisible();
+  else await expect(hint).toHaveCount(0);
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await Promise.all([checkedIn(page), page.reload()]);
