@@ -1,88 +1,76 @@
-# AGENTS.md
+# 공통 개발 지침(flexable-app)
 
-이 저장소에서 일하는 AI(Claude·Codex·Cursor·Gemini 등)와 사람이 먼저 읽는 안내. `frontend/` 안에서는 [`frontend/AGENTS.md`](frontend/AGENTS.md)(Expo 규칙)도 함께 따른다.
+텅장관리(Flex-able) 앱이다. 화면은 `frontend/`(Expo·React Native, 한 코드로 Android·웹), 앱 서버는 `backend/`(Spring)다. 데스크톱 웹사이트와 시연(`/m`)은 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)이고 서버·DB·계정을 따로 쓴다. 파트별 지침은 [`frontend/AGENTS.md`](frontend/AGENTS.md)·[`backend/AGENTS.md`](backend/AGENTS.md)에 있다. 이 파일에는 무엇을 읽고 어떻게 작업할지만 적고, 제품 내용은 아래 문서에 둔다.
 
-## 무엇을 만드는가
+## 기준 문서(저장소가 유일한 기준본)
 
-텅장관리(Flex-able): 사회초년생용 생활비 관리 앱. 사용자가 **직접 입력한** 잔액·수입일·고정지출·거래로 "오늘 쓸 수 있는 돈"을 계산한다.
-계좌 연결, AI 분석, 알림 자동 기록은 **시연에만 있고 실제 서비스에는 없다.** 시연과 데스크톱 웹사이트는 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)(시연 `/m`)에 있다. 기능별 구현 여부와 근거는 [`docs/FEATURES.md`](docs/FEATURES.md).
-
-## 구조
-
-```text
-backend/                  Spring Boot 4 · Java 21 · MySQL(Flyway). 패키지별: auth, budget, category, transaction, analysis, user, coin, outfit, referral, weblink, 공통 common·config(오류 형식·보안·설정값). Flyway Java 마이그레이션은 src/main/java/db/migration (구성은 backend/README.md)
-frontend/                 Expo(React Native) · Expo Router. 한 코드로 Android·웹
-  src/app/                화면 경로(파일 하나 = 화면 하나). Expo Router 규칙상 경로 파일은 여기에만 둔다
-  src/service/            실제 서비스 화면·세션·API 클라이언트(api/client.ts)
-  src/components/         공통 UI
-  src/theme/, src/utils/  색·글꼴 토큰, 날짜·금액 포맷
-  e2e/                    Playwright(실제 서비스 흐름)
-docs/                     API 계약, 기능 기준표, 운영 인수인계, Play 제출 자료
-.github/workflows/        ci.yml(PR 검증), server-health.yml(운영 서버 15분 감시)
-```
-
-웹사이트는 flexable-web이 자기 서버·DB·계정으로 따로 운영한다(2026-10-20 결정). 이 저장소 `backend/`는 앱 API이고, 웹에는 사용자가 앱에서 받은 연동 코드로 [앱 연동하기]를 했을 때만 서버 간 API(`/internal/v1/web-links/*`)로 회원 정보·시드머니를 준다. 경계와 계약 초안은 [앱·웹 서비스 경계](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/04-service-boundaries.md), 웹 기획 정본은 flexable-web에 있다.
-
-**의존 방향:** 공통 UI(`src/components`)는 값을 props로 받아 표시만 하고, 데이터는 서비스 쪽이 넘긴다.
-
-**요청 하나가 지나가는 길(예: 거래 수정):**
-`src/app/(service)/transactions/[id].tsx` → `src/service/TransactionForm.tsx` → `src/service/api/client.ts` → `PATCH /api/v1/transactions/{id}` → `backend/.../transaction/TransactionController.java` → `TransactionService.java`(`TransactionRepository`로 조회한 엔티티를 고치면 트랜잭션이 끝날 때 JPA가 반영) → MySQL `transactions`
-
-## 먼저 읽을 문서
-
-| 알고 싶은 것 | 문서 |
+| 무엇 | 어디 |
 |---|---|
-| 새 데스크톱 웹사이트 계획(기능·화면·아키텍처·일정) | [웹 제품 정본](https://github.com/shinds-team7/flexable-web/blob/main/docs/product/README.md). 웹 제품 개발은 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web) |
-| 지금 되는 기능과 근거 | [`docs/FEATURES.md`](docs/FEATURES.md) |
-| API 요청·응답, 예산 계산식 | [`docs/API.md`](docs/API.md) |
-| 프론트엔드·백엔드 실행 | [`frontend/README.md`](frontend/README.md), [`backend/README.md`](backend/README.md) |
-| 배포·출시 현황, 다음 할 일 | [`docs/HANDOFF.md`](docs/HANDOFF.md) |
-| 코인·코스튬 규칙, 영상 넣는 절차 | [`docs/coin-plan.md`](docs/coin-plan.md) |
-| Android 저장 후 빈 화면 버그와 재발 방지 규칙 | [`docs/bug-transaction-edit-blank-screen.md`](docs/bug-transaction-edit-blank-screen.md) |
+| 서비스 목적·기능·구현 여부 | [docs/FEATURES.md](docs/FEATURES.md) |
+| 폴더 구조·요청 경로·배포 갈래 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| API 계약·예산 계산식 | [docs/API.md](docs/API.md) |
+| 코인·코스튬 규칙 | [docs/coin-plan.md](docs/coin-plan.md) |
+| 결정 기록 | [docs/decisions/](docs/decisions/README.md) |
+| 문서 변경 이력 | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
+| 배포·출시 현황·할 일 | [docs/HANDOFF.md](docs/HANDOFF.md) |
+| 개인정보처리방침·이용약관 | [docs/play-store/](docs/play-store/README.md)(웹 공개 페이지와 같아야 한다, E2E가 검사) |
+| 작업 방식 자체 | [docs/decisions/2026-10-25-dev-process.md](docs/decisions/2026-10-25-dev-process.md) |
+
+회의·메신저에서 합의한 내용과 채팅에 붙여 넣은 기획은 PR로 저장소에 반영되기 전까지 개발 기준이 아니다. 저장소 문서와 다르면 저장소를 따르고 차이를 알린다. 시연(flexable-web `/m`)에만 있는 기능(계좌 연결, AI 분석, 알림 자동 기록, 예정 지출, 정산)을 서비스 기능으로 오인하지 않는다(FEATURES "미구현").
+
+## 작업 시작 전
+
+- 이번 Issue의 목표·참고 자료·범위·완료 조건을 읽는다. Issue가 없으면 범위와 완료 조건부터 확인한다.
+- Issue와 관련된 기능 행(`docs/FEATURES.md`)과 API·계산식(`docs/API.md`)을 저장소에서 직접 읽는다.
+- `docs/CHANGELOG.md` 최근 항목을 확인한다.
+- 구현 전에 작업 범위, 참고한 문서, 완료 조건을 요약한다.
+
+## 작업 중
+
+- 문서끼리 충돌하거나 정책이 없으면 임의로 확정하지 않고 알린다.
+- 작업 요청 없이 `docs/` 문서를 고치지 않는다. 기능을 추가하거나 바꾸면 `docs/FEATURES.md` 표는 같은 PR에서 고친다.
+- API 요청·응답은 `docs/API.md`와 맞춘다. 계약을 바꿔야 하면 구현하지 말고 먼저 알린다.
+- 정책에 없는 결정은 PR의 "새로 내린 결정" 칸에 적는다. 다른 파트(앱 화면·앱 서버·웹)에 영향을 주면 `docs/decisions/`에 기록한다.
+- 제품 공통 규칙:
+  - **예산 금액은 서버(`BudgetCalculator`)가 최종값이다.** 원 단위 정수, 나눗셈은 내림. 클라이언트에서 따로 계산하지 않는다.
+  - 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다. "계좌 연결", "최근 6개월 거래", "소비 패턴 분석"처럼 없는 기능을 암시하는 말과 개발 용어는 쓰지 않는다.
+  - 약관·개인정보처리방침을 바꾸면 `docs/play-store/*.md`와 웹 화면을 같은 PR에서 고친다(E2E가 검사).
+  - 웹 서버가 부르는 `/internal/v1/web-links/*`를 바꾸면 웹 저장소(flexable-web)에도 알린다.
+  - 버전은 `frontend/app.json`의 `version`이다. 시연 버전은 웹 저장소에서 관리한다.
+  - **공개 저장소다.** 비밀번호·키·개인 계정 정보를 코드·문서·커밋에 넣지 않는다.
+
+## 작업 완료 시
+
+- 바꾼 영역의 검증 명령을 돌리고 결과를 그대로 보고한다. 실기기·배포 확인은 코드 검증과 따로 적는다.
+- PR 템플릿을 채운다: Issue(`Closes #번호`), 참고한 문서, 영향받는 파트, 새로 내린 결정, 검증 결과.
+- 기준 문서·지침(`AGENTS.md`)·결정 기록을 바꾼 PR에는 `spec-change` 라벨을 붙이고 `docs/CHANGELOG.md`에 한 줄을 더한다. CI(`pr-rules`)가 검사한다.
+- 브랜치는 `SXXNHU/<종류>-<내용>`(예: `SXXNHU/fix-dow-ui`), 커밋은 `feat(frontend): 한국어 요약` 형식이다. `main`에서 따서 PR로 머지하고, CI가 실패한 PR은 머지하지 않는다.
+
+## `spec-change` PR이 병합되면
+
+작업 브랜치를 최신 `main`에 rebase하고 CI를 확인한다. 그다음 AI 세션을 새로 시작한다. 진행 중인 세션을 이어 가야 하면 "`docs/CHANGELOG.md`의 최신 항목을 읽고, 변경된 문서를 확인해서 현재 구현과 테스트에 필요한 변경을 먼저 정리해줘"라고 요청한다.
 
 ## 검증 명령
 
+Node 22, Java 21. PR마다 GitHub Actions(`.github/workflows/ci.yml`)가 모두 다시 돌린다(E2E는 정적 웹 빌드 + H2 백엔드).
+
 ```bash
 # 프론트엔드 (frontend/)
+npm ci
 npx tsc --noEmit
 npx expo lint
-npm run test:unit                          # 프론트 단위 테스트(test/*.test.cjs)
+npm run test:unit                          # 단위 테스트(test/*.test.cjs)
 npx expo export -p web                     # 웹 빌드
 npx playwright test                        # 로컬 백엔드(8080)와 웹(8081)을 먼저 띄운 뒤
 
 # 백엔드 (backend/)
 ./gradlew test
-./gradlew bootRun --args='--spring.profiles.active=local'   # MySQL 없이 H2
 ```
 
-코드를 바꿨으면 바꾼 영역의 검사를 돌리고 결과를 그대로 보고한다. 실기기·배포 확인은 코드 검증과 따로 적는다.
-PR을 올리면 GitHub Actions(`.github/workflows/ci.yml`)가 위 검사를 모두 다시 돌린다(E2E는 정적 웹 빌드 + H2 백엔드). CI가 실패한 PR은 머지하지 않는다.
-
-## 배포는 세 갈래다
-
-| 바뀐 것 | 반영 방법 |
-|---|---|
-| 웹 | `main`에 머지하면 Vercel이 자동 배포 |
-| 앱 JS·이미지 | EAS 원격 업데이트(새 설치 없이 반영) |
-| 앱 네이티브(패키지, `app.json` 권한·아이콘·플러그인, SDK) | `app.json` `version`을 올리고 새 빌드 → Play 업로드 |
-| 백엔드 | `backend/deploy/deploy.sh` |
-
-절차와 주의점은 `docs/HANDOFF.md` §4·§5.
-
-## 작업 규칙
-
-- 브랜치: `SXXNHU/<종류>-<내용>`(예: `SXXNHU/fix-dow-ui`), `main`에서 따서 PR로 머지
-- 커밋 메시지: `feat(frontend): 한국어 요약` 형식
-- DB 스키마는 `backend/src/main/resources/db/migration/V{n}__*.sql`을 **추가**한다. 이미 있는 마이그레이션(지금 `V1`~`V11` SQL과 Java `src/main/java/db/migration/V3__fixed_posting_cutover.java`)은 고치거나 지우지 않는다. HANDOFF 기록상 V11까지 운영 DB에 적용됐다(10-23). 다음 번호는 V12
-- 예산 금액은 서버(`BudgetCalculator`)가 최종값이다. 원 단위 정수, 나눗셈은 내림. 클라이언트에서 따로 계산하지 않는다
-- 화면 문구: "입력한 잔액·기록 기준 추정"으로 설명한다. "계좌 연결", "최근 6개월 거래", "소비 패턴 분석"처럼 없는 기능을 암시하는 말과 개발 용어는 쓰지 않는다
-- 버전: 서비스는 `frontend/app.json`의 `version`. 시연 버전은 웹사이트 저장소에서 관리한다
-- 약관·개인정보처리방침을 바꾸면 `docs/play-store/*.md`와 웹 화면이 같아야 한다(E2E가 검사)
-- 패키지는 `npx expo install`로 추가하고, 커밋 전에 `package-lock.json`을 HANDOFF §3대로 확인한다
+로컬 실행은 [README](README.md) "로컬에서 실행"을 본다.
 
 ## 하지 않는 것
 
 - 운영 DB 접속·수정, 서버 `.env`·JWT 비밀키 변경
 - 배포 명령 실행(EAS production 게시·빌드 제출, `deploy.sh`) — 사람이 직접 한다
 - `frontend/ios/`, `frontend/android/` 직접 편집(자동 생성 폴더)
-- **저장소는 공개(PUBLIC)다.** 비밀번호·키·개인 계정 정보를 코드·문서·커밋에 넣지 않는다

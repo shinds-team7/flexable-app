@@ -1,0 +1,28 @@
+# 작업 방식: 저장소 기준본·Issue 단위·spec-change 절차
+
+- 날짜: 2026-10-25 · 결정한 사람: SXXNHU · 관련: Issue #131
+- 영향: 전체(앱 화면·앱 서버·웹 연동·각자의 AI 세션)
+
+## 결정
+
+웹 저장소에서 정한 [작업 방식](https://github.com/shinds-team7/flexable-web/blob/main/docs/decisions/2026-10-25-dev-process.md)을 앱 저장소에도 그대로 쓴다. 규칙(기준본은 저장소 하나, Issue 단위 작업, PR 템플릿·CODEOWNERS·`spec-change`, 문서가 바뀌었을 때의 절차, 개발 중 결정의 기록)은 그 문서가 정본이고, 여기에는 앱 저장소에서 달라지는 경로만 적는다.
+
+## 이유
+
+앱 서버는 웹 서버에 회원 정보·시드머니를 주는 쪽이라 두 저장소의 계약·정책이 맞아야 한다. 같은 절차를 쓰면 어느 쪽 문서가 바뀌었는지, 어느 구현이 어느 문서 버전을 기준으로 했는지 같은 방식으로 추적할 수 있다.
+
+## 바뀌는 것(문서·코드·설정)
+
+| 웹 문서 §2의 항목 | 앱 저장소 | 상태 |
+|---|---|---|
+| 공통 `AGENTS.md`(`CLAUDE.md`는 `@AGENTS.md`) | 루트 `AGENTS.md`. 구조·요청 경로·배포 갈래는 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)로 옮김 | 1단계 |
+| 파트별 `AGENTS.md` | `frontend/AGENTS.md`(Expo 명령·컨벤션), `backend/AGENTS.md` | 1단계 |
+| Issue·PR 템플릿, CODEOWNERS(리드 @SXXNHU), 라벨 `spec-change`·`no-issue`, `pr-rules` | `.github/`. `pr-rules`의 기준 문서 경로에 `frontend/AGENTS.md`를 더함 | 1단계 |
+| `docs/CHANGELOG.md`, `docs/decisions/` | 같은 경로 | 1단계 |
+| `docs/PRD.md` | `docs/FEATURES.md`를 근거로 요약 | 2단계 |
+| `docs/policies.md` + `tests/policy/` | `docs/API.md`의 예산 계산식을 옮기고 백엔드 `*PolicyTest`가 검사 | 2단계 |
+| `docs/contracts/*.yaml` | `app-api.yaml`(앱 화면 ↔ 앱 서버), `web-link-api.yaml`(웹 서버가 부르는 `/internal/v1/web-links/*`). 백엔드 `ContractTest`, 프론트 `gen:api`·`check:api`·`mock:api` | 3단계 |
+| `main` 보호 | PR 필수, CI 필수, CODEOWNERS 경로 리드 리뷰 필수, 관리자 우회 가능 | 4단계(관리자 설정) |
+
+- 2·3단계가 병합되기 전까지 API 계약과 계산식의 정본은 `docs/API.md`다.
+- `web-link-api.yaml`은 웹 백엔드(`applink.AppApiClient`)가 기대하는 계약이라, 바꿀 때는 웹 저장소에도 알린다.

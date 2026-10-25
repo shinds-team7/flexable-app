@@ -60,7 +60,7 @@ npm run web
 ## 처음 보는 사람이 읽는 순서
 
 1. [`docs/FEATURES.md`](docs/FEATURES.md) — 지금 되는 기능, 시연에만 있는 기능, 아직 없는 기능
-2. [`AGENTS.md`](AGENTS.md) — 폴더 구조, 의존 방향, 검증 명령, 작업 규칙 (AI 도구도 이 파일을 읽는다)
+2. [`AGENTS.md`](AGENTS.md) — 기준 문서, 작업 절차(Issue → PR), 검증 명령 (AI 도구도 이 파일을 읽는다). 폴더 구조·의존 방향·배포 갈래는 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 3. [`docs/API.md`](docs/API.md) — API와 "오늘 쓸 수 있는 돈" 계산식
 4. [`frontend/README.md`](frontend/README.md), [`backend/README.md`](backend/README.md) — 영역별 실행·구조
 5. [`docs/HANDOFF.md`](docs/HANDOFF.md) — 배포·출시 현황과 다음 할 일
