@@ -92,12 +92,20 @@ class SeedMoneyFlowTest {
 		return String.valueOf((Object) JsonPath.read(r.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8), path));
 	}
 
+	/** 토큰 만료는 실제 시각으로 검사하므로, 가입(토큰 발급)만 지금 시각에 하고 고정한 시각으로 돌아온다. */
 	private String signup() throws Exception {
-		ResultActions r = mvc.perform(post("/api/v1/auth/signup").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"email\":\"seed-" + UUID.randomUUID()
-					+ "@example.com\",\"password\":\"abcd1234\",\"agreeTerms\":true,\"agreePrivacy\":true}"))
-			.andExpect(status().isCreated());
-		return read(r, "$.accessToken");
+		Instant fixed = clock.now;
+		clock.now = Instant.now();
+		try {
+			ResultActions r = mvc.perform(post("/api/v1/auth/signup").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"email\":\"seed-" + UUID.randomUUID()
+						+ "@example.com\",\"password\":\"abcd1234\",\"agreeTerms\":true,\"agreePrivacy\":true}"))
+				.andExpect(status().isCreated());
+			return read(r, "$.accessToken");
+		}
+		finally {
+			clock.now = fixed;
+		}
 	}
 
 	private static final String SETTINGS = "{\"balance\":1000000,\"payday\":26,\"incomeAmount\":2000000,"
