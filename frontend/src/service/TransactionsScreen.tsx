@@ -14,6 +14,9 @@ import {
 } from "./ui";
 import type { Transaction } from "./types";
 import { colors } from "@/theme";
+// 서버가 거래의 카테고리를 찾지 못하면 category가 null로 온다(docs/contracts/app-api.yaml Transaction).
+const NO_CATEGORY = { name: "카테고리 없음", icon: "pricetag", color: colors.textMuted };
+const categoryOf = (t: Transaction) => t.category ?? NO_CATEGORY;
 export function TransactionsScreen() {
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState("ALL");
@@ -134,12 +137,12 @@ export function TransactionsScreen() {
                         borderRadius: 20,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: t.category.color + "1F",
+                        backgroundColor: categoryOf(t).color + "1F",
                       }}
                     >
                       <CategoryIcon
-                        icon={t.category.icon}
-                        color={t.category.color}
+                        icon={categoryOf(t).icon}
+                        color={categoryOf(t).color}
                       />
                     </View>
                     <View style={{ flex: 1, gap: 3 }}>
@@ -148,7 +151,7 @@ export function TransactionsScreen() {
                       </T>
                       <T size={12} color={colors.textMuted}>
                         {toSeoulInput(t.occurredAt).slice(11, 16)} ·{" "}
-                        {t.category.name}
+                        {categoryOf(t).name}
                       </T>
                     </View>
                     <T
