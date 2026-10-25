@@ -13,7 +13,7 @@ ${topic({
         "파일 = 화면. <code>src/app/(service)/(tabs)/home.tsx</code> → 주소 <code>/home</code>.",
         "<code>[id].tsx</code> = 주소의 변수 자리. <code>useLocalSearchParams()</code>로 꺼낸다.",
         "<code>(service)</code>, <code>(tabs)</code>처럼 괄호 폴더는 주소에 나타나지 않는 <b>묶음</b>. 묶음마다 <code>_layout.tsx</code>가 공통 틀(검사·탭 바)을 둔다.",
-        "경로 파일은 <code>src/app</code>에만 둔다(AGENTS.md). 그래서 경로 파일은 대부분 한두 줄이고, 실제 화면은 <code>src/service</code>에 있다.",
+        "경로 파일은 <code>src/app</code>에만 둔다(<code>frontend/AGENTS.md</code>, <code>docs/ARCHITECTURE.md</code>). 그래서 경로 파일은 대부분 한두 줄이고, 실제 화면은 <code>src/service</code>에 있다.",
       ]), true),
       role: `<pre class="code-plain">src/app/
 ├─ _layout.tsx                 앱 전체 틀: 세션·토스트·필수 업데이트       → {{c:RootLayout}}
@@ -52,7 +52,7 @@ ${topic({
       id: "front.components", title: "src/components와 props",
       problem: "같은 버튼·카드를 화면마다 새로 만들면 모양이 어긋난다.",
       basics: basic("props란", p("부모가 자식 컴포넌트에 넘기는 값이다. <code>&lt;Button label=\"저장하기\" disabled={busy} onPress={save} /&gt;</code>에서 <code>label</code>, <code>disabled</code>, <code>onPress</code>가 props다. 자식은 받은 대로 그리고, 눌리면 받은 함수를 부를 뿐이다.")),
-      role: "AGENTS.md의 의존 방향 규칙: <b>공통 UI(<code>src/components</code>)는 값을 props로 받아 표시만 하고, 데이터는 서비스 쪽이 넘긴다</b> {{b:doc}}. 실제로 <code>src/components</code>의 파일들은 <code>api()</code>를 import하지 않는다 {{b:code}}. 예: {{c:TodayHeroView}}는 <code>todayAvailable</code>·<code>daysLeft</code>를 받아 카드만 그린다.",
+      role: "<code>docs/ARCHITECTURE.md</code>의 의존 방향 규칙: <b>공통 UI(<code>src/components</code>)는 값을 props로 받아 표시만 하고, 데이터는 서비스 쪽이 넘긴다</b> {{b:doc}}. 실제로 <code>src/components</code>의 파일들은 <code>api()</code>를 import하지 않는다 {{b:code}}. 예: {{c:TodayHeroView}}는 <code>todayAvailable</code>·<code>daysLeft</code>를 받아 카드만 그린다.",
       code: "{{c:componentsUi}}(Button·Field·Segment·ConfirmModal), {{c:TodayHeroView}}, <code>DayBudgets.tsx</code>, <code>Donut.tsx</code>, <code>CharacterStage.tsx</code>, {{c:SubHeader}}, <code>Toast.tsx</code>. 색·간격은 {{c:theme}}.",
       io: "서비스 화면이 받은 서버 값 → props → 공통 UI가 그림",
       next: "{{c:HomeScreen}}에서 {{c:TodayHeroView}}로 무엇을 넘기는지 보기",
