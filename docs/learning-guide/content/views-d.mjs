@@ -32,11 +32,13 @@ ${table(["단계", "저장 전", "9,000원 저장 후"], [
 ])}
 <p>테스트의 예제({{x:BudgetCalculatorTest}} <code>computesDocumentedExample</code>)도 같은 식이다: 잔액 1,250,000, 10:00 이후 지출 12,000·수입 30,000, 09:00 지출 58,000(기준 시각 전이라 잔액에는 이미 반영) → 추정 잔액 1,268,000, 남은 생활비 518,000, 오늘 쓴 돈 70,000(09:00 지출도 오늘 쓴 돈에는 들어감), 하루 예산 ⌊588,000 ÷ 13⌋ = 45,230, 오늘 쓸 수 있는 돈 −24,770.</p>
 ${snip("t-calc-example")}
+<p>같은 규칙을 표로 적은 문서가 <code>docs/policies.md</code>이고, 그 표를 JSON으로 옮긴 <code>tests/policy/budget.json</code>을 {{x:BudgetPolicyTest}}가 읽는다. 표 한 줄이 테스트 하나라, 문서를 고치고 코드를 안 고치면(또는 반대로) 테스트가 실패한다 {{b:test}}.</p>
+${snip("cfg-policy-budget")}${snip("t-policy-payday")}
 ${h3("design.sim", "계산 시뮬레이터(학습용)")}
 <p>서버 <code>BudgetCalculator.compute</code>를 자바스크립트로 그대로 옮긴 <b>학습 도구</b>다. 서비스 코드가 아니며 앱은 이 계산을 하지 않는다. 가이드를 만들 때 <code>BudgetCalculatorTest</code>의 기대값 55개와 모두 같은지 자동으로 검사했다 {{b:ran}}. 공휴일 목록은 <code>PublicHolidays.java</code>에서 그대로 읽었다.</p>
 <div id="sim-slot" class="sim"></div>`,
-      rules: ul(["최종값은 서버만 계산한다. 앱은 받은 값을 그린다(AGENTS.md).", "원 단위 정수, 나눗셈은 내림.", "계산식을 바꾸면 <code>docs/API.md</code> \"GET /budget/today\"를 먼저 고친다(API.md 머리말: 이 문서가 계약).", "<code>SeedMoneyService.allAmount</code>도 같은 <code>compute</code>를 주기 마지막 날 기준으로 다시 쓴다. 바꾸면 시드머니 'ALL' 금액도 바뀐다."]),
-      tests: "{{x:BudgetCalculatorTest}} 11개(수입일·주말·공휴일·말일·고정지출 횟수·예제·음수), 직접 실행 통과 {{b:ran}}. API 수준은 {{x:ApiFlowTest}} <code>fullFlow</code>(<code>todaySpent</code>, <code>estimatedBalance</code>).",
+      rules: ul(["최종값은 서버만 계산한다. 앱은 받은 값을 그린다(AGENTS.md).", "원 단위 정수, 나눗셈은 내림.", "계산 규칙의 정본은 <code>docs/policies.md</code> §1·§2다(10-25 <code>docs/API.md</code>에서 옮김). 식을 바꾸려면 그 예시 표와 <code>tests/policy/budget.json</code>을 같은 PR에서 먼저 고친다(<code>spec-change</code>, 리드 리뷰).", "<code>SeedMoneyService.allAmount</code>도 같은 <code>compute</code>를 주기 마지막 날 기준으로 다시 쓴다. 바꾸면 시드머니 'ALL' 금액도 바뀐다."]),
+      tests: "{{x:BudgetCalculatorTest}} 11개(수입일·주말·공휴일·말일·고정지출 횟수·예제·음수)와 정책 예시 표를 읽는 {{x:BudgetPolicyTest}} 13개, 직접 실행 통과 {{b:ran}}. API 수준은 {{x:ApiFlowTest}} <code>fullFlow</code>(<code>todaySpent</code>, <code>estimatedBalance</code>).",
       effect: "계산이 DB·스프링을 모르는 순수 함수라 입력만 바꿔 바로 검사할 수 있다. 앱·웹이 같은 값을 보여 준다.",
       why: "AGENTS.md에 '예산 금액은 서버(BudgetCalculator)가 최종값'이라는 규칙만 있고 이유는 적혀 있지 않다. 앱 버전이 섞여 있어도(원격 업데이트 전후) 같은 결과를 내려는 것으로 보인다 {{b:infer}}.",
       limits: ul([
@@ -213,17 +215,19 @@ ${steps([
   ["엔티티", "{{c:Transaction}} 필드 + <code>@Column</code>, 생성자, <code>update()</code>. <code>ddl-auto: validate</code>라 DB에 열이 없으면 서버가 뜨지 않는다."],
   ["DTO", "{{c:TransactionDtos}} <code>CreateRequest</code>(검증 어노테이션), <code>UpdateRequest</code>, <code>TransactionResponse.of</code>."],
   ["서비스", "{{c:TransactionService}} <code>createOnce</code>·<code>update</code>에서 값 넘기기."],
-  ["프론트", "{{c:types}} <code>Transaction</code>, {{c:TransactionForm}} state·입력칸·<code>body</code>."],
-  ["문서·테스트", "<code>docs/API.md</code>(계약) 먼저, {{x:ApiFlowTest}}에 검사 추가, E2E에 입력 추가."],
+  ["프론트", "{{c:TransactionForm}} state·입력칸·<code>body</code>. 타입은 손으로 고치지 않는다({{c:types}}는 생성 타입의 별칭)."],
+  ["계약", "구현보다 먼저 <code>docs/contracts/app-api.yaml</code>의 <code>Transaction</code>·요청 스키마에 필드를 더한다(계약 변경은 먼저 알리고 <code>spec-change</code>). 응답에 스펙에 없는 필드가 나오면 {{x:ContractTest}}가 실패하므로 순서를 바꿀 수 없다."],
+  ["프론트 타입·테스트", "<code>npm run gen:api</code>로 <code>schema.d.ts</code>를 다시 만든다(CI <code>check:api</code>가 검사). {{x:ApiFlowTest}}에 검사 추가, E2E에 입력 추가."],
   ["배포 순서", "백엔드(마이그레이션 포함) 먼저 → 앱. 반대로 하면 옛 서버가 모르는 필드를 받거나 새 앱이 없는 필드를 기다린다 {{b:infer}}."],
 ])}
 ${h2("change.calc", "예산 계산 바꾸기")}
 ${table(["볼 파일", "같이 흔들리는 것", "확인"], [
-  ["{{c:BudgetCalculator}} <code>compute</code>, 입력을 모으는 {{c:BudgetService}} <code>today</code>", "{{c:SeedMoneyService}} <code>allAmount</code>(같은 compute 사용), {{t:daily_budgets}}에 저장되는 하루 예산 → 캐릭터 점수·코인 보너스 판단, <code>docs/API.md</code> 계산식, 이 가이드의 시뮬레이터", "{{x:BudgetCalculatorTest}}에 숫자 예제 추가 → <code>./gradlew test</code>"],
+  ["{{c:BudgetCalculator}} <code>compute</code>, 입력을 모으는 {{c:BudgetService}} <code>today</code>", "{{c:SeedMoneyService}} <code>allAmount</code>(같은 compute 사용), {{t:daily_budgets}}에 저장되는 하루 예산 → 캐릭터 점수·코인 보너스 판단, <code>docs/policies.md</code> 예시 표와 <code>tests/policy/budget.json</code>, 이 가이드의 시뮬레이터", "표와 JSON을 먼저 고치고 → {{x:BudgetPolicyTest}}·{{x:BudgetCalculatorTest}} → <code>./gradlew test</code>"],
 ])}
 ${p("과거 날짜의 하루 예산은 이미 저장돼 있으므로 식을 바꿔도 지난 점수는 그대로이고, 바꾼 날부터 새 식의 값이 쌓인다 {{b:infer}}. 앱은 계산하지 않으므로 프론트는 보통 바꿀 것이 없다.")}
 ${h2("change.response", "API 응답 필드 추가")}
-${ul(["백엔드: 응답 record(예: <code>BudgetDtos.TodayResponse</code>)에 필드 추가, 만드는 곳(<code>compute</code>, <code>withCharacter</code>) 수정.", "프론트: {{c:types}}에 필드 추가. 옛 서버가 아직 안 주는 기간이 있으면 선택(<code>?</code>)으로 둔다(<code>User.provider?</code>가 그런 예, 주석 '소셜 로그인 전 서버').", "문서: <code>docs/API.md</code>. 테스트: <code>jsonPath(\"$.새필드\")</code>.", "옛 앱은 모르는 필드를 무시하므로 백엔드를 먼저 내도 된다 {{b:infer}}."])}
+${ul(["백엔드: 응답 record(예: <code>BudgetDtos.TodayResponse</code>)에 필드 추가, 만드는 곳(<code>compute</code>, <code>withCharacter</code>) 수정.", "계약: <code>docs/contracts/app-api.yaml</code>에 먼저 적는다. 스키마가 <code>additionalProperties: false</code>라 적지 않은 필드를 내보내면 {{x:ContractTest}}가 실패한다. 테스트: <code>jsonPath(\"$.새필드\")</code>.", "프론트: <code>npm run gen:api</code>로 타입을 다시 만들면 {{c:types}}를 거쳐 화면에 바로 반영된다. 옛 서버가 아직 안 주는 기간이 있으면 계약에서 그 필드를 필수(<code>required</code>)에 넣지 않으면 된다.", "옛 앱은 모르는 필드를 무시하므로 백엔드를 먼저 내도 된다 {{b:infer}}."])}
+${snip("cfg-contract-tx")}
 ${h2("change.column", "DB 컬럼 추가")}
 ${ol(["<code>backend/src/main/resources/db/migration/V12__설명.sql</code>을 <b>추가</b>(V1~V11과 V3 Java는 수정·삭제 금지). 시각 값을 넣는 데이터 변경처럼 DB 세션 시간대에 기대면 안 되는 것은 Java 마이그레이션.", "NOT NULL 열은 기존 행 때문에 DEFAULT가 필요하다(<code>from_fixed BOOLEAN NOT NULL DEFAULT FALSE</code>가 예).", "엔티티에 <code>@Column</code>. 로컬 <code>bootRun</code>으로 Flyway 적용·검증 통과 확인 → <code>./gradlew test</code>(H2에서도 같은 SQL이 돌아야 한다).", "배포하면 새 <code>app.jar</code>가 켜질 때 운영 RDS에 적용된다. Flyway는 자동으로 되돌리지 않는다. 되돌리려면 새 번호의 마이그레이션을 만든다.", "HANDOFF에 적용 기록을 남긴다(지금 'V11까지 운영 적용' 기록이 있음)."])}
 ${h2("change.logout", "'로그인이 풀려요' 조사")}
@@ -250,12 +254,13 @@ ${p("관련 테스트: E2E <code>real service lifecycle…</code>가 저장 전�
 
   const ops = {
     id: "ops", title: "실행·테스트·배포 이해", group: "실무",
-    summary: "로컬 실행, 설정·환경변수, 테스트 종류, CI, 테스트 밖 영역, 배포 갈래, 스키마 변경",
+    summary: "로컬 실행, 설정·환경변수, 테스트 종류, CI, PR이 머지되기까지, 테스트 밖 영역, 배포 갈래, 스키마 변경",
     html: `${h2("ops.local", "로컬 실행 순서")}
 ${steps([
   ["준비", "JDK 21, Node 22 이상(README)."],
   ["백엔드", "<code>cd backend</code> → <code>./gradlew bootRun --args='--spring.profiles.active=local'</code> → <code>curl http://localhost:8080/api/v1/health</code> → <code>{\"status\":\"UP\"}</code>. MySQL 없이 H2 파일 DB, 개발용 JWT 키."],
   ["웹", "<code>cd frontend</code> → <code>npm ci</code> → <code>.env.example</code>을 <code>.env.local</code>로 복사(<code>EXPO_PUBLIC_API_URL=http://localhost:8080</code>) → <code>npm run web</code> → <code>http://localhost:8081</code>."],
+  ["백엔드 없이 화면만(선택)", "<code>npm run mock:api</code> → 계약(<code>app-api.yaml</code>)의 예시 값으로 답하는 목 서버가 <code>http://localhost:4010</code>에 뜬다(Prism). <code>.env.local</code>의 주소를 4010으로 바꾸고 <code>npm run web</code>. 계산·저장은 하지 않으므로 화면 모양 확인용이다."],
   ["Android(선택)", "날짜 선택기·알림·영상 같은 네이티브 모듈은 Expo Go가 아니라 개발 빌드에서 확인(frontend README)."],
   ["끝낼 때", "EAS 빌드 전에는 <code>./gradlew --stop</code>과 로컬 서버 종료(잠금 파일 때문에 업로드가 실패한 기록, HANDOFF §4-2)."],
 ])}
@@ -282,16 +287,39 @@ ${snip("cfg-app-yml-app")}
 ${h2("ops.tests", "단위·통합·E2E 테스트의 차이")}
 ${table(["종류", "무엇을 띄우나", "이 저장소", "개수(소스 기준)", "이번 실행"], [
   ["백엔드 단위", "클래스 하나(스프링 없음)", "<code>BudgetCalculatorTest</code>, <code>CharacterScoreTest</code>, 제한기 테스트 등", "—", "아래 합계에 포함"],
-  ["백엔드 통합", "스프링 전체 + H2 메모리 + MockMvc(가짜 HTTP)", "<code>ApiFlowTest</code>, <code>SecurityTest</code>, <code>CoinFlowTest</code> …", "13개 클래스 86개", "<code>./gradlew test</code> 86개 통과(2026-10-25) {{b:ran}}"],
-  ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "6개", "<code>npm run test:unit</code> 6개 통과 {{b:ran}}"],
-  ["타입 검사·린트", "—", "<code>tsc</code>, <code>expo lint</code>", "—", "둘 다 오류 없음(종료 코드 0) {{b:ran}}"],
+  ["백엔드 정책", "<code>tests/policy/*.json</code>의 표 한 줄 = 테스트 하나", "<code>BudgetPolicyTest</code>·<code>CharacterPolicyTest</code>(단위), <code>SeedMoneyPolicyTest</code>(API)", "3개 클래스 25개", "아래 합계에 포함"],
+  ["백엔드 계약", "스프링 전체 + MockMvc, 응답을 OpenAPI 스펙으로 검사", "<code>ContractTest</code>", "5개", "아래 합계에 포함"],
+  ["백엔드 통합", "스프링 전체 + H2 메모리 + MockMvc(가짜 HTTP)", "<code>ApiFlowTest</code>, <code>SecurityTest</code>, <code>CoinFlowTest</code> …", "백엔드 전체 17개 클래스 116개", "<code>./gradlew test</code> 116개 통과(2026-10-25) {{b:ran}}"],
+  ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "12개(api-session 3·entry-reminder 6·outfit-lifecycle 3)", "<code>npm run test:unit</code> 12개 통과(10-25) {{b:ran}}"],
+  ["타입 검사·린트·계약 타입", "—", "<code>tsc</code>, <code>expo lint</code>, <code>check:api</code>", "—", "<code>check:api</code>·<code>tsc</code>·<code>lint</code> 모두 통과(10-25, #148 코드) {{b:ran}}"],
   ["E2E", "실제 브라우저(Playwright) + 실제 백엔드(H2) + 정적 웹", "<code>e2e/*.spec.ts</code>", "20개(service 15·coins 3·web-links 2)", "로컬 실행 안 함. PR #128·#129·#130의 CI 통과 {{b:ci}}"],
 ])}
+${p("<b>시계를 고정하는 테스트</b>: 시드머니·코인처럼 날짜에 달린 규칙은 테스트가 주입 <code>Clock</code>을 특정 날짜로 고정한다. 그런데 토큰 만료 검사는 실제 시각을 쓴다. 그래서 고정 시각(예: 10-01)에 가입하면 그 토큰의 30일 만료가 실제 날짜 10-31에 닥쳐 테스트가 401로 깨질 뻔했다. #138에서 가입만 지금 시각에 하고 고정 시각으로 돌아오게 고쳤다({{x:SeedMoneyFlowTest}}, {{x:CoinFlowTest}}. 새로 생긴 {{x:ContractTest}}·{{x:SeedMoneyPolicyTest}}는 처음부터 같은 방식) {{b:code}}.")}
 ${p("<b>실제 API와 mock</b>: E2E는 기본적으로 진짜 백엔드를 부른다. 시간이 필요하거나 외부 공급자가 필요한 곳만 특정 응답을 가짜로 바꾼다 {{b:test}}: 소셜 로그인 교환 응답, Google 연결 계정의 로그인 응답, 시간 적립 모으기, 시드머니 반영 대기, 웹 연동 화면의 API 전부, 카카오 계정처럼 보이게 한 <code>/me</code>. mock으로 확인한 것은 '화면이 그 응답을 잘 처리하는가'이지 서버 동작이 아니다. 서버 쪽은 백엔드 통합 테스트가 따로 본다.")}
 ${h2("ops.ci", "CI가 검사하는 것")}
 ${snip("cfg-ci")}
-${ul(["<b>백엔드 테스트</b>: <code>./gradlew test</code>", "<b>프론트엔드</b>: Node 22·npm 10으로 <code>npm ci</code>(EAS와 같은 조건, Windows에서 만든 lock 파일 문제를 잡음) → <code>tsc</code> → <code>expo lint</code> → <code>test:unit</code>", "<b>웹 빌드·E2E</b>: H2 백엔드를 띄우고 <code>expo export -p web</code> → <code>serve -s dist</code> → <code>playwright test</code>", "별도로 <code>server-health.yml</code>이 15분마다 운영 <code>/actuator/health</code>·웹 <code>/privacy</code>·인증서 만료를 밖에서 확인하고 실패하면 이슈를 연다 {{b:config}}"])}
-${p("CI가 실패한 PR은 머지하지 않는다(AGENTS.md). PR #128·#129·#130의 CI 통과를 2026-10-24 확인했다 {{b:ci}}. 그 뒤 가이드 수정의 CI 결과와 운영 배포 여부는 별개다.")}
+${ul(["<b>백엔드 테스트</b>: <code>./gradlew test</code>(계약·정책 테스트 포함. <code>docs/contracts</code>·<code>tests/policy</code>가 바뀌어도 다시 돈다)", "<b>프론트엔드</b>: Node 22·npm 10으로 <code>npm ci</code>(EAS와 같은 조건, Windows에서 만든 lock 파일 문제를 잡음) → <code>check:api</code>(계약에서 다시 만든 <code>schema.d.ts</code>가 커밋된 것과 같은지) → <code>tsc</code> → <code>expo lint</code> → <code>test:unit</code>", "<b>웹 빌드·E2E</b>: H2 백엔드를 띄우고 <code>expo export -p web</code> → <code>serve -s dist</code> → <code>playwright test</code>", "별도로 <code>server-health.yml</code>이 15분마다 운영 <code>/actuator/health</code>·웹 <code>/privacy</code>·인증서 만료를 밖에서 확인하고 실패하면 이슈를 연다 {{b:config}}"])}
+${p("CI가 실패한 PR은 머지하지 않는다(AGENTS.md). 10-25부터는 <code>main</code> 보호 규칙이 이것을 강제한다(아래). PR #128·#129·#130의 CI 통과를 2026-10-24 확인했다 {{b:ci}}. CI 통과와 운영 배포 여부는 별개다.")}
+${h2("ops.pr", "PR이 머지되기까지(10-25 도입한 작업 방식)")}
+${p("2026-10-25 웹 저장소와 같은 작업 방식을 앱 저장소에도 들였다(<code>docs/decisions/2026-10-25-dev-process.md</code> {{b:doc}}). 핵심은 <b>저장소 문서가 유일한 기준</b>이라는 것이다. 회의·메신저에서 합의한 내용도 PR로 문서에 들어오기 전까지는 개발 기준이 아니다.")}
+${steps([
+  ["Issue", "목표·참고 자료·범위·완료 조건을 Issue 템플릿(<code>.github/ISSUE_TEMPLATE</code>)으로 적는다."],
+  ["브랜치", "<code>main</code>에서 <code>SXXNHU/&lt;종류&gt;-&lt;내용&gt;</code>(예: <code>SXXNHU/fix-dow-ui</code>). 커밋은 <code>feat(frontend): 한국어 요약</code> 형식."],
+  ["작업", "관련 <code>docs/policies.md</code> 항목과 <code>docs/contracts/</code>를 먼저 읽는다. 정책에 없는 결정은 PR의 '새로 내린 결정' 칸에, 다른 파트에 영향이 있으면 <code>docs/decisions/</code>에 남긴다."],
+  ["PR", "템플릿(<code>.github/pull_request_template.md</code>)에 <code>Closes #번호</code>, 참고한 문서, 영향받는 파트, 검증 결과를 채운다."],
+  ["자동 검사", "<code>ci.yml</code>(백엔드·프론트·E2E)와 <code>pr-rules.yml</code>: <b>issue-link</b>(본문에 Issue 번호, 긴급 수정은 <code>no-issue</code> 라벨), <b>spec-change</b>(기준 문서를 바꿨으면 라벨 + <code>docs/CHANGELOG.md</code> 한 줄)."],
+  ["승인·병합", "<code>main</code> 보호: 직접 push·강제 push 금지, 위 CI 다섯 개 통과 필수, CODEOWNERS 경로(지침·PRD·정책·계약·결정·<code>tests/policy</code>·워크플로)는 리드 승인 필수. 승인·병합은 리드만 한다."],
+  ["기준 문서가 바뀐 뒤", "<code>spec-change</code> PR이 병합되면 봇이 열린 PR마다 안내 댓글을 단다. 작업 브랜치를 최신 <code>main</code>에 rebase하고, AI 세션을 새로 시작한다(이전 대화가 옛 문서를 기억하므로)."],
+])}
+${snip("cfg-pr-rules")}
+${table(["무엇", "어디(저장소가 기준본)"], [
+  ["목적·사용자·기능·범위", "<code>docs/PRD.md</code>, 기능별 화면·API·확인 방법은 <code>docs/FEATURES.md</code>"],
+  ["계산·상태 규칙과 예시 표", "<code>docs/policies.md</code> = <code>tests/policy/*.json</code> = <code>*PolicyTest</code>"],
+  ["API 계약", "<code>docs/contracts/app-api.yaml</code>, <code>web-link-api.yaml</code>(정본). <code>docs/API.md</code>는 요약·동작 설명"],
+  ["폴더 구조·요청 경로·배포 갈래", "<code>docs/ARCHITECTURE.md</code>(10-25 루트 AGENTS.md에서 옮김)"],
+  ["결정 기록, 문서 변경 이력", "<code>docs/decisions/</code>, <code>docs/CHANGELOG.md</code>"],
+  ["배포·출시 현황·할 일", "<code>docs/HANDOFF.md</code>"],
+])}
 ${h2("ops.untested", "코드 테스트로 확인되지 않는 영역")}
 ${ul([
   "<b>실기기 전용</b>: SecureStore, 기기 알림 예약, 영상 재생, 네이티브 날짜 선택기, 원격 업데이트 적용, 필수 업데이트 창, 화면 회전, R8 난독화. HANDOFF에 10-23 사용자 실기기 확인 기록이 있다 {{b:doc}}.",

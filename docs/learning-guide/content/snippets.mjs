@@ -34,7 +34,7 @@ export const SNIPPETS = [
   { id: "fe-useresource", path: F + "service/ui.tsx", from: "export function useResource<T>", to: "}, [identity, path, revision, nonce]),", toOffset: 1, title: "useResource — 화면 데이터 읽기" },
   { id: "fe-guard", path: F + "service/ui.tsx", from: "export function Guard({", to: "return <>{children}</>;", toOffset: 1, title: "로그인·예산 설정 검사" },
   { id: "fe-goback", path: F + "components/SubHeader.tsx", from: "export function goBack", lines: 4, title: "뒤로 가기(기록 없으면 대체 경로)" },
-  { id: "fe-types-tx", path: F + "service/types.ts", from: "export type Transaction = {", to: "};", title: "거래 응답 타입" },
+  { id: "fe-types-tx", path: F + "service/types.ts", from: "// 서버 응답 타입.", to: 'export type Transaction = S["Transaction"];', title: "계약에서 만든 타입을 다시 내보내는 types.ts" },
   // ---------- 다른 화면 ----------
   { id: "fe-home-top", path: F + "service/HomeScreen.tsx", from: "export function HomeScreen()", lines: 2, title: "홈이 오늘 예산을 읽는 줄" },
   { id: "fe-home-checkin", path: F + "service/HomeScreen.tsx", from: "const runCheckIn = useCallback", to: "}, [runCheckIn]);", title: "캐릭터 홈의 check-in" },
@@ -44,6 +44,7 @@ export const SNIPPETS = [
   { id: "fe-onb-save", path: F + "service/OnboardingScreen.tsx", from: 'if (step === "protect") {', to: "router.push(path(dest));", toOffset: 2, title: "예산 설정 마지막 단계 저장" },
   { id: "fe-draft-persist", path: F + "service/BudgetDraft.tsx", from: "const key = `flexable.service.draft.", to: ".catch((error) => setFailure({ owner: id, error }));", toOffset: 1, title: "예산 설정 임시 저장" },
   { id: "fe-coinapi", path: F + "service/coinApi.ts", whole: true, title: "코인·코스튬 API 함수" },
+  { id: "fe-entry-times", path: F + "service/entryReminderTimes.ts", from: "/** 밤(22시~9시 전)이면", to: "return times;", toOffset: 1, title: "기록 알림 시각 계산" },
   { id: "fe-seed-reminder", path: F + "service/seedReminder.ts", from: "/** 다음 수입일 전날 20시에", to: "const at = new Date(y, m - 1, d - 1, 20, 0, 0);", title: "수입일 전날 기기 알림" },
   // ---------- 백엔드: 거래 ----------
   { id: "be-tx-controller", path: B + "transaction/TransactionController.java", from: "@RestController", to: "void delete(", toOffset: 3, title: "TransactionController 전체" },
@@ -153,6 +154,11 @@ export const SNIPPETS = [
   { id: "t-fixed-rename", path: T + "ApiFlowTest.java", from: "void renamingAFixedExpenseDoesNotPostItsPastDatesAgain()", fromOffset: -1, to: "void logoutRevokesToken()", toOffset: -3, title: "이름 변경·삭제 후 재변경에도 중복 기록 방지" },
   { id: "t-logout", path: T + "ApiFlowTest.java", from: "void logoutRevokesToken()", fromOffset: -1, lines: 6, title: "로그아웃 후 토큰 거절" },
   { id: "t-calc-example", path: T + "budget/BudgetCalculatorTest.java", from: "void computesDocumentedExample()", fromOffset: -1, to: "assertThat(r.hasTransactions()).isTrue();", toOffset: 1, title: "계산식 예제 테스트" },
+  { id: "t-policy-payday", path: T + "budget/BudgetPolicyTest.java", from: "Stream<DynamicTest> payday()", fromOffset: -1, to: "BudgetCalculator.previousPayday(today, payday)", toOffset: 2, title: "정책 표 한 줄 = 테스트 하나" },
+  { id: "t-contract-call", path: T + "contract/ContractTest.java", from: "private MvcResult call(", fromOffset: -1, to: "응답이 docs/contracts와 달라요", toOffset: 2, title: "응답을 OpenAPI 스펙으로 검사" },
+  { id: "cfg-policy-budget", path: "tests/policy/budget.json", from: '"payday": [', to: "2026-11 전 공휴일(한글날)", toOffset: 1, title: "정책 예시 표(JSON) — 수입일" },
+  { id: "cfg-pr-rules", path: ".github/workflows/pr-rules.yml", from: "const SPEC = [", to: "errors.join(' '));", toOffset: 0, title: "spec-change 검사" },
+  { id: "cfg-contract-tx", path: "docs/contracts/app-api.yaml", from: "required: [id, type, amount, categoryId, category, title, memo, occurredAt, createdAt, fromFixed]", fromOffset: -2, to: "fromFixed: { type: boolean, description: '고정지출 자동 기록' }", toOffset: 0, title: "계약: 거래 응답(Transaction) 스키마" },
   { id: "t-security-other", path: T + "SecurityTest.java", from: "void otherUsersTransactionsAndCategoriesAreBlocked()", fromOffset: -1, to: '.andExpect(jsonPath("$.title").value("private"));', toOffset: 1, title: "남의 거래·카테고리 차단" },
   { id: "t-purchase-race", path: T + "coin/CoinFlowTest.java", from: "void concurrentPurchaseChargesOnce()", fromOffset: -1, to: "assertThat(statuses).containsExactlyInAnyOrder(200, 409);", title: "동시 구매 2번 → 한 번만 차감" },
   { id: "t-unit-late401", path: "frontend/test/api-session.test.cjs", from: 'test("a late 401 for the previous session', to: "assert.equal(expiredNew, 0);", toOffset: 1, title: "늦게 온 401은 새 세션을 끊지 않는다" },

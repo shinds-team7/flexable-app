@@ -14,6 +14,7 @@ export const FEATURES = {
   referral: { title: "추천 코드", summary: "다른 사람 코드를 등록하면 양쪽에 100코인. 한 번만, 내 코드는 안 된다.", rel: ["a.ref-me", "a.ref-register", "c.ReferralService", "t.referrals", "x.CoinFlowTest"] },
   seed: { title: "시드머니·수입일 전날 반영", summary: "모아둔 돈 + 주기마다 옮긴 돈. 수입일 전날 20시 기기 알림(서버 푸시 아님)으로 반영을 권한다. 옮긴 돈은 추정 잔액에서 빠진다.", rel: ["a.seed-get", "a.seed-post", "c.SeedMoneyService", "c.SeedMoneyCard", "c.seedReminder", "t.seed_money_entries", "x.SeedMoneyFlowTest"] },
   weblink: { title: "웹사이트 연동", summary: "앱에서 받은 6자리 코드를 별도 웹사이트(flexable-web)에 입력하면, <b>웹 서버</b>가 이 서버의 <code>/internal</code> API로 연동을 만든다. 웹에는 회원 이메일·로그인 방법·확정 시드머니만 준다.", rel: ["s.weblinks", "a.wl-code", "a.wl-list", "a.wl-delete", "a.int-link", "a.int-profile", "a.int-seed", "a.int-unlink", "c.WebLinkService", "t.web_link_codes", "t.web_links", "x.WebLinkFlowTest"] },
+  entryReminder: { title: "기록 알림(기기 안)", summary: "거래 기록이 24시간 없으면 기록을 권하는 알림(Android). 가장 최근 거래의 <code>createdAt</code>(고정지출 자동 기록 포함), 없으면 가입 시각부터 24시간마다, 22시~9시면 9시로 미뤄 앞으로 7번까지 <b>기기 안에</b> 예약한다. 서버 푸시가 아니고 서버 변경도 없다. 마이에서 끄고, 로그아웃하면 취소한다. 알림을 누르면 거래 기록 화면(#146).", rel: ["c.entryReminder", "c.localNotifications", "c.MyScreen", "s.txnew", "a.tx-list", "x.unitEntryReminder"] },
   fixed: { title: "고정지출 자동 기록", summary: "화면은 없다. 날짜가 된 고정지출을 서버가 지출 거래로 만든다. <b>예약 작업이 아니라</b> 오늘 예산·시드머니·내역·분석 API를 부를 때 먼저 실행된다.", rel: ["c.FixedExpensePoster", "t.fixed_expense_postings", "t.transactions", "a.budget-today", "a.tx-list", "a.analysis", "a.seed-get", "a.seed-post", "x.ApiFlowTest"] },
   tx: { title: "거래 직접 입력·수정·삭제", summary: "이 가이드의 대표 요청. 등록은 <code>Idempotency-Key</code>로 재전송 중복을 막고, 수정은 보낸 필드만 바꾼다.", rel: ["s.txnew", "s.txedit", "s.txlist", "a.tx-create", "a.tx-update", "a.tx-delete", "a.tx-list", "a.tx-get", "c.TransactionForm", "c.TransactionService", "t.transactions", "x.ApiFlowTest", "x.e2eService"] },
   category: { title: "카테고리 관리", summary: "기본 11개 + 직접 추가. 삭제하면 쓰던 거래는 기본 '기타'로 옮긴다.", rel: ["s.categories", "a.cat-list", "a.cat-create", "a.cat-update", "a.cat-delete", "c.CategoryService", "t.categories"] },
@@ -78,14 +79,31 @@ export const TESTS = {
     ["holidaysBeforeNovember2026KeepPastPaydays", "2026-11 이전 공휴일은 반영 안 함"],
   ], RAN_BE(11) + ". 이 가이드의 시뮬레이터도 빌드 때 이 테스트의 기대값 55개와 맞는지 검사했다.", { rel: ["c.BudgetCalculator", "f.today"] }),
   CharacterScoreTest: X(T + "budget/CharacterScoreTest.java", "단위", "캐릭터 점수 규칙.", [["keptDaysRaiseSlowlyAndOverspentDaysDropFast", "+15 / −50"], ["missingDaysUseLastKnownBudget", "기록 없는 날은 그 전 하루 예산"], ["peakStaysAfterDrop", "최고 점수 유지"]], RAN_BE(6), { rel: ["c.CharacterScore", "f.character"] }),
-  SeedMoneyFlowTest: X(T + "budget/SeedMoneyFlowTest.java", "통합", "시드머니 조회·반영(GOAL·ALL·MANUAL), 주기당 한 번, 지난 주기 건너뛰기, 웹 연동용 기록.", [["confirmOncePerCycleAndWaitUntilNextCycle", "주기당 한 번, 다음 주기까지 대기"], ["unansweredCycleIsSkippedAtNextCycleEnd", "응답 안 한 주기는 넘어감"], ["webLinkReadsConfirmedSeedMoney", "웹 서버가 확정 기록을 읽음"]], RAN_BE(6), { rel: ["c.SeedMoneyService", "f.seed", "a.seed-post", "a.int-seed"] }),
-  CoinFlowTest: X(T + "coin/CoinFlowTest.java", "통합(시계를 바꾸는 테스트)", "가입 선물·어제 예산 보너스·시간 적립, 코스튬 구매·적용·레벨 해금·환급, 추천 코드.", [
+  SeedMoneyFlowTest: X(T + "budget/SeedMoneyFlowTest.java", "통합(시계를 바꾸는 테스트)", "시드머니 조회·반영(GOAL·ALL·MANUAL), 주기당 한 번, 지난 주기 건너뛰기, 웹 연동용 기록. 토큰 만료는 실제 시각으로 검사하므로 가입(토큰 발급)만 지금 시각에 하고 고정한 시각으로 돌아온다(#138, 이 처리가 없으면 실제 날짜가 10-31을 넘는 순간 401로 실패했다).", [["confirmOncePerCycleAndWaitUntilNextCycle", "주기당 한 번, 다음 주기까지 대기"], ["unansweredCycleIsSkippedAtNextCycleEnd", "응답 안 한 주기는 넘어감"], ["webLinkReadsConfirmedSeedMoney", "웹 서버가 확정 기록을 읽음"]], RAN_BE(6), { rel: ["c.SeedMoneyService", "f.seed", "a.seed-post", "a.int-seed"] }),
+  CoinFlowTest: X(T + "coin/CoinFlowTest.java", "통합(시계를 바꾸는 테스트)", "가입 선물·어제 예산 보너스·시간 적립, 코스튬 구매·적용·레벨 해금·환급, 추천 코드. 가입만 실제 시각에 한다({{x:SeedMoneyFlowTest}}와 같은 이유, #138).", [
     ["concurrentPurchaseChargesOnce", "같은 코스튬을 동시에 두 번 구매 → 200 하나·409 하나, 잔액 0"],
     ["signupGiftOnlyOnceAndRewardsRepeatUntilAck", "가입 선물 한 번, ack 전에는 보상이 다시 옴"],
     ["passiveStartsAtFirstCheckInOnePerHourUpToTen", "시간 적립 규칙"],
     ["budgetBonusForKeptYesterdayOnly", "어제 하루치만 보너스"],
     ["referralRewardsBothOnceAndRejectsOwnCode", "추천 코드"],
   ], RAN_BE(14), { rel: ["c.CoinService", "c.OutfitService", "f.coin", "f.shop", "f.referral"] }),
+  BudgetPolicyTest: X(T + "budget/BudgetPolicyTest.java", "단위(정책 예시 표)", "<code>docs/policies.md</code> §1·§2의 입력→기대값 표를 옮긴 <code>tests/policy/budget.json</code>을 읽어 케이스마다 <code>BudgetCalculator</code>를 부른다. 표 한 줄이 테스트 하나(<code>@TestFactory</code>)라 문서와 코드가 어긋나면 이 테스트가 실패한다.", [
+    ["payday", "수입일 8개: 수입일 당일은 새 주기, 일요일·말일·공휴일 미루기, 2026-11 전 공휴일은 그대로"],
+    ["today", "오늘 쓸 수 있는 돈 5개: 기준 시각 전 지출, 오늘 자동 기록된 고정지출, 이번 주 범위, 음수 남은 돈, 시드머니로 옮긴 돈"],
+  ], RAN_BE(13), { testAnchor: "Stream<DynamicTest> ", rel: ["c.BudgetCalculator", "f.today", "x.BudgetCalculatorTest"] }),
+  CharacterPolicyTest: X(T + "budget/CharacterPolicyTest.java", "단위(정책 예시 표)", "<code>docs/policies.md</code> §4 = <code>tests/policy/character.json</code>. 처음 기록한 날 0점, 딱 맞게 쓴 날 +15, 1원이라도 넘기면 −50, 최대 200점, 최고 점수 유지.", [
+    ["characterPolicyCases", "표 6줄을 <code>CharacterScore.compute</code>로 확인(점수·변화량·최고 점수·단계)"],
+  ], RAN_BE(6), { testAnchor: "Stream<DynamicTest> ", rel: ["c.CharacterScore", "f.character", "x.CharacterScoreTest"] }),
+  SeedMoneyPolicyTest: X(T + "budget/SeedMoneyPolicyTest.java", "통합(정책 예시 표, 시계 고정)", "<code>docs/policies.md</code> §3 = <code>tests/policy/seed-money.json</code>. 반영 대기는 저장된 하루 예산·반영 기록에 달려 있어 계산 함수가 아니라 API로 검사한다. 케이스마다 새 회원이 시작일 정오에 예산을 설정하고, 검사일 정오에 조회·반영한다.", [
+    ["seedMoneyPolicyCases", "표 6줄: 매달 저축할 돈/남은 돈 전부, 응답 안 하면 다음 주기에도 대기, 고정지출·카드 미결제액 반영, 주기 넘어감, 반영할 주기 없음"],
+  ], RAN_BE(6), { testAnchor: "Stream<DynamicTest> ", rel: ["c.SeedMoneyService", "f.seed", "a.seed-get", "a.seed-post"] }),
+  ContractTest: X(T + "contract/ContractTest.java", "통합(계약 검사)", "실제 응답(상태 코드·본문)을 <code>docs/contracts/app-api.yaml</code>·<code>web-link-api.yaml</code>로 검사한다. 스펙에 없는 상태 코드나 <b>스펙에 적지 않은 필드</b>가 응답에 있으면 실패한다. 엔드포인트마다 정상·오류 응답을 한 번 이상 부른다.", [
+    ["공개_엔드포인트", "health·소셜 공급자 목록 같은 로그인 없는 API"],
+    ["계정", "가입 201·409·400, 로그인 401·200·400·429, /me 401·200, 로그아웃 204, 탈퇴 401·400·204"],
+    ["예산_시드머니와_웹_연동", "예산 미설정 404 → 설정 → 오늘·시드머니 200, 반영 409·400·201, 웹 서버의 internal API(서비스 키) 연동·조회·해제"],
+    ["카테고리_거래_분석", "카테고리 생성·중복·수정·삭제, 거래 등록 201 → 같은 키 200, 목록·조회·수정·삭제, 분석 요약"],
+    ["코인_코스튬_추천", "코인 check-in·ack·지갑·모으기, 코스튬 목록·구매·적용, 추천 코드"],
+  ], RAN_BE(5), { rel: ["a.tx-create", "a.budget-today", "a.int-link", "x.ApiFlowTest"] }),
   WebLinkFlowTest: X(T + "weblink/WebLinkFlowTest.java", "통합", "웹 연동 코드 발급·연동·해제·서비스 키.", [["linkReadAndUnlinkFromWeb", "연동·조회·해제"], ["internalApiRequiresServiceKey", "서비스 키 없으면 401"], ["appLogoutKeepsLinkAndAppUnlinkOrDeletionEndsIt", "앱 로그아웃은 연동 유지, 탈퇴는 연동 삭제"]], RAN_BE(5), { rel: ["c.WebLinkService", "f.weblink"] }),
   WebLinkAttemptLimiterTest: X(T + "weblink/WebLinkAttemptLimiterTest.java", "단위", "코드 실패 제한(10분 30회).", [["blocksAfterMaxFailuresUntilWindowPasses", "30회 뒤 차단"]], RAN_BE(1), { rel: ["c.WebLinkAttemptLimiter"] }),
   LoginAttemptLimiterTest: X(T + "auth/LoginAttemptLimiterTest.java", "단위(동시성 포함)", "로그인 실패 제한과 메모리 정리.", [["blocksAfterMaxFailuresAndReleasesAfterWindow", "5회 뒤 차단, 10분 뒤 해제"], ["concurrentFailuresAreAllCounted", "동시 실패도 모두 셈"]], RAN_BE(14), { rel: ["c.LoginAttemptLimiter"] }),
@@ -97,7 +115,15 @@ export const TESTS = {
     ["a late 401 for the previous session does not expire the new one", "이전 세션 요청의 401은 무시"],
     ["a 401 for the current session expires it once even if several requests fail", "만료 처리는 한 번"],
     ["sessionGeneration changes on every login and logout", "세대 번호 증가"],
-  ], "직접 실행: 2026-10-24 로컬 <code>npm run test:unit</code> — 6개(이 파일 3개 + outfit-lifecycle 3개) 모두 통과", { title: "api-session.test.cjs", testAnchor: "test(\"", rel: ["c.apiClient", "c.Session"] }),
+  ], "직접 실행: 2026-10-25 로컬 <code>npm run test:unit</code> — 12개(이 파일 3개 + entry-reminder 6개 + outfit-lifecycle 3개) 모두 통과", { title: "api-session.test.cjs", testAnchor: "test(\"", rel: ["c.apiClient", "c.Session"] }),
+  unitEntryReminder: X("frontend/test/entry-reminder.test.cjs", "프론트 단위(node:test)", "기록 알림의 시각 계산(<code>entryReminderTimes.ts</code>)만 검사한다. 이 파일은 expo 모듈을 쓰지 않아 기기 없이 돈다. 실제 알림 예약·표시는 웹·E2E로 확인할 수 없어 실기기 확인이 필요하다.", [
+    ["repeats every 24 hours from the last entry", "마지막 기록부터 24시간마다"],
+    ["moves late-night times to 9 the next morning", "밤 시각은 다음 날 9시로"],
+    ["moves early-morning times to 9 the same morning", "새벽 시각은 그날 9시로"],
+    ["22:00 is night and 9:00 is not", "22시는 밤, 9시는 아님"],
+    ["skips times that already passed", "이미 지난 시각은 건너뜀"],
+    ["keeps a night reminder that was moved past now", "9시로 미뤄져 아직 안 온 알림은 남김"],
+  ], "직접 실행: 2026-10-25 로컬 <code>npm run test:unit</code> — 이 파일 6개 통과", { title: "entry-reminder.test.cjs", testAnchor: "test(\"", rel: ["c.entryReminder", "f.entryReminder"] }),
   e2eService: X("frontend/e2e/service.spec.ts", "E2E(Playwright, 실제 백엔드 + 정적 웹)", "브라우저로 실제 화면을 누른다. 가입 → 예산 설정 → 거래 기록(응답을 일부러 끊고 같은 키로 재시도) → 수정 → 로그아웃 → 삭제. 일부 테스트는 특정 응답만 mock으로 바꾼다.", [
     ["real service lifecycle, retry idempotency, edits, logout and deletion", "대표 흐름 전체"],
     ["re-entering the balance in settings does not subtract earlier spending again", "잔액 재입력 시 이전 지출을 두 번 빼지 않음"],
@@ -167,5 +193,8 @@ export const GLOSSARY = {
   unit: G("단위·통합·E2E 테스트", "단위 = 함수 하나만(빠름), 통합 = 서버를 띄우고 DB까지(MockMvc), E2E = 진짜 브라우저로 화면을 누름(Playwright).", "{{v:ops.tests|테스트 종류}}", { kw: "test MockMvc Playwright JUnit" }),
   mock: G("mock", "진짜 대신 쓰는 가짜 응답. 시간이 필요하거나 외부 서비스가 필요한 경우만 E2E에서 응답 일부를 가짜로 바꾼다.", "{{x:e2eService}}", { kw: "모의 응답 route.fulfill" }),
   ci: G("CI(GitHub Actions)", "PR을 올릴 때마다 서버가 자동으로 테스트·빌드를 돌리는 것. 하나라도 실패하면 머지하지 않는다(AGENTS.md).", "{{snip:cfg-ci}}", { kw: "github actions ci.yml" }),
+  contract: G("API 계약(OpenAPI)", "앱과 서버가 주고받는 요청·응답의 모양(주소, 상태 코드, 필드와 타입, 필수 여부)을 기계가 읽는 형식(YAML)으로 적은 것. 사람이 읽는 설명서이자 테스트·타입 생성의 원본이다.", "앱 <code>docs/contracts/app-api.yaml</code>, 웹 서버용 <code>web-link-api.yaml</code>. 서버 응답은 {{x:ContractTest}}가, 프론트 타입 파일은 CI <code>check:api</code>가 이 파일과 비교한다. 바꿀 때는 구현보다 스펙이 먼저다(AGENTS.md).", { kw: "openapi yaml 스펙 swagger schema.d.ts gen:api mock:api" }),
+  policyCase: G("정책 예시 표", "'이 입력이면 이 값이 나와야 한다'를 표로 적은 규칙 문서. 같은 표를 JSON으로 옮겨 테스트가 읽으므로, 문서와 코드가 다르면 테스트가 실패한다.", "<code>docs/policies.md</code> ↔ <code>tests/policy/*.json</code> ↔ {{x:BudgetPolicyTest}}·{{x:SeedMoneyPolicyTest}}·{{x:CharacterPolicyTest}}.", { kw: "policies.md tests/policy 정책 테스트" }),
+  specChange: G("spec-change", "기준 문서(AGENTS.md·PRD·policies·contracts·decisions·tests/policy)를 바꾼 PR에 붙이는 라벨. CI(<code>pr-rules</code>)가 라벨과 <code>docs/CHANGELOG.md</code> 한 줄이 있는지 검사하고, 병합되면 다른 작업자는 브랜치를 rebase하고 AI 세션을 새로 시작한다.", "{{v:ops.pr|PR이 머지되기까지}}", { kw: "CHANGELOG pr-rules 라벨 issue-link CODEOWNERS" }),
   ota: G("원격 업데이트(EAS Update)", "앱을 다시 설치하지 않고 JS·이미지만 바꿔 내려보내는 것. 네이티브(권한·패키지)가 바뀌면 안 되고 새 빌드가 필요하다.", "{{v:ops.deploy|배포 세 갈래}}", { kw: "EAS update OTA expo-updates" }),
 };

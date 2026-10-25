@@ -1,5 +1,5 @@
 // 대표 요청 추적: "점심 9,000원을 기록하고 10,000원으로 고친다". 등록(POST) 1~11단계, 수정(PATCH) 12~16단계.
-// 요청·응답 JSON은 API 계약(docs/API.md, DTO)에 맞춘 가상 예시이고, 로그는 2026-10-24 로컬 H2 실행에서 캡처한 것이다(날짜가 다르다).
+// 요청·응답 JSON은 API 계약(docs/contracts/app-api.yaml, DTO)에 맞춘 가상 예시이고, 로그는 2026-10-24 로컬 H2 실행에서 캡처한 것이다(날짜가 다르다).
 
 const LOG_POST = `[보안 필터: 토큰의 사용자 확인 — 별도 읽기 전용 트랜잭션]
 Creating new transaction with name [...SimpleJpaRepository.findById]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,readOnly

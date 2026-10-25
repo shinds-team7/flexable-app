@@ -55,7 +55,7 @@ export function build({ SC }) {
     },
     {
       id: "p5", title: "주요 설계와 핵심 코드", time: "1.5분",
-      big: `<div class="pgrid"><div><b>계산은 서버 한 곳</b><span>BudgetCalculator 순수 함수 · 테스트 11개</span></div><div><b>JWT + token_version</b><span>요청마다 DB 확인 → 로그아웃 즉시 반영</span></div><div><b>잠금 + UNIQUE</b><span>설정 행·지갑 행 FOR UPDATE, 지급·반영은 유일 키</span></div><div><b>늦은 응답 무시</b><span>세션 generation으로 이전 세션 401 무시</span></div></div>`,
+      big: `<div class="pgrid"><div><b>계산은 서버 한 곳</b><span>BudgetCalculator 순수 함수 · 테스트 11개 + 정책 예시 표 13개</span></div><div><b>JWT + token_version</b><span>요청마다 DB 확인 → 로그아웃 즉시 반영</span></div><div><b>잠금 + UNIQUE</b><span>설정 행·지갑 행 FOR UPDATE, 지급·반영은 유일 키</span></div><div><b>늦은 응답 무시</b><span>세션 generation으로 이전 세션 401 무시</span></div></div>`,
       points: [`하루 예산 = (남은 생활비 + 오늘 쓴 돈) ÷ 남은 날 → 시나리오 ${n(c.dailyBudget)}원`, "고정지출 자동 기록은 예약 작업이 아니라 조회 때", "모든 오류는 { code, message } 한 모양"],
       notes: {
         say: "네 가지를 각 한 문장으로. 질문이 오면 해당 설계 절로 간다.",
