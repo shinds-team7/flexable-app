@@ -46,6 +46,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test:unit": "node --test \"test/*.test.cjs\"",
+    "gen:api": "npx --yes openapi-typescript@7.13.0 ../docs/contracts/app-api.yaml -o src/service/api/schema.d.ts",
+    "check:api": "npm run gen:api && git diff --exit-code -- src/service/api/schema.d.ts",
+    "mock:api": "node scripts/mock-api.cjs",
     "update:preview": "npx eas-cli@latest update --channel preview --environment preview --platform android",
     "update:promote": "npx eas-cli@latest update:republish --destination-channel production --platform android --non-interactive --group"
   },
