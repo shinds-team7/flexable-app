@@ -290,8 +290,8 @@ ${table(["종류", "무엇을 띄우나", "이 저장소", "개수(소스 기준
   ["백엔드 정책", "<code>tests/policy/*.json</code>의 표 한 줄 = 테스트 하나", "<code>BudgetPolicyTest</code>·<code>CharacterPolicyTest</code>(단위), <code>SeedMoneyPolicyTest</code>(API)", "3개 클래스 25개", "아래 합계에 포함"],
   ["백엔드 계약", "스프링 전체 + MockMvc, 응답을 OpenAPI 스펙으로 검사", "<code>ContractTest</code>", "5개", "아래 합계에 포함"],
   ["백엔드 통합", "스프링 전체 + H2 메모리 + MockMvc(가짜 HTTP)", "<code>ApiFlowTest</code>, <code>SecurityTest</code>, <code>CoinFlowTest</code> …", "백엔드 전체 17개 클래스 116개", "<code>./gradlew test</code> 116개 통과(2026-10-25) {{b:ran}}"],
-  ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "6개", "<code>npm run test:unit</code> 6개 통과(10-25) {{b:ran}}"],
-  ["타입 검사·린트·계약 타입", "—", "<code>tsc</code>, <code>expo lint</code>, <code>check:api</code>", "—", "#148 코드로 <code>check:api</code>·<code>tsc</code>·<code>lint</code> 모두 통과(10-25) {{b:ran}}"],
+  ["프론트 단위", "node:test로 TS 파일 일부", "<code>test/*.test.cjs</code>", "12개(api-session 3·entry-reminder 6·outfit-lifecycle 3)", "<code>npm run test:unit</code> 12개 통과(10-25) {{b:ran}}"],
+  ["타입 검사·린트·계약 타입", "—", "<code>tsc</code>, <code>expo lint</code>, <code>check:api</code>", "—", "<code>check:api</code>·<code>tsc</code>·<code>lint</code> 모두 통과(10-25, #148 코드) {{b:ran}}"],
   ["E2E", "실제 브라우저(Playwright) + 실제 백엔드(H2) + 정적 웹", "<code>e2e/*.spec.ts</code>", "20개(service 15·coins 3·web-links 2)", "로컬 실행 안 함. PR #128·#129·#130의 CI 통과 {{b:ci}}"],
 ])}
 ${p("<b>시계를 고정하는 테스트</b>: 시드머니·코인처럼 날짜에 달린 규칙은 테스트가 주입 <code>Clock</code>을 특정 날짜로 고정한다. 그런데 토큰 만료 검사는 실제 시각을 쓴다. 그래서 고정 시각(예: 10-01)에 가입하면 그 토큰의 30일 만료가 실제 날짜 10-31에 닥쳐 테스트가 401로 깨질 뻔했다. #138에서 가입만 지금 시각에 하고 고정 시각으로 돌아오게 고쳤다({{x:SeedMoneyFlowTest}}, {{x:CoinFlowTest}}. 새로 생긴 {{x:ContractTest}}·{{x:SeedMoneyPolicyTest}}는 처음부터 같은 방식) {{b:code}}.")}

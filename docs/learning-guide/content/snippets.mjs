@@ -44,6 +44,7 @@ export const SNIPPETS = [
   { id: "fe-onb-save", path: F + "service/OnboardingScreen.tsx", from: 'if (step === "protect") {', to: "router.push(path(dest));", toOffset: 2, title: "예산 설정 마지막 단계 저장" },
   { id: "fe-draft-persist", path: F + "service/BudgetDraft.tsx", from: "const key = `flexable.service.draft.", to: ".catch((error) => setFailure({ owner: id, error }));", toOffset: 1, title: "예산 설정 임시 저장" },
   { id: "fe-coinapi", path: F + "service/coinApi.ts", whole: true, title: "코인·코스튬 API 함수" },
+  { id: "fe-entry-times", path: F + "service/entryReminderTimes.ts", from: "/** 밤(22시~9시 전)이면", to: "return times;", toOffset: 1, title: "기록 알림 시각 계산" },
   { id: "fe-seed-reminder", path: F + "service/seedReminder.ts", from: "/** 다음 수입일 전날 20시에", to: "const at = new Date(y, m - 1, d - 1, 20, 0, 0);", title: "수입일 전날 기기 알림" },
   // ---------- 백엔드: 거래 ----------
   { id: "be-tx-controller", path: B + "transaction/TransactionController.java", from: "@RestController", to: "void delete(", toOffset: 3, title: "TransactionController 전체" },

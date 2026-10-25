@@ -45,7 +45,7 @@ ${snip("fe-onb-save")}${snip("be-budget-put")}${snip("be-budget-today")}
 
 ${h2("flows.seed", "시드머니 반영")}
 ${steps([
-  ["알림(기기 안)", "홈이 다음 수입일을 알면 {{c:seedReminder}}가 '수입일 전날 20시' 알림을 하나 예약한다. 서버 푸시가 아니다. 웹에는 알림이 없다."],
+  ["알림(기기 안)", "홈이 다음 수입일을 알면 {{c:seedReminder}}가 '수입일 전날 20시' 알림을 하나 예약한다. 이와 별개로 {{c:entryReminder}}가 마지막 기록부터 24시간마다 기록 알림을 예약한다(#146). 둘 다 서버 푸시가 아니다. 웹에는 알림이 없다."],
   ["조회", "{{c:SeedMoneyCard}} → {{a:seed-get}} → {{c:SeedMoneyService}} <code>get</code>: 먼저 고정지출 자동 기록 → <code>pending</code> 계산. 오늘이 수입일 전날이면 오늘 끝나는 주기, 아니면 직전 주기. 그 주기 끝 <b>전부터</b> 앱을 썼고({{t:daily_budgets}} 첫 날짜) 아직 반영 안 했을 때만 있다."],
   ["반영", "{{a:seed-post}} <code>{ cycleEnd, choice, amount? }</code> → 설정 행 잠금 → pending을 다시 계산해 <code>cycleEnd</code>가 같은지 확인 → GOAL(매달 저축할 돈 합)/ALL(그 주기 끝 기준 남은 돈 전부)/MANUAL(보낸 금액) → {{t:seed_money_entries}}에 저장 → 201."],
   ["오늘 예산에 반영", "{{c:BudgetService}} <code>today</code>가 <code>sumCreatedAfter(balanceAt)</code>로 잔액 기준 시각 뒤에 옮긴 돈을 추정 잔액에서 뺀다(통장에서 빠진 돈으로 본다). 분석·오늘 쓴 돈에는 넣지 않는다."],
