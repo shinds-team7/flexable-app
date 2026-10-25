@@ -217,22 +217,12 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 }
 ```
 
-계산(서버가 최종값, 원 단위 정수, 나눗셈은 내림):
+계산은 서버가 최종값이다(원 단위 정수, 나눗셈은 내림). 각 값의 규칙과 입력→기대값 예시는 [policies.md](policies.md)가 정본이다.
 
-- `estimatedBalance` = `balance` + (`balanceAt` 이후 수입 합) − (`balanceAt` 이후 지출 합) − (`balanceAt` 이후 시드머니로 옮긴 돈 합, 아래 "시드머니")
-- `nextPayday` = 오늘 이후(오늘 제외) 가장 가까운 수입일(토·일·공휴일이면 다음 평일. 예: 25일이 일요일이면 26일, 2026-12-25(금)이면 28일), `daysLeft` = 오늘부터 수입일 전날까지 날짜 수(오늘 포함, 최소 1)
-- `reservedFixed` = 내일 ~ 수입일 전날 사이에 날짜가 오는 고정지출 합. 오늘까지 날짜가 된 고정지출은 지출 거래로 자동 기록되어 `estimatedBalance`에서 빠진다(아래 "고정지출 자동 기록")
-- `remaining` = `estimatedBalance` − `reservedFixed` − `cardUnpaid` − `protectedTotal`
-- `dailyBudget` = max(0, `remaining` + `todaySpent`) ÷ `daysLeft`
-- `todayAvailable` = `dailyBudget` − `todaySpent`(오늘 예산을 넘으면 넘은 만큼 음수. 1.3.0 앱 홈은 마이너스로, 그 전 앱은 0원으로 보여 준다), `shortage` = `remaining` < 0이면 −`remaining`, 아니면 max(0, `todaySpent` − `dailyBudget`)
-- `todaySpent`, `weekSpent` = 오늘 / 이번 주(월~일) 지출 합. 고정지출 자동 기록(`fromFixed`)은 넣지 않는다. `cycleStart` = 직전 수입일
-- `weekDaysLeft` = 오늘부터 이번 주 일요일과 수입일 전날 중 빠른 날까지 날짜 수(오늘 포함, 최소 1)
-- `weekAvailable` = max(0, `dailyBudget` × `weekDaysLeft` − `todaySpent`) — 오늘 포함 이번 주 남은 날에 쓸 수 있는 돈
+- `nextPayday`·`cycleStart`·`daysLeft`: [§1 수입일·정산 주기](policies.md#1-수입일정산-주기budgetbudgetcalculator)
+- `estimatedBalance`·`reservedFixed`·`remaining`·`todaySpent`·`dailyBudget`·`todayAvailable`·`shortage`·`weekSpent`·`weekDaysLeft`·`weekAvailable`: [§2 오늘 쓸 수 있는 돈](policies.md#2-오늘-쓸-수-있는-돈get-budgettoday-budgetbudgetcalculator). `todayAvailable`은 오늘 예산을 넘으면 음수다(1.3.0 앱 홈은 마이너스로, 그 전 앱은 0원으로 보여 준다)
+- `characterPoints`·`characterDelta`: [§4 캐릭터 점수](policies.md#4-캐릭터-점수budgetcharacterscore). 이 요청마다 오늘의 `dailyBudget`을 날짜별로 저장한다(`daily_budgets`)
 - `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
-- 캐릭터 단계 점수(`characterPoints`, 0~200, 100점이 한 단계: 0~99 Lv.1, 100~199 Lv.2, 200 Lv.3):
-  - 이 요청마다 오늘의 `dailyBudget`을 날짜별로 저장한다(`daily_budgets`, 같은 날은 덮어씀 → 그날 마지막 값).
-  - 처음 저장한 날 0점(Lv.1)에서 시작해 그날부터 **어제까지** 하루씩 반영한다. 그날 지출 합(고정지출 자동 기록 제외)이 그날 하루 예산 이하면 +15, 넘으면 −50(0~200으로 자름). 저장이 없는 날(앱을 안 연 날)은 그 전 마지막 하루 예산으로 판단한다. 오늘은 내일 반영한다.
-  - `characterDelta` = 어제 하루의 점수 변화(반영한 날이 없으면 0)
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
 
@@ -240,9 +230,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 시드머니 = 모아둔 돈(`seedBase`) + 정산 주기마다 옮긴 돈의 합. 수입일 전날 앱이 기기 알림(20시, 서버 없음)으로 반영을 권하고, 홈에서 반영 창을 띄운다.
 
-- **반영할 주기(`pending`)**: 오늘이 수입일 전날이면 오늘 끝나는 주기, 아니면 직전 수입일 전날에 끝난 주기. 그 주기 마지막 날 **전에** 앱을 쓰기 시작했고(`daily_budgets` 첫 날짜) 아직 반영하지 않았을 때만 있다. 응답하지 않으면 다음 수입일 전날까지 기다리고, 그날이 되면 지난 주기는 반영 없이 넘어간다. 수입일은 `/budget/today`와 같은 규칙(31=말일, 토·일·공휴일이면 다음 평일)
-- **반영 방법**: `GOAL` = 매달 저축할 돈(`protectedItems` 합), `ALL` = 그 주기 마지막 날까지의 기록 기준 남은 돈 전부 = max(0, 그날 추정 잔액 − 카드 미결제액). 수입일 전날에는 남은 고정지출 예정액이 0이므로 '매달 저축할 돈 + 남은 생활비'와 같다. `MANUAL` = 직접 입력(0원 가능)
-- 옮긴 돈은 생활비 통장에서 빠진 것으로 보고 `estimatedBalance`에서 뺀다(잔액을 다시 입력하면 그 시각 이후 것만 뺀다). 소비 분석·오늘 쓴 돈에는 넣지 않는다
+반영할 주기(`pending`), 반영 방법(`GOAL`·`ALL`·`MANUAL`)의 금액, 옮긴 돈이 추정 잔액에서 빠지는 규칙(잔액을 다시 입력하면 그 시각 이후 것만 뺀다)과 예시는 [policies.md §3](policies.md#3-시드머니-반영get-budgetseed-money-post-budgetseed-moneyentries-budgetseedmoneyservice)이 정본이다.
 
 ### `GET /budget/seed-money` → 200 | 404 `BUDGET_NOT_SET`
 

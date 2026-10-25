@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 
 /**
- * 캐릭터 단계 점수. 100점이 한 단계: 0~99 Lv.1, 100~199 Lv.2, 200 Lv.3(최대). 규칙은 docs/API.md "GET /budget/today".
+ * 캐릭터 단계 점수. 100점이 한 단계: 0~99 Lv.1, 100~199 Lv.2, 200 Lv.3(최대). 규칙과 예시는 docs/policies.md §4(tests/policy/character.json).
  * 점수는 저장하지 않고 기록에서 매번 다시 계산하므로, 단계를 늘릴 때 MAX만 올리면 그동안의 기록대로 점수가 돌아온다.
  * 하루 예산을 처음 기록한 날 0점(Lv.1 0%)에서 시작해 어제까지 하루씩 반영한다. 오늘은 내일 반영한다.
  */

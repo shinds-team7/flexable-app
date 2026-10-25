@@ -6,9 +6,10 @@
 
 | 무엇 | 어디 |
 |---|---|
-| 서비스 목적·기능·구현 여부 | [docs/FEATURES.md](docs/FEATURES.md) |
+| 서비스 목적·사용자·기능·범위 | [docs/PRD.md](docs/PRD.md) (기능별 화면·API·확인 방법은 [docs/FEATURES.md](docs/FEATURES.md)) |
+| 계산·상태 규칙과 예시 표 | [docs/policies.md](docs/policies.md) = [tests/policy/](tests/policy/) 테스트 |
 | 폴더 구조·요청 경로·배포 갈래 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| API 계약·예산 계산식 | [docs/API.md](docs/API.md) |
+| API 계약 | [docs/API.md](docs/API.md) |
 | 코인·코스튬 규칙 | [docs/coin-plan.md](docs/coin-plan.md) |
 | 결정 기록 | [docs/decisions/](docs/decisions/README.md) |
 | 문서 변경 이력 | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
@@ -21,7 +22,7 @@
 ## 작업 시작 전
 
 - 이번 Issue의 목표·참고 자료·범위·완료 조건을 읽는다. Issue가 없으면 범위와 완료 조건부터 확인한다.
-- Issue와 관련된 기능 행(`docs/FEATURES.md`)과 API·계산식(`docs/API.md`)을 저장소에서 직접 읽는다.
+- `docs/PRD.md`에서 목적과 범위를, Issue와 관련된 `docs/policies.md` 항목과 API(`docs/API.md`)를 저장소에서 직접 읽는다.
 - `docs/CHANGELOG.md` 최근 항목을 확인한다.
 - 구현 전에 작업 범위, 참고한 문서, 완료 조건을 요약한다.
 
@@ -41,7 +42,7 @@
 
 ## 작업 완료 시
 
-- 바꾼 영역의 검증 명령을 돌리고 결과를 그대로 보고한다. 실기기·배포 확인은 코드 검증과 따로 적는다.
+- `tests/policy/`를 포함해 바꾼 영역의 검증 명령을 돌리고 결과를 그대로 보고한다. 실기기·배포 확인은 코드 검증과 따로 적는다.
 - PR 템플릿을 채운다: Issue(`Closes #번호`), 참고한 문서, 영향받는 파트, 새로 내린 결정, 검증 결과.
 - 기준 문서·지침(`AGENTS.md`)·결정 기록을 바꾼 PR에는 `spec-change` 라벨을 붙이고 `docs/CHANGELOG.md`에 한 줄을 더한다. CI(`pr-rules`)가 검사한다.
 - 브랜치는 `SXXNHU/<종류>-<내용>`(예: `SXXNHU/fix-dow-ui`), 커밋은 `feat(frontend): 한국어 요약` 형식이다. `main`에서 따서 PR로 머지하고, CI가 실패한 PR은 머지하지 않는다.

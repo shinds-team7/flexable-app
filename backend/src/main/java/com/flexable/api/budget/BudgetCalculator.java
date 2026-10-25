@@ -15,7 +15,7 @@ import com.flexable.api.budget.BudgetDtos.TodayResponse;
 import com.flexable.api.common.TxType;
 
 /**
- * 오늘 쓸 수 있는 돈 계산(서버 최종값). 원 단위 정수, 나눗셈은 내림. 규칙은 docs/API.md "GET /budget/today".
+ * 오늘 쓸 수 있는 돈 계산(서버 최종값). 원 단위 정수, 나눗셈은 내림. 규칙과 예시는 docs/policies.md §1·§2(tests/policy/budget.json).
  */
 public final class BudgetCalculator {
 

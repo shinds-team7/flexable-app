@@ -37,6 +37,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 정책 테스트가 읽는 저장소 파일. 바뀌면 테스트를 다시 돌린다(*PolicyTest)
+	inputs.dir('../tests/policy').withPropertyName('policyCases')
 }
 
 tasks.named('bootJar') {
