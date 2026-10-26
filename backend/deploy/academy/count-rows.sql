@@ -14,4 +14,4 @@ UNION ALL SELECT 'user_outfits', COUNT(*) FROM user_outfits
 UNION ALL SELECT 'referrals', COUNT(*) FROM referrals
 UNION ALL SELECT 'web_links', COUNT(*) FROM web_links
 UNION ALL SELECT 'flyway_schema_history', COUNT(*) FROM flyway_schema_history;
-SELECT MAX(version) AS flyway_version FROM flyway_schema_history WHERE success = 1;
+SELECT MAX(CAST(version AS UNSIGNED)) AS flyway_version FROM flyway_schema_history WHERE success = 1;
