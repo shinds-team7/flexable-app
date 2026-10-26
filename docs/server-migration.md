@@ -86,12 +86,12 @@ ssh flex-ec2
 cd /opt/flexable
 export RDS_HOST=database-flex.cdi4cs8mempl.ap-northeast-2.rds.amazonaws.com
 read -r -s -p "RDS admin 비밀번호: " MYSQL_PWD; echo; export MYSQL_PWD
-docker run --rm -e MYSQL_PWD mysql:8.0 mysql -h "$RDS_HOST" -u admin --ssl-mode=REQUIRED -e 'SELECT VERSION();'
+docker run --rm -e MYSQL_PWD mysql:8.4 mysql -h "$RDS_HOST" -u admin --ssl-mode=REQUIRED -e 'SELECT VERSION();'
 # 아카데미 중계 경로가 AWS에서 닿는지(아직 VM에 서버가 없으니 502·연결 오류라도 TLS 핸드셰이크까지 되면 된다)
 curl -sv https://teongjangcare.shinhanacademy.co.kr/ -o /dev/null 2>&1 | grep -E 'SSL connection|HTTP/'
 ```
 
-`VERSION()`이 `8.0.x`면 `MYSQL_IMAGE=mysql:8.0`, `8.4.x`면 `mysql:8.4`로 §5-2에 쓴다(위 `docker run`의 `mysql:8.0`도 같은 것으로).
+10-26 확인: RDS는 **8.4.9**다. 덤프 도구와 VM의 MySQL 모두 `mysql:8.4`를 쓴다.
 
 ## 5. 리허설(사람 — 운영 영향 없음)
 
@@ -102,7 +102,7 @@ ssh flex-ec2
 cd ~ && umask 077
 export RDS_HOST=database-flex.cdi4cs8mempl.ap-northeast-2.rds.amazonaws.com
 read -r -s -p "RDS admin 비밀번호: " MYSQL_PWD; echo; export MYSQL_PWD
-docker run --rm -e MYSQL_PWD mysql:8.0 mysqldump -h "$RDS_HOST" -u admin --ssl-mode=REQUIRED \
+docker run --rm -e MYSQL_PWD mysql:8.4 mysqldump -h "$RDS_HOST" -u admin --ssl-mode=REQUIRED \
   --single-transaction --set-gtid-purged=OFF --no-tablespaces flexable | gzip > dump-rehearsal.sql.gz
 ls -lh dump-rehearsal.sql.gz
 ```
@@ -118,7 +118,7 @@ scp flex-ec2:~/dump-rehearsal.sql.gz .
 
 cp ec2.env academy.env
 sed -i 's|^DB_URL=.*|DB_URL=jdbc:mysql://db:3306/flexable?serverTimezone=UTC\&characterEncoding=UTF-8\&sslMode=DISABLED\&allowPublicKeyRetrieval=true|' academy.env
-printf 'MYSQL_ROOT_PASSWORD=%s\nMYSQL_IMAGE=mysql:8.0\n' "$(openssl rand -base64 33 | tr -d '/+=' | cut -c1-32)" >> academy.env
+printf 'MYSQL_ROOT_PASSWORD=%s\nMYSQL_IMAGE=mysql:8.4\n' "$(openssl rand -base64 33 | tr -d '/+=' | cut -c1-32)" >> academy.env
 grep -E '^(DB_URL|DB_USERNAME|MYSQL_IMAGE|OAUTH_CALLBACK_BASE_URL)=' academy.env      # 값 확인(비밀번호 줄은 출력하지 않음)
 grep -c '^DB_PASSWORD=.*\$' academy.env    # 0이어야 한다($가 있으면 compose가 값을 바꿔 버린다)
 
@@ -152,7 +152,7 @@ scp backend/deploy/academy/count-rows.sql flex-ec2:~/
 ssh flex-ec2
 export RDS_HOST=database-flex.cdi4cs8mempl.ap-northeast-2.rds.amazonaws.com
 read -r -s -p "RDS admin 비밀번호: " MYSQL_PWD; echo; export MYSQL_PWD
-docker run --rm -i -e MYSQL_PWD mysql:8.0 mysql -h "$RDS_HOST" -u admin --ssl-mode=REQUIRED flexable < count-rows.sql
+docker run --rm -i -e MYSQL_PWD mysql:8.4 mysql -h "$RDS_HOST" -u admin --ssl-mode=REQUIRED flexable < count-rows.sql
 ```
 
 리허설 중에도 운영은 계속 쓰이므로 숫자가 조금 늘어 있을 수 있다. 전환일(§6)에는 정확히 같아야 한다.
