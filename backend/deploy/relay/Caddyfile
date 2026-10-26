@@ -1,0 +1,9 @@
+# 이전 기간(아카데미 VM 사용 중) EC2 전용: 옛 주소로 온 요청을 아카데미 VM으로 넘긴다.
+# 앱·OAuth 콜백·웹 연동·서버 감시가 모두 이 주소를 쓰므로 주소를 바꾸지 않아도 된다. 계획: docs/server-migration.md
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy https://teongjangcare.shinhanacademy.co.kr {
+		# 아카데미 프록시는 Host로 VM을 찾는다
+		header_up Host teongjangcare.shinhanacademy.co.kr
+	}
+}

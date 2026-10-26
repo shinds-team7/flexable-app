@@ -1,0 +1,54 @@
+# 신한 아카데미 VM(11-18까지): API + MySQL. HTTPS는 아카데미 프록시가 처리하고 호스트 80번으로 들어온다.
+# 계획·명령: docs/server-migration.md
+services:
+  db:
+    image: ${MYSQL_IMAGE:-mysql:8.0}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: flexable
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    mem_limit: 1g
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  api:
+    build: .
+    image: flexable-api:latest
+    env_file: .env
+    environment:
+      # 메모리 8GB VM이라 EC2(t3.micro)보다 크게 잡는다
+      JAVA_OPTS: "-Xms256m -Xmx1g -XX:+UseSerialGC -XX:MaxMetaspaceSize=192m -Duser.timezone=UTC"
+    restart: unless-stopped
+    mem_limit: 1500m
+    ports:
+      - "80:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      # 1코어라 기동이 느리다
+      start_period: 180s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+volumes:
+  # 운영 DB. `docker compose down -v`를 하면 지워진다
+  mysql_data:
