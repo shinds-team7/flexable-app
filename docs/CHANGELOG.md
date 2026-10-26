@@ -6,7 +6,7 @@
 
 ## 2026-10-26
 
-- [#174] 코인 내역 API `GET /coins/ledger?before=&limit=`(최신순, `nextBefore`로 다음 쪽, `limit` 1~100 기본 30, `LedgerEntry`에 `outfitId`)를 `app-api.yaml`에 추가하고, 홈 코인 칩 → 코인 내역 화면을 만들었다. 기존 응답은 바뀌지 않았다 — 영향: 앱 화면(원격 업데이트로 반영)·앱 서버(`deploy.sh`, 마이그레이션 없음)
+- [#175] 코인 내역 API `GET /coins/ledger?before=&limit=`(최신순, `nextBefore`로 다음 쪽, `limit` 1~100 기본 30, `LedgerEntry`에 `outfitId`)를 `app-api.yaml`에 추가하고, 홈 코인 칩 → 코인 내역 화면을 만들었다. 기존 응답은 바뀌지 않았다 — 영향: 앱 화면(원격 업데이트로 반영)·앱 서버(`deploy.sh`, 마이그레이션 없음)
 
 ## 2026-10-25
 
