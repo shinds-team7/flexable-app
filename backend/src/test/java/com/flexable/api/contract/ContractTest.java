@@ -304,6 +304,9 @@ class ContractTest {
 		app(auth(get("/api/v1/outfits"), token), 200);
 		app(auth(post("/api/v1/outfits/outfit-03/purchase"), token), 200);
 		app(auth(post("/api/v1/outfits/outfit-03/purchase"), token), 409);
+		String newest = read(app(auth(get("/api/v1/coins/ledger?limit=1"), token), 200), "$.nextBefore");
+		app(auth(get("/api/v1/coins/ledger?before=" + newest), token), 200);
+		app(auth(get("/api/v1/coins/ledger?limit=0"), token), 400);
 		app(auth(post("/api/v1/outfits/costume-lv1/purchase"), token), 409);
 		app(auth(json(put("/api/v1/outfits/equipped"), "{\"outfitId\":\"outfit-03\"}"), token), 200);
 		app(auth(json(put("/api/v1/outfits/equipped"), "{\"outfitId\":\"outfit-01\"}"), token), 409);

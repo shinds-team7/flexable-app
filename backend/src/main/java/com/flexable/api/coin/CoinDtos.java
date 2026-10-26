@@ -21,6 +21,15 @@ public final class CoinDtos {
 	public record Reward(long id, CoinReason reason, int amount, LocalDate refDate, OffsetDateTime createdAt) {
 	}
 
+	/** 내역 한 줄. amount: 사용(PURCHASE)은 음수. refDate는 BUDGET_BONUS, outfitId는 PURCHASE일 때만 */
+	public record LedgerEntry(long id, CoinReason reason, int amount, LocalDate refDate, String outfitId,
+			OffsetDateTime createdAt) {
+	}
+
+	/** nextBefore: 다음 쪽을 부를 before 값, 더 없으면 null */
+	public record LedgerPage(List<LedgerEntry> items, Long nextBefore) {
+	}
+
 	public record CheckInResponse(Wallet wallet, List<Reward> rewards) {
 	}
 

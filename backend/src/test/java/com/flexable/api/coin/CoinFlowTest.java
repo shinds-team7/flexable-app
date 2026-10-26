@@ -201,6 +201,49 @@ class CoinFlowTest {
 		checkIn(a).andExpect(jsonPath("$.rewards", hasSize(1))).andExpect(jsonPath("$.rewards[0].id").value(giftId));
 	}
 
+	// ---- 내역 ----
+
+	@Test
+	void ledgerListsMyEntriesNewestFirstAndPages() throws Exception {
+		clock.seoul("2026-10-21T09:00");
+		String token = signup();
+		checkIn(token);
+		clock.seoul("2026-10-21T12:00");
+		mvc.perform(auth(post("/api/v1/outfits/outfit-03/purchase"), token, null)).andExpect(status().isOk());
+
+		// 모달로 보여 주기 전(ack 전)의 가입 선물도 내역에는 있다
+		Object purchaseId = read(mvc.perform(auth(get("/api/v1/coins/ledger"), token, null))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(2)))
+			.andExpect(jsonPath("$.items[0].reason").value("PURCHASE"))
+			.andExpect(jsonPath("$.items[0].amount").value(-200))
+			.andExpect(jsonPath("$.items[0].outfitId").value("outfit-03"))
+			.andExpect(jsonPath("$.items[1].reason").value("SIGNUP_GIFT"))
+			.andExpect(jsonPath("$.items[1].amount").value(200))
+			.andExpect(jsonPath("$.items[1].outfitId").value(nullValue()))
+			.andExpect(jsonPath("$.nextBefore").value(nullValue())), "$.items[0].id");
+
+		mvc.perform(auth(get("/api/v1/coins/ledger?limit=1"), token, null))
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.items[0].reason").value("PURCHASE"))
+			.andExpect(jsonPath("$.nextBefore").value(purchaseId));
+		mvc.perform(auth(get("/api/v1/coins/ledger?limit=1&before=" + purchaseId), token, null))
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.items[0].reason").value("SIGNUP_GIFT"))
+			.andExpect(jsonPath("$.nextBefore").value(nullValue()));
+
+		mvc.perform(auth(get("/api/v1/coins/ledger?limit=0"), token, null))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+		mvc.perform(auth(get("/api/v1/coins/ledger?limit=101"), token, null)).andExpect(status().isBadRequest());
+
+		// 남의 내역은 보이지 않는다
+		String other = signup();
+		mvc.perform(auth(get("/api/v1/coins/ledger"), other, null))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(0)));
+	}
+
 	// ---- 시간 적립 ----
 
 	@Test

@@ -8,15 +8,19 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flexable.api.budget.BudgetService;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
 import com.flexable.api.coin.CoinDtos.CollectResponse;
+import com.flexable.api.coin.CoinDtos.LedgerEntry;
+import com.flexable.api.coin.CoinDtos.LedgerPage;
 import com.flexable.api.coin.CoinDtos.Passive;
 import com.flexable.api.coin.CoinDtos.Reward;
 import com.flexable.api.coin.CoinDtos.Wallet;
+import com.flexable.api.common.ApiException;
 import com.flexable.api.common.Times;
 import com.flexable.api.config.AppProperties;
 
@@ -32,6 +36,8 @@ public class CoinService {
 	public static final int PASSIVE_LIMIT = 10;
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
 	public static final String ONCE = "once";
+	public static final int LEDGER_DEFAULT_LIMIT = 30;
+	public static final int LEDGER_MAX_LIMIT = 100;
 
 	private final CoinWalletRepository wallets;
 	private final CoinLedgerRepository ledger;
@@ -91,6 +97,19 @@ public class CoinService {
 		post(w, CoinReason.PASSIVE, today() + "#" + accrued, collectable, true);
 		w.collectPassive(accrued);
 		return new CollectResponse(collectable, view(w));
+	}
+
+	/** 적립·사용 내역, 최신순. before가 없으면 가장 최근부터. limit+1개를 읽어 다음 쪽이 있는지 본다. */
+	@Transactional(readOnly = true)
+	public LedgerPage ledger(long userId, Long before, int limit) {
+		if (limit < 1 || limit > LEDGER_MAX_LIMIT) {
+			throw ApiException.invalid("limit", "limit은 1~" + LEDGER_MAX_LIMIT + " 사이로 보내 주세요");
+		}
+		List<CoinLedger> rows = ledger.findByUserIdAndIdLessThanOrderByIdDesc(userId,
+				before == null ? Long.MAX_VALUE : before, Limit.of(limit + 1));
+		boolean more = rows.size() > limit;
+		List<LedgerEntry> items = rows.stream().limit(limit).map(this::toEntry).toList();
+		return new LedgerPage(items, more ? items.get(items.size() - 1).id() : null);
 	}
 
 	/** 지갑이 없으면 만들고 행을 잠근다. 같은 트랜잭션 안에서 잔액을 바꾸기 전에 부른다. */
@@ -154,5 +173,12 @@ public class CoinService {
 	private Reward toReward(CoinLedger l) {
 		LocalDate refDate = l.getReason() == CoinReason.BUDGET_BONUS ? LocalDate.parse(l.getRefKey()) : null;
 		return new Reward(l.getId(), l.getReason(), l.getAmount(), refDate, Times.at(l.getCreatedAt(), zone));
+	}
+
+	private LedgerEntry toEntry(CoinLedger l) {
+		LocalDate refDate = l.getReason() == CoinReason.BUDGET_BONUS ? LocalDate.parse(l.getRefKey()) : null;
+		String outfitId = l.getReason() == CoinReason.PURCHASE ? l.getRefKey() : null;
+		return new LedgerEntry(l.getId(), l.getReason(), l.getAmount(), refDate, outfitId,
+				Times.at(l.getCreatedAt(), zone));
 	}
 }
