@@ -16,6 +16,8 @@ scp -i "$KEY" "$DIR/../build/libs/app.jar" "$DIR/Dockerfile" "$DIR/docker-compos
 # 루트 디스크가 작아서(이슈 #31 당시 6.7GB, 10-20 기준 15GB — HANDOFF §5) 빌드 캐시가 쌓이면 다음 빌드가 no space left로 실패한다(apt-get update exit 100으로 보임).
 # 빌드 전에 캐시를 지워 이미 디스크가 찬 상태에서도 다시 실행하면 복구되게 하고, 빌드 뒤 이전 이미지·새 캐시를 지운다.
 ssh -i "$KEY" "$HOST" 'set -e; cd /opt/flexable && chmod +x setup-db.sh
+# 컨테이너는 uid 10001로 돈다. 로컬 umask 077로 빌드한 jar(600)는 읽지 못해 "Unable to access jarfile"로 재시작이 반복된다
+chmod 644 app.jar
 if ! { test -s .env && grep -q "^DB_PASSWORD=." .env; }; then
   echo ".env가 비어 있습니다. 먼저 /opt/flexable/setup-db.sh 를 실행하세요." >&2; exit 1
 fi
