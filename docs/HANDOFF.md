@@ -32,19 +32,16 @@
 - [ ] 웹 시드머니 인수인계의 남은 체크 2개([`web-seed-entries-handoff.md`](web-seed-entries-handoff.md))
 - [ ] 팀원 2차 피드백 수집(노션), 2028 공휴일 추가(2027년 6월쯤), 도메인 구매·탄력적 IP(§6)
 
-서버 이전(10-26 결정, 기한 11-18):
+서버 이전(10-26 결정, 기한 11-18) — 계획·명령은 [`server-migration.md`](server-migration.md):
 
-AWS(EC2 `t3.micro` + RDS `database-flex`)를 내리고 신한 아카데미가 제공하는 서버로 옮긴다. 지금 VM 1대를 받았다. API와 DB를 나눠 두도록 **VM 1대를 더 요청한다**(사람). 서버 주소·계정·비밀번호는 이 문서에 적지 않는다(공개 저장소).
+AWS(EC2 + RDS)를 내리고 신한 아카데미 VM으로 옮긴다. VM 1대는 웹이 쓰고 있어, **앱용 VM 1대를 더 받아** API·Caddy·MySQL을 함께 올린다. 주소(`flex-able-sh.duckdns.org`)는 그대로라 앱 재빌드·원격 업데이트는 필요 없다. 서버 주소·계정·비밀번호는 이 문서에 적지 않는다(공개 저장소).
 
-- [ ] VM 1대 추가 요청(사람). 받으면 VM 1: API(Docker Compose api + Caddy), VM 2: MySQL로 쓴다. 1대로만 가면 한 VM에 MySQL을 함께 띄우고 디스크·메모리 여유를 먼저 본다
-- [ ] 새 VM 준비: `backend/deploy/setup-server.sh`로 Docker 설치, 80·443 공개, 22는 관리자 IP만, MySQL 포트는 API VM에서만 접근
-- [ ] DB 옮기기(사람): RDS에서 덤프 → 새 MySQL에 복원. 옮기는 동안 쓰기가 생기지 않게 점검 시간을 정한다. Flyway 기록(`flyway_schema_history`, V11)도 같이 옮겨야 새 서버가 마이그레이션을 다시 돌리지 않는다
-- [ ] 서버 `.env`(사람): 기존 값을 안전한 경로로 옮기고 `DB_URL`만 새 DB로 바꾼다. **`JWT_SECRET`을 그대로 써야 사용자가 로그아웃되지 않는다.** `WEB_LINK_SERVICE_KEYS`·OAuth·`CORS_ORIGINS`도 그대로
-- [ ] 배포: `deploy.sh [ssh-host]`에 새 호스트를 넘긴다(기본값은 지금 EC2 IP). 이전이 끝나면 기본값과 `SSH_KEY`를 새 서버로 바꾼다
-- [ ] 주소 전환: DuckDNS `flex-able-sh.duckdns.org`를 새 API VM IP로 바꾼다. 주소가 같으면 앱 `EXPO_PUBLIC_API_URL`·웹 `APP_LINK_BASE_URL`·OAuth 콜백·서버 감시는 바꿀 필요가 없다(앱 재빌드·원격 업데이트 불필요). Caddy가 새 인증서를 받는지 확인
-- [ ] 확인: `/actuator/health` DB·디스크 포함 UP, 로그인(이메일·카카오·Google), 거래 기록, 웹 연동, 서버 감시 워크플로 통과. 웹(flexable-web) 담당에게 전환 시각을 알린다
-- [ ] 개인정보처리방침(사람 결정 후 같은 PR에서 `docs/play-store/privacy-policy.md`와 웹 화면): 수탁자 표의 "Amazon Web Services Korea LLC(EC2, RDS)"를 새 서버 제공자로, 백업 "최대 7일"(지금 RDS 자동 백업)을 새 서버의 백업 방식으로 맞춘다. Play 데이터 보안 양식도 다시 본다
-- [ ] AWS 종료(사람, 새 서버 확인 뒤): EC2·RDS 삭제, 남는 스냅샷·EBS·보안 그룹 정리. 방침에 백업 최대 7일로 적었으니 최종 스냅샷을 남기면 7일 안에 지운다. 이 문서 §5 서버 운영 정보(EC2·RDS·보안 그룹)와 `server-health.yml` 이슈 본문의 EC2·RDS 안내를 새 서버 기준으로 고친다
+- [ ] 앱용 VM 1대 추가 요청, 사양·고정 IP·포트·사용 기간 확인(계획 §2)
+- [ ] 코드 PR: compose에 MySQL 추가, 하루 1번 덤프·7일 보관 백업(계획 §3)
+- [ ] 리허설: RDS 덤프를 새 VM에 복원해 확인 후 지우기(계획 §4)
+- [ ] 전환(11-04 전후 목표): EC2 API 멈춤 → 덤프·복원 → DuckDNS 변경 → 확인(계획 §5). **`JWT_SECRET`은 그대로**
+- [ ] 개인정보처리방침 수탁자·백업 문구, 운영 문서 갱신(계획 §6)
+- [ ] AWS 정리(11-13 전후, 계획 §7)
 
 나중에(요청 있을 때만):
 
