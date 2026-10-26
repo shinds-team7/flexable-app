@@ -2,6 +2,7 @@
 import { api } from "./api/client";
 import type {
   CheckIn,
+  CoinLedgerPage,
   CoinWallet,
   CollectResult,
   OutfitList,
@@ -14,6 +15,9 @@ export const ackRewards = (ids: number[]) =>
   api<void>("/coins/rewards/ack", { method: "POST", body: { ids } });
 export const getWallet = () => api<CoinWallet>("/coins");
 export const collectCoins = () => api<CollectResult>("/coins/collect", { method: "POST" });
+/** Newest first. Pass the previous page's nextBefore to read older entries. */
+export const getLedger = (before?: number) =>
+  api<CoinLedgerPage>(before == null ? "/coins/ledger" : `/coins/ledger?before=${before}`);
 
 export const getOutfits = () => api<OutfitList>("/outfits");
 export const purchaseOutfit = (id: string) =>

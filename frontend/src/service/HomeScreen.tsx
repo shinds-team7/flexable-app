@@ -262,13 +262,19 @@ function statusOf(s: Today): PaceStatus {
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
 }
-/** Coin balance floating over the character video; the shop is reached from the header button. */
+/** Coin balance floating over the character video; it opens the coin history. The shop is reached from the header button. */
 function CoinChip({ balance }: { balance: number }) {
   return (
-    <View style={styles.coinChip} accessible accessibilityLabel={`보유 코인 ${money(balance)}개`}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`보유 코인 ${money(balance)}개, 코인 내역 보기`}
+      onPress={() => router.push("/coins/history")}
+      hitSlop={8}
+      style={styles.coinChip}
+    >
       <T size={14} weight="800" num>
         🪙 {money(balance)}
       </T>
-    </View>
+    </Pressable>
   );
 }
