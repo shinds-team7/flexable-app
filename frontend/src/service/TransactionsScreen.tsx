@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Card, Screen, Segment, T } from "@/components/ui";
+import { MonthCalendar, type DayTotals } from "@/components/MonthCalendar";
 import {
   CategoryIcon,
   ErrorNotice,
@@ -41,6 +42,15 @@ export function TransactionsScreen() {
     });
   const total = (type: string) =>
     items.filter((x) => x.type === type).reduce((a, x) => a + x.amount, 0);
+  // 달력은 아래 목록 필터와 상관없이 그달의 지출·수입을 모두 날짜별로 보여준다.
+  const daily = new Map<string, DayTotals>();
+  items.forEach((t) => {
+    const d = toSeoulInput(t.occurredAt).slice(0, 10);
+    const sum = daily.get(d) ?? { expense: 0, income: 0 };
+    if (t.type === "INCOME") sum.income += t.amount;
+    else sum.expense += t.amount;
+    daily.set(d, sum);
+  });
   return (
     <Screen>
       <Card style={{ paddingTop: 8, gap: 8 }}>
@@ -78,6 +88,12 @@ export function TransactionsScreen() {
             </View>
           ))}
         </View>
+        <MonthCalendar
+          year={month.getUTCFullYear()}
+          month={month.getUTCMonth() + 1}
+          today={seoulDate()}
+          totals={daily}
+        />
       </Card>
       <Segment
         items={[
