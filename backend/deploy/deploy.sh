@@ -5,6 +5,11 @@ set -euo pipefail
 HOST="${1:-ubuntu@3.36.103.99}"
 KEY="${SSH_KEY:-$HOME/.ssh/sh-flex.pem}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
+# 서버 이전 기간(docs/server-migration.md)에는 EC2가 아카데미 VM으로 중계만 한다. 이때 배포하면 중계 Caddyfile을 덮어쓰고
+# DB(RDS)가 없는 api를 띄우게 되므로 막는다.
+if ssh -i "$KEY" "$HOST" 'test -e /opt/flexable/RELAY_MODE'; then
+  echo "EC2가 중계 모드입니다(/opt/flexable/RELAY_MODE). 지금은 backend/deploy/academy/deploy.sh로 배포하세요." >&2; exit 1
+fi
 (cd "$DIR/.." && ./gradlew bootJar -q)
 scp -i "$KEY" "$DIR/../build/libs/app.jar" "$DIR/Dockerfile" "$DIR/docker-compose.yml" "$DIR/Caddyfile" \
   "$DIR/.env.example" "$DIR/setup-db.sh" "$HOST:/opt/flexable/"
