@@ -1,6 +1,6 @@
 # 인수인계 — 텅장관리 앱(1.4.0) Google Play 비공개 테스트
 
-마지막 갱신 2026-10-26(`main` `d1884cb` 기준). 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
+마지막 갱신 2026-10-26 퇴근(`main` `1ecb551` 기준). **10-27 출근하면 바로 아래 "서버 이전"의 "10-27 이어서 할 일"부터 한다.** 다른 PC나 다른 사람이 이어서 작업할 때 이 문서부터 읽는다.
 
 읽는 법: 맨 앞 "지금 상태와 남은 일"이 현재 기준이다. 그 아래 §0의 날짜별 절은 **그때의 작업 기록**이라 당시 상태(예: "운영 반영 전")가 그대로 남아 있고, 뒤에 확인된 일은 해당 줄 끝에 덧붙였다. 기능별 현재 동작은 [`FEATURES.md`](FEATURES.md).
 
@@ -37,7 +37,15 @@
 비용 때문에 **RDS를 지우고**, 11-18까지는 신한 아카데미 앱 전용 VM에 API·MySQL을 올린다. EC2는 Caddy 중계로만 남겨 `flex-able-sh.duckdns.org` 요청을 아카데미(`teongjangcare.shinhanacademy.co.kr`)로 넘긴다. **주소가 그대로라 앱 업데이트·OAuth·웹 설정은 바꾸지 않는다.** 11-18 전에 EC2 로컬 DB(RDS 없음)로 돌아와 계속 AWS로 서비스한다. 이전 기간에는 EC2에 `RELAY_MODE` 파일이 있어 기존 `deploy.sh`가 멈추고, 배포는 `backend/deploy/academy/deploy.sh`로 한다.
 
 - [x] 앱용 VM 받음(10-26): 1코어·8GB·디스크 23GB·Ubuntu 22.04·Docker
-- [ ] 준비·VM 설정·RDS 버전 확인·리허설·전환(10-26 하루에, 계획 §2~§6). **`JWT_SECRET`은 그대로**
+- [x] 준비·VM 설정·RDS 버전 확인(10-26, 계획 §2~§4): 작업 PC `~/.ssh/config`에 `academy`·`flex-ec2` 등록(키 로그인), VM docker 그룹·KST·`/opt/flexable`. RDS는 **MySQL 8.4.9** → 덤프 도구·VM 모두 `mysql:8.4`(#168). VM에서 카카오·Google로 나가는 연결 확인. 도메인은 Cloudflare 공인 주소이고 임시 nginx로 **VM·PC·EC2 모두 200** 확인(중계 가능)
+- [x] 리허설(10-26, 계획 §5): 덤프 26KB·테이블 18개 → VM 복원 → 행 수(users 35, transactions 188 등) → api 배포(`academy/deploy.sh`) → Flyway "up to date"·기동 12초·외부 `/actuator/health` 전체 UP → `backup-db.sh` 1회 성공. 배포 중 jar 권한 600 문제를 고쳤다(#170). **리허설 DB·덤프는 VM·EC2·PC에서 모두 지웠다**(`down -v`)
+- 10-27 이어서 할 일 — **계획 §6 전환**(점검 약 1시간, 웹 담당·테스터에게 먼저 공지):
+  - VM에 남아 있는 것: `/opt/flexable`의 `.env`(아카데미용, 완성본), `app.jar`(10-26 `main` 빌드), compose·`backup-db.sh`·`count-rows.sql`, Docker 이미지 `flexable-api`·`mysql:8.4`. 컨테이너·DB 볼륨은 없음
+  - EC2: 운영 그대로(api·caddy Up, RDS 사용 중). 아직 `RELAY_MODE` 없음
+  - 순서: §6-1 EC2 `docker compose stop api` → §6-2 최종 덤프(`mysql:8.4`) → §6-3 VM에 복원 후 `docker compose up -d`(새 jar가 필요하면 그 전에 `academy/deploy.sh academy`) → §6-4 EC2 중계 전환 → §6-5 확인·백업 cron
+  - 주의(10-26 겪은 것): 제 답변을 터미널에서 복사하면 줄 끝에 `│`가 붙는다 → 한 줄씩 붙이고 `│` 지우기. VM에서 `sudo`는 `ssh -t academy '...'`. `umask 077`을 친 창에서 빌드해도 이제 배포 스크립트가 jar 권한을 고친다
+  - 작업 PC 홈의 `ec2.env`·`academy.env`(비밀값)는 비밀번호 관리자로 옮기고 지운다(VM에는 이미 올라가 있음)
+- [ ] 전환(계획 §6). **`JWT_SECRET`은 그대로**
 - [ ] RDS 삭제(전환 뒤 1~2일, 계획 §7)
 - [ ] EC2 로컬 DB로 복귀(11-14~11-16, 계획 §8), 아카데미 VM 데이터 삭제(11-17)
 - [x] 개인정보처리방침: 수탁자 표에 아카데미를 넣지 않는다(10-26 사용자 결정, 11-18 전 EC2로 복귀). 복귀 뒤 백업 문구만 손본다(계획 §9)
