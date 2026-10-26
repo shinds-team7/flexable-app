@@ -451,6 +451,27 @@ paths:
                   collected: { type: integer }
                   wallet: { $ref: '#/components/schemas/Wallet' }
         '401': { $ref: '#/components/responses/Error' }
+  /coins/ledger:
+    get:
+      tags: [coin]
+      summary: 코인 적립·사용 내역, 최신순. before로 이전 내역을 더 불러온다
+      parameters:
+        - { name: before, in: query, required: false, description: '이 id보다 오래된 내역(앞 응답의 nextBefore)', schema: { type: integer, format: int64 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+      responses:
+        '200':
+          description: 내역 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextBefore]
+                additionalProperties: false
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/LedgerEntry' } }
+                  nextBefore: { type: integer, format: int64, nullable: true, description: '다음 요청의 before. null이면 끝' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
 
   /outfits:
     get:
@@ -939,6 +960,17 @@ components:
         reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND] }
         amount: { type: integer }
         refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
+        createdAt: { type: string, format: date-time }
+    LedgerEntry:
+      type: object
+      required: [id, reason, amount, refDate, outfitId, createdAt]
+      additionalProperties: false
+      properties:
+        id: { type: integer, format: int64 }
+        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND] }
+        amount: { type: integer, description: '적립은 양수, 사용(PURCHASE)은 음수' }
+        refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
+        outfitId: { type: string, nullable: true, description: 'PURCHASE의 코스튬 id' }
         createdAt: { type: string, format: date-time }
     OutfitList:
       type: object
