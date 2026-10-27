@@ -8,52 +8,71 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
-import { Button, Card, RadioMark, T } from "@/components/ui";
+import { Button, RadioMark, T } from "@/components/ui";
 import { colors, floating, radius } from "@/theme";
+import { styles as heroStyles } from "@/components/HomeStyles";
 import { api } from "./api/client";
-import { ErrorNotice, MoneyField, money, useResource } from "./ui";
+import { ErrorNotice, MoneyField, money } from "./ui";
 import type { SeedChoice, SeedMoney } from "./types";
 /**
  * 시드머니 합계와, 수입일 전날부터 뜨는 반영 창. 반영하기 전까지는 홈에 올 때마다 다시 뜬다
- * (다음 수입일 전날이 되면 서버가 지난 주기를 넘긴다). 반영한 돈은 생활비 잔액에서 빠지므로 onChanged로 홈을 다시 읽는다.
+ * (다음 수입일 전날이 되면 서버가 지난 주기를 넘긴다). 반영한 돈은 생활비 잔액에서 빠지므로 onChanged로 홈과 시드머니를 다시 읽는다.
+ * seed는 홈이 GET /budget/seed-money로 읽어 넘긴다(서버가 이 기능 전이면 홈이 카드를 그리지 않는다).
  */
-export function SeedMoneyCard({ onChanged }: { onChanged: () => void }) {
-  const result = useResource<SeedMoney>("/budget/seed-money");
+export function SeedMoneyCard({
+  seed,
+  onChanged,
+  style,
+}: {
+  seed: SeedMoney;
+  onChanged: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
   const [later, setLater] = useState<string | null>(null);
-  const seed = result.data;
-  // 서버가 이 기능 전이면(404) 아무것도 보이지 않는다.
-  if (!seed) return null;
   const pending = seed.pending;
   return (
     <>
-      <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={styles.icon}>
-          <Ionicons name="wallet-outline" size={22} color={colors.brand} />
+      {/* Same blue panel as the today card it sits beside. */}
+      <View style={[heroStyles.hero, style]}>
+        <T size={15} weight="700" color={colors.onBrand}>
+          시드머니
+        </T>
+        <View style={styles.amountRow}>
+          <T
+            size={38}
+            weight="800"
+            color={colors.onBrand}
+            num
+            style={{ flex: 1, lineHeight: 46 }}
+            accessibilityLabel={`시드머니 ${money(seed.total)}원`}
+          >
+            {money(seed.total)}
+            <T size={22} weight="700" color={colors.onBrand}>
+              {" "}
+              원
+            </T>
+          </T>
+          <View style={styles.icon}>
+            <Ionicons name="wallet-outline" size={32} color={colors.onBrand} />
+          </View>
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <T size={14} color={colors.textSub}>
-            시드머니
-          </T>
-          <T size={20} weight="800" num>
-            {money(seed.total)}원
-          </T>
-          <T size={13} color={colors.textMuted} num>
+        <View style={[heroStyles.heroFoot, styles.foot]}>
+          <T size={12} color={colors.onBrandSub} num>
             모아둔 돈 {money(seed.base)}원 + 반영한 돈 {money(seed.saved)}원 ·
             매달 {money(seed.monthlyGoal)}원 저축
           </T>
         </View>
-      </Card>
+      </View>
       {pending && later !== pending.cycleEnd && (
         <ReflectModal
           // A new cycle starts with a fresh choice.
           key={pending.cycleEnd}
           pending={pending}
           onLater={() => setLater(pending.cycleEnd)}
-          onDone={() => {
-            result.retry();
-            onChanged();
-          }}
+          onDone={onChanged}
         />
       )}
     </>
@@ -196,14 +215,22 @@ function ReflectModal({
   );
 }
 const styles = StyleSheet.create({
+  amountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 6,
+  },
   icon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brandSoft,
+    width: 56,
+    height: 56,
+    borderRadius: radius.soft,
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
   },
+  // The caption may wrap to two lines, so the footer sits at the bottom instead of a fixed gap.
+  foot: { marginTop: "auto" },
   dim: {
     flex: 1,
     justifyContent: "center",

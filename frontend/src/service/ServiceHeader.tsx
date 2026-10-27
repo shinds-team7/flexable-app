@@ -1,10 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { usePathname } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
 import { colors, pressTransition } from "@/theme";
 import { AddTransactionSheet } from "./AddTransactionSheet";
+import { useInbox } from "./inbox";
 const tabs = [
   {
     href: "/home" as const,
@@ -35,10 +36,26 @@ const tabs = [
     match: (p: string) => p === "/my",
   },
 ];
-// Tabs live in the bottom icon bar for every home style; the header keeps only the logo row.
+// Tabs live in the bottom icon bar for every home style; the header keeps the logo row and the inbox bell.
 // The shop is reached from the coin history, opened by the coin chip on the character home.
 export function ServiceHeader() {
-  return <AppHeaderView homeHref="/home" />;
+  return <AppHeaderView homeHref="/home" right={<InboxButton />} />;
+}
+/** 알림함으로 간다. 안 읽은 알림이 있으면 점을 찍는다 */
+function InboxButton() {
+  const { unread } = useInbox();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={unread ? "알림함, 새 알림 있음" : "알림함"}
+      onPress={() => router.push("/notifications")}
+      hitSlop={6}
+      style={styles.bell}
+    >
+      <Ionicons name="notifications-outline" size={24} color={colors.text} />
+      {unread && <View style={styles.dot} />}
+    </Pressable>
+  );
 }
 export function ServiceTabBar() {
   const pathname = usePathname();
@@ -68,6 +85,25 @@ function RecordButton() {
   );
 }
 const styles = StyleSheet.create({
+  bell: {
+    width: 48,
+    height: 48,
+    marginRight: -12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Same unread dot as the shop button in the coin history.
+  dot: {
+    position: "absolute",
+    top: 11,
+    right: 12,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "#fff",
+    backgroundColor: colors.danger,
+  },
   record: {
     width: 48,
     height: 48,

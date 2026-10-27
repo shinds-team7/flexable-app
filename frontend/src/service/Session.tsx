@@ -14,6 +14,7 @@ import { readStorage, writeStorage } from "./storage";
 import type { AuthResponse, User } from "./types";
 import { useToast } from "@/components/Toast";
 import { cancelEntryReminder } from "./entryReminder";
+import { clearInbox } from "./inboxStore";
 import { cancelSeedReminder } from "./seedReminder";
 const KEY = "flexable.service.token";
 /** True when the app or page was opened on /oauth/callback (web: the current address). */
@@ -61,6 +62,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // 로그아웃·탈퇴한 기기에 다음 수입일 알림·기록 알림이 남지 않게 한다.
     await cancelSeedReminder().catch(() => {});
     await cancelEntryReminder();
+    if (id !== null) await clearInbox(id).catch(() => {});
   }, []);
   const expired = useCallback(async () => {
     await clear();

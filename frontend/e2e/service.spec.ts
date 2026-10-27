@@ -435,7 +435,9 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await closeGift(page);
-  await expect(page.getByText("500,000원", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("시드머니 500,000원", { exact: true }),
+  ).toBeVisible();
   // The real prompt needs a finished pay cycle, so the pending answer is mocked; the POST body is what matters.
   let posted: unknown;
   const pending = {
@@ -484,7 +486,9 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
   await page.getByRole("radio", { name: "직접 입력", exact: true }).click();
   await page.getByLabel("반영할 금액 (원)", { exact: true }).fill("120000");
   await page.getByRole("button", { name: "반영하기", exact: true }).click();
-  await expect(page.getByText("620,000원", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("시드머니 620,000원", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText("이번 달 모은 돈을 시드머니에 반영할까요?", { exact: true }),
   ).toBeHidden();
@@ -555,7 +559,10 @@ test("expired token returns to start; public routes remain accessible", async ({
   expect(await token(page)).toBeNull();
   await page.goto("/privacy");
   await expect(
-    page.getByText("- 시행일: 2026년 10월 28일(웹사이트 연동은 그 전에 동의한 이용자에게 동의한 때부터)", { exact: true }),
+    page.getByText(
+      "- 시행일: 2026년 10월 28일(웹사이트 연동은 그 전에 동의한 이용자에게 동의한 때부터)",
+      { exact: true },
+    ),
   ).toBeVisible();
   await page.goto("/support");
   await expect(page.getByText("앱 버전 1.5.0", { exact: true })).toBeVisible();
