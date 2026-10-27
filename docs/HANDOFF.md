@@ -46,8 +46,9 @@
   - 주의(10-26 겪은 것): 제 답변을 터미널에서 복사하면 줄 끝에 `│`가 붙는다 → 한 줄씩 붙이고 `│` 지우기. VM에서 `sudo`는 `ssh -t academy '...'`. `umask 077`을 친 창에서 빌드해도 이제 배포 스크립트가 jar 권한을 고친다
   - 작업 PC 홈의 `ec2.env`·`academy.env`(비밀값)는 비밀번호 관리자로 옮기고 지운다(VM에는 이미 올라가 있음)
 - [x] **전환 완료(10-27, 점검 약 15:20~15:55 KST)**: EC2 api 정지 → RDS 최종 덤프(26KB) → VM 복원, 행 수 15개 테이블 모두 일치(users 35, transactions 195, daily_budgets 110, coin_ledger 86 등, Flyway 11건) → VM api 기동 15:50 KST(10-26 `main` `1ecb551` 빌드 jar = 운영과 같은 백엔드) → EC2 Caddy를 중계(`relay/Caddyfile`)로, `RELAY_MODE` 생성. 옛 주소 health 전체 UP, 서버 감시 수동 실행 success, VM 백업 cron 매일 04:00 등록, 사용자 실기기 확인 완료. 되돌리기 명령은 계획 §6-6(RDS가 남아 있는 동안만)
-- [ ] **#175 코인 내역 API는 아직 운영에 없다**(전환은 같은 버전으로 함). `backend/deploy/academy/deploy.sh academy`로 서버를 먼저 배포한 뒤 앱 원격 업데이트를 게시한다(반대 순서면 코인 내역 화면이 실패)
-- [ ] RDS 삭제 대기: 10-28 04:00 VM 첫 자동 백업(`/opt/flexable/backups/backup.log`) 성공 확인 뒤 계획 §7. 되돌림용 `dump-final.sql.gz`가 EC2 `~`와 작업 PC `~`에 있다(RDS 삭제 때 같이 지움)
+- [ ] **#175 코인 내역 API(팀원 PR, 10-27 머지)는 아직 운영에 없다**(전환은 같은 버전으로 함). 서버 배포는 아카데미 네트워크 안의 PC에서만 된다. `backend/deploy/academy/deploy.sh academy`로 서버를 먼저 배포한 뒤 앱 원격 업데이트를 게시한다(반대 순서면 코인 내역 화면이 실패)
+- [x] **RDS 삭제 완료(10-27, 사용자)**: `database-flex` 삭제, 보안 그룹 `ec2-rds-1`·`rds-ec2-1` 정리. **이제 RDS로 되돌릴 수 없다.** 운영 DB는 아카데미 VM 하나뿐이다
+- [ ] 10-28 04:00 VM 첫 자동 백업 확인(`ssh academy 'cat /opt/flexable/backups/backup.log; ls -l /opt/flexable/backups'`). 성공하면 되돌림용 `dump-final.sql.gz`(EC2 `~`, 작업 PC `~`)와 작업 PC의 `ec2.env`·`academy.env`를 지운다(`.env` 두 개는 비밀번호 관리자로 옮긴 뒤)
 - [ ] RDS 삭제(전환 뒤 1~2일, 계획 §7)
 - [ ] EC2 로컬 DB로 복귀(11-14~11-16, 계획 §8), 아카데미 VM 데이터 삭제(11-17)
 - [x] 개인정보처리방침: 수탁자 표에 아카데미를 넣지 않는다(10-26 사용자 결정, 11-18 전 EC2로 복귀). 복귀 뒤 백업 문구만 손본다(계획 §9)
