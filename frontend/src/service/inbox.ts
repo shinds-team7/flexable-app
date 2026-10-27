@@ -17,6 +17,7 @@ import { ENTRY_REMINDER, SEED_REMINDER } from "./reminderTexts";
 import { useSession } from "./Session";
 import type { CoinLedgerEntry, Today, Transaction } from "./types";
 import { money, parseTime, seoulDate } from "./ui";
+import { useWallet } from "./wallet";
 
 export type InboxItem = {
   key: string;
@@ -107,6 +108,8 @@ export function useInbox() {
   const { user, revision } = useSession();
   const id = user?.onboarded ? user.id : undefined;
   const version = useInboxVersion();
+  // 홈 첫 방문 선물·모으기·구매로 코인이 바뀌면 화면 데이터를 다시 읽지 않으므로, 잔액이 바뀔 때 코인 내역을 다시 읽는다.
+  const balance = useWallet()?.balance;
   const [resumed, resume] = useState(0);
   const [attempt, retry] = useState(0);
   const [server, setServer] = useState<Server>();
@@ -147,7 +150,7 @@ export function useInbox() {
     return () => {
       alive = false;
     };
-  }, [id, revision, resumed, attempt]);
+  }, [id, revision, resumed, attempt, balance]);
   useEffect(() => {
     if (!id) return;
     let alive = true;

@@ -15,7 +15,7 @@ import { ErrorNotice, Loading, seoulDate } from "./ui";
  */
 export function NotificationsScreen() {
   const { id, items, seen, error, loading, retry } = useInbox();
-  // 화면을 연 순간의 읽은 시각. 읽음 처리 뒤에도 이번에 새로 온 알림을 표시해 둔다.
+  // 화면을 연 순간의 읽은 시각. 읽음 처리 뒤에도 이번에 새로 온 알림은 바탕색으로 표시해 둔다.
   const [opened, setOpened] = useState<number>();
   if (opened === undefined && seen !== undefined) setOpened(seen);
   // 가장 최근 알림 시각까지만 읽음으로 한다. 지금 시각을 쓰면 읽음 기록이 바뀔 때마다 다시 읽고 또 기록하게 된다.
@@ -95,7 +95,7 @@ function Row({ item, fresh }: { item: InboxItem; fresh: boolean }) {
         .filter(Boolean)
         .join(", ")}
       onPress={() => router.push(item.href)}
-      style={styles.row}
+      style={[styles.row, fresh && styles.fresh]}
     >
       <View style={[styles.icon, { backgroundColor: item.color + "1F" }]}>
         <Ionicons name={item.icon} size={20} color={item.color} />
@@ -110,12 +110,9 @@ function Row({ item, fresh }: { item: InboxItem; fresh: boolean }) {
           </T>
         )}
       </View>
-      <View style={{ alignItems: "flex-end", gap: 6 }}>
-        <T size={12} color={colors.textMuted} num>
-          {time}
-        </T>
-        {fresh && <View style={styles.dot} />}
-      </View>
+      <T size={12} color={colors.textMuted} num>
+        {time}
+      </T>
     </Pressable>
   );
 }
@@ -126,18 +123,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingVertical: 12,
+    // The unread background spans the card edge to edge (card padding 20) without moving the text.
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
+  // 이번에 새로 온(안 읽은) 알림은 옅은 블루 바탕으로 구분한다.
+  fresh: { backgroundColor: colors.brandSoft },
   icon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.danger,
   },
 });

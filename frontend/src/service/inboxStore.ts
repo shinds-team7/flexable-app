@@ -82,20 +82,12 @@ export function recordBudget(id: number, date: string, todayAvailable: number) {
   });
 }
 
-/**
- * 알림함에 보여 줄 기기 기록. 처음 열 때는 지금을 마지막으로 연 시각으로 저장해,
- * 알림함이 생기기 전의 코인·고정지출 기록이 모두 안 읽음으로 보이지 않게 한다.
- */
+/** 알림함에 보여 줄 기기 기록. 알림함을 한 번도 열지 않았으면 모든 알림이 안 읽음이다 */
 export function readInbox(id: number) {
   return serial(async () => {
-    const now = Date.now();
-    const planned = plan(await read(id, "planned", EMPTY), now);
+    const planned = plan(await read(id, "planned", EMPTY), Date.now());
     const budget = await read<BudgetNote[]>(id, "budget", []);
-    let seen = await read<number | null>(id, "seen", null);
-    if (seen === null) {
-      seen = now;
-      await write(id, "seen", seen);
-    }
+    const seen = await read<number>(id, "seen", 0);
     return { sent: planned.sent, budget, seen };
   });
 }
