@@ -16,13 +16,16 @@ import { colors } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
 import { SeedMoneyCard } from "./SeedMoneyCard";
 import { DayBudgets } from "@/components/DayBudgets";
+import { SwipePager } from "@/components/SwipePager";
 import { useSeedReminderSetting } from "./reminderSetting";
 import { cancelSeedReminder, scheduleSeedReminder } from "./seedReminder";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
-import type { CoinReward, Today } from "./types";
+import type { CoinReward, SeedMoney, Today } from "./types";
 import { publishWallet, useWallet } from "./wallet";
 export function HomeScreen() {
   const result = useResource<Today>("/budget/today");
+  // Seed money is the hero's second page, swiped in from the right.
+  const seed = useResource<SeedMoney>("/budget/seed-money");
   const [basis, setBasis] = useState(false);
   const [style] = useHomeStyle();
   const [remind] = useSeedReminderSetting();
@@ -67,15 +70,27 @@ export function HomeScreen() {
     else if (nextPayday) scheduleSeedReminder(nextPayday).catch(() => {});
   }, [nextPayday, remind]);
   const hero = s && (
-    <TodayHeroView
-      today={new Date(s.date + "T12:00:00")}
-      summary={{
-        todayAvailable: s.todayAvailable,
-        daysLeft: s.daysLeft,
-      }}
-      footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
-      onDetails={() => setBasis(true)}
-    />
+    <SwipePager>
+      <TodayHeroView
+        today={new Date(s.date + "T12:00:00")}
+        summary={{
+          todayAvailable: s.todayAvailable,
+          daysLeft: s.daysLeft,
+        }}
+        footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
+        onDetails={() => setBasis(true)}
+      />
+      {seed.data && (
+        <SeedMoneyCard
+          seed={seed.data}
+          style={{ flex: 1 }}
+          onChanged={() => {
+            seed.retry();
+            result.retry();
+          }}
+        />
+      )}
+    </SwipePager>
   );
   return (
     <View style={{ flex: 1 }}>
@@ -126,7 +141,6 @@ export function HomeScreen() {
                 </T>
               </Card>
             </View>
-            <SeedMoneyCard onChanged={result.retry} />
             <DayBudgets date={s.date} dailyBudget={s.dailyBudget} />
             {!s.hasTransactions && (
               <Card style={{ gap: 4 }}>
