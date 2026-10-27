@@ -438,6 +438,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/budget/day-weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 요일별 비중과 고를 수 있는 프리셋(docs/policies.md §5). 내 기록 기준은 부를 때마다 어제까지 기록으로 다시 낸다 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["DayWeights"];
+                401: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        /** 요일별 비중 저장. 프리셋은 서버가 비중을 채우고 CUSTOM은 보낸 비중을 쓴다. 오늘 하루 예산부터 바뀐다 */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DayWeightsRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["DayWeights"];
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/budget/seed-money": {
         parameters: {
             query?: never;
@@ -1553,6 +1602,16 @@ export interface components {
          *       "weekAvailable": 201380,
          *       "cycleStart": "2026-09-25",
          *       "hasTransactions": true,
+         *       "dayPreset": "EVEN",
+         *       "dayBudgets": [
+         *         45230,
+         *         45230,
+         *         45230,
+         *         45230,
+         *         45230,
+         *         45230,
+         *         45230
+         *       ],
          *       "characterPoints": 130,
          *       "characterDelta": 15
          *     }
@@ -1595,8 +1654,127 @@ export interface components {
             /** Format: date */
             cycleStart: string;
             hasTransactions: boolean;
+            dayPreset: components["schemas"]["DayPreset"];
+            /** @description 월~일 요일별 하루 예산(남은 생활비를 남은 날의 요일 비중 합으로 나눔, §5). dailyBudget = 오늘 요일 값 */
+            dayBudgets: number[];
             characterPoints: number;
             characterDelta: number;
+        };
+        /**
+         * @description EVEN 기본 배분, RECORD 내 기록 기준, WEEKEND 주말 넉넉히, WEEKDAY 평일 넉넉히, CUSTOM 직접 조정
+         * @enum {string}
+         */
+        DayPreset: "EVEN" | "RECORD" | "WEEKEND" | "WEEKDAY" | "CUSTOM";
+        /** @description 월~일 비중(상대값). 하루 예산 = 남은 생활비 × 그 요일 비중 ÷ 남은 날의 비중 합 */
+        DayWeightList: number[];
+        DayWeightsRequest: {
+            preset: components["schemas"]["DayPreset"];
+            /** @description CUSTOM이면 필수. 다른 프리셋이면 무시하고 서버가 채운다 */
+            weights?: components["schemas"]["DayWeightList"];
+        };
+        /**
+         * @example {
+         *       "preset": "RECORD",
+         *       "weights": [
+         *         10,
+         *         10,
+         *         9,
+         *         9,
+         *         19,
+         *         29,
+         *         14
+         *       ],
+         *       "min": 5,
+         *       "max": 30,
+         *       "presets": [
+         *         {
+         *           "id": "EVEN",
+         *           "weights": [
+         *             14,
+         *             14,
+         *             14,
+         *             14,
+         *             14,
+         *             14,
+         *             14
+         *           ]
+         *         },
+         *         {
+         *           "id": "RECORD",
+         *           "weights": [
+         *             10,
+         *             10,
+         *             9,
+         *             9,
+         *             19,
+         *             29,
+         *             14
+         *           ]
+         *         },
+         *         {
+         *           "id": "WEEKEND",
+         *           "weights": [
+         *             12,
+         *             12,
+         *             12,
+         *             12,
+         *             14,
+         *             19,
+         *             19
+         *           ]
+         *         },
+         *         {
+         *           "id": "WEEKDAY",
+         *           "weights": [
+         *             16,
+         *             16,
+         *             16,
+         *             16,
+         *             16,
+         *             10,
+         *             10
+         *           ]
+         *         }
+         *       ],
+         *       "record": {
+         *         "from": "2026-09-29",
+         *         "to": "2026-10-26",
+         *         "days": 28,
+         *         "weekdays": 7,
+         *         "minDays": 7,
+         *         "minWeekdays": 3
+         *       }
+         *     }
+         */
+        DayWeights: {
+            preset: components["schemas"]["DayPreset"];
+            weights: components["schemas"]["DayWeightList"];
+            /** @description 요일 비중 최솟값(5) */
+            min: number;
+            /** @description 요일 비중 최댓값(30) */
+            max: number;
+            /** @description EVEN·RECORD·WEEKEND·WEEKDAY 순서 */
+            presets: {
+                id: components["schemas"]["DayPreset"];
+                /** @description null이면 지금 쓸 수 없음(RECORD의 기록 부족) */
+                weights: number[] | null;
+            }[];
+            /** @description 내 기록 기준을 낸 기간(오늘 전 최대 3개월, 기간 안 첫 기록일 ~ 어제). days ≥ minDays이고 weekdays ≥ minWeekdays여야 쓸 수 있다 */
+            record: {
+                /**
+                 * Format: date
+                 * @description 기간 안 기록이 없으면 null
+                 */
+                from: string | null;
+                /** Format: date */
+                to: string;
+                /** @description 지출을 기록한 날 수(고정지출 자동 기록 제외) */
+                days: number;
+                /** @description 기록이 있는 요일 수 */
+                weekdays: number;
+                minDays: number;
+                minWeekdays: number;
+            };
         };
         /**
          * @example {
@@ -1809,6 +1987,15 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["Settings"];
+            };
+        };
+        /** @description 요일별 비중 */
+        DayWeights: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DayWeights"];
             };
         };
         /** @description 시드머니 */

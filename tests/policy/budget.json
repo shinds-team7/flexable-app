@@ -1,5 +1,5 @@
 {
-  "policy": "docs/policies.md §1 수입일·정산 주기, §2 오늘 쓸 수 있는 돈",
+  "policy": "docs/policies.md §1 수입일·정산 주기, §2 오늘 쓸 수 있는 돈(§5 요일별 비중 포함)",
   "zone": "Asia/Seoul",
   "payday": [
     { "name": "수입일 전: 이번 달 수입일까지", "today": "2026-10-13", "payday": 23, "expected": { "nextPayday": "2026-10-23", "cycleStart": "2026-09-23" } },
@@ -57,7 +57,8 @@
         "nextPayday": "2026-10-23", "daysLeft": 2, "cycleStart": "2026-09-23",
         "estimatedBalance": 300000, "reservedFixed": 0, "remaining": 300000,
         "todaySpent": 0, "dailyBudget": 150000, "todayAvailable": 150000, "shortage": 0,
-        "weekSpent": 0, "weekDaysLeft": 2, "weekAvailable": 300000
+        "weekSpent": 0, "weekDaysLeft": 2, "weekAvailable": 300000,
+        "dayBudgets": [150000, 150000, 150000, 150000, 150000, 150000, 150000]
       }
     },
     {
@@ -84,6 +85,22 @@
         "estimatedBalance": 700000, "reservedFixed": 0, "remaining": 350000,
         "todaySpent": 0, "dailyBudget": 12068, "todayAvailable": 12068, "shortage": 0,
         "weekSpent": 0, "weekDaysLeft": 5, "weekAvailable": 60340
+      }
+    },
+    {
+      "name": "요일별 비중(주말 넉넉히): 남은 날의 비중 합으로 나누고, 이번 주는 요일별 금액을 더함",
+      "input": {
+        "today": "2026-10-27", "balance": 1000000, "balanceAt": "2026-10-27T09:00", "payday": 25, "cardUnpaid": 0,
+        "fixed": [], "protectedTotal": 0, "savedSinceBalance": 0,
+        "dayWeights": [12, 12, 12, 12, 14, 19, 19],
+        "transactions": [{ "type": "EXPENSE", "amount": 20000, "at": "2026-10-27T12:00" }]
+      },
+      "expected": {
+        "nextPayday": "2026-11-25", "daysLeft": 29, "cycleStart": "2026-10-26",
+        "estimatedBalance": 980000, "reservedFixed": 0, "remaining": 980000,
+        "todaySpent": 20000, "dailyBudget": 29126, "todayAvailable": 9126, "shortage": 0,
+        "weekSpent": 20000, "weekDaysLeft": 6, "weekAvailable": 193590,
+        "dayBudgets": [29126, 29126, 29126, 29126, 33980, 46116, 46116]
       }
     }
   ]

@@ -212,6 +212,8 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
   "weekAvailable": 192000,
   "cycleStart": "2026-09-25",
   "hasTransactions": true,
+  "dayPreset": "EVEN",
+  "dayBudgets": [34000, 34000, 34000, 34000, 34000, 34000, 34000],
   "characterPoints": 130,
   "characterDelta": 15
 }
@@ -221,10 +223,42 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 - `nextPayday`·`cycleStart`·`daysLeft`: [§1 수입일·정산 주기](policies.md#1-수입일정산-주기budgetbudgetcalculator)
 - `estimatedBalance`·`reservedFixed`·`remaining`·`todaySpent`·`dailyBudget`·`todayAvailable`·`shortage`·`weekSpent`·`weekDaysLeft`·`weekAvailable`: [§2 오늘 쓸 수 있는 돈](policies.md#2-오늘-쓸-수-있는-돈get-budgettoday-budgetbudgetcalculator). `todayAvailable`은 오늘 예산을 넘으면 음수다(1.3.0 앱 홈은 마이너스로, 그 전 앱은 0원으로 보여 준다)
+- `dayPreset`·`dayBudgets`(월~일 요일별 하루 예산, `dailyBudget` = 오늘 요일 값): [§5 요일별 비중](policies.md#5-요일별-비중getput-budgetday-weights-budgetdayweights). 비중을 정하지 않았으면 `EVEN`이고 모든 요일이 같다
 - `characterPoints`·`characterDelta`: [§4 캐릭터 점수](policies.md#4-캐릭터-점수budgetcharacterscore). 이 요청마다 오늘의 `dailyBudget`을 날짜별로 저장한다(`daily_budgets`)
 - `hasTransactions` = 지금까지 거래를 한 건이라도 기록했는지(기간 무관). 홈 빈 상태 판단용
 
 화면 문구는 "입력한 잔액·기록 기준 추정"으로 설명한다(실제 은행 잔액과 다를 수 있음).
+
+### `GET /budget/day-weights` → 200 | 404 `BUDGET_NOT_SET`
+
+```json
+{
+  "preset": "RECORD",
+  "weights": [10, 10, 9, 9, 19, 29, 14],
+  "min": 5,
+  "max": 30,
+  "presets": [
+    { "id": "EVEN", "weights": [14, 14, 14, 14, 14, 14, 14] },
+    { "id": "RECORD", "weights": [10, 10, 9, 9, 19, 29, 14] },
+    { "id": "WEEKEND", "weights": [12, 12, 12, 12, 14, 19, 19] },
+    { "id": "WEEKDAY", "weights": [16, 16, 16, 16, 16, 10, 10] }
+  ],
+  "record": { "from": "2026-09-29", "to": "2026-10-26", "days": 28, "weekdays": 7, "minDays": 7, "minWeekdays": 3 }
+}
+```
+
+- `weights`는 지금 쓰는 월~일 비중(5~30), `presets`는 고를 수 있는 프리셋. `RECORD`의 `weights`가 `null`이면 기록이 부족해 고를 수 없다(`record`에 기록한 날·요일 수와 기준).
+- `RECORD`는 부를 때마다 어제까지의 기록으로 다시 낸다. 저장된 `weights`는 고른 때의 값이다.
+
+### `PUT /budget/day-weights` → 200(응답은 GET과 같음) | 400 | 404 `BUDGET_NOT_SET`
+
+```json
+{ "preset": "WEEKEND" }
+{ "preset": "CUSTOM", "weights": [10, 30, 10, 10, 10, 10, 10] }
+```
+
+- `EVEN`·`RECORD`·`WEEKEND`·`WEEKDAY`는 서버가 비중을 채운다(보낸 `weights`는 무시). `CUSTOM`은 `weights` 7개(각 5~30)가 필수다.
+- `RECORD`를 쓸 수 없으면 400 `VALIDATION_FAILED`(`fields.preset`). 저장하면 그날 `GET /budget/today`부터 바뀐다. 규칙은 [§5](policies.md#5-요일별-비중getput-budgetday-weights-budgetdayweights).
 
 ## 시드머니
 

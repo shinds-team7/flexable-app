@@ -80,15 +80,34 @@ public final class BudgetDtos {
 			long totalAfter, OffsetDateTime createdAt) {
 	}
 
+	/** preset이 CUSTOM이면 weights(월~일 7개, 5~30)가 필요하고, 다른 프리셋이면 서버가 채운다. */
+	public record DayWeightsRequest(
+			@NotNull(message = "배분 방법을 골라 주세요") DayWeights.Preset preset,
+			@Size(min = 7, max = 7, message = "요일 7개의 비중이 필요해요") List<@NotNull(message = "비중을 입력해 주세요") @Min(value = DayWeights.MIN, message = "비중은 5~30 사이로 정해 주세요") @Max(value = DayWeights.MAX, message = "비중은 5~30 사이로 정해 주세요") Integer> weights) {
+	}
+
+	/** weights가 null이면 그 프리셋을 지금 쓸 수 없다(내 기록 기준의 기록 부족). */
+	public record DayPresetItem(DayWeights.Preset id, List<Integer> weights) {
+	}
+
+	/** 내 기록 기준을 낸 기간. days·weekdays가 minDays·minWeekdays 이상이어야 쓸 수 있다. */
+	public record DayRecordInfo(LocalDate from, LocalDate to, int days, int weekdays, int minDays, int minWeekdays) {
+	}
+
+	public record DayWeightsResponse(DayWeights.Preset preset, List<Integer> weights, int min, int max,
+			List<DayPresetItem> presets, DayRecordInfo record) {
+	}
+
 	public record TodayResponse(LocalDate date, LocalDate nextPayday, int daysLeft, long estimatedBalance,
 			long reservedFixed, long cardUnpaid, long protectedTotal, long remaining, long todaySpent,
 			long dailyBudget, long todayAvailable, long shortage, long weekSpent, int weekDaysLeft, long weekAvailable,
-			LocalDate cycleStart, boolean hasTransactions, int characterPoints, int characterDelta) {
+			LocalDate cycleStart, boolean hasTransactions, DayWeights.Preset dayPreset, List<Long> dayBudgets,
+			int characterPoints, int characterDelta) {
 
 		TodayResponse withCharacter(CharacterScore.Result c) {
 			return new TodayResponse(date, nextPayday, daysLeft, estimatedBalance, reservedFixed, cardUnpaid,
 					protectedTotal, remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent, weekDaysLeft,
-					weekAvailable, cycleStart, hasTransactions, c.points(), c.delta());
+					weekAvailable, cycleStart, hasTransactions, dayPreset, dayBudgets, c.points(), c.delta());
 		}
 	}
 }
