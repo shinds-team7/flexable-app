@@ -1,10 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, usePathname } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
-import { colors } from "@/theme";
-import { useHomeStyle } from "./homeStyle";
-import { useWallet } from "./wallet";
+import { colors, pressTransition } from "@/theme";
 const tabs = [
   {
     href: "/home" as const,
@@ -35,61 +33,45 @@ const tabs = [
     match: (p: string) => p === "/my",
   },
 ];
-// Tabs live in the bottom icon bar for every home style; the header keeps the logo row,
-// plus the shop button on the character home where the costume is shown.
+// Tabs live in the bottom icon bar for every home style; the header keeps only the logo row.
+// The shop is reached from the coin history, opened by the coin chip on the character home.
 export function ServiceHeader() {
-  const pathname = usePathname();
-  const [style] = useHomeStyle();
-  return (
-    <AppHeaderView
-      homeHref="/home"
-      right={
-        pathname === "/home" && style === "character" ? (
-          <ShopButton />
-        ) : undefined
-      }
-    />
-  );
-}
-/** Coins, collecting and costumes all live in the shop; the dot says coins are waiting there. The balance itself shows on the character stage. */
-function ShopButton() {
-  const wallet = useWallet();
-  const waiting = (wallet?.passive.collectable ?? 0) > 0;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="상점"
-      onPress={() => router.push("/customize")}
-      hitSlop={6}
-      style={({ pressed }) => [styles.shop, pressed && { opacity: 0.6 }]}
-    >
-      <Ionicons name="shirt-outline" size={24} color={colors.text} />
-      {waiting && <View style={styles.dot} />}
-    </Pressable>
-  );
+  return <AppHeaderView homeHref="/home" />;
 }
 export function ServiceTabBar() {
   const pathname = usePathname();
-  return <BottomTabBar tabs={tabs} pathname={pathname} />;
+  return (
+    <BottomTabBar tabs={tabs} pathname={pathname} middle={<RecordButton />} />
+  );
+}
+/** Sits between 내역 and 분석 on every tab, so recording is one tap from anywhere. */
+function RecordButton() {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="거래 직접 기록"
+      onPress={() => router.push("/transactions/new")}
+      style={({ pressed }) => [
+        styles.record,
+        pressTransition,
+        pressed && styles.recordPressed,
+      ]}
+    >
+      <Ionicons name="add" size={30} color="#fff" />
+    </Pressable>
+  );
 }
 const styles = StyleSheet.create({
-  // The negative margin lines the icon up with the logo row's padding while keeping a 44pt target.
-  shop: {
-    width: 44,
-    height: 44,
-    marginRight: -10,
+  record: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: colors.brand,
   },
-  dot: {
-    position: "absolute",
-    top: 8,
-    right: 7,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: "#fff",
-    backgroundColor: colors.danger,
+  recordPressed: {
+    transform: [{ scale: 0.94 }],
+    backgroundColor: colors.brandDark,
   },
 });

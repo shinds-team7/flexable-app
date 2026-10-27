@@ -1,5 +1,7 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors } from "@/theme";
@@ -16,7 +18,7 @@ import {
   useResource,
 } from "./ui";
 
-/** 코인 적립·사용 내역. 홈 캐릭터 영상 위 코인 칩에서 들어온다(GET /coins/ledger, 최신순). */
+/** 코인 적립·사용 내역. 홈 캐릭터 영상 위 코인 칩에서 들어온다(GET /coins/ledger, 최신순). 보유 코인 옆 버튼으로 상점에 간다. */
 export function CoinHistoryScreen() {
   const first = useResource<CoinLedgerPage>("/coins/ledger");
   const wallet = useResource<CoinWallet>("/coins");
@@ -69,19 +71,34 @@ export function CoinHistoryScreen() {
       <SubHeader title="코인 내역" fallback="/home" />
       <Screen>
         {wallet.data && (
-          <Card>
-            <T size={13} color={colors.textSub}>
-              보유 코인
-            </T>
-            <View
-              accessible
-              accessibilityLabel={`보유 코인 ${wallet.data.balance}개`}
-            >
-              <T size={24} weight="800" num>
-                🪙 {money(wallet.data.balance)}
+          <View style={styles.top}>
+            <Card style={{ flex: 1 }}>
+              <T size={13} color={colors.textSub}>
+                보유 코인
               </T>
-            </View>
-          </Card>
+              <View
+                accessible
+                accessibilityLabel={`보유 코인 ${wallet.data.balance}개`}
+              >
+                <T size={24} weight="800" num>
+                  🪙 {money(wallet.data.balance)}
+                </T>
+              </View>
+            </Card>
+            <Card
+              style={styles.shop}
+              accessibilityLabel="상점"
+              onPress={() => router.push("/customize")}
+            >
+              <Ionicons name="storefront-outline" size={24} color={colors.text} />
+              <T size={13} weight="700">
+                상점
+              </T>
+              {wallet.data.passive.collectable > 0 && (
+                <View style={styles.dot} />
+              )}
+            </Card>
+          </View>
         )}
         <ErrorNotice error={first.error} retry={first.retry} />
         {first.loading && !base ? (
@@ -169,3 +186,20 @@ function Row({ entry }: { entry: CoinLedgerEntry }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  top: { flexDirection: "row", gap: 12 },
+  // The dot says coins are waiting to be collected in the shop.
+  shop: { alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 24 },
+  dot: {
+    position: "absolute",
+    top: 12,
+    right: 14,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "#fff",
+    backgroundColor: colors.danger,
+  },
+});

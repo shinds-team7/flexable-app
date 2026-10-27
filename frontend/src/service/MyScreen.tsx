@@ -41,7 +41,7 @@ export function AccountLine({ user }: { user: User }) {
     </>
   );
 }
-/** 내 추천 코드와 친구 코드 입력. 코인·상점은 캐릭터 홈 헤더의 상점 버튼에만 있다. 코인 API가 없는 서버(1.4.0 이전)에서는 보이지 않는다 */
+/** 내 추천 코드와 친구 코드 입력. 코인·상점은 캐릭터 홈 코인 칩 → 코인 내역의 상점 버튼으로만 들어간다. 코인 API가 없는 서버(1.4.0 이전)에서는 보이지 않는다 */
 function ReferralCard() {
   const toast = useToast();
   const [referral, setReferral] = useState<Referral>();

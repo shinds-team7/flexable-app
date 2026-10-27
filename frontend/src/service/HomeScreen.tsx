@@ -1,4 +1,3 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -13,7 +12,7 @@ import { RewardModal } from "./RewardModal";
 import { sessionGeneration } from "./api/client";
 import { ackRewards, checkIn } from "./coinApi";
 import { TodayHeroView } from "@/components/TodayHeroView";
-import { colors, floating, pressTransition } from "@/theme";
+import { colors } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
 import { SeedMoneyCard } from "./SeedMoneyCard";
 import { DayBudgets } from "@/components/DayBudgets";
@@ -176,49 +175,12 @@ export function HomeScreen() {
             </Sheet>
           </>
         )}
-        {/* Keeps the last card scrollable past the floating record button. */}
-        <View style={{ height: FAB_SPACE }} />
       </Screen>
       <RewardModal reward={rewards[0] ?? null} onClose={closeReward} />
-      <View style={styles.fabRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="거래 직접 기록"
-          onPress={() => router.push("/transactions/new")}
-          style={({ pressed }) => [
-            styles.fab,
-            floating,
-            pressTransition,
-            pressed && styles.fabPressed,
-          ]}
-        >
-          <Ionicons name="add" size={32} color="#fff" />
-        </Pressable>
-      </View>
     </View>
   );
 }
-const FAB_SIZE = 56;
-const FAB_GAP = 16;
-const FAB_SPACE = FAB_SIZE + FAB_GAP;
 const styles = StyleSheet.create({
-  // box-none lets taps beside the button reach the cards underneath.
-  fabRow: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: FAB_GAP,
-    alignItems: "center",
-    pointerEvents: "box-none",
-  },
-  fab: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.brand,
-  },
   pair: { flexDirection: "row", gap: 12 },
   half: { flex: 1, gap: 4, padding: 16 },
   // A negative amount turns the card navy, like the empty today card.
@@ -231,10 +193,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.9)",
-  },
-  fabPressed: {
-    transform: [{ scale: 0.94 }],
-    backgroundColor: colors.brandDark,
   },
 });
 // Mirrors the server rule in docs/API.md: a kept day adds 15 points, an overspent day takes 50, within 0-200 (Lv.3 for now).
@@ -262,7 +220,7 @@ function statusOf(s: Today): PaceStatus {
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
 }
-/** Coin balance floating over the character video; it opens the coin history. The shop is reached from the header button. */
+/** Coin balance floating over the character video; it opens the coin history, where the shop button sits. */
 function CoinChip({ balance }: { balance: number }) {
   return (
     <Pressable

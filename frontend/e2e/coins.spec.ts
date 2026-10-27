@@ -76,8 +76,10 @@ async function closeReward(page: Page, title: string, amount: number) {
 }
 const balance = (page: Page, n: number) =>
   expect(page.getByLabel(`코인 ${n}개`, { exact: true })).toBeVisible();
-// Coins, collecting and costumes live in the shop behind the character home's header button.
+// Coins, collecting and costumes live in the shop: coin chip on the character home → coin history → 상점.
 async function openShop(page: Page) {
+  await page.getByRole("button", { name: /코인 내역 보기$/ }).click();
+  await expect(page).toHaveURL(/\/coins\/history$/);
   await page.getByRole("button", { name: "상점", exact: true }).click();
   await expect(page).toHaveURL(/\/customize$/);
 }
@@ -131,6 +133,8 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
     await expect(hint).toBeVisible();
   else await expect(hint).toHaveCount(0);
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+  await expect(page).toHaveURL(/\/coins\/history$/);
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await Promise.all([checkedIn(page), page.reload()]);
   await expect(
@@ -151,6 +155,9 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
       await page.getByRole("button", { name, exact: true }).click();
       await expectVideoPlaying(page);
     }
+    // Back goes through the coin history the shop was opened from.
+    await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+    await expect(page).toHaveURL(/\/coins\/history$/);
     await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
     await expect(page).toHaveURL(/\/home$/);
     await expectVideoPlaying(page);
@@ -258,7 +265,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await onboard(page);
   await closeReward(page, "업데이트 기념 200코인 선물", 200);
   await page.goto("/my");
-  // My page keeps only the referral; the shop is reached from the home header alone.
+  // My page keeps only the referral; the shop is reached from the coin history alone.
   await expect(page.getByRole("button", { name: "상점" })).toHaveCount(0);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
   await page
