@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, type Href } from "expo-router";
-import type { ComponentProps, ReactNode } from "react";
+import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
 import { T } from "./ui";
@@ -50,10 +50,11 @@ export function AppHeaderView({
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
-/** 하단 탭바 — 아이콘 아래 라벨을 함께 보여 준다. 선택된 탭만 신한 블루 */
+/** 하단 탭바 — 아이콘 아래 라벨을 함께 보여 준다. 선택된 탭만 신한 블루. middle은 탭 가운데에 끼우는 버튼 */
 export function BottomTabBar({
   tabs,
   pathname,
+  middle,
 }: {
   tabs: {
     href: Href;
@@ -63,12 +64,14 @@ export function BottomTabBar({
     match: (p: string) => boolean;
   }[];
   pathname: string;
+  middle?: ReactNode;
 }) {
+  const half = Math.ceil(tabs.length / 2);
   return (
     <View style={styles.bottom} accessibilityRole="tablist">
-      {tabs.map((t) => {
+      {tabs.map((t, i) => {
         const on = t.match(pathname);
-        return (
+        const tab = (
           <Pressable
             key={t.label}
             style={styles.bottomTab}
@@ -90,6 +93,14 @@ export function BottomTabBar({
               {t.label}
             </T>
           </Pressable>
+        );
+        return i === half - 1 && middle ? (
+          <Fragment key={t.label}>
+            {tab}
+            <View style={styles.bottomTab}>{middle}</View>
+          </Fragment>
+        ) : (
+          tab
         );
       })}
     </View>

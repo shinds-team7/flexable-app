@@ -111,7 +111,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     fullPage: true,
   });
   const before = await snapshot(page, "/budget/today");
-  // The record button floats above the tab bar: the list scrolls under it while it keeps its place.
+  // The record button sits in the tab bar: the list scrolls while it keeps its place.
   const record = page.getByRole("button", {
     name: "거래 직접 기록",
     exact: true,
@@ -187,7 +187,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   ).toBeVisible();
   await page.getByRole("tab", { name: "내역", exact: true }).click();
   await expect(page.getByText("테스트 점심", { exact: true })).toBeVisible();
-  // 내역 has no add button of its own; income is picked in the form opened by the home + button.
+  // 내역 has no add button of its own; income is picked in the form opened by the tab bar + button.
   await expect(
     page.getByRole("button", { name: "+ 거래 직접 기록", exact: true }),
   ).toHaveCount(0);

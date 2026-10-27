@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, usePathname } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
-import { colors } from "@/theme";
+import { colors, pressTransition } from "@/theme";
 import { useHomeStyle } from "./homeStyle";
 import { useWallet } from "./wallet";
 const tabs = [
@@ -70,7 +70,26 @@ function ShopButton() {
 }
 export function ServiceTabBar() {
   const pathname = usePathname();
-  return <BottomTabBar tabs={tabs} pathname={pathname} />;
+  return (
+    <BottomTabBar tabs={tabs} pathname={pathname} middle={<RecordButton />} />
+  );
+}
+/** Sits between 내역 and 분석 on every tab, so recording is one tap from anywhere. */
+function RecordButton() {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="거래 직접 기록"
+      onPress={() => router.push("/transactions/new")}
+      style={({ pressed }) => [
+        styles.record,
+        pressTransition,
+        pressed && styles.recordPressed,
+      ]}
+    >
+      <Ionicons name="add" size={30} color="#fff" />
+    </Pressable>
+  );
 }
 const styles = StyleSheet.create({
   // The negative margin lines the icon up with the logo row's padding while keeping a 44pt target.
@@ -80,6 +99,18 @@ const styles = StyleSheet.create({
     marginRight: -10,
     alignItems: "center",
     justifyContent: "center",
+  },
+  record: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.brand,
+  },
+  recordPressed: {
+    transform: [{ scale: 0.94 }],
+    backgroundColor: colors.brandDark,
   },
   dot: {
     position: "absolute",
