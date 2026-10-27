@@ -50,9 +50,7 @@ export function DayWeightsScreen() {
   const drag = (index: number, weight: number) => {
     if (!data || !current || current.weights[index] === weight) return;
     const weights = current.weights.map((w, i) => (i === index ? weight : w));
-    // Dragging back onto a preset's exact values keeps that preset's name.
-    const match = data.presets.find((p) => sameWeights(p.weights, weights));
-    pick(match?.id ?? "CUSTOM", weights);
+    pick("CUSTOM", weights);
   };
 
   // Unlock only on failure: on success the screen is popping (docs/bug-transaction-edit-blank-screen.md).
