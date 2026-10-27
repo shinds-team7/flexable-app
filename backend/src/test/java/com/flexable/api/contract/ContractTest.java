@@ -237,6 +237,8 @@ class ContractTest {
 		app(auth(json(post("/api/v1/budget/seed-money/entries"), "{\"cycleEnd\":\"" + cycleEnd + "\",\"choice\":\"ALL\"}"), token), 201);
 		app(auth(get("/api/v1/budget/today"), token), 200);
 		web(get("/internal/v1/web-links/" + linkId + "/seed-money"), 200);
+		web(json(put("/internal/v1/web-links/" + linkId + "/seed-money"), "{\"total\":2000000}"), 200);
+		web(json(put("/internal/v1/web-links/" + linkId + "/seed-money"), "{\"total\":0}"), 400);
 
 		clock.now = Instant.now();
 		app(auth(get("/api/v1/me/web-links"), token), 200);

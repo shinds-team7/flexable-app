@@ -108,6 +108,21 @@ public class SeedMoneyService {
 				Times.at(updatedAt, zone), dailyBudgets.findFirstDate(userId), history);
 	}
 
+	/**
+	 * 웹 연동용. 웹에서 고친 총액이 되도록 모아둔 돈(seedBase)을 바꾼다(총액 − 반영한 돈 합). 반영 기록과 예산 계산은 그대로다.
+	 * 반영한 돈 합보다 작은 총액은 모아둔 돈이 음수가 되므로 받지 않는다.
+	 */
+	@Transactional
+	public WebSeedMoney setTotalFromWeb(long userId, long total) {
+		BudgetSettings s = settings.findForUpdate(userId).orElseThrow(() -> new ApiException(ErrorCode.BUDGET_NOT_SET));
+		long saved = entries.findByUserIdOrderByCycleEndAsc(userId).stream().mapToLong(SeedMoneyEntry::getAmount).sum();
+		if (total < saved) {
+			throw ApiException.invalid("total", "앱에서 반영한 돈(" + String.format("%,d", saved) + "원)보다 작게 고칠 수 없어요");
+		}
+		s.changeSeedBase(total - saved, clock.instant());
+		return forWeb(userId);
+	}
+
 	private SeedMoneyResponse view(long userId, BudgetSettings s, LocalDate today) {
 		List<SeedMoneyEntry> list = entries.findByUserIdOrderByCycleEndDesc(userId);
 		long saved = list.stream().mapToLong(SeedMoneyEntry::getAmount).sum();
