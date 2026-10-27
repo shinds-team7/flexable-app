@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { seoulDate } from "../ui";
 import { imageImportSupported, pickAndRecognize } from "./ocr";
 import { parseReceipt } from "./parse";
@@ -9,10 +9,19 @@ export { imageImportSupported };
 export function useImageImport() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const lock = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      lock.current = false;
+      setBusy(false);
+    }, []),
+  );
   const start = async () => {
-    if (busy) return;
+    if (lock.current) return;
+    lock.current = true;
     setBusy(true);
     setError(undefined);
+    let leaving = false;
     try {
       const lines = await pickAndRecognize();
       if (!lines) return;
@@ -25,10 +34,14 @@ export function useImageImport() {
       }
       setPending(items);
       router.push("/transactions/import");
+      leaving = true;
     } catch {
       setError("이 기기에서는 이미지를 읽지 못했어요. 직접 입력해 주세요");
     } finally {
-      setBusy(false);
+      if (!leaving) {
+        lock.current = false;
+        setBusy(false);
+      }
     }
   };
   return { start, busy, error, clearError: () => setError(undefined) };

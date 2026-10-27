@@ -93,7 +93,7 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
   const lock = useRef(false);
   const expense = useResource<Category[]>("/categories?type=EXPENSE");
   const income = useResource<Category[]>("/categories?type=INCOME");
-  const range = useMemo(() => dateRange(initial.map((c) => c.date)), [initial]);
+  const range = useMemo(() => dateRange(rows.map((r) => r.date)), [rows]);
   const existing = useResource<{ items: Transaction[] }>(
     range ? `/transactions?from=${range.from}&to=${range.to}` : null,
   );
@@ -134,8 +134,14 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
       guess: guessCategoryName(r.title, type),
       review: r.review.filter((m) => m !== REVIEW_TYPE),
     });
-  const loading = expense.loading || income.loading;
-  const loadError = expense.error ?? income.error;
+  const loading = expense.loading || income.loading || existing.loading;
+  const loadError =
+    expense.error ??
+    income.error ??
+    existing.error ??
+    (!range
+      ? "거래 날짜를 확인해 주세요. 한 번에 366일 안의 거래를 가져올 수 있어요"
+      : undefined);
   const targets = rows.filter((r) => isOn(r) && r.status !== "saved");
   const savedCount = rows.filter((r) => r.status === "saved").length;
   const problem = (r: Row) =>
@@ -146,7 +152,7 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
     !categoryOf(r);
 
   const save = async () => {
-    if (lock.current) return;
+    if (lock.current || loading || loadError) return;
     if (targets.some(problem)) {
       setError("확인이 필요한 항목이 있어요. 표시된 항목을 확인해 주세요");
       return;
@@ -179,6 +185,7 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
           uncertain
             ? {
                 status: "uncertain",
+                picked: true,
                 body,
                 message:
                   "저장됐는지 확인하지 못했어요. 다시 시도하면 같은 내용으로 확인해요",
@@ -192,13 +199,13 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
       }
     }
     session.invalidate();
-    lock.current = false;
-    setBusy(false);
     if (failed === 0) {
       clearPending();
       toast(`${targets.length}건을 기록했어요`, undefined, "top");
       goBack("/transactions");
     } else {
+      lock.current = false;
+      setBusy(false);
       setError(`${failed}건을 저장하지 못했어요. 표시된 항목을 확인해 주세요`);
     }
   };
@@ -216,7 +223,7 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
       footer={
         <Button
           label={label}
-          disabled={busy || loading || targets.length === 0}
+          disabled={busy || loading || !!loadError || targets.length === 0}
           onPress={save}
         />
       }
@@ -226,7 +233,18 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
         날짜만 읽을 수 있어서 시각은 기록하지 않아요
       </T>
       {savedCount > 0 && <T size={13}>{savedCount}건은 이미 기록했어요</T>}
-      <ErrorNotice error={loadError} />
+      <ErrorNotice
+        error={loadError}
+        retry={
+          range
+            ? () => {
+                expense.retry();
+                income.retry();
+                existing.retry();
+              }
+            : undefined
+        }
+      />
       {loading && <Loading />}
       {rows.map((r) => {
         const cat = categoryOf(r);
