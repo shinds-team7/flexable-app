@@ -130,6 +130,12 @@ public class WebLinkService {
 		return seedMoney.forWeb(find(linkId).getUserId());
 	}
 
+	/** 웹에서 고친 총액을 앱 시드머니에 반영한다. 예산 설정 전이면 404 BUDGET_NOT_SET. */
+	@Transactional
+	public WebSeedMoney updateSeedMoney(String linkId, long total) {
+		return seedMoney.setTotalFromWeb(find(linkId).getUserId(), total);
+	}
+
 	@Transactional
 	public void unlink(String linkId) {
 		if (links.deleteByLinkHash(sha256(linkId)) == 0) {

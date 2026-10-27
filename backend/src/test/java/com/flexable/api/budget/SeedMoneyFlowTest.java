@@ -244,6 +244,54 @@ class SeedMoneyFlowTest {
 	}
 
 	@Test
+	void webEditsTotalByChangingSeedBase() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		String linkId = link(token);
+		mvc.perform(webPut(linkId, "{\"total\":1000000}"))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("BUDGET_NOT_SET"));
+
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}")).andExpect(status().isOk());
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(status().isOk());
+		clock.seoulNoon("2026-10-25");
+		mvc.perform(auth(post("/api/v1/budget/seed-money/entries"), token,
+				"{\"cycleEnd\":\"2026-10-25\",\"choice\":\"GOAL\"}"))
+			.andExpect(status().isCreated());
+
+		// 반영한 돈 300,000은 그대로 두고 모아둔 돈을 1,200,000 − 300,000으로 바꾼다.
+		clock.seoulNoon("2026-10-27");
+		mvc.perform(webPut(linkId, "{\"total\":1200000}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.total").value(1200000))
+			.andExpect(jsonPath("$.base").value(900000))
+			.andExpect(jsonPath("$.entries", hasSize(1)))
+			.andExpect(jsonPath("$.entries[0].totalAfter").value(1200000))
+			.andExpect(jsonPath("$.updatedAt").value("2026-10-27T12:00:00+09:00"));
+		mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null))
+			.andExpect(jsonPath("$.base").value(900000))
+			.andExpect(jsonPath("$.saved").value(300000))
+			.andExpect(jsonPath("$.total").value(1200000));
+
+		// 반영한 돈보다 작게는 고칠 수 없다. 반영한 돈과 같으면 모아둔 돈이 0원이다.
+		mvc.perform(webPut(linkId, "{\"total\":299999}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.fields.total").exists());
+		mvc.perform(webPut(linkId, "{\"total\":300000}")).andExpect(jsonPath("$.base").value(0));
+		mvc.perform(webPut(linkId, "{\"total\":-1}")).andExpect(status().isBadRequest());
+		mvc.perform(webPut(linkId, "{}")).andExpect(status().isBadRequest());
+		mvc.perform(put("/internal/v1/web-links/" + linkId + "/seed-money").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"total\":1}")).andExpect(status().isUnauthorized());
+	}
+
+	private MockHttpServletRequestBuilder webPut(String linkId, String body) {
+		return put("/internal/v1/web-links/" + linkId + "/seed-money").header("X-Service-Key", KEY)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(body);
+	}
+
+	@Test
 	void webHistoryKeepsConfirmedChoicesAndZeroButDoesNotFillSkippedCycles() throws Exception {
 		clock.seoulNoon("2026-10-01");
 		String token = signup();

@@ -493,6 +493,7 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 - `DELETE /internal/v1/web-links/{linkId}` → 204
 - 연동이 없으면(해제·앱 탈퇴) 위 둘은 404 `LINK_NOT_FOUND` → 웹은 연동을 끊고 저장한 앱 정보를 지운다
 - `AppProfile` = `{ "email": string|null, "provider": "email"|"kakao"|"google" }`. 앱에는 닉네임이 없다. 소셜 계정은 `email`이 null일 수 있다
+- `PUT /internal/v1/web-links/{linkId}/seed-money` `{ "total": 1200000 }` → 200(GET과 같은 응답). 웹 홈에서 연동 회원이 시드머니 총액을 고치면 웹 서버가 부른다. 모아둔 돈(`seedBase`)을 `total − 반영한 돈 합`으로 바꾸고 반영 기록·예산 계산은 그대로 둔다. `total`이 반영한 돈 합보다 작거나 0~999,999,999,999 밖이면 400 `VALIDATION_FAILED`(`fields.total`), 예산 설정 전 404 `BUDGET_NOT_SET`([결정](decisions/2026-10-27-web-seed-money-write.md))
 - `GET /internal/v1/web-links/{linkId}/seed-money` → 200. 기존 `total`, `base`, `monthlyGoal`, `lastEntry`, `updatedAt`을 유지하며 `startedOn`, `entries`를 추가한다. 앱에서 예산 설정을 아직 안 했으면 404 `BUDGET_NOT_SET`, 없는·해제된 연동은 404 `LINK_NOT_FOUND`, 서비스 키 없음·오류는 401 `UNAUTHORIZED`로 기존과 같다.
 
 ```json

@@ -4,6 +4,10 @@
 
 형식: `- [#PR] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
+## 2026-10-27
+
+- [#PRNUM] 웹 연동 `PUT /internal/v1/web-links/{linkId}/seed-money` `{total}`을 `web-link-api.yaml`에 추가했다. 웹에서 고친 시드머니 총액이 되도록 모아둔 돈(seedBase)을 총액 − 반영한 돈 합으로 바꾸고, 반영한 돈보다 작으면 400으로 거절한다([결정](decisions/2026-10-27-web-seed-money-write.md), policies §3). 기존 응답은 바뀌지 않았다 — 영향: 앱 서버(`deploy.sh`, 마이그레이션 없음)·웹(`RestAppApiClient`)
+
 ## 2026-10-26
 
 - [#175] 코인 내역 API `GET /coins/ledger?before=&limit=`(최신순, `nextBefore`로 다음 쪽, `limit` 1~100 기본 30, `LedgerEntry`에 `outfitId`)를 `app-api.yaml`에 추가하고, 홈 코인 칩 → 코인 내역 화면을 만들었다. 기존 응답은 바뀌지 않았다 — 영향: 앱 화면(원격 업데이트로 반영)·앱 서버(`deploy.sh`, 마이그레이션 없음)
