@@ -166,7 +166,6 @@ export function TransactionsScreen() {
                         {t.title}
                       </T>
                       <T size={12} color={colors.textMuted}>
-                        {toSeoulInput(t.occurredAt).slice(11, 16)} ·{" "}
                         {categoryOf(t).name}
                       </T>
                     </View>
