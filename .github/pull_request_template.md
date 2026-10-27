@@ -20,6 +20,7 @@ Closes #
 - [ ] 앱 서버(`backend/`) — 반영: `deploy.sh`, DB 마이그레이션 여부:
 - [ ] 웹(flexable-web) 연동(`/internal/v1/web-links/*`) — 웹 저장소에 알림
 - [ ] 문서·계약·정책·지침(→ `spec-change` 라벨 + `docs/CHANGELOG.md` 한 줄)
+- [ ] `docs/HANDOFF.md` "코드에는 있지만 운영에 아직 없는 것"에 이 PR 한 줄 추가(반영 방법·배포 순서)
 
 ## 🧭 정책에 없어서 새로 내린 결정
 

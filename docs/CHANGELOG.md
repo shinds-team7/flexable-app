@@ -6,6 +6,7 @@
 
 ## 2026-10-27
 
+- [#190] 기능·수정 PR은 같은 PR에서 `docs/HANDOFF.md` "코드에는 있지만 운영에 아직 없는 것"에 한 줄(반영 방법·배포 순서)을 더하고, 배포·실기기 확인 결과는 다음 작업 PR에 같이 적는다는 규칙을 `AGENTS.md` "작업 완료 시"와 PR 템플릿에 추가했다. HANDOFF만 고치는 PR은 그날 다음 PR이 없을 때만 올린다 — 영향: 전체(작업 방식)
 - [#189] 웹 연동 `PUT /internal/v1/web-links/{linkId}/seed-money` `{total}`을 `web-link-api.yaml`에 추가했다. 웹에서 고친 시드머니 총액이 되도록 모아둔 돈(seedBase)을 총액 − 반영한 돈 합으로 바꾸고, 반영한 돈보다 작으면 400으로 거절한다([결정](decisions/2026-10-27-web-seed-money-write.md), policies §3). 기존 응답은 바뀌지 않았다 — 영향: 앱 서버(`deploy.sh`, 마이그레이션 없음)·웹(`RestAppApiClient`)
 
 ## 2026-10-26
