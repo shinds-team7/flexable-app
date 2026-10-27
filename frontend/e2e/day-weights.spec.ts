@@ -59,7 +59,9 @@ test("weekday allocation: a new user cannot use the record preset, picks a prese
   await expect(
     page.getByText(/지출을 기록한 날이 7일 더 있으면 쓸 수 있어요/),
   ).toBeVisible();
-  await page.getByRole("radio", { name: "내 기록 기준", exact: true }).click();
+  const record = page.getByRole("radio", { name: "내 기록 기준", exact: true });
+  await expect(record).toBeDisabled();
+  await record.click({ force: true });
   await expect(
     page.getByRole("radio", { name: "기본 배분", exact: true }),
   ).toBeChecked();
