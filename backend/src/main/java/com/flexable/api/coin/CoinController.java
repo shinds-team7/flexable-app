@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,6 +15,7 @@ import com.flexable.api.auth.CurrentUser;
 import com.flexable.api.coin.CoinDtos.AckRequest;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
 import com.flexable.api.coin.CoinDtos.CollectResponse;
+import com.flexable.api.coin.CoinDtos.LedgerPage;
 import com.flexable.api.coin.CoinDtos.Wallet;
 
 /** 코인 지갑·check-in·모으기. 규칙은 docs/coin-plan.md. */
@@ -46,5 +48,11 @@ public class CoinController {
 	@PostMapping("/collect")
 	CollectResponse collect(@AuthenticationPrincipal Jwt jwt) {
 		return service.collect(CurrentUser.id(jwt));
+	}
+
+	@GetMapping("/ledger")
+	LedgerPage ledger(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) Long before,
+			@RequestParam(defaultValue = "" + CoinService.LEDGER_DEFAULT_LIMIT) int limit) {
+		return service.ledger(CurrentUser.id(jwt), before, limit);
 	}
 }

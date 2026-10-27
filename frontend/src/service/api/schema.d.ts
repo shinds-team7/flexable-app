@@ -1010,6 +1010,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/coins/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 코인 적립·사용 내역, 최신순. before로 이전 내역을 더 불러온다 */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 이 id보다 오래된 내역(앞 응답의 nextBefore) */
+                    before?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 내역 한 쪽 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["LedgerEntry"][];
+                            /**
+                             * Format: int64
+                             * @description 다음 요청의 before. null이면 끝
+                             */
+                            nextBefore: number | null;
+                        };
+                    };
+                };
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/outfits": {
         parameters: {
             query?: never;
@@ -1697,6 +1746,23 @@ export interface components {
              * @description BUDGET_BONUS의 지킨 날짜
              */
             refDate: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        LedgerEntry: {
+            /** Format: int64 */
+            id: number;
+            /** @enum {string} */
+            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND";
+            /** @description 적립은 양수, 사용(PURCHASE)은 음수 */
+            amount: number;
+            /**
+             * Format: date
+             * @description BUDGET_BONUS의 지킨 날짜
+             */
+            refDate: string | null;
+            /** @description PURCHASE의 코스튬 id */
+            outfitId: string | null;
             /** Format: date-time */
             createdAt: string;
         };

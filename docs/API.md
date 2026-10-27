@@ -404,6 +404,26 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 
 받을 게 없으면 `collected: 0`(오류 아님).
 
+### `GET /coins/ledger?before={id}&limit=30` → 200
+
+코인 적립·사용 내역(`coin_ledger`), 최신순(id 큰 순). 홈 코인 칩 → 코인 내역 화면(`service/CoinHistoryScreen.tsx`)이 쓴다.
+
+```json
+{
+  "items": [
+    { "id": 40, "reason": "PURCHASE", "amount": -200, "refDate": null, "outfitId": "outfit-03", "createdAt": "2026-10-22T12:10:00+09:00" },
+    { "id": 32, "reason": "BUDGET_BONUS", "amount": 5, "refDate": "2026-10-20", "outfitId": null, "createdAt": "2026-10-21T09:03:00+09:00" },
+    { "id": 31, "reason": "SIGNUP_GIFT", "amount": 200, "refDate": null, "outfitId": null, "createdAt": "2026-10-21T09:03:00+09:00" }
+  ],
+  "nextBefore": null
+}
+```
+
+- `before` 없음 = 가장 최근부터. 다음 쪽은 앞 응답의 `nextBefore`를 `before`로 넣는다. `nextBefore`가 `null`이면 더 없다.
+- `limit` 1~100, 기본 30. 범위 밖은 400 `VALIDATION_FAILED`(field `limit`).
+- `amount`는 적립 양수, 사용(`PURCHASE`) 음수. `reason`은 check-in `rewards`와 같은 값에 `PASSIVE`(모으기)·`REFERRAL_INVITEE`(추천 코드 등록)·`PURCHASE`(코스튬 구매)가 더해진다. `outfitId`는 `PURCHASE`일 때만, `refDate`는 `BUDGET_BONUS`일 때만 있다.
+- 모달로 아직 보여 주지 않은 보상도 이미 지급된 내역이라 포함한다.
+
 ### `GET /outfits` → 200 `OutfitList`
 
 ```json

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,9 @@ public interface CoinLedgerRepository extends JpaRepository<CoinLedger, Long> {
 	@Modifying
 	@Query("update CoinLedger l set l.notifiedAt = :now where l.userId = :userId and l.id in :ids and l.notifiedAt is null")
 	int markNotified(Long userId, Collection<Long> ids, Instant now);
+
+	/** before보다 오래된 내 내역, 최신순 */
+	List<CoinLedger> findByUserIdAndIdLessThanOrderByIdDesc(Long userId, Long before, Limit limit);
 
 	@Modifying
 	@Query("delete from CoinLedger l where l.userId = :userId")

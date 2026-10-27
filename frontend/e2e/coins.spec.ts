@@ -214,6 +214,17 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   const wallet = await api(page, "GET", "/coins");
   expect(wallet.balance).toBe(0);
   expect(wallet.equippedOutfitId).toBe("outfit-03");
+  // The coin chip over the video opens the history, newest first with the amount in front.
+  await page
+    .getByRole("button", { name: "보유 코인 0개, 코인 내역 보기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/coins\/history$/);
+  const rows = page.getByLabel(/^[+-]\d[\d,]* .+, \d\d:\d\d$/);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toHaveText(/^-200 코스튬 구매/);
+  await expect(rows.nth(1)).toHaveText(/^\+200 가입 선물/);
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
   await openShop(page);
   await balance(page, 0);
   await expect(
