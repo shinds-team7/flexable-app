@@ -66,6 +66,11 @@ public final class BudgetDtos {
 	}
 
 	/** 웹 연동으로 넘기는 시드머니. 반영 대기 정보는 넣지 않는다. */
+	/** 웹에서 고친 시드머니 총액(PUT /internal/v1/web-links/{linkId}/seed-money). */
+	public record WebSeedMoneyUpdate(
+			@NotNull(message = "금액을 입력해 주세요") @Min(value = 0, message = "금액은 0원 이상이어야 해요") @Max(value = MAX_AMOUNT, message = "금액이 너무 커요") Long total) {
+	}
+
 	public record WebSeedMoney(long total, long base, long monthlyGoal, SeedMoneyEntryItem lastEntry,
 			OffsetDateTime updatedAt, LocalDate startedOn, List<WebSeedMoneyEntry> entries) {
 	}

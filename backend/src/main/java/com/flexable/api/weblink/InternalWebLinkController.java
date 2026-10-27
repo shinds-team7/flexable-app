@@ -5,12 +5,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flexable.api.budget.BudgetDtos.WebSeedMoney;
+import com.flexable.api.budget.BudgetDtos.WebSeedMoneyUpdate;
 import com.flexable.api.weblink.WebLinkDtos.AppProfile;
 import com.flexable.api.weblink.WebLinkDtos.LinkCreated;
 import com.flexable.api.weblink.WebLinkDtos.LinkRequest;
@@ -42,6 +44,11 @@ public class InternalWebLinkController {
 	@GetMapping("/{linkId}/seed-money")
 	WebSeedMoney seedMoney(@PathVariable String linkId) {
 		return service.seedMoney(linkId);
+	}
+
+	@PutMapping("/{linkId}/seed-money")
+	WebSeedMoney updateSeedMoney(@PathVariable String linkId, @Valid @RequestBody WebSeedMoneyUpdate req) {
+		return service.updateSeedMoney(linkId, req.total());
 	}
 
 	@DeleteMapping("/{linkId}")

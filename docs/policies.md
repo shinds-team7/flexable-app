@@ -82,7 +82,9 @@
 
 웹 연동용 시드머니(`/internal/v1/web-links/{linkId}/seed-money`)는 확정 기록만 주고 반영 대기·후보 금액은 주지 않는다([API.md](API.md#웹사이트-연동)).
 
-검사: `SeedMoneyPolicyTest`(이 표), `SeedMoneyFlowTest`.
+웹에서 고친 총액(`PUT` 같은 경로, 2026-10-27): 모아둔 돈 = 총액 − 반영한 돈 합. 반영 기록과 §2 추정 잔액은 바뀌지 않는다. 총액이 반영한 돈 합보다 작으면 거절한다(400 `VALIDATION_FAILED`). 예: 모아둔 돈 500,000 + 반영 300,000에서 웹이 1,200,000으로 고치면 모아둔 돈 900,000, 299,999로 고치면 거절, 300,000이면 모아둔 돈 0.
+
+검사: `SeedMoneyPolicyTest`(이 표), `SeedMoneyFlowTest`(웹에서 고친 총액은 `webEditsTotalByChangingSeedBase`).
 
 ## 4. 캐릭터 점수(`budget.CharacterScore`)
 

@@ -61,6 +61,12 @@ public class BudgetSettings {
 		this.seedBase = seedBase;
 	}
 
+	/** 웹에서 시드머니 총액을 고쳤을 때. 웹이 바뀐 값을 알아보도록 updatedAt도 바꾼다. */
+	public void changeSeedBase(long seedBase, Instant now) {
+		this.seedBase = seedBase;
+		this.updatedAt = now;
+	}
+
 	public long getSeedBase() {
 		return seedBase;
 	}
