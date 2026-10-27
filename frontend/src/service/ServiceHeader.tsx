@@ -1,8 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, usePathname } from "expo-router";
+import { usePathname } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
 import { colors, pressTransition } from "@/theme";
+import { AddTransactionSheet } from "./AddTransactionSheet";
 const tabs = [
   {
     href: "/home" as const,
@@ -44,21 +46,25 @@ export function ServiceTabBar() {
     <BottomTabBar tabs={tabs} pathname={pathname} middle={<RecordButton />} />
   );
 }
-/** Sits between 내역 and 분석 on every tab, so recording is one tap from anywhere. */
+/** Sits between 내역 and 분석 on every tab, so recording is one tap from anywhere. It opens the choice of image upload or manual entry. */
 function RecordButton() {
+  const [open, setOpen] = useState(false);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="거래 직접 기록"
-      onPress={() => router.push("/transactions/new")}
-      style={({ pressed }) => [
-        styles.record,
-        pressTransition,
-        pressed && styles.recordPressed,
-      ]}
-    >
-      <Ionicons name="add" size={30} color="#fff" />
-    </Pressable>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="거래 추가"
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [
+          styles.record,
+          pressTransition,
+          pressed && styles.recordPressed,
+        ]}
+      >
+        <Ionicons name="add" size={30} color="#fff" />
+      </Pressable>
+      <AddTransactionSheet visible={open} onClose={() => setOpen(false)} />
+    </>
   );
 }
 const styles = StyleSheet.create({

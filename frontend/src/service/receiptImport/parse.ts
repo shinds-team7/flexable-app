@@ -1,0 +1,241 @@
+// 거래내역 스크린샷의 OCR 줄(텍스트와 좌표)을 거래 후보로 바꾼다. expo·ML Kit 모듈을 쓰지 않아 단위 테스트에서 바로 돌린다.
+// 지원하는 화면: 토스(날짜 머리글형 / 왼쪽 날짜 열형), 카카오뱅크, 카카오페이. 못 읽은 값은 채우지 않고 review에 이유를 남긴다.
+
+export type OcrLine = { text: string; x: number; y: number };
+export type ImportSource = "toss" | "kakaobank" | "kakaopay";
+export type ImportCandidate = {
+  /** "YYYY-MM-DD". 연도는 화면에 없어 오늘 기준 가장 가까운 과거로 추정한다 */
+  date: string;
+  title: string;
+  amount: number;
+  type: "EXPENSE" | "INCOME" | null;
+  balance: number | null;
+  ownTransfer: boolean;
+  refund: boolean;
+  /** 사용자가 확인해야 하는 이유. 비어 있지 않으면 확인 전에는 저장하지 않는다 */
+  review: string[];
+};
+export type ParseResult = {
+  source: ImportSource | null;
+  items: ImportCandidate[];
+};
+
+const AMOUNT = /^([+\-−–])?\s*(\d{1,3}(?:,\d{3})*|\d+)\s*원$/;
+const DATE_DOT = /^(\d{1,2})\.(\d{1,2})\.?$/;
+const DATE_KOR = /^(\d{1,2})월\s*(\d{1,2})일$/;
+const DATE_DAY = /^(\d{1,2})일\s*[월화수목금토일]요일/;
+const MONTH_HEAD = /^(\d{1,2})월\s*[·・]/;
+const PAY_ROW =
+  /^(결제취소\s*[·・]?\s*환불|결제|충전|송금\s*받기|송금|출금|입금)\s*[|｜]\s*(.+)$/;
+const OWN = /내\s*\S*\s*(계좌|통장)|\(내\s*[^)]*\)|충전/;
+const REFUND = /취소\s*[·・]?\s*환불/;
+
+const won = (m: RegExpMatchArray) => Number(m[2].replace(/,/g, ""));
+const unsigned = (s: string) => s.replace(/^[+\-−–]\s*/, "");
+
+export const REVIEW_TYPE = "입금인지 출금인지 확인이 필요해요";
+
+/**
+ * OCR이 한 줄로 합쳐 준 "10.26 CU 광화문점 -6,800원", "체크카드 잔액 2,336,700원" 같은 줄을
+ * 날짜·내용·금액 조각으로 나눈다. 조각의 x는 줄 안의 대략적인 순서만 맞춘다.
+ */
+export function splitLines(lines: OcrLine[]): OcrLine[] {
+  return lines.flatMap((line) => {
+    const out: OcrLine[] = [];
+    let rest = line.text.trim();
+    let x = line.x;
+    const date = rest.match(/^(\d{1,2}\.\d{1,2})\s+(\S.*)$/);
+    if (date) {
+      out.push({ text: date[1], x, y: line.y });
+      rest = date[2];
+      x += 1;
+    }
+    const amount = rest.match(
+      /^(\S.*?)\s+([+\-−–]?\s*(?:\d{1,3}(?:,\d{3})+|\d+)\s*원)$/,
+    );
+    if (amount && !/^[+\-−–]?\s*[\d,]+$/.test(amount[1])) {
+      out.push({ text: amount[1], x, y: line.y });
+      out.push({
+        text: amount[2].replace(/\s+/g, ""),
+        x: x + 100000,
+        y: line.y,
+      });
+    } else out.push({ text: rest, x, y: line.y });
+    return out;
+  });
+}
+
+/** y가 비슷한 줄을 한 행으로 묶고, 행 안에서는 왼쪽부터 정렬한다. */
+export function toRows(input: OcrLine[], tolerance = 14): OcrLine[][] {
+  const lines = splitLines(input);
+  const sorted = [...lines].sort((a, b) => a.y - b.y);
+  const rows: OcrLine[][] = [];
+  for (const line of sorted) {
+    const last = rows[rows.length - 1];
+    if (last && Math.abs(last[0].y - line.y) <= tolerance) last.push(line);
+    else rows.push([line]);
+  }
+  return rows.map((r) => r.sort((a, b) => a.x - b.x));
+}
+
+/** 월·일만 있는 날짜의 연도를 오늘 기준 가장 가까운 과거로 정한다. */
+export function resolveDate(month: number, day: number, today: string) {
+  const [y, m, d] = today.split("-").map(Number);
+  const year = month > m || (month === m && day > d) ? y - 1 : y;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
+function detect(rows: OcrLine[][]): ImportSource | null {
+  const text = rows.map((r) => r.map((l) => l.text).join(" ")).join("\n");
+  if (
+    /카카오페이머니|카드만들기/.test(text) ||
+    rows.some((r) => PAY_ROW.test(r[0].text))
+  )
+    return "kakaopay";
+  // 거래 행의 "내 토스뱅크 계좌" 같은 문구가 섞이므로 화면 고유 문구만 본다.
+  if (/입출금통장|가져오기/.test(text)) return "kakaobank";
+  if (/채우기|보내기/.test(text)) return "toss";
+  // 잔액 열이 있는 화면은 어느 쪽이든 같은 규칙으로 읽는다.
+  return /잔액/.test(text) ||
+    rows.some((r) => r.some((l) => AMOUNT.test(l.text)))
+    ? "toss"
+    : null;
+}
+
+type Raw = {
+  date: string;
+  title: string;
+  sub: string;
+  amountText: string;
+  amount: number;
+  sign: "+" | "-" | null;
+  balance: number | null;
+};
+
+function finish(source: ImportSource, raws: Raw[]): ImportCandidate[] {
+  // 화면은 최신순이다. 다음 항목(더 오래된 거래)의 잔액과 비교하면 부호를 확인할 수 있다.
+  return raws.map((r, i) => {
+    const review: string[] = [];
+    let type: ImportCandidate["type"] = null;
+    const next = raws[i + 1];
+    if (r.sign) type = r.sign === "+" ? "INCOME" : "EXPENSE";
+    else if (r.balance != null && next?.balance != null)
+      type = r.balance - next.balance === r.amount ? "INCOME" : "EXPENSE";
+    else if (REFUND.test(r.sub) || /입금|급여/.test(r.sub)) type = "INCOME";
+    if (type === null) review.push(REVIEW_TYPE);
+    if (r.balance != null && next?.balance != null && type) {
+      const delta = type === "INCOME" ? r.amount : -r.amount;
+      if (r.balance - next.balance !== delta)
+        review.push("잔액과 금액이 맞지 않아요");
+    }
+    const refund = REFUND.test(r.sub) || REFUND.test(r.title);
+    return {
+      date: r.date,
+      title: r.title,
+      amount: r.amount,
+      type,
+      balance: r.balance,
+      ownTransfer: OWN.test(r.sub) || OWN.test(r.title),
+      refund,
+      review,
+    };
+  });
+}
+
+function parseBalanceStyle(rows: OcrLine[][], today: string): Raw[] {
+  const out: Raw[] = [];
+  let date: string | null = null;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const joined = row.map((l) => l.text).join(" ");
+    const head = joined.match(DATE_KOR);
+    if (head) {
+      date = resolveDate(Number(head[1]), Number(head[2]), today);
+      continue;
+    }
+    // 거래 행: 오른쪽 끝에 금액이 있고 바로 아래 행에 부제와 잔액이 있다.
+    const amountLine = row[row.length - 1];
+    const am = amountLine && amountLine.text.match(AMOUNT);
+    if (!am || (row.length < 2 && !DATE_DOT.test(row[0].text))) continue;
+    const rest = row.slice(0, -1);
+    const dot = rest[0]?.text.match(DATE_DOT);
+    if (dot) date = resolveDate(Number(dot[1]), Number(dot[2]), today);
+    const title = rest
+      .filter((l) => !DATE_DOT.test(l.text))
+      .map((l) => l.text)
+      .join(" ")
+      .trim();
+    if (!title || !date) continue;
+    const subRow = rows[i + 1] ?? [];
+    const balLine = subRow[subRow.length - 1];
+    const bm =
+      balLine && unsigned(balLine.text.replace(/^잔액\s*/, "")).match(AMOUNT);
+    const sub = subRow
+      .slice(0, bm ? -1 : undefined)
+      .map((l) => l.text.replace(/\s*잔액$/, ""))
+      .join(" ")
+      .trim();
+    out.push({
+      date,
+      title,
+      sub,
+      amountText: amountLine.text,
+      amount: won(am),
+      sign: am[1] ? (am[1] === "+" ? "+" : "-") : null,
+      balance: bm ? won(bm) : null,
+    });
+    if (bm) i++;
+  }
+  return out;
+}
+
+function parsePay(rows: OcrLine[][], today: string): Raw[] {
+  const out: Raw[] = [];
+  let month: number | null = null;
+  let date: string | null = null;
+  for (let i = 0; i < rows.length; i++) {
+    const joined = rows[i].map((l) => l.text).join(" ");
+    const mh = joined.match(MONTH_HEAD);
+    if (mh) month = Number(mh[1]);
+    const dm = joined.match(DATE_DAY);
+    if (dm && month != null) {
+      date = resolveDate(month, Number(dm[1]), today);
+      continue;
+    }
+    const pm = joined.match(PAY_ROW);
+    if (!pm || !date) continue;
+    // 금액은 다음 행 왼쪽에 있다.
+    const amountLine = rows[i + 1]?.find((l) => AMOUNT.test(l.text));
+    const am = amountLine?.text.match(AMOUNT);
+    if (!amountLine || !am) continue;
+    const kind = pm[1].replace(/\s+/g, "");
+    const detail = pm[2].trim();
+    const arrow = detail.split(/→/);
+    const income = am[1] === "+";
+    const counterpart =
+      arrow.length === 2 ? (income ? arrow[0] : arrow[1]) : detail;
+    out.push({
+      date,
+      title: counterpart.replace(/\([^)]*\)/g, "").trim() || detail,
+      sub: `${kind} ${detail}`,
+      amountText: amountLine.text,
+      amount: won(am),
+      sign: am[1] ? (income ? "+" : "-") : null,
+      balance: null,
+    });
+    i++;
+  }
+  return out;
+}
+
+export function parseReceipt(lines: OcrLine[], today: string): ParseResult {
+  const rows = toRows(lines);
+  const source = detect(rows);
+  if (!source) return { source: null, items: [] };
+  const raws =
+    source === "kakaopay"
+      ? parsePay(rows, today)
+      : parseBalanceStyle(rows, today);
+  return { source, items: finish(source, raws) };
+}
