@@ -7,6 +7,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,7 +16,7 @@ import com.flexable.api.budget.BudgetDtos.TodayResponse;
 import com.flexable.api.common.TxType;
 
 /**
- * 오늘 쓸 수 있는 돈 계산(서버 최종값). 원 단위 정수, 나눗셈은 내림. 규칙과 예시는 docs/policies.md §1·§2(tests/policy/budget.json).
+ * 오늘 쓸 수 있는 돈 계산(서버 최종값). 원 단위 정수, 나눗셈은 내림. 규칙과 예시는 docs/policies.md §1·§2·§5(tests/policy/budget.json).
  */
 public final class BudgetCalculator {
 
@@ -30,10 +31,17 @@ public final class BudgetCalculator {
 		}
 	}
 
-	/** savedSinceBalance: 잔액 기준 시각 뒤에 시드머니로 옮긴 돈(통장에서 빠진 돈). */
+	/** savedSinceBalance: 잔액 기준 시각 뒤에 시드머니로 옮긴 돈(통장에서 빠진 돈). days: 요일별 비중(§5). */
 	public record Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
 			List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions,
-			long savedSinceBalance) {
+			long savedSinceBalance, DayWeights.Setting days) {
+
+		public Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
+				List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions,
+				long savedSinceBalance) {
+			this(balance, balanceAt, payday, cardUnpaid, fixedDays, fixedAmounts, protectedTotal, transactions,
+					hasTransactions, savedSinceBalance, DayWeights.Setting.DEFAULT);
+		}
 
 		public Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
 				List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions) {
@@ -75,17 +83,25 @@ public final class BudgetCalculator {
 		}
 
 		long remaining = estimated - reservedFixed - in.cardUnpaid() - in.protectedTotal();
-		long dailyBudget = Math.max(0, remaining + todaySpent) / daysLeft;
+		// 남은 생활비(오늘 쓴 돈 포함)를 남은 날의 요일 비중대로 나눈다. 비중이 모두 같으면 ÷ 남은 날과 같다.
+		long[] dayBudgets = DayWeights.split(Math.max(0, remaining + todaySpent), in.days().weights(), today,
+				nextPayday);
+		long dailyBudget = dayBudgets[DayWeights.index(today)];
 		// 오늘 예산을 넘으면 넘은 만큼 음수로 둔다(홈에서 마이너스로 보여 준다).
 		long todayAvailable = dailyBudget - todaySpent;
 		long shortage = remaining < 0 ? -remaining : Math.max(0, todaySpent - dailyBudget);
 		LocalDate weekLast = weekEnd.isBefore(nextPayday) ? weekEnd : nextPayday.minusDays(1);
 		int weekDaysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, weekLast) + 1);
-		long weekAvailable = Math.max(0, dailyBudget * weekDaysLeft - todaySpent);
+		long weekBudget = 0;
+		for (LocalDate d = today; !d.isAfter(weekLast); d = d.plusDays(1)) {
+			weekBudget += dayBudgets[DayWeights.index(d)];
+		}
+		long weekAvailable = Math.max(0, weekBudget - todaySpent);
 
 		return new TodayResponse(today, nextPayday, daysLeft, estimated, reservedFixed, in.cardUnpaid(),
 				in.protectedTotal(), remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent,
-				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions(), 0, 0);
+				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions(), in.days().preset(),
+				Arrays.stream(dayBudgets).boxed().toList(), 0, 0);
 	}
 
 	/** 그 달의 수입일(31 등 없는 날은 말일로). */

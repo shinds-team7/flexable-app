@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flexable.api.auth.CurrentUser;
+import com.flexable.api.budget.BudgetDtos.DayWeightsRequest;
+import com.flexable.api.budget.BudgetDtos.DayWeightsResponse;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyResponse;
 import com.flexable.api.budget.BudgetDtos.SettingsRequest;
@@ -45,6 +47,16 @@ public class BudgetController {
 	@GetMapping("/today")
 	TodayResponse today(@AuthenticationPrincipal Jwt jwt) {
 		return service.today(CurrentUser.id(jwt));
+	}
+
+	@GetMapping("/day-weights")
+	DayWeightsResponse dayWeights(@AuthenticationPrincipal Jwt jwt) {
+		return service.dayWeights(CurrentUser.id(jwt));
+	}
+
+	@PutMapping("/day-weights")
+	DayWeightsResponse putDayWeights(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody DayWeightsRequest req) {
+		return service.putDayWeights(CurrentUser.id(jwt), req);
 	}
 
 	@GetMapping("/seed-money")

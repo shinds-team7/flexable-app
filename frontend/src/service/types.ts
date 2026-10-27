@@ -21,6 +21,8 @@ export type BudgetSettings = Required<Omit<S["SettingsRequest"], "seedBase">> &
 export type SeedChoice = S["SeedChoice"];
 export type SeedMoney = S["SeedMoney"];
 export type Today = S["Today"];
+export type DayPreset = S["DayPreset"];
+export type DayWeights = S["DayWeights"];
 export type Analysis = S["AnalysisSummary"];
 
 export type CoinWallet = S["Wallet"];

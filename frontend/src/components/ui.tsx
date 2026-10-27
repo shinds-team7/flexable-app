@@ -238,7 +238,7 @@ export function Row({
   right?: ReactNode;
   first?: boolean;
   onPress: () => void;
-} & Pick<PressableProps, 'accessibilityRole' | 'accessibilityState' | 'aria-checked'>) {
+} & Pick<PressableProps, 'accessibilityRole' | 'accessibilityState' | 'aria-checked' | 'disabled'>) {
   return (
     <Pressable
       accessibilityRole="button"

@@ -15,6 +15,10 @@ import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.flexable.api.budget.BudgetDtos.DayPresetItem;
+import com.flexable.api.budget.BudgetDtos.DayRecordInfo;
+import com.flexable.api.budget.BudgetDtos.DayWeightsRequest;
+import com.flexable.api.budget.BudgetDtos.DayWeightsResponse;
 import com.flexable.api.budget.BudgetDtos.FixedItem;
 import com.flexable.api.budget.BudgetDtos.ProtectedEntry;
 import com.flexable.api.budget.BudgetDtos.SettingsRequest;
@@ -124,10 +128,66 @@ public class BudgetService {
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
 				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
 				!txs.isEmpty() || transactions.existsByUserId(userId),
-				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()));
+				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()), s.getDays());
 		TodayResponse r = BudgetCalculator.compute(input, today, zone);
 		dailyBudgets.upsert(userId, today, r.dailyBudget());
 		return r.withCharacter(characterScore(userId, today));
+	}
+
+	/** 저장된 요일별 비중과 고를 수 있는 프리셋(§5). 내 기록 기준은 부를 때마다 어제까지 기록으로 다시 낸다. */
+	@Transactional(readOnly = true)
+	public DayWeightsResponse dayWeights(long userId) {
+		LocalDate today = LocalDate.now(clock.withZone(zone));
+		return toDayWeights(require(userId).getDays(), recordWeights(userId, today));
+	}
+
+	/** 프리셋을 고르면 서버가 비중을 채우고, CUSTOM은 보낸 비중을 그대로 저장한다. 오늘 하루 예산부터 바로 바뀐다. */
+	@Transactional
+	public DayWeightsResponse putDayWeights(long userId, DayWeightsRequest req) {
+		LocalDate today = LocalDate.now(clock.withZone(zone));
+		BudgetSettings s = settings.findForUpdate(userId).orElseThrow(() -> new ApiException(ErrorCode.BUDGET_NOT_SET));
+		DayWeights.Record record = recordWeights(userId, today);
+		List<Integer> weights = switch (req.preset()) {
+			case CUSTOM -> {
+				if (req.weights() == null) {
+					throw ApiException.invalid("weights", "요일 7개의 비중이 필요해요");
+				}
+				yield List.copyOf(req.weights());
+			}
+			case RECORD -> {
+				if (record.weights() == null) {
+					throw ApiException.invalid("preset", "기록이 더 쌓이면 쓸 수 있어요");
+				}
+				yield record.weights();
+			}
+			default -> DayWeights.fixed(req.preset());
+		};
+		DayWeights.Setting days = new DayWeights.Setting(req.preset(), weights);
+		s.applyDays(days);
+		settings.save(s);
+		return toDayWeights(days, record);
+	}
+
+	private DayWeights.Record recordWeights(long userId, LocalDate today) {
+		Map<LocalDate, Long> spent = new HashMap<>();
+		Instant from = today.minusMonths(DayWeights.MONTHS).atStartOfDay(zone).toInstant();
+		for (var t : transactions.findSince(userId, from)) {
+			if (t.getType() == TxType.EXPENSE && !t.isFromFixed()) {
+				spent.merge(t.getOccurredAt().atZone(zone).toLocalDate(), t.getAmount(), Long::sum);
+			}
+		}
+		return DayWeights.fromRecords(spent, today);
+	}
+
+	private static DayWeightsResponse toDayWeights(DayWeights.Setting days, DayWeights.Record record) {
+		List<DayPresetItem> presets = List.of(
+				new DayPresetItem(DayWeights.Preset.EVEN, DayWeights.EVEN),
+				new DayPresetItem(DayWeights.Preset.RECORD, record.weights()),
+				new DayPresetItem(DayWeights.Preset.WEEKEND, DayWeights.WEEKEND),
+				new DayPresetItem(DayWeights.Preset.WEEKDAY, DayWeights.WEEKDAY));
+		return new DayWeightsResponse(days.preset(), days.weights(), DayWeights.MIN, DayWeights.MAX, presets,
+				new DayRecordInfo(record.from(), record.to(), record.days(), record.weekdays(), DayWeights.MIN_DAYS,
+						DayWeights.MIN_WEEKDAYS));
 	}
 
 	/** 코인·코스튬이 쓰는 오늘 기준 캐릭터 점수(peak = 지금까지 최고 점수). 하루 예산 기록이 없으면 0점. */

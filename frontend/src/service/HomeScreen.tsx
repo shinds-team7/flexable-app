@@ -141,7 +141,12 @@ export function HomeScreen() {
                 </T>
               </Card>
             </View>
-            <DayBudgets date={s.date} dailyBudget={s.dailyBudget} />
+            <DayBudgets
+              date={s.date}
+              dayBudgets={s.dayBudgets}
+              preset={s.dayPreset}
+              onEdit={() => router.push("/budget/day-weights")}
+            />
             {!s.hasTransactions && (
               <Card style={{ gap: 4 }}>
                 <T weight="700">아직 기록한 거래가 없어요</T>

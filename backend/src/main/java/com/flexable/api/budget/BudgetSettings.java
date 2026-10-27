@@ -41,6 +41,13 @@ public class BudgetSettings {
 	@Column(name = "fixed_posting_since")
 	private Instant fixedPostingSince;
 
+	/** 요일별 비중을 고른 프리셋(DayWeights.Preset)과 월~일 비중("14,14,…") */
+	@Column(name = "day_preset", nullable = false)
+	private String dayPreset = DayWeights.Preset.EVEN.name();
+
+	@Column(name = "day_weights", nullable = false)
+	private String dayWeights = DayWeights.encode(DayWeights.EVEN);
+
 	protected BudgetSettings() {
 	}
 
@@ -65,6 +72,16 @@ public class BudgetSettings {
 	public void changeSeedBase(long seedBase, Instant now) {
 		this.seedBase = seedBase;
 		this.updatedAt = now;
+	}
+
+	/** 요일별 비중만 바꾼다. 웹 연동에 넘기는 값이 아니라 updatedAt은 그대로 둔다. */
+	public void applyDays(DayWeights.Setting days) {
+		this.dayPreset = days.preset().name();
+		this.dayWeights = DayWeights.encode(days.weights());
+	}
+
+	public DayWeights.Setting getDays() {
+		return new DayWeights.Setting(DayWeights.Preset.valueOf(dayPreset), DayWeights.decode(dayWeights));
 	}
 
 	public long getSeedBase() {

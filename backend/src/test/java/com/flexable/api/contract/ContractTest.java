@@ -223,9 +223,17 @@ class ContractTest {
 		app(auth(get("/api/v1/budget/settings"), token), 404);
 		app(auth(get("/api/v1/budget/today"), token), 404);
 		app(auth(get("/api/v1/budget/seed-money"), token), 404);
+		app(auth(get("/api/v1/budget/day-weights"), token), 404);
+		app(auth(json(put("/api/v1/budget/day-weights"), "{\"preset\":\"WEEKEND\"}"), token), 404);
 		app(auth(json(put("/api/v1/budget/settings"), "{\"balance\":1000,\"payday\":40,\"incomeAmount\":0}"), token), 400);
 		app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
 		app(auth(get("/api/v1/budget/settings"), token), 200);
+		app(auth(get("/api/v1/budget/today"), token), 200);
+		app(auth(get("/api/v1/budget/day-weights"), token), 200);
+		app(auth(json(put("/api/v1/budget/day-weights"), "{\"preset\":\"RECORD\"}"), token), 400);
+		app(auth(json(put("/api/v1/budget/day-weights"), "{\"preset\":\"CUSTOM\"}"), token), 400);
+		app(auth(json(put("/api/v1/budget/day-weights"), "{\"preset\":\"WEEKEND\"}"), token), 200);
+		app(auth(json(put("/api/v1/budget/day-weights"), "{\"preset\":\"CUSTOM\",\"weights\":[5,10,15,20,25,30,30]}"), token), 200);
 		app(auth(get("/api/v1/budget/today"), token), 200);
 		app(auth(get("/api/v1/budget/seed-money"), token), 200);
 		app(auth(json(post("/api/v1/budget/seed-money/entries"), "{\"cycleEnd\":\"2026-09-25\",\"choice\":\"GOAL\"}"), token), 409);

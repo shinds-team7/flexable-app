@@ -20,7 +20,7 @@ import com.flexable.api.common.TxType;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** docs/policies.md §1·§2 예시 표 = tests/policy/budget.json. 표를 고치면 이 테스트가 코드와 맞는지 확인한다. */
+/** docs/policies.md §1·§2(§5 요일별 비중 포함) 예시 표 = tests/policy/budget.json. 표를 고치면 이 테스트가 코드와 맞는지 확인한다. */
 class BudgetPolicyTest {
 
 	private static JsonNode root() throws Exception {
@@ -56,7 +56,11 @@ class BudgetPolicyTest {
 					in.get("payday").asInt(), in.get("cardUnpaid").asLong(),
 					in.get("fixed").valueStream().map(f -> f.get("day").asInt()).toList(),
 					in.get("fixed").valueStream().map(f -> f.get("amount").asLong()).toList(),
-					in.get("protectedTotal").asLong(), txs, !txs.isEmpty(), in.get("savedSinceBalance").asLong());
+					in.get("protectedTotal").asLong(), txs, !txs.isEmpty(), in.get("savedSinceBalance").asLong(),
+					in.has("dayWeights")
+							? new DayWeights.Setting(DayWeights.Preset.CUSTOM,
+									in.get("dayWeights").valueStream().map(JsonNode::asInt).toList())
+							: DayWeights.Setting.DEFAULT);
 			TodayResponse r = BudgetCalculator.compute(input, date(in.get("today")), zone);
 			JsonNode ex = c.get("expected");
 			assertThat(r.nextPayday()).isEqualTo(date(ex.get("nextPayday")));
@@ -72,6 +76,9 @@ class BudgetPolicyTest {
 			assertThat(r.weekSpent()).isEqualTo(ex.get("weekSpent").asLong());
 			assertThat(r.weekDaysLeft()).isEqualTo(ex.get("weekDaysLeft").asInt());
 			assertThat(r.weekAvailable()).isEqualTo(ex.get("weekAvailable").asLong());
+			if (ex.has("dayBudgets")) {
+				assertThat(r.dayBudgets()).isEqualTo(ex.get("dayBudgets").valueStream().map(JsonNode::asLong).toList());
+			}
 		}));
 	}
 
