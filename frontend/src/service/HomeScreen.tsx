@@ -220,7 +220,7 @@ function statusOf(s: Today): PaceStatus {
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
 }
-/** Coin balance floating over the character video; it opens the coin history. The shop is reached from the header button. */
+/** Coin balance floating over the character video; it opens the coin history, where the shop button sits. */
 function CoinChip({ balance }: { balance: number }) {
   return (
     <Pressable

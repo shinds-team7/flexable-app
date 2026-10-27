@@ -113,8 +113,8 @@ export function CustomizeScreen() {
           generation,
         );
       setBought(null);
-      // 홈은 돌아올 때 다시 불러 새 코스튬을 보여 준다
-      router.replace("/home");
+      // 홈은 돌아올 때 다시 불러 새 코스튬을 보여 준다. 상점 아래 코인 내역까지 걷어 내고 홈으로 간다
+      router.dismissTo("/home");
     });
 
   return (
