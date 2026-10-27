@@ -6,7 +6,7 @@
 
 ## 2026-10-27
 
-- [#PRNUM] 웹 연동 `PUT /internal/v1/web-links/{linkId}/seed-money` `{total}`을 `web-link-api.yaml`에 추가했다. 웹에서 고친 시드머니 총액이 되도록 모아둔 돈(seedBase)을 총액 − 반영한 돈 합으로 바꾸고, 반영한 돈보다 작으면 400으로 거절한다([결정](decisions/2026-10-27-web-seed-money-write.md), policies §3). 기존 응답은 바뀌지 않았다 — 영향: 앱 서버(`deploy.sh`, 마이그레이션 없음)·웹(`RestAppApiClient`)
+- [#189] 웹 연동 `PUT /internal/v1/web-links/{linkId}/seed-money` `{total}`을 `web-link-api.yaml`에 추가했다. 웹에서 고친 시드머니 총액이 되도록 모아둔 돈(seedBase)을 총액 − 반영한 돈 합으로 바꾸고, 반영한 돈보다 작으면 400으로 거절한다([결정](decisions/2026-10-27-web-seed-money-write.md), policies §3). 기존 응답은 바뀌지 않았다 — 영향: 앱 서버(`deploy.sh`, 마이그레이션 없음)·웹(`RestAppApiClient`)
 
 ## 2026-10-26
 
