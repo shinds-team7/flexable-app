@@ -5,25 +5,21 @@ import DateTimePicker, {
 import { Platform, Pressable, View } from "react-native";
 import { T } from "@/components/ui";
 import { colors, radius } from "@/theme";
-// value is "YYYY-MM-DDTHH:mm" in Seoul time. The pickers use device time, which is Seoul for our users.
+// value is "YYYY-MM-DD" in Seoul time. The pickers use device time, which is Seoul for our users.
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
 function toDate(value: string) {
-  const [y, mo, d, h, mi] = value.split(/[-T:]/).map(Number);
-  return new Date(y, mo - 1, d, h, mi);
+  const [y, mo, d] = value.split("-").map(Number);
+  return new Date(y, mo - 1, d);
 }
 function toValue(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-/** "2026. 10. 20. (화) 오후 12:40" */
-export function dateTimeText(value: string) {
-  const date = toDate(value);
-  const h = date.getHours();
-  const noon = h < 12 ? "오전" : "오후";
-  return `${value.slice(0, 10).replace(/-/g, ". ")}. (${DOW[date.getDay()]}) ${noon} ${h % 12 || 12}:${pad(date.getMinutes())}`;
+/** "2026. 10. 20. (화)" */
+export function dateText(value: string) {
+  return `${value.replace(/-/g, ". ")}. (${DOW[toDate(value).getDay()]})`;
 }
-// One field for both: the date picker opens first, then the time wheel for the picked day.
-export function DateTimeField({
+export function DateField({
   label,
   value,
   onChange,
@@ -33,26 +29,13 @@ export function DateTimeField({
   onChange: (value: string) => void;
 }) {
   const date = toDate(value);
-  const pickTime = (day: Date) =>
-    DateTimePickerAndroid.open({
-      value: day,
-      mode: "time",
-      is24Hour: false,
-      // The spinner lets people drag the hour and minute wheels.
-      display: "spinner",
-      onChange: (event, picked) => {
-        if (event.type === "set" && picked) onChange(toValue(picked));
-      },
-    });
   const pickDate = () =>
     DateTimePickerAndroid.open({
       value: date,
       mode: "date",
       display: "calendar",
       onChange: (event, picked) => {
-        if (event.type !== "set" || !picked) return;
-        onChange(toValue(picked));
-        pickTime(picked);
+        if (event.type === "set" && picked) onChange(toValue(picked));
       },
     });
   if (Platform.OS !== "android")
@@ -63,13 +46,13 @@ export function DateTimeField({
         </T>
         <DateTimePicker
           value={date}
-          mode="datetime"
+          mode="date"
           locale="ko-KR"
           onChange={(_, picked) => picked && onChange(toValue(picked))}
         />
       </View>
     );
-  const text = dateTimeText(value);
+  const text = dateText(value);
   return (
     <View style={{ gap: 8 }}>
       <T size={14} weight="700" color={colors.textSub}>

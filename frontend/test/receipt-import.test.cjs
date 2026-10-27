@@ -1,0 +1,256 @@
+// Runs the real src/service/receiptImport/parse.ts (transpiled) on OCR lines laid out like the four sample screens.
+// Coordinates follow the pixel positions of the screenshots; text is what ML Kit is expected to return per line.
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const ts = require("typescript");
+
+function load() {
+  const source = fs.readFileSync(
+    require.resolve("../src/service/receiptImport/parse.ts"),
+    "utf8",
+  );
+  const js = ts.transpileModule(source, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.CommonJS,
+    },
+  }).outputText;
+  const context = { exports: {}, Date };
+  vm.runInNewContext(js, context);
+  return context.exports;
+}
+const api = load();
+// The module runs in a vm realm: copy results so deepEqual compares plain objects.
+const plain = (v) => JSON.parse(JSON.stringify(v));
+const parseReceipt = (l, t) => plain(api.parseReceipt(l, t));
+const { resolveDate } = api;
+const TODAY = "2026-10-26";
+// rows: [y, [x, text], ...]
+const lines = (rows) =>
+  rows.flatMap(([y, ...cells]) => cells.map(([x, text]) => ({ x, y, text })));
+const brief = (r) =>
+  r.items.map((i) => [i.date.slice(5), i.title, i.type, i.amount]);
+
+const TOSS1 = lines([
+  [320, [50, "2,336,700원"]],
+  [437, [180, "채우기"], [620, "보내기"]],
+  [660, [40, "10월 26일"]],
+  [735, [155, "스타벅스"], [675, "-5,500원"]],
+  [777, [155, "체크카드"], [610, "잔액 2,336,700원"]],
+  [868, [155, "홍길동"], [637, "+100,000원"]],
+  [910, [155, "내 신한계좌에서 이체"], [610, "잔액 2,342,200원"]],
+  [1003, [40, "10월 25일"]],
+  [1080, [155, "쿠팡"], [655, "+32,900원"]],
+  [1122, [155, "체크카드 취소 · 환불"], [610, "잔액 2,242,200원"]],
+  [1217, [155, "쿠팡"], [660, "-32,900원"]],
+  [1261, [155, "체크카드 결제"], [610, "잔액 2,209,300원"]],
+  [1356, [40, "10월 24일"]],
+  [1433, [155, "CU 광화문점"], [677, "-7,800원"]],
+  [1475, [155, "체크카드"], [610, "잔액 2,242,200원"]],
+  [1568, [155, "홍길동"], [640, "-500,000원"]],
+  [1610, [155, "내 카카오뱅크 계좌로 이체"], [610, "잔액 2,250,000원"]],
+  [1687, [40, "10월 23일"]],
+  [1750, [155, "급여"], [605, "+2,500,000원"]],
+  [1792, [155, "입금"], [610, "잔액 2,750,000원"]],
+  [1810, [345, "테스트용 가상 내역"]],
+]);
+// KB account inside Toss: dark, date only on the first row of a day, income has no sign.
+const TOSS2 = lines([
+  [320, [60, "2,143,200원"]],
+  [830, [45, "전체"]],
+  [930, [45, "10.26"], [150, "CU 광화문점"], [660, "-6,800원"]],
+  [975, [150, "체크카드"], [655, "2,143,200원"]],
+  [1050, [150, "홍길동"], [635, "200,000원"]],
+  [1098, [150, "내 토스뱅크 계좌에서 이체"], [662, "2,150,000원"]],
+  [1182, [45, "10.25"], [150, "이마트"], [660, "48,600원"]],
+  [1228, [150, "체크카드 취소 · 환불"], [657, "1,950,000원"]],
+  [1306, [150, "이마트"], [645, "-48,600원"]],
+  [1352, [150, "체크카드 결제"], [657, "1,901,400원"]],
+  [1433, [45, "10.24"], [150, "홍길동"], [620, "-700,000원"]],
+  [1480, [150, "내 신한계좌로 이체"], [657, "1,950,000원"]],
+  [1562, [45, "10.23"], [150, "급여"], [615, "2,500,000원"]],
+  [1607, [150, "입금"], [657, "2,650,000원"]],
+  [1795, [355, "테스트용 가상 내역"]],
+]);
+const KAKAOBANK = lines([
+  [330, [280, "홍길동의 통장"]],
+  [570, [190, "이체"], [560, "가져오기"]],
+  [743, [40, "3개월 · 전체 · 최신순"]],
+  [868, [37, "10.26"], [160, "CU 광화문점"], [668, "-6,800원"]],
+  [914, [160, "체크카드"], [590, "잔액 2,143,200원"]],
+  [1030, [37, "10.26"], [160, "홍길동"], [627, "+200,000원"]],
+  [1080, [160, "내 토스뱅크 계좌에서"], [590, "잔액 2,150,000원"]],
+  [1196, [37, "10.25"], [160, "이마트"], [652, "+48,600원"]],
+  [1245, [160, "체크카드 취소 · 환불"], [590, "잔액 1,950,000원"]],
+  [1370, [37, "10.25"], [160, "이마트"], [652, "-48,600원"]],
+  [1418, [160, "체크카드 결제"], [590, "잔액 1,901,400원"]],
+  [1538, [37, "10.24"], [160, "홍길동"], [632, "-700,000원"]],
+  [1587, [160, "내 신한계좌로 이체"], [590, "잔액 1,950,000원"]],
+  [1704, [37, "10.23"], [160, "급여"], [606, "+2,500,000원"]],
+  [1752, [160, "타행입금"], [590, "잔액 2,650,000원"]],
+]);
+const KAKAOPAY = lines([
+  [250, [180, "내역"], [555, "카드만들기"]],
+  [355, [295, "10월 · 페이머니"]],
+  [453, [36, "26일 월요일"], [203, "+60,500원"]],
+  [551, [150, "송금 받기 | 김민지 → 카카오페이머니"]],
+  [604, [150, "+15,000원"]],
+  [718, [150, "송금 | 카카오페이머니 → 홍길동(내 국민계좌)"]],
+  [770, [150, "-50,000원"]],
+  [885, [150, "충전 | 홍길동(내 신한계좌) → 카카오페이머니"]],
+  [936, [150, "+100,000원"]],
+  [1052, [150, "결제 | 메가MGC커피"]],
+  [1103, [150, "-4,500원"]],
+  [1220, [36, "25일 일요일"], [197, "0원"]],
+  [1318, [150, "결제취소 · 환불 | 카카오톡 선물하기"]],
+  [1369, [150, "+18,000원"]],
+  [1486, [150, "결제 | 카카오톡 선물하기"]],
+  [1537, [150, "-18,000원"]],
+]);
+
+test("toss: date headers, signs and balance chain", () => {
+  const r = parseReceipt(TOSS1, TODAY);
+  assert.equal(r.source, "toss");
+  assert.deepEqual(brief(r), [
+    ["10-26", "스타벅스", "EXPENSE", 5500],
+    ["10-26", "홍길동", "INCOME", 100000],
+    ["10-25", "쿠팡", "INCOME", 32900],
+    ["10-25", "쿠팡", "EXPENSE", 32900],
+    ["10-24", "CU 광화문점", "EXPENSE", 7800],
+    ["10-24", "홍길동", "EXPENSE", 500000],
+    ["10-23", "급여", "INCOME", 2500000],
+  ]);
+  assert.ok(r.items.every((i) => i.review.length === 0));
+  assert.equal(r.items[0].date, "2026-10-26");
+});
+
+test("toss: own transfers and refunds are flagged, not dropped", () => {
+  const r = parseReceipt(TOSS1, TODAY);
+  assert.deepEqual(
+    r.items.map((i) => [i.ownTransfer, i.refund]),
+    [
+      [false, false],
+      [true, false],
+      [false, true],
+      [false, false],
+      [false, false],
+      [true, false],
+      [false, false],
+    ],
+  );
+});
+
+test("toss (dark, left date column): dates carry over and signs come from the balance", () => {
+  const r = parseReceipt(TOSS2, TODAY);
+  assert.equal(r.source, "toss");
+  assert.deepEqual(brief(r), [
+    ["10-26", "CU 광화문점", "EXPENSE", 6800],
+    ["10-26", "홍길동", "INCOME", 200000],
+    ["10-25", "이마트", "INCOME", 48600],
+    ["10-25", "이마트", "EXPENSE", 48600],
+    ["10-24", "홍길동", "EXPENSE", 700000],
+    ["10-23", "급여", "INCOME", 2500000],
+  ]);
+  assert.ok(r.items.every((i) => i.review.length === 0));
+  assert.equal(r.items[2].refund, true);
+});
+
+test("kakaobank: every row has its own date", () => {
+  const r = parseReceipt(KAKAOBANK, TODAY);
+  assert.equal(r.source, "kakaobank");
+  assert.deepEqual(brief(r), [
+    ["10-26", "CU 광화문점", "EXPENSE", 6800],
+    ["10-26", "홍길동", "INCOME", 200000],
+    ["10-25", "이마트", "INCOME", 48600],
+    ["10-25", "이마트", "EXPENSE", 48600],
+    ["10-24", "홍길동", "EXPENSE", 700000],
+    ["10-23", "급여", "INCOME", 2500000],
+  ]);
+  assert.ok(r.items.every((i) => i.review.length === 0));
+});
+
+test("kakaopay: amount sits under the title, no balance column", () => {
+  const r = parseReceipt(KAKAOPAY, TODAY);
+  assert.equal(r.source, "kakaopay");
+  assert.deepEqual(brief(r), [
+    ["10-26", "김민지", "INCOME", 15000],
+    ["10-26", "홍길동", "EXPENSE", 50000],
+    ["10-26", "홍길동", "INCOME", 100000],
+    ["10-26", "메가MGC커피", "EXPENSE", 4500],
+    ["10-25", "카카오톡 선물하기", "INCOME", 18000],
+    ["10-25", "카카오톡 선물하기", "EXPENSE", 18000],
+  ]);
+  assert.deepEqual(
+    r.items.map((i) => [i.ownTransfer, i.refund]),
+    [
+      [false, false],
+      [true, false],
+      [true, false],
+      [false, false],
+      [false, true],
+      [false, false],
+    ],
+  );
+});
+
+test("a balance that does not match asks for review", () => {
+  const broken = KAKAOBANK.map((l) =>
+    l.text === "잔액 2,150,000원" ? { ...l, text: "잔액 2,100,000원" } : l,
+  );
+  const r = parseReceipt(broken, TODAY);
+  assert.ok(r.items[0].review.length > 0);
+});
+
+test("a screen with no transactions is not supported", () => {
+  const r = parseReceipt(lines([[100, [40, "설정"]]]), TODAY);
+  assert.equal(r.source, null);
+  assert.deepEqual(r.items, []);
+});
+
+test("year is the nearest past occurrence", () => {
+  assert.equal(resolveDate(12, 30, "2027-01-02"), "2026-12-30");
+  assert.equal(resolveDate(1, 2, "2027-01-02"), "2027-01-02");
+  assert.equal(resolveDate(10, 27, "2026-10-26"), "2025-10-27");
+});
+
+// ML Kit may return a whole visual row as one line; the result must not change.
+const merge = (input) => {
+  const byY = new Map();
+  for (const l of input) byY.set(l.y, [...(byY.get(l.y) ?? []), l]);
+  return [...byY].map(([y, row]) => ({
+    y,
+    x: Math.min(...row.map((l) => l.x)),
+    text: row
+      .sort((a, b) => a.x - b.x)
+      .map((l) => l.text)
+      .join(" "),
+  }));
+};
+
+for (const [name, fixture] of [
+  ["toss", TOSS1],
+  ["toss (dark)", TOSS2],
+  ["kakaobank", KAKAOBANK],
+  ["kakaopay", KAKAOPAY],
+]) {
+  test(`${name}: rows merged into single OCR lines parse the same`, () => {
+    assert.deepEqual(
+      parseReceipt(merge(fixture), TODAY),
+      parseReceipt(fixture, TODAY),
+    );
+  });
+}
+
+test("an unknown direction is flagged with the shared review message", () => {
+  const r = parseReceipt(
+    lines([
+      [100, [40, "10.26"], [150, "이마트"], [660, "48,600원"]],
+      [150, [150, "체크카드"], [657, "2,000,000원"]],
+    ]),
+    TODAY,
+  );
+  assert.equal(r.items[0].type, null);
+  assert.deepEqual(r.items[0].review, [api.REVIEW_TYPE]);
+});

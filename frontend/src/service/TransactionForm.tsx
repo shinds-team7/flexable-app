@@ -7,7 +7,8 @@ import { goBack } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
 import { api } from "./api/client";
 import { CategorySheet } from "./CategorySheet";
-import { DateTimeField } from "./DateTimeField";
+import { DateField } from "./DateField";
+import { occurredAtFor, validDate } from "./occurredAt";
 import { useSession } from "./Session";
 import {
   CategoryIcon,
@@ -17,9 +18,9 @@ import {
   Loading,
   money,
   Page,
+  seoulDate,
   toSeoulInput,
   useResource,
-  validTime,
 } from "./ui";
 import type { Category, Kind, Transaction } from "./types";
 export function TransactionForm({ id }: { id?: string }) {
@@ -44,11 +45,10 @@ function Form({ existing }: { existing?: Transaction }) {
   const [title, setTitle] = useState(existing?.title ?? "");
   // The form no longer edits memos; an existing one is sent back unchanged.
   const memo = existing?.memo ?? "";
-  // Keep seconds for the default "now": minute truncation can put a new transaction before balanceAt.
-  const [occurredAt, setOccurredAt] = useState(
-    () => existing?.occurredAt ?? new Date().toISOString(),
+  // Only the day is picked; occurredAtFor() decides the time sent to the server.
+  const [date, setDate] = useState(() =>
+    existing ? toSeoulInput(existing.occurredAt).slice(0, 10) : seoulDate(),
   );
-  const [time, setTime] = useState(() => toSeoulInput(occurredAt));
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -94,9 +94,9 @@ function Form({ existing }: { existing?: Transaction }) {
       (!categoryId ||
         title.trim().length > 40 ||
         memo.length > 200 ||
-        !validTime(time))
+        !validDate(date))
     ) {
-      setError("카테고리와 날짜·시간을 확인해 주세요");
+      setError("카테고리와 날짜를 확인해 주세요");
       return;
     }
     lock.current = true;
@@ -113,7 +113,7 @@ function Form({ existing }: { existing?: Transaction }) {
         list.find((c) => c.id === categoryId)?.name ||
         (type === "INCOME" ? "수입" : "지출"),
       memo,
-      occurredAt,
+      occurredAt: occurredAtFor(date, existing?.occurredAt, new Date()),
     };
     pending.current = body;
     try {
@@ -263,14 +263,7 @@ function Form({ existing }: { existing?: Transaction }) {
           onChangeText={setTitle}
           maxLength={40}
         />
-        <DateTimeField
-          label="날짜와 시간"
-          value={time}
-          onChange={(value) => {
-            setTime(value);
-            if (validTime(value)) setOccurredAt(value + ":00+09:00");
-          }}
-        />
+        <DateField label="날짜" value={date} onChange={setDate} />
       </View>
       {uncertain && (
         <T>저장 여부를 확인하지 못했어요. 같은 내용으로 다시 확인할게요</T>

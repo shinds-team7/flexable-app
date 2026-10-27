@@ -112,10 +112,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   });
   const before = await snapshot(page, "/budget/today");
   // The record button sits in the tab bar: the list scrolls while it keeps its place.
-  const record = page.getByRole("button", {
-    name: "거래 직접 기록",
-    exact: true,
-  });
+  const record = page.getByRole("button", { name: "거래 추가", exact: true });
   const week = page.getByText("이번 주 쓸 수 있는 돈", { exact: true });
   // A shorter window guarantees the home list is taller than the screen.
   await page.setViewportSize({ width: 390, height: 640 });
@@ -130,6 +127,11 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   expect((await record.boundingBox())!.y).toBeCloseTo(fabY, 0);
   await page.setViewportSize({ width: 390, height: 844 });
   await record.click();
+  // The web build cannot read images, so only the manual form is offered.
+  await expect(
+    page.getByRole("button", { name: "이미지 업로드", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "직접 입력", exact: true }).click();
   await page.getByLabel("금액", { exact: true }).fill("1000000000000");
   await page.getByRole("button", { name: SAVE }).click();
   await expect(
@@ -189,12 +191,11 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await expect(page.getByText("테스트 점심", { exact: true })).toBeVisible();
   // 내역 has no add button of its own; income is picked in the form opened by the tab bar + button.
   await expect(
-    page.getByRole("button", { name: "+ 거래 직접 기록", exact: true }),
+    page.getByRole("button", { name: "+ 거래 추가", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("tab", { name: "홈", exact: true }).click();
-  await page
-    .getByRole("button", { name: "거래 직접 기록", exact: true })
-    .click();
+  await page.getByRole("button", { name: "거래 추가", exact: true }).click();
+  await page.getByRole("button", { name: "직접 입력", exact: true }).click();
   await expect(
     page.getByRole("tab", { name: "지출", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
@@ -251,7 +252,10 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     page.getByText("이 카테고리의 거래는 '기타'로 옮겨져요", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "삭제", exact: true }).last().click();
-  await expect(page.getByText("수정 중 추가", { exact: true })).toHaveCount(0);
+  // The hidden 내역 tab still lists the old category name until it regains focus, so count only what is visible.
+  await expect(
+    page.getByText("수정 중 추가", { exact: true }).filter({ visible: true }),
+  ).toHaveCount(0);
   await page.goto("/transactions");
   await page.getByRole("button", { name: /테스트 점심, 7,000원/ }).click();
   await expect(
@@ -561,7 +565,7 @@ test("expired token returns to start; public routes remain accessible", async ({
     ),
   ).toBeVisible();
   await page.goto("/support");
-  await expect(page.getByText("앱 버전 1.4.1", { exact: true })).toBeVisible();
+  await expect(page.getByText("앱 버전 1.5.0", { exact: true })).toBeVisible();
   // 시연은 웹사이트 저장소(flexable-web)의 /m 으로 옮겼다. 시작 화면에는 링크만 남는다.
   await page.goto("/");
   await expect(page.getByText("시연 보기", { exact: true })).toBeVisible();

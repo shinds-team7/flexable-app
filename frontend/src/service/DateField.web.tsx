@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { T } from "@/components/ui";
 import { colors, font, radius } from "@/theme";
-// The native picker has no web build. The browser's datetime-local input gives one calendar-and-time field.
+// The native picker has no web build. The browser's date input gives the calendar.
 const style = {
   fontFamily: font,
   fontSize: 16,
@@ -14,7 +14,7 @@ const style = {
   boxSizing: "border-box" as const,
   width: "100%",
 };
-export function DateTimeField({
+export function DateField({
   label,
   value,
   onChange,
@@ -29,7 +29,7 @@ export function DateTimeField({
         {label}
       </T>
       <input
-        type="datetime-local"
+        type="date"
         aria-label={label}
         value={value}
         onChange={(e) => e.target.value && onChange(e.target.value)}

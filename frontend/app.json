@@ -2,7 +2,7 @@
   "expo": {
     "name": "텅장관리",
     "slug": "flexable",
-    "version": "1.4.1",
+    "version": "1.5.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -47,6 +47,14 @@
         }
       ],
       "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "거래내역 스크린샷을 고르려고 사진에 접근해요. 고른 사진은 기기에서만 읽어요",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       [
         "./plugins/withSplashBranding",
         {
