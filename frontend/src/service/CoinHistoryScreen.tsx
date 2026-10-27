@@ -1,4 +1,3 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -90,7 +89,7 @@ export function CoinHistoryScreen() {
               accessibilityLabel="상점"
               onPress={() => router.push("/customize")}
             >
-              <Ionicons name="shirt-outline" size={24} color={colors.text} />
+              <T size={24}>🏪</T>
               <T size={13} weight="700">
                 상점
               </T>
