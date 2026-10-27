@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { AppState } from "react-native";
 import { api, sessionGeneration } from "./api/client";
 import { entryReminderTimes } from "./entryReminderTimes";
+import { recordReminders } from "./inboxStore";
 import { ensureChannel, notificationsAllowed } from "./localNotifications";
 import { useEntryReminderSetting } from "./reminderSetting";
+import { ENTRY_REMINDER } from "./reminderTexts";
 import { useSession } from "./Session";
 import type { Transaction } from "./types";
 import { parseTime } from "./ui";
@@ -30,7 +32,10 @@ async function cancelAll() {
   );
 }
 export function cancelEntryReminder() {
-  return serial(cancelAll);
+  return serial(async () => {
+    await cancelAll();
+    await recordReminders("entry", []);
+  });
 }
 /** 마지막 기록부터 24시간마다(밤이면 9시로 미뤄) 앞으로 COUNT번을 다시 예약한다. */
 function scheduleEntryReminder(last: Date, generation: number) {
@@ -40,19 +45,19 @@ function scheduleEntryReminder(last: Date, generation: number) {
     if (!(await notificationsAllowed())) return;
     await ensureChannel(CHANNEL, "기록 알림");
     await cancelAll();
-    for (const [i, at] of entryReminderTimes(last, new Date(), COUNT).entries())
+    const times = entryReminderTimes(last, new Date(), COUNT);
+    for (const [i, at] of times.entries())
       await Notifications.scheduleNotificationAsync({
         identifier: `${PREFIX}${i}`,
-        content: {
-          title: "하루 동안 기록이 없었어요",
-          body: "쓴 돈을 기록하면 오늘 쓸 수 있는 돈이 더 정확해져요",
-        },
+        content: ENTRY_REMINDER,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: at,
           channelId: CHANNEL,
         },
       });
+    // 알림함에 남기도록 예약 시각을 기록한다.
+    await recordReminders("entry", times);
   });
 }
 function seoulDay(offset: number) {

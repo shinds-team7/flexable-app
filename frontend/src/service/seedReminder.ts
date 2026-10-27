@@ -1,7 +1,9 @@
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import { recordReminders } from "./inboxStore";
 import { ensureChannel, notificationsAllowed } from "./localNotifications";
+import { SEED_REMINDER } from "./reminderTexts";
 import { useSession } from "./Session";
 
 // 수입일 전날 시드머니 반영 알림. 기기 안에서만 예약하고 서버로 보내는 정보는 없다.
@@ -14,22 +16,22 @@ export async function scheduleSeedReminder(nextPayday: string) {
   const [y, m, d] = nextPayday.split("-").map(Number);
   const at = new Date(y, m - 1, d - 1, 20, 0, 0);
   await Notifications.cancelScheduledNotificationAsync(ID);
-  if (at.getTime() <= Date.now()) return;
+  if (at.getTime() <= Date.now()) return recordReminders("seed", []);
   await Notifications.scheduleNotificationAsync({
     identifier: ID,
-    content: {
-      title: "내일은 수입일이에요",
-      body: "이번 달 모은 돈을 시드머니에 반영해 보세요",
-    },
+    content: SEED_REMINDER,
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: at,
       channelId: CHANNEL,
     },
   });
+  // 알림함에 남기도록 예약 시각을 기록한다.
+  await recordReminders("seed", [at]);
 }
 export async function cancelSeedReminder() {
   await Notifications.cancelScheduledNotificationAsync(ID);
+  await recordReminders("seed", []);
 }
 // 같은 알림 응답으로 화면이 다시 열릴 때 홈으로 또 보내지 않도록 처리한 응답을 기억한다.
 const handled = new Set<string>();
