@@ -107,7 +107,8 @@ export function DayWeightsScreen() {
                         : PRESET_DETAIL[id]
                     }
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: on, disabled: !available }}
+                    disabled={!available || busy}
+                    accessibilityState={{ checked: on, disabled: !available || busy }}
                     aria-checked={on}
                     right={<RadioMark on={on} />}
                     onPress={() => p.weights && pick(p.id, p.weights)}
