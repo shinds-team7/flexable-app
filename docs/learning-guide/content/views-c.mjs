@@ -209,8 +209,8 @@ ${topic({
         ["V11", "outfit-03·04 → 선비냥이·유령냥이 판매", "{{snip:mig-v11|V11}}"],
         ["V12", "budget_settings.day_preset·day_weights (기본값이 기본 배분이라 기존 금액 그대로)", "{{snip:mig-v12|V12}}"],
       ]),
-      code: "로컬 실행에서 Flyway가 V1부터 V12까지 12개를 차례로 적용하는 로그(<code>Successfully applied 12 migrations … now at version v12</code>, 2026-10-28)를 확인했다 {{b:ran}}. 운영은 V11까지 적용됐다는 기록이 있다(10-23, HANDOFF {{b:doc}}). V12는 요일별 배분 서버 배포와 함께 나가며, 운영 적용은 10-28에 팀이 배포·실기기 확인을 마쳤다고 알려 준 내용이고 저장소 문서에는 아직 기록이 없다 {{b:unknown}}. 다음 번호는 V13.",
-      io: "새 SQL 파일 → PR → 머지 → 배포한 app.jar가 켜질 때 운영 RDS에 적용",
+      code: "로컬 실행에서 Flyway가 V1부터 V12까지 12개를 차례로 적용하는 로그(<code>Successfully applied 12 migrations … now at version v12</code>, 2026-10-28)를 확인했다 {{b:ran}}. 운영 V12 적용은 <code>docs/HANDOFF.md</code>에 10-28 배포·실기기 확인을 마쳤다는 사용자 보고로 기록돼 있다 {{b:doc}}. 이번 문서 갱신에서 운영 DB를 직접 검증한 것은 아니다 {{b:unknown}}. 다음 번호는 V13.",
+      io: "새 SQL 파일 → PR → 머지 → 배포한 app.jar가 켜질 때 운영 DB에 적용(현재 아카데미 VM MySQL)",
       next: "{{v:ops.schema|EC2 앱 변경과 RDS 스키마 변경의 관계}} · {{v:change.column|DB 컬럼 추가 지도}}",
     })}`,
   };
