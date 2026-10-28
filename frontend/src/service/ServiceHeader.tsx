@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, usePathname } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
 import { colors, pressTransition } from "@/theme";
 import { AddTransactionSheet } from "./AddTransactionSheet";
@@ -39,7 +40,52 @@ const tabs = [
 // Tabs live in the bottom icon bar for every home style; the header keeps the logo row and the inbox bell.
 // The shop is reached from the coin history, opened by the coin chip on the character home.
 export function ServiceHeader() {
-  return <AppHeaderView homeHref="/home" right={<InboxButton />} />;
+  return (
+    <AppHeaderView
+      homeHref="/home"
+      right={
+        <View style={styles.right}>
+          <ChatbotButton />
+          <InboxButton />
+        </View>
+      }
+    />
+  );
+}
+/** AI 메이트(챗봇)로 간다. 처음이면 메이트 스타일 선택부터 뜬다 */
+function ChatbotButton() {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="AI 메이트"
+      onPress={() => router.push("/chatbot")}
+      hitSlop={6}
+      style={styles.iconBtn}
+    >
+      <RobotIcon size={26} />
+    </Pressable>
+  );
+}
+/** AI 메이트 버튼의 로봇 아이콘(테두리는 글자색, 얼굴 화면은 브랜드색) */
+function RobotIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={2.8} r={1.2} stroke={colors.text} strokeWidth={1.5} />
+      <Path d="M12 4v2" stroke={colors.text} strokeWidth={1.5} strokeLinecap="round" />
+      <Rect x={4} y={6} width={16} height={11} rx={3.5} stroke={colors.text} strokeWidth={1.6} />
+      <Rect x={2} y={9.5} width={2} height={4} rx={1} fill={colors.text} />
+      <Rect x={20} y={9.5} width={2} height={4} rx={1} fill={colors.text} />
+      <Rect x={6.6} y={8.6} width={10.8} height={5.8} rx={2} fill={colors.brand} />
+      <Rect x={9} y={10.4} width={1.6} height={2.2} rx={0.8} fill="#fff" />
+      <Rect x={13.4} y={10.4} width={1.6} height={2.2} rx={0.8} fill="#fff" />
+      <Path
+        d="M7.5 21.5v-1.3a2.2 2.2 0 0 1 2.2-2.2h4.6a2.2 2.2 0 0 1 2.2 2.2v1.3"
+        stroke={colors.text}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
 }
 /** 알림함으로 간다. 안 읽은 알림이 있으면 점을 찍는다 */
 function InboxButton() {
@@ -85,6 +131,13 @@ function RecordButton() {
   );
 }
 const styles = StyleSheet.create({
+  right: { flexDirection: "row", alignItems: "center" },
+  iconBtn: {
+    width: 44,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   bell: {
     width: 48,
     height: 48,
