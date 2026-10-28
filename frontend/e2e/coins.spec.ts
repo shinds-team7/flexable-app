@@ -440,3 +440,54 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   ).toBeVisible();
   expect(collects).toBe(1);
 });
+
+test("attendance: the calendar button on the character opens the stamp calendar and pays once a day", async ({
+  page,
+}) => {
+  await signup(page, email("attendance"));
+  await onboard(page);
+  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+
+  await page
+    .getByRole("button", { name: "출석체크 달력 열기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "출석체크", exact: true }),
+  ).toBeVisible();
+  const { today } = await api(page, "GET", "/coins/attendance");
+  const [, m, d] = today.split("-").map(Number);
+  await expect(
+    page.getByLabel(`${m}월 ${d}일, 오늘`, { exact: true }),
+  ).toBeVisible();
+  // Nothing is paid until the button is pressed.
+  await page
+    .getByRole("button", { name: "출석하기 · 5코인", exact: true })
+    .click();
+  await expect(page.getByText("🪙 5코인을 받았어요", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel(`${m}월 ${d}일, 오늘, 출석`, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("연속 1일째", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "오늘 출석 완료", exact: true }),
+  ).toBeDisabled();
+  // The coin chip, now on the character's left, follows the new balance without a reward modal.
+  await page.getByRole("button", { name: "닫기", exact: true }).last().click();
+  await expect(
+    page.getByRole("button", { name: "보유 코인 205개, 코인 내역 보기", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "코인을 받았어요" })).toHaveCount(0);
+
+  // Reopening reads the server again; a second attendance the same day pays nothing.
+  await page
+    .getByRole("button", { name: "출석체크 달력 열기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "오늘 출석 완료", exact: true }),
+  ).toBeDisabled();
+  expect((await api(page, "POST", "/coins/attendance")).rewarded).toBe(0);
+  await page.getByRole("button", { name: "닫기", exact: true }).last().click();
+
+  await page.getByRole("button", { name: /코인 내역 보기$/ }).click();
+  await expect(page.getByText("+5 출석체크", { exact: true })).toBeVisible();
+});

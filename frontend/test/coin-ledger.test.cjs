@@ -52,3 +52,12 @@ test("budget bonus names the day it was kept", () => {
     "",
   );
 });
+
+test("attendance marks the streak bonus day", () => {
+  assert.equal(ledgerTitle({ reason: "ATTENDANCE", amount: 5 }), "+5 출석체크");
+  assert.equal(ledgerDetail({ reason: "ATTENDANCE", amount: 5 }), "");
+  assert.equal(
+    ledgerDetail({ reason: "ATTENDANCE", amount: 30 }),
+    "연속 출석 보너스",
+  );
+});

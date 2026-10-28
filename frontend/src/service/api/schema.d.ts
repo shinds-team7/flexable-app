@@ -1059,6 +1059,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/coins/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 이번 달 출석과 연속 출석 일수 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 출석 현황 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Attendance"];
+                    };
+                };
+                401: components["responses"]["Error"];
+            };
+        };
+        put?: never;
+        /** 오늘 출석(여러 번 불러도 한 번만 지급, 이미 했으면 rewarded 0) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 받은 코인, 출석 현황, 지갑 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rewarded: number;
+                            attendance: components["schemas"]["Attendance"];
+                            wallet: components["schemas"]["Wallet"];
+                        };
+                    };
+                };
+                401: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/coins/ledger": {
         parameters: {
             query?: never;
@@ -1917,7 +1979,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             /** @enum {string} */
-            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND";
+            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND" | "ATTENDANCE";
             amount: number;
             /**
              * Format: date
@@ -1931,7 +1993,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             /** @enum {string} */
-            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND";
+            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND" | "ATTENDANCE";
             /** @description 적립은 양수, 사용(PURCHASE)은 음수 */
             amount: number;
             /**
@@ -1943,6 +2005,20 @@ export interface components {
             outfitId: string | null;
             /** Format: date-time */
             createdAt: string;
+        };
+        Attendance: {
+            /**
+             * Format: date
+             * @description 서버 기준 오늘(KST)
+             */
+            today: string;
+            /** @description 이번 달 출석한 날, 오래된 순 */
+            days: string[];
+            /** @description 오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수 */
+            streak: number;
+            checkedToday: boolean;
+            /** @description 오늘 출석하면(했으면) 받는 코인. 연속 7·14·21…일째는 30, 그 밖에는 5 */
+            todayReward: number;
         };
         OutfitList: {
             /** Format: int64 */
