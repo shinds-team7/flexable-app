@@ -438,6 +438,26 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 
 받을 게 없으면 `collected: 0`(오류 아님).
 
+### `GET /coins/attendance` → 200 `Attendance`
+
+홈 캐릭터 오른쪽 위 출석 달력 버튼 → 출석 달력(`service/AttendanceSheet.tsx`)이 쓴다. 날짜는 모두 KST.
+
+```json
+{ "today": "2026-10-28", "days": ["2026-10-26", "2026-10-27"], "streak": 2, "checkedToday": false, "todayReward": 5 }
+```
+
+- `days` = 이번 달 1일~오늘 중 출석한 날, 오래된 순
+- `streak` = 오늘까지 연속 출석 일수. 오늘 아직 안 했으면 어제까지(어제도 안 했으면 0). 달이 바뀌어도 이어진다
+- `todayReward` = 오늘 출석하면(이미 했으면 받은) 코인. 연속 7·14·21…일째는 30, 그 밖에는 5
+
+### `POST /coins/attendance` → 200
+
+```json
+{ "rewarded": 5, "attendance": { "...": "Attendance" }, "wallet": { "...": "CoinWallet" } }
+```
+
+오늘 출석하고 `todayReward`만큼 준다. 이미 했으면 `rewarded: 0`(오류 아님). 내역은 `ATTENDANCE`(`ref_key` = 날짜)로 남기고, 받은 코인은 달력에서 바로 보여 주므로 check-in `rewards`(모달)에는 넣지 않는다.
+
 ### `GET /coins/ledger?before={id}&limit=30` → 200
 
 코인 적립·사용 내역(`coin_ledger`), 최신순(id 큰 순). 홈 코인 칩 → 코인 내역 화면(`service/CoinHistoryScreen.tsx`)이 쓴다.
@@ -455,7 +475,7 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 
 - `before` 없음 = 가장 최근부터. 다음 쪽은 앞 응답의 `nextBefore`를 `before`로 넣는다. `nextBefore`가 `null`이면 더 없다.
 - `limit` 1~100, 기본 30. 범위 밖은 400 `VALIDATION_FAILED`(field `limit`).
-- `amount`는 적립 양수, 사용(`PURCHASE`) 음수. `reason`은 check-in `rewards`와 같은 값에 `PASSIVE`(모으기)·`REFERRAL_INVITEE`(추천 코드 등록)·`PURCHASE`(코스튬 구매)가 더해진다. `outfitId`는 `PURCHASE`일 때만, `refDate`는 `BUDGET_BONUS`일 때만 있다.
+- `amount`는 적립 양수, 사용(`PURCHASE`) 음수. `reason`은 check-in `rewards`와 같은 값에 `PASSIVE`(모으기)·`REFERRAL_INVITEE`(추천 코드 등록)·`PURCHASE`(코스튬 구매)·`ATTENDANCE`(출석)가 더해진다. `outfitId`는 `PURCHASE`일 때만, `refDate`는 `BUDGET_BONUS`일 때만 있다.
 - 모달로 아직 보여 주지 않은 보상도 이미 지급된 내역이라 포함한다.
 
 ### `GET /outfits` → 200 `OutfitList`

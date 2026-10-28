@@ -310,6 +310,8 @@ class ContractTest {
 		app(auth(json(post("/api/v1/coins/rewards/ack"), "{\"ids\":[" + rewardId + "]}"), token), 204);
 		app(auth(get("/api/v1/coins"), token), 200);
 		app(auth(post("/api/v1/coins/collect"), token), 200);
+		app(auth(get("/api/v1/coins/attendance"), token), 200);
+		app(auth(post("/api/v1/coins/attendance"), token), 200);
 
 		app(auth(get("/api/v1/outfits"), token), 200);
 		app(auth(post("/api/v1/outfits/outfit-03/purchase"), token), 200);

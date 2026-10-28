@@ -13,12 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.flexable.api.auth.CurrentUser;
 import com.flexable.api.coin.CoinDtos.AckRequest;
+import com.flexable.api.coin.CoinDtos.AttendResponse;
+import com.flexable.api.coin.CoinDtos.Attendance;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
 import com.flexable.api.coin.CoinDtos.CollectResponse;
 import com.flexable.api.coin.CoinDtos.LedgerPage;
 import com.flexable.api.coin.CoinDtos.Wallet;
 
-/** 코인 지갑·check-in·모으기. 규칙은 docs/coin-plan.md. */
+/** 코인 지갑·check-in·모으기·출석. 규칙은 docs/coin-plan.md. */
 @RestController
 @RequestMapping("/api/v1/coins")
 public class CoinController {
@@ -48,6 +50,16 @@ public class CoinController {
 	@PostMapping("/collect")
 	CollectResponse collect(@AuthenticationPrincipal Jwt jwt) {
 		return service.collect(CurrentUser.id(jwt));
+	}
+
+	@GetMapping("/attendance")
+	Attendance attendance(@AuthenticationPrincipal Jwt jwt) {
+		return service.attendance(CurrentUser.id(jwt));
+	}
+
+	@PostMapping("/attendance")
+	AttendResponse attend(@AuthenticationPrincipal Jwt jwt) {
+		return service.attend(CurrentUser.id(jwt));
 	}
 
 	@GetMapping("/ledger")
