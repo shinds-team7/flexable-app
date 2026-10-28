@@ -236,6 +236,8 @@ test("image import prevents double taps, avoids state changes after navigation a
       },
     },
     "../ui": { seoulDate: () => "2026-10-27" },
+    "expo-updates": {},
+    "./diagnostics": { createImportDiagnostic() {} },
     "./ocr": {
       imageImportSupported: true,
       pickAndRecognize: () => new Promise((resolve) => pickers.push(resolve)),

@@ -1,7 +1,13 @@
 import { router, useFocusEffect } from "expo-router";
+import * as Updates from "expo-updates";
 import { useCallback, useRef, useState } from "react";
 import { seoulDate } from "../ui";
-import { imageImportSupported, pickAndRecognize } from "./ocr";
+import {
+  getLastRecognitionStats,
+  imageImportSupported,
+  pickAndRecognize,
+} from "./ocr";
+import { createImportDiagnostic } from "./diagnostics";
 import { parseReceipt } from "./parse";
 import { setPending } from "./store";
 export { imageImportSupported };
@@ -9,6 +15,8 @@ export { imageImportSupported };
 export function useImageImport() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [diagnostic, setDiagnostic] =
+    useState<ReturnType<typeof createImportDiagnostic>>();
   const lock = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -21,12 +29,21 @@ export function useImageImport() {
     lock.current = true;
     setBusy(true);
     setError(undefined);
+    setDiagnostic(undefined);
     let leaving = false;
     try {
       const lines = await pickAndRecognize();
       if (!lines) return;
       const { items } = parseReceipt(lines, seoulDate());
       if (items.length === 0) {
+        setDiagnostic(
+          createImportDiagnostic(
+            lines,
+            getLastRecognitionStats(),
+            Updates,
+            "no-transactions",
+          ),
+        );
         setError(
           "거래내역을 읽지 못했어요. 토스·카카오뱅크·카카오페이의 거래내역 화면을 캡처해 올려 주세요",
         );
@@ -36,6 +53,14 @@ export function useImageImport() {
       router.push("/transactions/import");
       leaving = true;
     } catch {
+      setDiagnostic(
+        createImportDiagnostic(
+          [],
+          getLastRecognitionStats(),
+          Updates,
+          "recognition-error",
+        ),
+      );
       setError("이 기기에서는 이미지를 읽지 못했어요. 직접 입력해 주세요");
     } finally {
       if (!leaving) {
@@ -44,5 +69,14 @@ export function useImageImport() {
       }
     }
   };
-  return { start, busy, error, clearError: () => setError(undefined) };
+  return {
+    start,
+    busy,
+    error,
+    diagnostic,
+    clearError: () => {
+      setError(undefined);
+      setDiagnostic(undefined);
+    },
+  };
 }

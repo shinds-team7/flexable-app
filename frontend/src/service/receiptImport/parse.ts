@@ -308,3 +308,19 @@ export function parseReceipt(lines: OcrLine[], today: string): ParseResult {
       : parseBalanceStyle(rows, today);
   return { source, items: finish(source, raws) };
 }
+
+/** 원문 없이 실패한 단계를 구분하는 로컬 진단용 개수만 반환한다. */
+export function receiptDiagnostics(lines: OcrLine[]) {
+  const rows = toRows(lines);
+  return {
+    lines: lines.length,
+    rows: rows.length,
+    amounts: rows.flat().filter((l) => AMOUNT.test(l.text)).length,
+    dates: rows
+      .flat()
+      .filter((l) => DATE_DOT.test(l.text) || DATE_KOR.test(l.text)).length,
+    payMonths: rows.filter((r) => MONTH_HEAD.test(payText(r))).length,
+    payDays: rows.filter((r) => DATE_DAY.test(payText(r))).length,
+    payDetails: rows.filter((r) => payDetail(payText(r))).length,
+  };
+}
