@@ -49,7 +49,9 @@
 
 - [ ] Android `minVersion` 1.4.1 → 1.5.0(사용자가 테스터 Play 스토어에 1.5.0이 보이는 것을 확인한 뒤, 10-28, 앱 설정 파일만, Vercel 자동 배포): 1.4.1 이하 Android 앱은 다음 실행 때 닫을 수 없는 업데이트 창이 뜬다. 되돌리려면 1.4.1로 내린다
 - [ ] 홈 출석체크(Issue #197, PR #198, 앱 서버 + 앱 화면, DB 마이그레이션 없음): 캐릭터 오른쪽 위 달력 버튼 → 출석 달력 → [출석하기], 하루 +5·연속 7일째마다 +30. 코인 칩은 캐릭터 왼쪽 위로 옮김. 새 API `GET·POST /coins/attendance`. **서버를 먼저 배포**(`backend/deploy/academy/deploy.sh academy`)하고 그다음 runtime 1.5.0 원격 업데이트를 게시한다(반대면 달력이 실패). Android 실기기 확인 전
-- [ ] 토스·카카오페이 스크린샷 파서 보완(Issue #203, PR #204, 앱 화면만): OCR 날짜 공백·같은 행의 날짜/금액 조각, 카카오페이 월 표시의 가운데 점·페이머니 앞 구분선 오인식·My 구독·로고 행을 처리한다. 로컬 Windows OCR 출력에서 카카오페이 0건 → 5건을 확인했으나 Android ML Kit 출력과 실기기는 미확인이다. 기존 runtime 1.5.0 원격 업데이트로 반영하며 서버 배포·새 네이티브 빌드·배포 순서 제약은 없다. 운영 게시 뒤 Android에서 두 이미지 재확인 필요.
+- [x] 토스·카카오페이 스크린샷 파서 보완(Issue #203, PR #204, 앱 화면만): OCR 날짜 공백·같은 행의 날짜/금액 조각, 카카오페이 가운데 점·구분선 오인식·My 구독·로고 행을 처리한다. **2026-10-29 01:11 KST Android runtime 1.5.0 production 게시 완료**(이번 사용자 요청). 서버 배포·새 네이티브 빌드 없음. 게시용 브랜치 `SXXNHU/release-1.5.0-ocr-fix`, 커밋 `a881dd1` = 기존 1.5.0 `f283fea` + OCR 파서·테스트만 적용했으며 #198 출석체크는 포함하지 않았다. preview 그룹 `1cbbe57d-ff70-4c4a-9f65-47fee542fd89` → production 그룹 `88599ddd-33d8-46cc-a446-7da9e0176de5`(Android `01a18347-c1f7-7fb7-87aa-2f9aeba232be`). 두 환경의 공개 변수 일치, 운영 API 주소·로컬 API 주소 없음, production 채널의 번들 SHA-256 일치를 확인했다. 게시용 타입 검사·린트·단위 59개 통과.
+- [ ] #204 원격 업데이트 실기기 수신·인식 확인: 앱 완전 종료·실행(필요하면 잠시 뒤 한 번 더) 후 토스·카카오페이 이미지 재확인. 로컬 Windows OCR에서 카카오페이 0건 → 5건만 확인했으며 Android ML Kit 출력·실기기는 아직 미확인이다. 이 PC의 직접 manifest 요청은 Cloudflare 서명 차단(403)으로 확인하지 못했고, EAS의 production 채널·runtime·등록된 번들 해시로 게시 상태를 확인했다.
+- #204 되돌리기(사람): production의 첫 1.5.0 원격 업데이트이므로 `npx eas-cli@latest update:rollback 88599ddd-33d8-46cc-a446-7da9e0176de5 --platform android --message "1.5.0 OCR 수정 되돌리기" --non-interactive`로 해당 앱의 내장 번들로 되돌린다. 1.4.x 그룹을 다시 게시해도 1.5.0에는 적용되지 않는다.
 
 남은 확인·결정(사람):
 
