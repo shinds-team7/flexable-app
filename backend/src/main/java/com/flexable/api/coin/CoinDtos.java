@@ -38,4 +38,16 @@ public final class CoinDtos {
 
 	public record CollectResponse(int collected, Wallet wallet) {
 	}
+
+	/**
+	 * days: 이번 달 출석한 날, 오래된 순. streak: 오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수.
+	 * todayReward: 오늘 출석하면(했으면) 받는 코인
+	 */
+	public record Attendance(LocalDate today, List<LocalDate> days, int streak, boolean checkedToday,
+			int todayReward) {
+	}
+
+	/** rewarded: 이번 요청으로 받은 코인, 이미 출석했으면 0 */
+	public record AttendResponse(int rewarded, Attendance attendance, Wallet wallet) {
+	}
 }

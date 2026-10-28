@@ -14,7 +14,10 @@ const LABELS: Record<string, string> = {
   REFERRAL_INVITER: "친구가 내 추천 코드 등록",
   PURCHASE: "코스튬 구매",
   REFUND: "코스튬 구매 코인 돌려받음",
+  ATTENDANCE: "출석체크",
 };
+/** Every 7th day in a row pays this instead of the daily 5 (docs/coin-plan.md §1). */
+const STREAK_REWARD = 30;
 
 /** The amount comes first: "+200 가입 선물", "-200 코스튬 구매". */
 export function ledgerTitle(e: Entry) {
@@ -25,6 +28,8 @@ export function ledgerTitle(e: Entry) {
 
 /** Extra line under the title, or "" when there is nothing to add. */
 export function ledgerDetail(e: Entry) {
+  if (e.reason === "ATTENDANCE")
+    return e.amount === STREAK_REWARD ? "연속 출석 보너스" : "";
   if (e.reason !== "BUDGET_BONUS" || !e.refDate) return "";
   const [, m, d] = e.refDate.split("-").map(Number);
   return `${m}월 ${d}일 예산을 지켰어요`;

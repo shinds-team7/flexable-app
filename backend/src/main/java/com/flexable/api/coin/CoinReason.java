@@ -15,5 +15,7 @@ public enum CoinReason {
 	/** 코스튬 구매, 금액은 음수(코스튬 id) */
 	PURCHASE,
 	/** 산 코스튬이 레벨 코스튬으로 바뀌어 돌려준 코인(코스튬 id). V10에서만 생긴다 */
-	REFUND
+	REFUND,
+	/** 홈 출석 달력에서 출석함(그 날짜). 연속 7일째마다 금액이 커진다 */
+	ATTENDANCE
 }

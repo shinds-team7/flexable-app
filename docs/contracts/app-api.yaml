@@ -472,6 +472,34 @@ paths:
                   collected: { type: integer }
                   wallet: { $ref: '#/components/schemas/Wallet' }
         '401': { $ref: '#/components/responses/Error' }
+  /coins/attendance:
+    get:
+      tags: [coin]
+      summary: 이번 달 출석과 연속 출석 일수
+      responses:
+        '200':
+          description: 출석 현황
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attendance' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [coin]
+      summary: 오늘 출석(여러 번 불러도 한 번만 지급, 이미 했으면 rewarded 0)
+      responses:
+        '200':
+          description: 받은 코인, 출석 현황, 지갑
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rewarded, attendance, wallet]
+                additionalProperties: false
+                properties:
+                  rewarded: { type: integer }
+                  attendance: { $ref: '#/components/schemas/Attendance' }
+                  wallet: { $ref: '#/components/schemas/Wallet' }
+        '401': { $ref: '#/components/responses/Error' }
   /coins/ledger:
     get:
       tags: [coin]
@@ -1059,7 +1087,7 @@ components:
       additionalProperties: false
       properties:
         id: { type: integer, format: int64 }
-        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND] }
+        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND, ATTENDANCE] }
         amount: { type: integer }
         refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
         createdAt: { type: string, format: date-time }
@@ -1069,11 +1097,21 @@ components:
       additionalProperties: false
       properties:
         id: { type: integer, format: int64 }
-        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND] }
+        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND, ATTENDANCE] }
         amount: { type: integer, description: '적립은 양수, 사용(PURCHASE)은 음수' }
         refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
         outfitId: { type: string, nullable: true, description: 'PURCHASE의 코스튬 id' }
         createdAt: { type: string, format: date-time }
+    Attendance:
+      type: object
+      required: [today, days, streak, checkedToday, todayReward]
+      additionalProperties: false
+      properties:
+        today: { type: string, format: date, description: '서버 기준 오늘(KST)' }
+        days: { type: array, items: { type: string, format: date }, description: '이번 달 출석한 날, 오래된 순' }
+        streak: { type: integer, description: '오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수' }
+        checkedToday: { type: boolean }
+        todayReward: { type: integer, description: '오늘 출석하면(했으면) 받는 코인. 연속 7·14·21…일째는 30, 그 밖에는 5' }
     OutfitList:
       type: object
       required: [balance, equippedOutfitId, peakLevel, items]

@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -7,6 +8,7 @@ import {
   pointsStatus,
   type PaceStatus,
 } from "@/components/CharacterStage";
+import { AttendanceSheet } from "./AttendanceSheet";
 import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
 import { sessionGeneration } from "./api/client";
@@ -27,6 +29,7 @@ export function HomeScreen() {
   // Seed money is the hero's second page, swiped in from the right.
   const seed = useResource<SeedMoney>("/budget/seed-money");
   const [basis, setBasis] = useState(false);
+  const [attendance, setAttendance] = useState(false);
   const [style] = useHomeStyle();
   const [remind] = useSeedReminderSetting();
   const wallet = useWallet();
@@ -110,6 +113,17 @@ export function HomeScreen() {
                   />
                 }
                 coin={<CoinChip balance={wallet?.balance ?? 0} />}
+                attendance={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="출석체크 달력 열기"
+                    onPress={() => setAttendance(true)}
+                    hitSlop={8}
+                    style={styles.calendar}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color={colors.text} />
+                  </Pressable>
+                }
                 gauge={status}
               >
                 {hero}
@@ -196,6 +210,7 @@ export function HomeScreen() {
         )}
       </Screen>
       <RewardModal reward={rewards[0] ?? null} onClose={closeReward} />
+      <AttendanceSheet visible={attendance} onClose={() => setAttendance(false)} />
     </View>
   );
 }
@@ -211,6 +226,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.9)",
+  },
+  calendar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.9)",
   },
 });

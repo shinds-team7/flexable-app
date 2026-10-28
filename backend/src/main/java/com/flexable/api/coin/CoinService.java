@@ -6,13 +6,17 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flexable.api.budget.BudgetService;
+import com.flexable.api.coin.CoinDtos.AttendResponse;
+import com.flexable.api.coin.CoinDtos.Attendance;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
 import com.flexable.api.coin.CoinDtos.CollectResponse;
 import com.flexable.api.coin.CoinDtos.LedgerEntry;
@@ -35,6 +39,9 @@ public class CoinService {
 	public static final int BUDGET_BONUS = 5;
 	public static final int PASSIVE_LIMIT = 10;
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
+	public static final int ATTENDANCE_REWARD = 5;
+	public static final int ATTENDANCE_STREAK = 7;
+	public static final int ATTENDANCE_STREAK_REWARD = 30;
 	public static final String ONCE = "once";
 	public static final int LEDGER_DEFAULT_LIMIT = 30;
 	public static final int LEDGER_MAX_LIMIT = 100;
@@ -97,6 +104,45 @@ public class CoinService {
 		post(w, CoinReason.PASSIVE, today() + "#" + accrued, collectable, true);
 		w.collectPassive(accrued);
 		return new CollectResponse(collectable, view(w));
+	}
+
+	@Transactional(readOnly = true)
+	public Attendance attendance(long userId) {
+		return attendance(userId, today());
+	}
+
+	/** 오늘 출석. 이미 했으면 아무것도 주지 않고 rewarded 0. 받은 코인은 출석 달력에서 바로 보여 주므로 모달로 보내지 않는다. */
+	@Transactional
+	public AttendResponse attend(long userId) {
+		LocalDate today = today();
+		CoinWallet w = lockWallet(userId);
+		Attendance before = attendance(userId, today);
+		if (before.checkedToday()) {
+			return new AttendResponse(0, before, view(w));
+		}
+		post(w, CoinReason.ATTENDANCE, today.toString(), before.todayReward(), true);
+		return new AttendResponse(before.todayReward(), attendance(userId, today), view(w));
+	}
+
+	/** 연속 n일째 출석의 보상. 7·14·21…일째는 기본 대신 보너스 */
+	public static int attendanceReward(int streakDay) {
+		return streakDay % ATTENDANCE_STREAK == 0 ? ATTENDANCE_STREAK_REWARD : ATTENDANCE_REWARD;
+	}
+
+	private Attendance attendance(long userId, LocalDate today) {
+		Set<LocalDate> days = new HashSet<>();
+		for (String key : ledger.findRefKeys(userId, CoinReason.ATTENDANCE)) {
+			days.add(LocalDate.parse(key));
+		}
+		boolean checkedToday = days.contains(today);
+		int streak = 0;
+		for (LocalDate d = checkedToday ? today : today.minusDays(1); days.contains(d); d = d.minusDays(1)) {
+			streak++;
+		}
+		LocalDate first = today.withDayOfMonth(1);
+		List<LocalDate> month = days.stream().filter(d -> !d.isBefore(first) && !d.isAfter(today)).sorted().toList();
+		return new Attendance(today, month, streak, checkedToday,
+				attendanceReward(checkedToday ? streak : streak + 1));
 	}
 
 	/** 적립·사용 내역, 최신순. before가 없으면 가장 최근부터. limit+1개를 읽어 다음 쪽이 있는지 본다. */

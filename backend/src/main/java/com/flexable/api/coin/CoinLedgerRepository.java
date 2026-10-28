@@ -22,6 +22,10 @@ public interface CoinLedgerRepository extends JpaRepository<CoinLedger, Long> {
 	@Query("update CoinLedger l set l.notifiedAt = :now where l.userId = :userId and l.id in :ids and l.notifiedAt is null")
 	int markNotified(Long userId, Collection<Long> ids, Instant now);
 
+	/** 출석처럼 날짜를 ref_key로 쓰는 사유의 ref_key 전부 */
+	@Query("select l.refKey from CoinLedger l where l.userId = :userId and l.reason = :reason")
+	List<String> findRefKeys(Long userId, CoinReason reason);
+
 	/** before보다 오래된 내 내역, 최신순 */
 	List<CoinLedger> findByUserIdAndIdLessThanOrderByIdDesc(Long userId, Long before, Limit limit);
 

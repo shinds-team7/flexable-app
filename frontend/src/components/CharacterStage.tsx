@@ -27,10 +27,10 @@ export function pointsStatus(points: number, label: string): PaceStatus {
 
 /**
  * 적용 중인 코스튬 영상 하나와 승급 게이지. 캐릭터(character)는 서비스가 전달한다(말풍선은 10-22에 뺐다).
- * 코인 잔액(coin)은 영상 우측 상단에 띄운다. [모으기]·코스튬은 코인 칩 → 코인 내역의 상점 버튼 → 상점 화면에 있다.
+ * 코인 잔액(coin)은 영상 좌측 상단, 출석 달력 버튼(attendance)은 우측 상단에 띄운다(#197). [모으기]·코스튬은 코인 칩 → 코인 내역의 상점 버튼 → 상점 화면에 있다.
  * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
  */
-export function CharacterStage({ level, character, coin, gauge, children }: { level: Level; character: ReactNode; coin?: ReactNode; gauge: PaceStatus; children: ReactNode }) {
+export function CharacterStage({ level, character, coin, attendance, gauge, children }: { level: Level; character: ReactNode; coin?: ReactNode; attendance?: ReactNode; gauge: PaceStatus; children: ReactNode }) {
   const accent = ACCENTS[level];
 
   return (
@@ -39,6 +39,7 @@ export function CharacterStage({ level, character, coin, gauge, children }: { le
         <View style={styles.char}>
           {character}
           {coin && <View style={styles.coin}>{coin}</View>}
+          {attendance && <View style={styles.attendance}>{attendance}</View>}
         </View>
       </View>
 
@@ -108,7 +109,8 @@ const styles = StyleSheet.create({
   heroSlot: { alignSelf: 'stretch', marginTop: 12 },
   // wrap 의 좌우 여백(16)을 상쇄해 화면 끝까지. 넓은 웹 화면에서는 640에서 멈춘다
   stage: { alignItems: 'center', marginHorizontal: -16, alignSelf: 'stretch' },
-  coin: { position: 'absolute', top: 12, right: 16 },
+  coin: { position: 'absolute', top: 12, left: 16 },
+  attendance: { position: 'absolute', top: 12, right: 16 },
   char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
   gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
   gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

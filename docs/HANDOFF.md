@@ -48,6 +48,7 @@
 - [ ] 요일별 생활비 배분(Issue #191, PR #192, 앱 서버 + 앱 화면, **DB 마이그레이션 V12** `budget_settings.day_preset`·`day_weights`, 기본값이 기본 배분이라 기존 금액 변화 없음): 새 API `GET·PUT /budget/day-weights`, `GET /budget/today`에 `dayPreset`·`dayBudgets`. **서버를 먼저 배포**(`backend/deploy/academy/deploy.sh academy`)하고 그다음 #183과 함께 runtime 1.5.0 새 빌드로 반영한다(반대면 홈 요일 카드가 비고 배분 화면이 실패). #183은 10-27 main에 머지(`52a1bb7`)돼 현재 main은 1.5.0이며, 보존한 1.4.1 preview 그룹에는 이 기능이 없다. Android 실기기에서 막대 끌기(스크롤과 겹치지 않는지)·저장 후 홈 반영 확인 전
 
 - [ ] Android `minVersion` 1.4.1 → 1.5.0(사용자가 테스터 Play 스토어에 1.5.0이 보이는 것을 확인한 뒤, 10-28, 앱 설정 파일만, Vercel 자동 배포): 1.4.1 이하 Android 앱은 다음 실행 때 닫을 수 없는 업데이트 창이 뜬다. 되돌리려면 1.4.1로 내린다
+- [ ] 홈 출석체크(Issue #197, PR #198, 앱 서버 + 앱 화면, DB 마이그레이션 없음): 캐릭터 오른쪽 위 달력 버튼 → 출석 달력 → [출석하기], 하루 +5·연속 7일째마다 +30. 코인 칩은 캐릭터 왼쪽 위로 옮김. 새 API `GET·POST /coins/attendance`. **서버를 먼저 배포**(`backend/deploy/academy/deploy.sh academy`)하고 그다음 runtime 1.5.0 원격 업데이트를 게시한다(반대면 달력이 실패). Android 실기기 확인 전
 남은 확인·결정(사람):
 
 - [x] 웹 서버와의 실서버 연동 전체 흐름(코드 발급 → 웹 입력 → 앱 목록 → 해제): 10-26 사용자 확인 완료
