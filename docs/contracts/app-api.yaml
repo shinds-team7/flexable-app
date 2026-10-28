@@ -23,6 +23,7 @@ tags:
   - name: outfit
   - name: referral
   - name: web-link
+  - name: chat
   - name: health
 
 paths:
@@ -623,6 +624,31 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
 
+  /chat/messages:
+    post:
+      tags: [chat]
+      summary: AI 메이트(Gemini) 답변. 대화는 서버에 저장하지 않고 앱이 보낸 기록으로만 답한다
+      description: |
+        서버가 오늘 예산·요일별 배분·이번 주기와 직전 같은 기간의 카테고리별 지출 합계(입력한 잔액·기록 기준)를 함께 보낸다. 거래 메모·개별 거래는 보내지 않는다.
+        `action`은 제안일 뿐 저장하지 않는다. 사용자가 확인하면 앱이 `PUT /budget/day-weights`로 저장한다.
+        서버에 키가 없으면 503 `CHAT_UNAVAILABLE`, 모델 호출이 실패하면 502 `CHAT_FAILED`, 1시간에 30번을 넘으면 429 `TOO_MANY_ATTEMPTS`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatRequest' }
+      responses:
+        '200':
+          description: 답변과 (있으면) 확인이 필요한 변경 제안
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+
   /health:
     get:
       tags: [health]
@@ -705,7 +731,8 @@ components:
           enum: [VALIDATION_FAILED, UNAUTHORIZED, INVALID_CREDENTIALS, SOCIAL_ACCOUNT, OAUTH_CODE_INVALID, NOT_FOUND,
             BUDGET_NOT_SET, EMAIL_UNAVAILABLE, CATEGORY_DUPLICATE, CATEGORY_DEFAULT, SEED_NOT_PENDING,
             OUTFIT_NOT_FOR_SALE, OUTFIT_OWNED, OUTFIT_LOCKED, COINS_NOT_ENOUGH, REFERRAL_CODE_INVALID,
-            REFERRAL_ALREADY, LINK_CODE_INVALID, LINK_NOT_FOUND, TOO_MANY_ATTEMPTS, INTERNAL_ERROR]
+            REFERRAL_ALREADY, LINK_CODE_INVALID, LINK_NOT_FOUND, TOO_MANY_ATTEMPTS, CHAT_UNAVAILABLE, CHAT_FAILED,
+            INTERNAL_ERROR]
         message: { type: string }
         fields:
           type: object
@@ -1036,6 +1063,51 @@ components:
               date: { type: string, format: date }
               expense: { type: integer, format: int64 }
               income: { type: integer, format: int64 }
+
+    ChatMessage:
+      type: object
+      required: [role, text]
+      additionalProperties: false
+      properties:
+        role: { type: string, enum: [USER, MODEL], description: 'USER 사용자, MODEL 이전 AI 답변' }
+        text: { type: string, minLength: 1, maxLength: 1000 }
+    ChatRequest:
+      type: object
+      required: [messages]
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          description: '오래된 것부터. 마지막은 USER. 첫 USER 앞의 MODEL(인사말 등)은 서버가 건너뛴다'
+          minItems: 1
+          maxItems: 20
+          items: { $ref: '#/components/schemas/ChatMessage' }
+        mate:
+          type: string
+          enum: [ANALYST, FRIEND, COACH]
+          description: '말투. ANALYST 똑똑한 분석가(기본), FRIEND 다정한 친구, COACH 따끔한 조언가'
+    ChatResponse:
+      type: object
+      required: [reply, action]
+      additionalProperties: false
+      properties:
+        reply: { type: string, description: '화면에 보여 줄 답변. **굵게** 표시가 들어갈 수 있다' }
+        action:
+          type: object
+          nullable: true
+          description: '확인이 필요한 변경 제안. 없으면 null. 확인 버튼을 누르면 앱이 PUT /budget/day-weights {preset}으로 저장한다'
+          required: [type, preset, label]
+          additionalProperties: false
+          properties:
+            type: { type: string, enum: [DAY_PRESET] }
+            preset:
+              type: string
+              enum: [EVEN, RECORD, WEEKEND, WEEKDAY]
+              description: 'CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만'
+            label: { type: string, description: '프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히)' }
+      example:
+        reply: "요일별 배분을 **주말 넉넉히**로 바꿀까요?\n확인을 누르면 오늘 하루 예산부터 바뀌어요."
+        action: { type: DAY_PRESET, preset: WEEKEND, label: 주말 넉넉히 }
 
     Wallet:
       type: object

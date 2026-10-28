@@ -29,6 +29,7 @@
 | 알림함 | 헤더 오른쪽 종 아이콘(안 읽은 알림이 있으면 빨간 점) → `/notifications` → `service/NotificationsScreen.tsx`(목록 `service/inbox.ts`). 최근 30일의 코인 적립·사용, 고정지출 자동 기록, 오늘 예산을 다 씀·넘음, 이 기기에서 보낸 시드머니·기록 알림을 최신순으로 보여 주고, 누르면 코인 내역·거래 상세·홈·거래 기록으로 간다. 열면 모두 읽음. 보낸 기기 알림·예산 상태·읽은 시각은 사용자별로 기기 안에만 저장(`service/inboxStore.ts`, 로그아웃·탈퇴 때 지움). 예산 상태는 앱이 그 상태를 처음 본 시각으로 하루에 한 번씩 남는다(앱을 연 날만). 기기 알림 기록은 Android만, 예약 시각이 지나면 보낸 것으로 본다 | 서버 변경 없음. `GET /coins/ledger` 첫 쪽, `GET /transactions`(최근 30일, `fromFixed`), `GET /budget/today`의 `todayAvailable`(0이면 다 씀, 음수면 넘음) | 단위 `test/inbox-records.test.cjs`(예약 기록·예산 상태·안 읽음). 기기 알림 기록은 실기기 확인 필요 |
 | 카테고리 관리 | `/categories` → `service/CategoriesScreen.tsx` | `GET·POST·PATCH·DELETE /categories` (삭제하면 거래는 같은 종류의 기본 '기타'/'기타 수입'으로, 그 이름을 바꿔 찾지 못하면 같은 종류의 첫 기본 카테고리로) | E2E `real service lifecycle…` |
 | 소비 분석 | `/analysis` → `service/AnalysisScreen.tsx` | `GET /analysis/summary` | E2E `real service lifecycle…`(분석 탭 진입) |
+| AI 메이트(챗봇) | 앱 화면 연결 전 | `POST /chat/messages`(`chat/ChatService.java`, Gemini 호출 `chat/GeminiChatModel.java`). 대화는 저장하지 않고 앱이 보낸 최근 20개로 답한다. 서버가 오늘·이번 주 예산(`BudgetService.today`), 요일별 배분, 이번 주기와 직전 같은 일수의 카테고리별 지출 합계를 함께 보낸다(거래 제목·메모·개별 거래는 보내지 않음). 요일별 배분은 `action`으로 제안만 하고, 확인하면 앱이 `PUT /budget/day-weights`로 저장한다. 키(`GEMINI_API_KEY`)가 없으면 503, 사용자별 1시간 30번 | 백엔드 `ChatFlowTest`(서버 금액 전달·제안만 하고 저장 안 함·제안 못 하는 프리셋 거름·호출 제한), `ChatUnavailableTest`, `GeminiChatModelTest`(키 헤더·대화 턴 합치기·함수 호출 읽기), `ContractTest` |
 | 예산 다시 설정 | 마이 → 예산 설정 수정 | `PUT /budget/settings` (잔액 기준 시각을 지금으로) | E2E `re-entering the balance…` |
 | 계정 삭제 | 앱 `/account/delete`, 웹 공개 `/delete-account` → `service/DeleteAccountScreen.tsx` | `DELETE /me` (`user/AccountDeletionService.java`) | E2E `public deletion…` |
 | 공개 페이지 | `/privacy`, `/terms`, `/support` | 원문은 `docs/play-store/privacy-policy.md`·`terms.md` | E2E `approved legal copy…`(웹 화면과 원문 일치 검사) |
@@ -44,7 +45,7 @@
 
 문서나 시연에 나와도 실제 앱에는 없다. 스토어 문구·앱 화면에 쓰지 않는다.
 
-- 계좌 연결(오픈뱅킹), AI 소비 분석·추천
+- 계좌 연결(오픈뱅킹)
 - 결제 알림·문자 자동 기록, 서버 푸시 알림(기기 안에서 예약하는 시드머니·기록 알림만 있음)
 - 예정 지출·고액 지출 계획, 정산
 - 비밀번호 찾기, 이메일 인증

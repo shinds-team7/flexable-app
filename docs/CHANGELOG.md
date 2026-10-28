@@ -4,6 +4,10 @@
 
 형식: `- [#PR] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
+## 2026-10-28
+
+- [#?] AI 메이트(챗봇) 서버 API `POST /chat/messages`를 `app-api.yaml`에 추가했다(Gemini, 대화 저장 안 함, 요일별 배분은 `action`으로 제안만 하고 앱이 확인 뒤 `PUT /budget/day-weights`, 오류 코드 `CHAT_UNAVAILABLE` 503·`CHAT_FAILED` 502). PRD §5와 FEATURES "미구현"에서 AI 소비 분석·추천을 뺐다([결정](decisions/2026-10-28-ai-mate.md)). 기존 응답은 바뀌지 않았다 — 영향: 앱 서버(`deploy.sh`, 마이그레이션 없음, `.env`에 `GEMINI_API_KEY`)·앱 화면(연결은 다음 PR)
+
 ## 2026-10-27
 
 - [#192] 요일별 생활비 배분 추가: 하루 예산을 남은 날의 요일 비중대로 나눈다(policies §2 식 변경, §5 새로 — 프리셋 기본·내 기록 기준(최대 3개월, 7일·3개 요일 이상)·주말·평일, 요일 비중 5~30, 직접 조정). `GET·PUT /budget/day-weights`와 `Today.dayPreset`·`dayBudgets`를 `app-api.yaml`에 추가했다. 비중을 정하지 않은 사용자는 기본 배분이라 기존 금액과 같다([결정](decisions/2026-10-27-day-weights.md)) — 영향: 앱 서버(아카데미 배포, 마이그레이션 V12)·앱 화면(#183 반영 후 runtime 1.5.0 새 빌드에 포함, 서버 먼저)

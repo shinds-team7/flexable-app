@@ -1421,6 +1421,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chat/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI 메이트(Gemini) 답변. 대화는 서버에 저장하지 않고 앱이 보낸 기록으로만 답한다
+         * @description 서버가 오늘 예산·요일별 배분·이번 주기와 직전 같은 기간의 카테고리별 지출 합계(입력한 잔액·기록 기준)를 함께 보낸다. 거래 메모·개별 거래는 보내지 않는다.
+         *     `action`은 제안일 뿐 저장하지 않는다. 사용자가 확인하면 앱이 `PUT /budget/day-weights`로 저장한다.
+         *     서버에 키가 없으면 503 `CHAT_UNAVAILABLE`, 모델 호출이 실패하면 502 `CHAT_FAILED`, 1시간에 30번을 넘으면 429 `TOO_MANY_ATTEMPTS`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChatRequest"];
+                };
+            };
+            responses: {
+                /** @description 답변과 (있으면) 확인이 필요한 변경 제안 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatResponse"];
+                    };
+                };
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                429: components["responses"]["Error"];
+                502: components["responses"]["Error"];
+                503: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1466,7 +1516,7 @@ export interface components {
     schemas: {
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "INTERNAL_ERROR";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "INTERNAL_ERROR";
             message: string;
             /** @description VALIDATION_FAILED에서 필드별 문장 */
             fields?: {
@@ -1899,6 +1949,49 @@ export interface components {
                 /** Format: int64 */
                 income: number;
             }[];
+        };
+        ChatMessage: {
+            /**
+             * @description USER 사용자, MODEL 이전 AI 답변
+             * @enum {string}
+             */
+            role: "USER" | "MODEL";
+            text: string;
+        };
+        ChatRequest: {
+            /** @description 오래된 것부터. 마지막은 USER. 첫 USER 앞의 MODEL(인사말 등)은 서버가 건너뛴다 */
+            messages: components["schemas"]["ChatMessage"][];
+            /**
+             * @description 말투. ANALYST 똑똑한 분석가(기본), FRIEND 다정한 친구, COACH 따끔한 조언가
+             * @enum {string}
+             */
+            mate?: "ANALYST" | "FRIEND" | "COACH";
+        };
+        /**
+         * @example {
+         *       "reply": "요일별 배분을 **주말 넉넉히**로 바꿀까요?\n확인을 누르면 오늘 하루 예산부터 바뀌어요.",
+         *       "action": {
+         *         "type": "DAY_PRESET",
+         *         "preset": "WEEKEND",
+         *         "label": "주말 넉넉히"
+         *       }
+         *     }
+         */
+        ChatResponse: {
+            /** @description 화면에 보여 줄 답변. **굵게** 표시가 들어갈 수 있다 */
+            reply: string;
+            /** @description 확인이 필요한 변경 제안. 없으면 null. 확인 버튼을 누르면 앱이 PUT /budget/day-weights {preset}으로 저장한다 */
+            action: {
+                /** @enum {string} */
+                type: "DAY_PRESET";
+                /**
+                 * @description CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만
+                 * @enum {string}
+                 */
+                preset: "EVEN" | "RECORD" | "WEEKEND" | "WEEKDAY";
+                /** @description 프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히) */
+                label: string;
+            } | null;
         };
         Wallet: {
             /** Format: int64 */
