@@ -229,12 +229,13 @@ class CoinFlowTest {
 		clock.seoul("2026-10-21T23:59");
 		attend(token).andExpect(jsonPath("$.rewarded").value(0)).andExpect(jsonPath("$.wallet.balance").value(5));
 
+		mvc.perform(auth(get("/api/v1/coins/ledger"), token, null))
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.items[0].reason").value("ATTENDANCE"))
+			.andExpect(jsonPath("$.items[0].amount").value(5));
 		// 출석 코인은 달력에서 바로 보여 주므로 check-in 모달에는 가입 선물만 온다
 		checkIn(token).andExpect(jsonPath("$.rewards", hasSize(1)))
 			.andExpect(jsonPath("$.rewards[0].reason").value("SIGNUP_GIFT"));
-		mvc.perform(auth(get("/api/v1/coins/ledger?limit=1"), token, null))
-			.andExpect(jsonPath("$.items[0].reason").value("ATTENDANCE"))
-			.andExpect(jsonPath("$.items[0].amount").value(5));
 	}
 
 	@Test
