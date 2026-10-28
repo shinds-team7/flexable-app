@@ -1,6 +1,7 @@
 import { router } from "expo-router";
-import { View } from "react-native";
+import { Share, View } from "react-native";
 import { Button, Sheet, T } from "@/components/ui";
+import { useToast } from "@/components/Toast";
 import {
   imageImportSupported,
   useImageImport,
@@ -14,6 +15,7 @@ export function AddTransactionSheet({
   onClose: () => void;
 }) {
   const imageImport = useImageImport();
+  const toast = useToast();
   return (
     <>
       <Sheet
@@ -53,6 +55,27 @@ export function AddTransactionSheet({
       >
         <View style={{ gap: 10 }}>
           <T>{imageImport.error}</T>
+          {imageImport.diagnostic && (
+            <>
+              <T size={12} selectable>
+                {imageImport.diagnostic.summary}
+              </T>
+              <Button
+                label="문제 확인 정보 공유"
+                variant="soft"
+                onPress={() => {
+                  const message = imageImport.diagnostic?.detail;
+                  if (message)
+                    Share.share({ message }).catch(() =>
+                      toast("확인 정보를 공유하지 못했어요"),
+                    );
+                }}
+              />
+              <T size={12}>
+                사진·이름·거래 금액은 제외하고 글자 배치와 확인 코드만 공유해요
+              </T>
+            </>
+          )}
           <Button label="확인" onPress={imageImport.clearError} />
         </View>
       </Sheet>
