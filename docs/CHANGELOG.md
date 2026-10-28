@@ -6,7 +6,7 @@
 
 ## 2026-10-28
 
-- [#번호] 홈 출석체크 추가: 캐릭터 오른쪽 위 달력 버튼 → [출석하기]로 하루 +5, 연속 7·14·21…일째는 그날 +30, 하루 빠지면 연속 초기화(coin-plan §1 "출석"). `GET·POST /coins/attendance`, `Attendance` 스키마, 코인 사유 `ATTENDANCE`를 `app-api.yaml`에 추가했다. 기록은 `coin_ledger`에 남겨 마이그레이션은 없다 — 영향: 앱 서버(배포 먼저)·앱 화면
+- [#198] 홈 출석체크 추가: 캐릭터 오른쪽 위 달력 버튼 → [출석하기]로 하루 +5, 연속 7·14·21…일째는 그날 +30, 하루 빠지면 연속 초기화(coin-plan §1 "출석"). `GET·POST /coins/attendance`, `Attendance` 스키마, 코인 사유 `ATTENDANCE`를 `app-api.yaml`에 추가했다. 기록은 `coin_ledger`에 남겨 마이그레이션은 없다 — 영향: 앱 서버(배포 먼저)·앱 화면
 
 ## 2026-10-27
 
