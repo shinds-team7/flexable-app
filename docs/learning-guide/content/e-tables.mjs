@@ -1,4 +1,4 @@
-// 최종 스키마(V1~V11 SQL + V3 Java를 순서대로 적용한 결과). 빌드가 H2 information_schema 추출본과 대조한다.
+// 최종 스키마(V1~V12 SQL + V3 Java를 순서대로 적용한 결과). 빌드가 H2 information_schema 추출본과 대조한다.
 // 예시 행은 가이드 시나리오(가상 사용자 learner@example.com)용이며 실제 사용자 데이터가 아니다.
 const C = (name, type, o = {}) => ({ name, type, nullable: !!o.n, default: o.d ?? null, key: o.k || "", note: o.note || "", since: o.v || "" });
 const U = (t) => ({ name: `fk_${t}`, column: "user_id", refTable: "users", refColumn: "id", onDelete: "CASCADE" });
@@ -65,6 +65,8 @@ export const TABLES = {
       C("updated_at", "DATETIME(6)"),
       C("fixed_posting_since", "DATETIME(6)", { n: true, note: "고정지출 자동 기록 도입 전 사용자만 값이 있다(V3가 채움)", v: "V2·V3" }),
       C("seed_base", "BIGINT", { d: "0", note: "모아둔 돈(시드머니 시작 금액)", v: "V7" }),
+      C("day_preset", "VARCHAR(10)", { d: "'EVEN'", note: "요일 배분 프리셋(EVEN·RECORD·WEEKEND·WEEKDAY·CUSTOM). 저장한 적 없으면 EVEN", v: "V12" }),
+      C("day_weights", "VARCHAR(40)", { d: "'14,14,14,14,14,14,14'", note: "요일 비중 월~일 7개를 쉼표로 이은 문자열(각 5~30). 기본은 모두 같음 = 기존 하루 예산 그대로", v: "V12" }),
     ],
     pk: ["user_id"],
     uniques: [],
@@ -72,8 +74,8 @@ export const TABLES = {
     indexes: [],
     entity: "BudgetSettings",
     repo: "SettingsRepository",
-    migrations: ["V1", "V2", "V3", "V7"],
-    rows: [["user_id", "balance", "balance_at", "payday", "card_unpaid", "seed_base"], [1, 1250000, "2026-10-13 01:00:00.000000", 25, 0, 500000]],
+    migrations: ["V1", "V2", "V3", "V7", "V12"],
+    rows: [["user_id", "balance", "balance_at", "payday", "card_unpaid", "seed_base", "day_preset"], [1, 1250000, "2026-10-13 01:00:00.000000", 25, 0, 500000, "EVEN"]],
   },
   fixed_expenses: {
     group: "budget",

@@ -22,6 +22,11 @@ export const FEATURES = {
   delete: { title: "계정·데이터 삭제", summary: "앱 안과 웹 공개 페이지에서 삭제할 수 있고, 한 트랜잭션에서 즉시 영구 삭제한다.", rel: ["s.delete", "a.me-delete", "c.AccountDeletionService", "x.ApiFlowTest"] },
   access: { title: "접근 제어", summary: "로그인 후 모든 API는 JWT 서명·만료·사용자·토큰 버전을 확인한다. 거래·카테고리는 소유자 조건으로 찾아 남의 것은 404. CORS는 허용된 웹 주소만.", rel: ["c.SecurityConfig", "c.CurrentUser", "c.TransactionRepository", "x.SecurityTest"] },
   update: { title: "원격 업데이트·필수 업데이트", summary: "앱 JS·이미지는 EAS Update로 다시 설치 없이 바뀐다. 최소 버전보다 낮은 앱에는 닫을 수 없는 업데이트 창.", rel: ["c.LaunchUpdate", "c.ForceUpdate"] },
+  dayWeights: { title: "요일별 생활비 배분", summary: "하루 예산을 남은 날의 <b>요일 비중</b>대로 나눈다(예: 주말 넉넉히). 프리셋(기본·내 기록 기준·주말·평일)을 고르거나 요일 막대를 끌어 5~30 사이로 직접 조정한다. 금액은 서버가 계산하고 앱은 비중(%)과 서버가 준 <code>dayBudgets</code>를 그린다. 비중을 정하지 않은 사용자는 기본 배분이라 기존 금액과 같다(#192, 마이그레이션 V12).", rel: ["s.dayweights", "a.day-weights-get", "a.day-weights-put", "a.budget-today", "c.DayWeights", "c.BudgetService", "c.DayWeightsScreen", "c.DayBudgets", "t.budget_settings", "x.DayWeightsPolicyTest", "x.DayWeightsFlowTest", "x.unitDayWeights"] },
+  screenshotImport: { title: "스크린샷으로 거래 가져오기", summary: "탭 바 + → 이미지 업로드. 토스·카카오뱅크·카카오페이 거래내역 화면 1장을 고르면 <b>기기 안</b>(ML Kit 한국어 인식)에서 글자를 읽어 거래 후보로 바꾸고, 사용자가 검토한 뒤 기존 <code>POST /transactions</code>로 저장한다. 서버·계약 변경이 없고 이미지는 기기 밖으로 나가지 않는다. 중복 조회가 끝나야 저장할 수 있고, 응답을 못 받은 항목은 같은 본문·키로 다시 보낸다(#183, 새 네이티브 모듈이라 1.5.0 새 빌드).", rel: ["s.import", "c.ImportReview", "c.receiptParse", "a.tx-create", "a.tx-list", "x.unitReceiptImport", "x.unitReceiptFlow"] },
+  inbox: { title: "앱 안 알림함", summary: "홈 헤더 종 아이콘 → 알림함. 기기가 보낸 알림(시드머니·기록), 예산 상태 변화, 코인 보상·고정지출 자동 기록을 한 목록으로 모아 보여 준다. 기기 기록은 사용자별로 기기 안에만 저장하고, 코인·고정지출은 열 때마다 서버에서 읽는다. 외부 카드·페이 알림을 가져오는 기능이 <b>아니다</b>(#186).", rel: ["s.notifications", "c.inbox", "c.NotificationsScreen", "a.coin-ledger", "x.unitInboxRecords"] },
+  coinHistory: { title: "코인 내역", summary: "홈 코인 칩 → 코인 내역. 적립·사용 기록을 최신순으로 한 쪽씩 읽고(<code>nextBefore</code>), 보유 코인 옆 버튼으로 상점에 간다(#175).", rel: ["s.coinhistory", "c.CoinHistoryScreen", "a.coin-ledger", "t.coin_ledger", "x.unitCoinLedger"] },
+  txCalendar: { title: "지출 달력·거래 날짜만 입력", summary: "내역 탭에 월 달력(날짜별 지출·수입 합)을 더했고(#173), 거래 입력에서 시각을 없애 날짜만 고른다(#183). 오늘은 지금 시각, 다른 날은 한국 시간 12:00으로 보낸다. 서버가 잔액 기준 시각 이후 거래만 추정 잔액에 넣기 때문에, 오늘을 정오로 고정하면 방금 쓴 돈이 빠질 수 있어서다.", rel: ["s.txlist", "s.txnew", "c.TransactionForm", "c.occurredAt", "x.unitOccurredAt"] },
 };
 
 const R = (route, file, component, title, summary, rel = []) => ({ route, path: file, component, title, summary, rel: [`c.${component}`, ...rel] });
@@ -41,10 +46,14 @@ export const SCREENS = {
   customize: R("/customize", F + "app/(service)/customize.tsx", "CustomizeScreen", "상점", "캐릭터 홈 헤더의 셔츠 버튼으로 들어온다.", ["a.outfit-list"]),
   weblinks: R("/web-links", F + "app/(service)/web-links.tsx", "WebLinksScreen", "웹사이트 연동", "", ["a.wl-code"]),
   delete: R("/account/delete · /delete-account", F + "app/(service)/account/delete.tsx", "DeleteAccountScreen", "계정 삭제", "웹 공개 페이지 <code>/delete-account</code>도 같은 컴포넌트(<code>publicPage</code>).", ["a.me-delete"]),
+  dayweights: R("/budget/day-weights", F + "app/(service)/budget/day-weights.tsx", "DayWeightsScreen", "요일별 배분", "프리셋 선택과 요일 막대 끌기. 저장하면 홈의 요일 카드와 오늘 하루 예산이 바뀐다.", ["a.day-weights-get", "a.day-weights-put"]),
+  import: R("/transactions/import", F + "app/(service)/transactions/import.tsx", "ImportReview", "스크린샷 가져오기 검토", "읽은 거래 후보를 확인·수정하고 저장한다.", ["a.tx-create", "a.tx-list"]),
+  notifications: R("/notifications", F + "app/(service)/notifications.tsx", "NotificationsScreen", "알림함", "홈 헤더 종 아이콘으로 들어온다.", ["a.coin-ledger"]),
+  coinhistory: R("/coins/history", F + "app/(service)/coins/history.tsx", "CoinHistoryScreen", "코인 내역", "홈 코인 칩으로 들어온다.", ["a.coin-ledger"]),
 };
 
 const X = (path, kind, summary, methods, run, o = {}) => ({ path, kind, summary, methods, run, ...o });
-const RAN_BE = (n) => `직접 실행: 2026-10-25 로컬 <code>./gradlew test</code> — 이 클래스 ${n}개 모두 통과`;
+const RAN_BE = (n) => `직접 실행: 2026-10-28 로컬 <code>./gradlew test</code> — 이 클래스 ${n}개 모두 통과`;
 export const TESTS = {
   ApiFlowTest: X(T + "ApiFlowTest.java", "통합(Spring Boot + MockMvc + H2)", "가입부터 탈퇴까지 실제 컨트롤러·서비스·DB를 통째로 띄워 HTTP 요청 모양으로 검사한다.", [
     ["fullFlow", "카테고리 11개, 예산 미설정 404, 설정 저장, 거래 등록 201 → 같은 키 재전송 200(같은 id), 수정·메모 삭제, 카테고리 삭제 시 거래 이동, 남의 거래 404, 탈퇴"],
@@ -79,18 +88,19 @@ export const TESTS = {
     ["holidaysBeforeNovember2026KeepPastPaydays", "2026-11 이전 공휴일은 반영 안 함"],
   ], RAN_BE(11) + ". 이 가이드의 시뮬레이터도 빌드 때 이 테스트의 기대값 55개와 맞는지 검사했다.", { rel: ["c.BudgetCalculator", "f.today"] }),
   CharacterScoreTest: X(T + "budget/CharacterScoreTest.java", "단위", "캐릭터 점수 규칙.", [["keptDaysRaiseSlowlyAndOverspentDaysDropFast", "+15 / −50"], ["missingDaysUseLastKnownBudget", "기록 없는 날은 그 전 하루 예산"], ["peakStaysAfterDrop", "최고 점수 유지"]], RAN_BE(6), { rel: ["c.CharacterScore", "f.character"] }),
-  SeedMoneyFlowTest: X(T + "budget/SeedMoneyFlowTest.java", "통합(시계를 바꾸는 테스트)", "시드머니 조회·반영(GOAL·ALL·MANUAL), 주기당 한 번, 지난 주기 건너뛰기, 웹 연동용 기록. 토큰 만료는 실제 시각으로 검사하므로 가입(토큰 발급)만 지금 시각에 하고 고정한 시각으로 돌아온다(#138, 이 처리가 없으면 실제 날짜가 10-31을 넘는 순간 401로 실패했다).", [["confirmOncePerCycleAndWaitUntilNextCycle", "주기당 한 번, 다음 주기까지 대기"], ["unansweredCycleIsSkippedAtNextCycleEnd", "응답 안 한 주기는 넘어감"], ["webLinkReadsConfirmedSeedMoney", "웹 서버가 확정 기록을 읽음"]], RAN_BE(6), { rel: ["c.SeedMoneyService", "f.seed", "a.seed-post", "a.int-seed"] }),
+  SeedMoneyFlowTest: X(T + "budget/SeedMoneyFlowTest.java", "통합(시계를 바꾸는 테스트)", "시드머니 조회·반영(GOAL·ALL·MANUAL), 주기당 한 번, 지난 주기 건너뛰기, 웹 연동용 기록. 토큰 만료는 실제 시각으로 검사하므로 가입(토큰 발급)만 지금 시각에 하고 고정한 시각으로 돌아온다(#138, 이 처리가 없으면 실제 날짜가 10-31을 넘는 순간 401로 실패했다).", [["confirmOncePerCycleAndWaitUntilNextCycle", "주기당 한 번, 다음 주기까지 대기"], ["unansweredCycleIsSkippedAtNextCycleEnd", "응답 안 한 주기는 넘어감"], ["webLinkReadsConfirmedSeedMoney", "웹 서버가 확정 기록을 읽음"]], RAN_BE(7), { rel: ["c.SeedMoneyService", "f.seed", "a.seed-post", "a.int-seed"] }),
   CoinFlowTest: X(T + "coin/CoinFlowTest.java", "통합(시계를 바꾸는 테스트)", "가입 선물·어제 예산 보너스·시간 적립, 코스튬 구매·적용·레벨 해금·환급, 추천 코드. 가입만 실제 시각에 한다({{x:SeedMoneyFlowTest}}와 같은 이유, #138).", [
+    ["ledgerListsMyEntriesNewestFirstAndPages", "코인 내역: 내 기록만 최신순, <code>nextBefore</code>로 쪽 넘김, 다른 사용자 기록은 안 보임"],
     ["concurrentPurchaseChargesOnce", "같은 코스튬을 동시에 두 번 구매 → 200 하나·409 하나, 잔액 0"],
     ["signupGiftOnlyOnceAndRewardsRepeatUntilAck", "가입 선물 한 번, ack 전에는 보상이 다시 옴"],
     ["passiveStartsAtFirstCheckInOnePerHourUpToTen", "시간 적립 규칙"],
     ["budgetBonusForKeptYesterdayOnly", "어제 하루치만 보너스"],
     ["referralRewardsBothOnceAndRejectsOwnCode", "추천 코드"],
-  ], RAN_BE(14), { rel: ["c.CoinService", "c.OutfitService", "f.coin", "f.shop", "f.referral"] }),
+  ], RAN_BE(15), { rel: ["c.CoinService", "c.OutfitService", "f.coin", "f.shop", "f.referral"] }),
   BudgetPolicyTest: X(T + "budget/BudgetPolicyTest.java", "단위(정책 예시 표)", "<code>docs/policies.md</code> §1·§2의 입력→기대값 표를 옮긴 <code>tests/policy/budget.json</code>을 읽어 케이스마다 <code>BudgetCalculator</code>를 부른다. 표 한 줄이 테스트 하나(<code>@TestFactory</code>)라 문서와 코드가 어긋나면 이 테스트가 실패한다.", [
     ["payday", "수입일 8개: 수입일 당일은 새 주기, 일요일·말일·공휴일 미루기, 2026-11 전 공휴일은 그대로"],
-    ["today", "오늘 쓸 수 있는 돈 5개: 기준 시각 전 지출, 오늘 자동 기록된 고정지출, 이번 주 범위, 음수 남은 돈, 시드머니로 옮긴 돈"],
-  ], RAN_BE(13), { testAnchor: "Stream<DynamicTest> ", rel: ["c.BudgetCalculator", "f.today", "x.BudgetCalculatorTest"] }),
+    ["today", "오늘 쓸 수 있는 돈 6개(⑥ 요일 비중 포함): 기준 시각 전 지출, 오늘 자동 기록된 고정지출, 이번 주 범위, 음수 남은 돈, 시드머니로 옮긴 돈"],
+  ], RAN_BE(14), { testAnchor: "Stream<DynamicTest> ", rel: ["c.BudgetCalculator", "f.today", "x.BudgetCalculatorTest"] }),
   CharacterPolicyTest: X(T + "budget/CharacterPolicyTest.java", "단위(정책 예시 표)", "<code>docs/policies.md</code> §4 = <code>tests/policy/character.json</code>. 처음 기록한 날 0점, 딱 맞게 쓴 날 +15, 1원이라도 넘기면 −50, 최대 200점, 최고 점수 유지.", [
     ["characterPolicyCases", "표 6줄을 <code>CharacterScore.compute</code>로 확인(점수·변화량·최고 점수·단계)"],
   ], RAN_BE(6), { testAnchor: "Stream<DynamicTest> ", rel: ["c.CharacterScore", "f.character", "x.CharacterScoreTest"] }),
@@ -115,7 +125,7 @@ export const TESTS = {
     ["a late 401 for the previous session does not expire the new one", "이전 세션 요청의 401은 무시"],
     ["a 401 for the current session expires it once even if several requests fail", "만료 처리는 한 번"],
     ["sessionGeneration changes on every login and logout", "세대 번호 증가"],
-  ], "직접 실행: 2026-10-25 로컬 <code>npm run test:unit</code> — 12개(이 파일 3개 + entry-reminder 6개 + outfit-lifecycle 3개) 모두 통과", { title: "api-session.test.cjs", testAnchor: "test(\"", rel: ["c.apiClient", "c.Session"] }),
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 51개(10개 파일; 이 파일 3개) 모두 통과", { title: "api-session.test.cjs", testAnchor: "test(\"", rel: ["c.apiClient", "c.Session"] }),
   unitEntryReminder: X("frontend/test/entry-reminder.test.cjs", "프론트 단위(node:test)", "기록 알림의 시각 계산(<code>entryReminderTimes.ts</code>)만 검사한다. 이 파일은 expo 모듈을 쓰지 않아 기기 없이 돈다. 실제 알림 예약·표시는 웹·E2E로 확인할 수 없어 실기기 확인이 필요하다.", [
     ["repeats every 24 hours from the last entry", "마지막 기록부터 24시간마다"],
     ["moves late-night times to 9 the next morning", "밤 시각은 다음 날 9시로"],
@@ -123,13 +133,57 @@ export const TESTS = {
     ["22:00 is night and 9:00 is not", "22시는 밤, 9시는 아님"],
     ["skips times that already passed", "이미 지난 시각은 건너뜀"],
     ["keeps a night reminder that was moved past now", "9시로 미뤄져 아직 안 온 알림은 남김"],
-  ], "직접 실행: 2026-10-25 로컬 <code>npm run test:unit</code> — 이 파일 6개 통과", { title: "entry-reminder.test.cjs", testAnchor: "test(\"", rel: ["c.entryReminder", "f.entryReminder"] }),
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 6개 통과", { title: "entry-reminder.test.cjs", testAnchor: "test(\"", rel: ["c.entryReminder", "f.entryReminder"] }),
   e2eService: X("frontend/e2e/service.spec.ts", "E2E(Playwright, 실제 백엔드 + 정적 웹)", "브라우저로 실제 화면을 누른다. 가입 → 예산 설정 → 거래 기록(응답을 일부러 끊고 같은 키로 재시도) → 수정 → 로그아웃 → 삭제. 일부 테스트는 특정 응답만 mock으로 바꾼다.", [
     ["real service lifecycle, retry idempotency, edits, logout and deletion", "대표 흐름 전체"],
     ["re-entering the balance in settings does not subtract earlier spending again", "잔액 재입력 시 이전 지출을 두 번 빼지 않음"],
     ["expired token returns to start; public routes remain accessible", "만료 토큰 → 시작 화면"],
     ["social login binds the code to this tab's verifier and signs in once (exchange answer mocked)", "소셜 로그인(교환 응답 mock)"],
   ], "{{b:ci}} PR #128·#129·#130에서 통과(2026-10-24 확인). 로컬에서는 실행하지 않았다. 직접 실행하려면 로컬 백엔드(8080)와 웹(8081)을 띄워야 한다. CI가 PR마다 실행한다(<code>ci.yml</code> e2e 작업). 소스 기준 20개(service 15·coins 3·web-links 2).", { title: "e2e/service.spec.ts", testAnchor: "test(\"", rel: ["f.tx", "f.auth", "s.txnew", "s.txedit"] }),
+  DayWeightsPolicyTest: X(T + "budget/DayWeightsPolicyTest.java", "단위(정책 예시 표)", "<code>docs/policies.md</code> §5 = <code>tests/policy/day-weights.json</code>. 지출 기록에서 '내 기록 기준' 비중이 나오는 규칙(최대 3개월, 7일·3개 요일 이상, 5~30, 합 100)을 표 5줄로 확인한다.", [
+    ["record", "표 5줄을 <code>DayWeights</code>로 계산: 7일 미만·3개 요일 미만이면 비중 없음, 소수점이 큰 요일에 1씩 더하기, 기록 없는 요일은 5, 3개월 전 기록은 제외"],
+  ], "직접 실행: 2026-10-28 로컬 <code>./gradlew test</code> 통과", { testAnchor: "Stream<DynamicTest> ", rel: ["c.DayWeights", "f.dayWeights", "a.day-weights-get"] }),
+  DayWeightsFlowTest: X(T + "budget/DayWeightsFlowTest.java", "통합(시계 고정)", "프리셋을 저장하면 오늘 하루 예산이 바뀌는지 API로 확인한다.", [
+    ["presetChangesTodayBudget", "프리셋 저장 → <code>dayBudgets</code>·오늘 하루 예산 변경"],
+  ], "직접 실행: 2026-10-28 로컬 <code>./gradlew test</code> 통과", { rel: ["c.DayWeights", "c.BudgetService", "f.dayWeights", "a.day-weights-put"] }),
+  unitDayWeights: X("frontend/test/day-weights.test.cjs", "프론트 단위(node:test)", "요일 막대의 값 변환과 안내 문구(<code>utils/dayWeights.ts</code>)만 검사한다. 금액 계산은 서버 몫이라 여기에 없다.", [
+    ["top of the bar is the max weight, bottom is the min, outside is clamped", "막대 위쪽 = 최대 비중, 아래쪽 = 최소, 범위 밖은 자름"],
+    ["percent labels are shares of the total", "퍼센트 표시는 합에서 차지하는 몫"],
+    ["record hint says what is missing or which period was used", "기록 부족 안내 문구"],
+    ["weights compare element by element", "비중 비교는 요소별"],
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 4개 통과", { title: "day-weights.test.cjs", testAnchor: "test(\"", rel: ["f.dayWeights"] }),
+  unitReceiptImport: X("frontend/test/receipt-import.test.cjs", "프론트 단위(node:test)", "OCR 줄(텍스트와 좌표)을 거래 후보로 바꾸는 <code>parse.ts</code>를 검사한다. 토스·카카오뱅크·카카오페이 화면 모양별 케이스. 입력은 가짜 OCR 줄이고, 실기기 OCR 출력으로 바꾸는 일은 HANDOFF에 남아 있다 {{b:doc}}.", [
+    ["toss: date headers, signs and balance chain", "토스 날짜 머리글형: 부호와 잔액 이어짐"],
+    ["toss: own transfers and refunds are flagged, not dropped", "내 계좌 이체·환불은 버리지 않고 표시"],
+    ["kakaobank: every row has its own date", "카카오뱅크: 줄마다 날짜"],
+    ["kakaopay: amount sits under the title, no balance column", "카카오페이: 금액이 제목 아래, 잔액 열 없음"],
+    ["a balance that does not match asks for review", "잔액이 안 맞으면 확인 요청"],
+    ["a screen with no transactions is not supported", "거래가 없는 화면은 지원 안 함"],
+    ["year is the nearest past occurrence", "연도는 가장 가까운 과거"],
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 13개 통과", { title: "receipt-import.test.cjs", testAnchor: "test(\"", rel: ["c.receiptParse", "f.screenshotImport"] }),
+  unitReceiptFlow: X("frontend/test/receipt-import-flow.test.cjs", "프론트 단위(node:test)", "가져온 후보를 저장하기까지의 흐름: 중복 조회가 끝나야 저장, 이미 있는 거래는 제외, 네트워크 재시도는 같은 본문·키, 두 번 눌러도 한 번.", [
+    ["review waits for duplicate lookup and blocks saving when the lookup fails", "중복 조회 전·실패 시 저장 막기"],
+    ["an existing matching transaction is excluded before any save", "이미 있는 같은 거래는 저장 전에 제외"],
+    ["a network retry sends the original body and idempotency key and stays locked on success", "재시도는 원래 본문·키, 성공하면 잠금 유지"],
+    ["image import prevents double taps, avoids state changes after navigation and unlocks on return", "연타 방지, 화면을 떠난 뒤 상태 변경 없음"],
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 4개 통과", { title: "receipt-import-flow.test.cjs", testAnchor: "test(\"", rel: ["c.ImportReview", "f.screenshotImport", "a.tx-create"] }),
+  unitInboxRecords: X("frontend/test/inbox-records.test.cjs", "프론트 단위(node:test)", "알림함의 기기 기록 규칙(<code>inboxRecords.ts</code>): 보낸 알림 판정, 재예약, 읽지 않음 표시.", [
+    ["a reminder counts as sent once its time has passed", "예약 시각이 지나면 '보낸 알림'"],
+    ["rescheduling drops the old future times of that kind only", "다시 예약하면 같은 종류의 미래 시각만 교체"],
+    ["budget state is noted once per day and state, from the server value", "예산 상태는 하루·상태마다 한 번만 기록"],
+    ["unread when something arrived after the inbox was last opened", "마지막으로 연 뒤 도착한 게 있으면 읽지 않음"],
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 7개 통과", { title: "inbox-records.test.cjs", testAnchor: "test(\"", rel: ["c.inbox", "f.inbox"] }),
+  unitCoinLedger: X("frontend/test/coin-ledger.test.cjs", "프론트 단위(node:test)", "코인 내역 줄의 제목·금액 표시(<code>coinLedger.ts</code>). 모르는 사유가 와도 금액은 보인다.", [
+    ["puts the signed amount before the reason", "부호 있는 금액을 앞에"],
+    ["an unknown reason still shows the amount", "모르는 사유여도 금액 표시"],
+    ["budget bonus names the day it was kept", "예산 보너스는 지킨 날을 이름에 넣음"],
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 3개 통과", { title: "coin-ledger.test.cjs", testAnchor: "test(\"", rel: ["f.coinHistory", "a.coin-ledger"] }),
+  unitOccurredAt: X("frontend/test/occurred-at.test.cjs", "프론트 단위(node:test)", "날짜만 고른 거래가 서버에 보낼 <code>occurredAt</code>(<code>occurredAt.ts</code>).", [
+    ["today keeps the current instant so it stays after balanceAt", "오늘은 지금 시각(기준 시각 이후 유지)"],
+    ["other days use noon Seoul time", "다른 날은 한국 시간 정오"],
+    ["editing without changing the day keeps the stored value", "수정에서 날짜를 안 바꾸면 저장값 유지"],
+    ["reads the Seoul day across midnight UTC", "UTC 자정 전후에도 한국 날짜로 읽음"],
+  ], "직접 실행: 2026-10-28 로컬 <code>npm run test:unit</code> — 이 파일 5개 통과", { title: "occurred-at.test.cjs", testAnchor: "test(\"", rel: ["f.txCalendar", "c.occurredAt"] }),
 };
 
 const G = (title, def, where = "", o = {}) => ({ title, def, where, ...o });

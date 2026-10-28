@@ -8,6 +8,8 @@
 "budget_settings","updated_at","timestamp",,"NO",,"7"
 "budget_settings","fixed_posting_since","timestamp",,"YES",,"8"
 "budget_settings","seed_base","bigint",,"NO","0","9"
+"budget_settings","day_preset","character varying","10","NO","'EVEN'","10"
+"budget_settings","day_weights","character varying","40","NO","'14,14,14,14,14,14,14'","11"
 "categories","id","bigint",,"NO",,"1"
 "categories","user_id","bigint",,"NO",,"2"
 "categories","name","character varying","20","NO",,"3"
