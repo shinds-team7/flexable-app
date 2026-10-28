@@ -21,16 +21,17 @@ export type ParseResult = {
 };
 
 const AMOUNT = /^([+\-−–])?\s*(\d{1,3}(?:,\d{3})*|\d+)\s*원$/;
-const DATE_DOT = /^(\d{1,2})\.(\d{1,2})\.?$/;
-const DATE_KOR = /^(\d{1,2})월\s*(\d{1,2})일$/;
-const DATE_DAY = /^(\d{1,2})일\s*[월화수목금토일]요일/;
-const MONTH_HEAD = /^(\d{1,2})월\s*[·・]/;
+const DATE_DOT = /^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.?$/;
+const DATE_KOR = /^(\d{1,2})\s*월\s*(\d{1,2})\s*일$/;
+const DATE_DAY = /^(\d{1,2})\s*일\s*[월화수목금토일]\s*요\s*일/;
+const MONTH_HEAD = /^(\d{1,2})\s*월\s*[·・•ㆍ]/;
 const PAY_ROW =
-  /^(결제취소\s*[·・]?\s*환불|결제|충전|송금\s*받기|송금|출금|입금)\s*[|｜]\s*(.+)$/;
+  /^(결제\s*취소\s*[·・•ㆍ]?\s*환불|결제|충전|송금\s*받기|송금|출금|입금)\s*[|｜│丨]\s*(.+)$/;
+const PAY_LOGO = /^[p,]?pay$/i;
 const OWN = /내\s*\S*\s*(계좌|통장)|\(내\s*[^)]*\)|충전/;
-const REFUND = /취소\s*[·・]?\s*환불/;
+const REFUND = /취소\s*[·・•ㆍ]?\s*환불/;
 
-const won = (m: RegExpMatchArray) => Number(m[2].replace(/,/g, ""));
+const won = (m: RegExpMatchArray) => Number(m[2].replace(/[,\s]/g, ""));
 const unsigned = (s: string) => s.replace(/^[+\-−–]\s*/, "");
 
 export const REVIEW_TYPE = "입금인지 출금인지 확인이 필요해요";
@@ -44,7 +45,7 @@ export function splitLines(lines: OcrLine[]): OcrLine[] {
     const out: OcrLine[] = [];
     let rest = line.text.trim();
     let x = line.x;
-    const date = rest.match(/^(\d{1,2}\.\d{1,2})\s+(\S.*)$/);
+    const date = rest.match(/^(\d{1,2}\s*\.\s*\d{1,2})\s+(\S.*)$/);
     if (date) {
       out.push({ text: date[1], x, y: line.y });
       rest = date[2];
@@ -75,7 +76,60 @@ export function toRows(input: OcrLine[], tolerance = 14): OcrLine[][] {
     if (last && Math.abs(last[0].y - line.y) <= tolerance) last.push(line);
     else rows.push([line]);
   }
-  return rows.map((r) => r.sort((a, b) => a.x - b.x));
+  return rows.map((r) => joinFragments(r.sort((a, b) => a.x - b.x)));
+}
+
+/** 날짜와 금액의 기호가 별도 OCR 줄이어도 같은 시각적 행 안에서만 합친다. */
+function joinFragments(input: OcrLine[]): OcrLine[] {
+  const row = [...input];
+  if (!DATE_DOT.test(row[0]?.text ?? "")) {
+    for (const count of [2, 3]) {
+      if (row.length < count) continue;
+      const text = row
+        .slice(0, count)
+        .map((l) => l.text)
+        .join("");
+      if (!DATE_DOT.test(text)) continue;
+      row.splice(0, count, { ...row[0], text });
+      break;
+    }
+  }
+  const end = row.length - 1;
+  let amount = end;
+  if (row[end]?.text === "원" && end > 0) {
+    if (!AMOUNT.test(`${row[end - 1].text}원`)) return row;
+    amount--;
+  } else if (!AMOUNT.test(row[end]?.text ?? "")) return row;
+  if (/^[+\-−–]$/.test(row[amount - 1]?.text ?? "")) amount--;
+  if (amount < end) {
+    row.splice(amount, row.length - amount, {
+      ...row[amount],
+      text: row
+        .slice(amount)
+        .map((l) => l.text)
+        .join(""),
+    });
+  }
+  return row;
+}
+
+function payDetail(text: string): { kind: string; detail: string } | null {
+  // 1/I/l은 금액이나 일반 상호에서 바꾸지 않고, 송금 문구와 페이머니 사이의 구분선일 때만 허용한다.
+  const normalized = text.replace(
+    /^(송금\s*받기|송금|충전|출금|입금)\s+[1Il]\s+(?=카카오\s*페이\s*머니)/,
+    "$1 | ",
+  );
+  const pay = normalized.match(PAY_ROW);
+  if (pay) return { kind: pay[1].replace(/\s+/g, ""), detail: pay[2].trim() };
+  const subscription = text.match(/^My\s*구독\s*[-－–—·•]\s*(.+)$/i);
+  return subscription ? { kind: "결제", detail: subscription[1].trim() } : null;
+}
+
+function payText(row: OcrLine[]): string {
+  return row
+    .filter((l) => !PAY_LOGO.test(l.text))
+    .map((l) => l.text)
+    .join(" ");
 }
 
 /** 월·일만 있는 날짜의 연도를 오늘 기준 가장 가까운 과거로 정한다. */
@@ -89,8 +143,8 @@ export function resolveDate(month: number, day: number, today: string) {
 function detect(rows: OcrLine[][]): ImportSource | null {
   const text = rows.map((r) => r.map((l) => l.text).join(" ")).join("\n");
   if (
-    /카카오페이머니|카드만들기/.test(text) ||
-    rows.some((r) => PAY_ROW.test(r[0].text))
+    /카카오\s*페이\s*머니|카드\s*만들기/.test(text) ||
+    rows.some((r) => payDetail(payText(r)))
   )
     return "kakaopay";
   // 거래 행의 "내 토스뱅크 계좌" 같은 문구가 섞이므로 화면 고유 문구만 본다.
@@ -195,7 +249,8 @@ function parsePay(rows: OcrLine[][], today: string): Raw[] {
   let month: number | null = null;
   let date: string | null = null;
   for (let i = 0; i < rows.length; i++) {
-    const joined = rows[i].map((l) => l.text).join(" ");
+    const row = rows[i];
+    const joined = payText(row);
     const mh = joined.match(MONTH_HEAD);
     if (mh) month = Number(mh[1]);
     const dm = joined.match(DATE_DAY);
@@ -203,14 +258,28 @@ function parsePay(rows: OcrLine[][], today: string): Raw[] {
       date = resolveDate(month, Number(dm[1]), today);
       continue;
     }
-    const pm = joined.match(PAY_ROW);
+    const inlineAmount =
+      row.length > 1 && row[row.length - 1].text.match(AMOUNT);
+    const pm = payDetail(inlineAmount ? payText(row.slice(0, -1)) : joined);
     if (!pm || !date) continue;
-    // 금액은 다음 행 왼쪽에 있다.
-    const amountLine = rows[i + 1]?.find((l) => AMOUNT.test(l.text));
+    // 금액 앞에 결제 로고만 읽힌 행이 끼기도 한다. 다른 내용·날짜·거래를 건너뛰어 금액을 붙이지 않는다.
+    let amountRow = i;
+    let amountLine: OcrLine | undefined = inlineAmount
+      ? row[row.length - 1]
+      : undefined;
+    for (let j = i + 1; !amountLine && j < rows.length; j++) {
+      const next = rows[j];
+      if (next.every((l) => PAY_LOGO.test(l.text) && l.x < row[0].x)) continue;
+      const content = next.filter((l) => !PAY_LOGO.test(l.text));
+      if (content.length === 1 && AMOUNT.test(content[0].text)) {
+        amountLine = content[0];
+        amountRow = j;
+      }
+      break;
+    }
     const am = amountLine?.text.match(AMOUNT);
     if (!amountLine || !am) continue;
-    const kind = pm[1].replace(/\s+/g, "");
-    const detail = pm[2].trim();
+    const { kind, detail } = pm;
     const arrow = detail.split(/→/);
     const income = am[1] === "+";
     const counterpart =
@@ -224,7 +293,7 @@ function parsePay(rows: OcrLine[][], today: string): Raw[] {
       sign: am[1] ? (income ? "+" : "-") : null,
       balance: null,
     });
-    i++;
+    i = amountRow;
   }
   return out;
 }
