@@ -12,13 +12,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
   TextInput,
   View,
   type TextInputProps,
 } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
-import { colors, font, noOutline, radius } from "@/theme";
+import { colors, fontStyle, noOutline, radius } from "@/theme";
 import { useSession } from "./Session";
 import { api, errorText } from "./api/client";
 export const money = (n: number) => n.toLocaleString("ko-KR");
@@ -65,7 +66,6 @@ export function Field({
           }}
           style={[
             {
-              fontFamily: font,
               fontSize: 16,
               minHeight: 52,
               paddingVertical: 14,
@@ -79,6 +79,7 @@ export function Field({
             noOutline,
             right ? { paddingRight: 52 } : undefined,
             props.style,
+            fontStyle(StyleSheet.flatten(props.style)?.fontWeight),
           ]}
         />
         {right && (

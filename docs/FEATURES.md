@@ -9,6 +9,7 @@
 
 | 기능 | 화면·경로 | API·저장 | 확인 방법 |
 |---|---|---|---|
+| 앱 글꼴 | 본문·입력칸·도넛 차트 라벨은 Pretendard. Android에서 휴대폰의 글꼴 종류를 바꿔도 앱 글꼴 유지, 글자 크기 접근성 설정은 유지 | 서버 변경 없음. `theme/fonts.native.ts`의 굵기별 로컬 파일을 `expo-font`로 읽은 뒤 화면 표시. 웹은 기존 CSS 글꼴 유지 | 단위 `test/fonts.test.cjs`(Android·iOS 굵기 선택·폰트 파일, 웹 설정). Android 사용자 지정 글꼴·큰 글씨 실기기 확인 필요 |
 | 시작 분기 | `/` → `src/app/index.tsx` (로그인·예산 설정 여부로 `/home`·`/onboarding`·시작 화면) | `GET /me` | E2E `expired token returns to start…` |
 | 회원가입·로그인·로그아웃 | `/auth/signup`, `/auth/login` → `service/AuthScreen.tsx` | `POST /auth/signup·login·logout`. 토큰은 앱 SecureStore, 웹 localStorage(`service/storage.ts`) | 백엔드 `ApiFlowTest`(가입 검증·로그인 제한·로그아웃 폐기), E2E `real service lifecycle…` |
 | 카카오·Google 로그인 | 시작 화면 `src/app/index.tsx`(`service/OAuthButtons.tsx`) → 브라우저 → `/oauth/callback`(`service/OAuthCallbackScreen.tsx`, 흐름은 `service/oauth.ts`). 앱 1.1.0부터(`expo-web-browser` 네이티브 모듈), 웹은 바로 | `GET /auth/oauth/providers`, `GET /auth/oauth/{provider}/start·callback`, `POST /auth/oauth/exchange`(1회용 코드 + verifier). 키가 없는 공급자는 "쓸 수 없어요" 안내. 같은 검증 이메일의 기존 계정이 있으면 연결해 로그인(기존 세션은 끊음). 연결된 계정에 이메일 로그인하면 비밀번호가 맞아도 "Google로 가입한 계정이에요" 안내와 해당 소셜 버튼(`service/AuthScreen.tsx`, 동작은 `service/useSocialLogin.ts`). 소셜 계정 탈퇴는 '탈퇴' 입력 | 백엔드 `OAuthFlowTest`·`MemoryOAuthStoreTest`·`RestOAuthProviderClientTest`, E2E `social login …`(교환 응답은 mock)·`email login of a google-linked account …`(로그인 응답 mock). 운영 키 설정 완료(10-19), 새 웹사이트에서 운영 로그인 확인. Android 실기기 확인 10-23(사용자, HANDOFF 0-2) |

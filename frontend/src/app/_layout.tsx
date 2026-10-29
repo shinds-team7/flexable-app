@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -14,6 +15,7 @@ import {
 } from "@/service/LaunchUpdate";
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
+import { bundledFonts } from "@/theme/fonts";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
@@ -38,7 +40,16 @@ function SplashGate() {
 
 /** 공통 틀(안전영역·폰 프레임·토스트)과 세션을 둔다. */
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(Platform.OS === "web" ? {} : bundledFonts);
   useFetchUpdateOnResume();
+  useEffect(() => {
+    if (fontError) {
+      SplashScreen.hideAsync().catch(() => {});
+      throw fontError;
+    }
+  }, [fontError]);
+  // 폰트가 준비되기 전 시스템 글꼴로 화면을 그리거나 스플래시를 내리지 않는다.
+  if (!fontsLoaded) return null;
   return (
     <SafeAreaProvider>
       <View style={styles.outer}>
