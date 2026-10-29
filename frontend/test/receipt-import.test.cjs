@@ -566,3 +566,98 @@ test("missing bank currency needs a time and a separate right balance column; ra
   );
   assert.equal(result.items.length, 0);
 });
+
+// #211: actual cropped OCR-2 positions; all dates, names and amounts are synthetic.
+// No app header/footer, balance label or correctly recognized currency suffix remains.
+const TOSS_CROPPED_ANDROID = [
+  { x: 40, y: 93, text: "10.25 가상카드출금" },
+  { x: 188, y: 153, text: "21:00" },
+  { x: 188, y: 273, text: "가상24상점" },
+  { x: 188, y: 336, text: "20:00" },
+  { x: 188, y: 455, text: "가상(내)계좌" },
+  { x: 187, y: 516, text: "19:00" },
+  { x: 41, y: 635, text: "10.24 가상친구" },
+  { x: 188, y: 698, text: "18:00" },
+  { x: 186, y: 814, text: "가상상점" },
+  { x: 187, y: 877, text: "17:00" },
+  { x: 188, y: 997, text: "가상매장" },
+  { x: 188, y: 1059, text: "16:00" },
+  { x: 187, y: 1179, text: "깨진금액항목" },
+  { x: 187, y: 1239, text: "15:00" },
+  { x: 872, y: 92, text: "-900" },
+  { x: 868, y: 156, text: "100,000" },
+  { x: 838, y: 275, text: "-1,000" },
+  { x: 866, y: 337, text: "100,900" },
+  { x: 834, y: 455, text: "-2,000x" },
+  { x: 873, y: 517, text: "101,900" },
+  { x: 813, y: 635, text: "103,900" },
+  { x: 874, y: 699, text: "113,900" },
+  { x: 782, y: 819, text: "-100,000" },
+  { x: 893, y: 879, text: "10,000" },
+  { x: 812, y: 999, text: "-10,000x" },
+  { x: 878, y: 1061, text: "110,000" },
+  { x: 834, y: 1180, text: "-1,0000" },
+  { x: 878, y: 1243, text: "120,000" },
+];
+
+test("cropped Android Toss: infer the screen from dated transaction/time/balance pairs, require amount review", () => {
+  const result = parseReceipt(TOSS_CROPPED_ANDROID, TODAY);
+  assert.equal(result.source, "toss");
+  assert.deepEqual(brief(result), [
+    ["10-25", "가상카드출금", "EXPENSE", 900],
+    ["10-25", "가상24상점", "EXPENSE", 1000],
+    ["10-25", "가상(내)계좌", "EXPENSE", 2000],
+    ["10-24", "가상친구", "INCOME", 103900],
+    ["10-24", "가상상점", "EXPENSE", 100000],
+    ["10-24", "가상매장", "EXPENSE", 10000],
+  ]);
+  assert.ok(
+    result.items.every((i) =>
+      i.review.includes("금액의 원 표시를 정확히 읽지 못했어요"),
+    ),
+  );
+  const uncropped = [
+    ...TOSS_CROPPED_ANDROID,
+    ...lines([[1400, [200, "채우기"], [700, "보내기"]]]),
+  ];
+  assert.deepEqual(result, parseReceipt(uncropped, TODAY));
+  // Cropping shifts the origin and resizing changes the absolute coordinates.
+  assert.deepEqual(
+    result,
+    parseReceipt(
+      TOSS_CROPPED_ANDROID.map((l) => ({
+        ...l,
+        x: l.x / 2,
+        y: (l.y - 90) / 2,
+      })),
+      TODAY,
+    ),
+  );
+});
+
+test("cropped bank rows: skip leading transactions with no visible date and an incomplete final row", () => {
+  const cropped = TOSS_CROPPED_ANDROID.filter((l) => l.y >= 273 && l.y <= 999);
+  assert.deepEqual(brief(parseReceipt(cropped, TODAY)), [
+    ["10-24", "가상친구", "INCOME", 103900],
+    ["10-24", "가상상점", "EXPENSE", 100000],
+  ]);
+  assert.deepEqual(
+    parseReceipt(cropped.filter((l) => l.y > 635), TODAY).items,
+    [],
+  );
+});
+
+test("cropped numeric content without a dated bank layout stays unsupported", () => {
+  for (const invalid of [
+    TOSS_CROPPED_ANDROID.filter((l) => l.x < 500),
+    TOSS_CROPPED_ANDROID.filter((l) => !/^\d{2}:\d{2}$/.test(l.text)),
+    TOSS_CROPPED_ANDROID.map((l) => (l.x > 500 ? { ...l, x: 250 } : l)),
+    TOSS_CROPPED_ANDROID.map((l) =>
+      /^10\.\d{2}/.test(l.text) ? { ...l, text: "가상상점" } : l,
+    ),
+  ]) {
+    const result = parseReceipt(invalid, TODAY);
+    assert.equal(result.source, null);
+    assert.deepEqual(result.items, []);
+  }
+});
