@@ -8,6 +8,8 @@ export type ReminderTime = { kind: ReminderKind; at: number };
 export type Planned = { sent: ReminderTime[]; pending: ReminderTime[] };
 /** 오늘 예산을 다 썼거나(over=false) 넘은(over=true) 상태를 앱이 처음 본 시각 */
 export type BudgetNote = { date: string; over: boolean; at: number };
+/** 직접 눌러 확인한 알림의 고유 키와 알림 시각 */
+export type ReadReceipt = { key: string; at: number };
 
 /** 기기 저장 칸이 작아(SecureStore 2KB) 종류마다 최근 것만 남긴다 */
 export const KEEP = 20;
@@ -54,7 +56,15 @@ export function noteBudget(
   return [{ date, over, at: now }, ...notes].slice(0, KEEP);
 }
 
-/** 마지막으로 알림함을 연 시각보다 늦은 알림이 있으면 안 읽은 알림이 있다 */
-export function hasUnread(times: number[], seen: number) {
-  return times.some((at) => at > seen);
+/** 구버전의 읽음 기록은 유지하고, 이후에는 직접 확인한 항목만 읽음으로 본다. */
+export function isUnread(item: ReadReceipt, seen: number, read: ReadReceipt[]) {
+  return item.at > seen && !read.some((receipt) => receipt.key === item.key);
+}
+
+export function hasUnread(
+  items: ReadReceipt[],
+  seen: number,
+  read: ReadReceipt[],
+) {
+  return items.some((item) => isUnread(item, seen, read));
 }

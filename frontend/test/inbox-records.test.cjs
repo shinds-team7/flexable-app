@@ -20,7 +20,7 @@ function load() {
   vm.runInNewContext(js, context);
   return context.exports;
 }
-const { plan, noteBudget, hasUnread, KEEP } = load();
+const { plan, noteBudget, isUnread, hasUnread, KEEP } = load();
 const EMPTY = { sent: [], pending: [] };
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
@@ -52,7 +52,10 @@ test("rescheduling drops the old future times of that kind only", () => {
 test("cancelling keeps what was already sent and forgets the rest", () => {
   let r = plan(EMPTY, 0, "seed", [100]);
   r = plan(r, 150, "seed", []);
-  assert.deepEqual(plain(r), { sent: [{ kind: "seed", at: 100 }], pending: [] });
+  assert.deepEqual(plain(r), {
+    sent: [{ kind: "seed", at: 100 }],
+    pending: [],
+  });
 });
 
 test("past times passed when scheduling are not kept as pending", () => {
@@ -61,7 +64,8 @@ test("past times passed when scheduling are not kept as pending", () => {
 
 test("sent reminders are newest first, not repeated, and capped", () => {
   let r = EMPTY;
-  for (let i = 1; i <= KEEP + 5; i++) r = plan(r, i * 10, "entry", [i * 10 + 5]);
+  for (let i = 1; i <= KEEP + 5; i++)
+    r = plan(r, i * 10, "entry", [i * 10 + 5]);
   r = plan(r, 10000);
   assert.equal(r.sent.length, KEEP);
   assert.equal(r.sent[0].at, (KEEP + 5) * 10 + 5);
@@ -81,8 +85,20 @@ test("budget state is noted once per day and state, from the server value", () =
   assert.equal(n.length, 3);
 });
 
-test("unread when something arrived after the inbox was last opened", () => {
-  assert.equal(hasUnread([100, 200], 200), false);
-  assert.equal(hasUnread([100, 201], 200), true);
-  assert.equal(hasUnread([], 0), false);
+test("only the opened key is read, including older and simultaneous notifications", () => {
+  const older = { key: "fixed:1", at: 100 };
+  const opened = { key: "coin:1", at: 200 };
+  const simultaneous = { key: "coin:2", at: 200 };
+  const read = [opened];
+  assert.equal(isUnread(opened, 0, read), false);
+  assert.equal(isUnread(older, 0, read), true);
+  assert.equal(isUnread(simultaneous, 0, read), true);
+  assert.equal(hasUnread([older, opened, simultaneous], 0, read), true);
+  assert.equal(hasUnread([opened], 0, read), false);
+  assert.equal(hasUnread([], 0, read), false);
+});
+
+test("legacy read timestamps are preserved without hiding later unread items", () => {
+  assert.equal(isUnread({ key: "coin:1", at: 100 }, 200, []), false);
+  assert.equal(isUnread({ key: "coin:2", at: 201 }, 200, []), true);
 });

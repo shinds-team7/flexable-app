@@ -82,20 +82,53 @@ test("analysis resets to current month after navigating away and chart selects e
   await expect(page.getByText("2026년 10월", { exact: true })).toBeVisible();
 });
 
-test("notification highlight clears on opening an item and returning", async ({
+test("only tapped notifications lose their highlight, including after re-entry and reload", async ({
   page,
 }) => {
   await session(page);
   await page.goto("/notifications");
+  const unread = page.getByRole("button", { name: /^새 알림/ });
+  await expect(unread).toHaveCount(3);
+  // Merely leaving and re-entering the list never acknowledges anything.
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+  const bell = page.getByRole("button", {
+    name: "알림함, 새 알림 있음",
+    exact: true,
+  });
+  await expect(bell).toBeVisible();
+  await bell.click();
+  await expect(unread).toHaveCount(3);
+  // Open the newest notification first: older ones must stay unread.
+  await page
+    .getByRole("button", { name: /^새 알림, 오늘 예산을 넘었어요/ })
+    .click();
+  await expect(page).toHaveURL(/\/home$/);
+  await bell.click();
+  await expect(unread).toHaveCount(2);
   const item = page.getByRole("button", { name: /새 알림, \+3 코인 모으기/ });
   await expect(item).toBeVisible();
   await item.click();
   await expect(page).toHaveURL(/\/coins\/history$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/notifications$/);
-  await expect(page.getByRole("button", { name: /^새 알림/ })).toHaveCount(0);
+  await expect(unread).toHaveCount(1);
   const read = page.getByRole("button", { name: /^\+3 코인 모으기/ });
   await expect(read).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const remaining = page.getByRole("button", {
+    name: /^새 알림, 고정지출을 기록했어요/,
+  });
+  await expect(remaining).toHaveCSS("background-color", "rgb(235, 240, 255)");
+  await page.reload();
+  await expect(unread).toHaveCount(1);
+  await expect(read).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await remaining.click();
+  await expect(page).toHaveURL(/\/transactions\/2$/);
+  await page.goBack();
+  await expect(unread).toHaveCount(0);
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "알림함", exact: true }),
+  ).toBeVisible();
 });
 
 test("calendar branches into future planning and past records with the selected date", async ({
