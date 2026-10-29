@@ -219,12 +219,30 @@ function CoinCard({
         )}
       </View>
       {wallet && (
-        <Button
-          label={ready > 0 ? `모으기 +${ready}` : "모으기"}
-          disabled={busy || ready <= 0}
-          onPress={onCollect}
-          style={{ minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 }}
-        />
+        <View>
+          <Button
+            label={ready > 0 ? `모으기 +${ready}` : "모으기"}
+            disabled={busy || ready <= 0}
+            onPress={onCollect}
+            style={{ minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 }}
+          />
+          {ready > 0 && (
+            <View
+              accessibilityLabel="모을 코인 있음"
+              style={{
+                position: "absolute",
+                top: 2,
+                right: 2,
+                width: 9,
+                height: 9,
+                borderRadius: 5,
+                borderWidth: 1.5,
+                borderColor: colors.card,
+                backgroundColor: colors.danger,
+              }}
+            />
+          )}
+        </View>
       )}
     </Card>
   );

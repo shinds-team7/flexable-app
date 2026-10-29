@@ -170,10 +170,39 @@ function detect(rows: OcrLine[][]): ImportSource | null {
   if (/입출금통장|가져오기/.test(text)) return "kakaobank";
   if (/채우기|보내기/.test(text)) return "toss";
   // 잔액 열이 있는 화면은 어느 쪽이든 같은 규칙으로 읽는다.
-  return /잔액/.test(text) ||
-    rows.some((r) => r.some((l) => AMOUNT.test(l.text)))
+  if (/잔액/.test(text) || rows.some((r) => r.some((l) => AMOUNT.test(l.text))))
+    return "toss";
+  // 위아래를 자르면 앱 이름·버튼·원 단위가 모두 사라질 수 있다.
+  // 날짜 뒤의 거래/시각/잔액 열이 맞을 때만 기존 토스 규칙으로 읽는다.
+  let dated = false;
+  return rows.some((row, i) => {
+    if (
+      DATE_DOT.test(row[0]?.text ?? "") ||
+      DATE_KOR.test(row.map((l) => l.text).join(" "))
+    )
+      dated = true;
+    return (
+      dated &&
+      hasBankColumns(row, rows[i + 1] ?? []) &&
+      BANK_LOOSE_AMOUNT.test(row[row.length - 1].text)
+    );
+  })
     ? "toss"
     : null;
+}
+
+/** 원 없는 금액을 화면 판별과 거래 해석에서 같은 행·열 조건으로 제한한다. */
+function hasBankColumns(row: OcrLine[], subRow: OcrLine[]): boolean {
+  if (row.length < 2 || subRow.length !== 2) return false;
+  const amount = row[row.length - 1];
+  const [time, balance] = subRow;
+  return (
+    TIME.test(time.text) &&
+    balance.x > time.x * 2 &&
+    amount.x > row[row.length - 2].x * 2 &&
+    Math.abs(amount.x - balance.x) <= Math.max(30, amount.x * 0.25) &&
+    BANK_AMOUNT_SHAPE.test(balance.text)
+  );
 }
 
 type Raw = {
@@ -238,15 +267,7 @@ function parseBalanceStyle(rows: OcrLine[][], today: string): Raw[] {
     const subRow = rows[i + 1] ?? [];
     const balLine = subRow[subRow.length - 1];
     // 원 없는 숫자는 날짜가 있고, 아래 행의 시각과 별도 오른쪽 잔액 열이 확인될 때만 후보로 둔다.
-    const time = subRow[0];
-    const bankColumns =
-      row.length >= 2 &&
-      subRow.length === 2 &&
-      TIME.test(time.text) &&
-      balLine.x > time.x * 2 &&
-      amountLine.x > row[row.length - 2].x * 2 &&
-      Math.abs(amountLine.x - balLine.x) <= Math.max(30, amountLine.x * 0.25) &&
-      BANK_AMOUNT_SHAPE.test(balLine.text);
+    const bankColumns = hasBankColumns(row, subRow);
     const exactAmount = amountLine?.text.match(AMOUNT);
     const am =
       exactAmount ??

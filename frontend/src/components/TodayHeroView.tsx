@@ -12,11 +12,13 @@ export function TodayHeroView({
   today,
   summary: s,
   onDetails,
+  onOverHelp,
   footerCaption,
 }: {
   today: Date;
   summary: HeroSummary;
   onDetails: () => void;
+  onOverHelp?: () => void;
   footerCaption: string;
 }) {
   const over = s.todayAvailable < 0;
@@ -53,16 +55,41 @@ export function TodayHeroView({
       </T>
 
       {over && s.daysLeft > 1 && (
-        <T size={13} weight="600" color={colors.onBrand} style={{ marginTop: 2 }} num>
+        <T
+          size={13}
+          weight="600"
+          color={colors.onBrand}
+          style={{ marginTop: 2 }}
+          num
+        >
           남은 {s.daysLeft - 1}일에 나눠서 반영할게요
         </T>
       )}
 
       {empty && (
-        <View style={styles.heroChip}>
+        <View
+          style={[
+            styles.heroChip,
+            { flexDirection: "row", alignItems: "center", gap: 8 },
+          ]}
+        >
           <T size={12} weight="700" color={colors.onBrand}>
             {over ? "오늘 예산을 넘었어요" : "오늘 예산을 다 썼어요"}
           </T>
+          {over && onOverHelp && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="오늘 예산 초과 도움말"
+              hitSlop={12}
+              onPress={onOverHelp}
+            >
+              <Ionicons
+                name="help-circle-outline"
+                size={22}
+                color={colors.onBrand}
+              />
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -72,13 +99,7 @@ export function TodayHeroView({
         accessibilityRole="button"
         accessibilityLabel="계산 근거 보기"
       >
-        <T
-          size={12}
-          color={sub}
-          numberOfLines={1}
-          style={{ flex: 1 }}
-          num
-        >
+        <T size={12} color={sub} numberOfLines={1} style={{ flex: 1 }} num>
           {footerCaption}
         </T>
         <View style={{ flexDirection: "row", alignItems: "center" }}>

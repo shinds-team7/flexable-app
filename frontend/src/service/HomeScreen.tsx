@@ -1,19 +1,26 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  AppState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { Button, Card, Screen, Sheet, T } from "@/components/ui";
 import {
   CharacterStage,
   pointsStatus,
   type PaceStatus,
 } from "@/components/CharacterStage";
+import { WeekExpensesSheet } from "./WeekExpensesSheet";
 import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
 import { sessionGeneration } from "./api/client";
 import { ackRewards, checkIn } from "./coinApi";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors } from "@/theme";
-import { useHomeStyle } from "./homeStyle";
 import { SeedMoneyCard } from "./SeedMoneyCard";
 import { DayBudgets } from "@/components/DayBudgets";
 import { SwipePager } from "@/components/SwipePager";
@@ -27,27 +34,32 @@ export function HomeScreen() {
   // Seed money is the hero's second page, swiped in from the right.
   const seed = useResource<SeedMoney>("/budget/seed-money");
   const [basis, setBasis] = useState(false);
-  const [style] = useHomeStyle();
+  const [levelHelp, setLevelHelp] = useState(false);
+  const [overHelp, setOverHelp] = useState(false);
+  const [week, setWeek] = useState(false);
   const [remind] = useSeedReminderSetting();
   const wallet = useWallet();
   const [rewards, setRewards] = useState<CoinReward[]>([]);
   const checking = useRef(false);
-  const characterHome = style === "character";
   // Opening or returning to the home runs check-in; the header shop button reads the wallet it returns.
   const runCheckIn = useCallback(() => {
-    if (!characterHome || checking.current) return;
+    if (checking.current) return;
     checking.current = true;
     const generation = sessionGeneration();
     checkIn()
       .then((r) => {
         publishWallet(r.wallet, generation);
-        if (r.rewards.length) setRewards((q) => [...q, ...r.rewards.filter((x) => !q.some((y) => y.id === x.id))]);
+        if (r.rewards.length)
+          setRewards((q) => [
+            ...q,
+            ...r.rewards.filter((x) => !q.some((y) => y.id === x.id)),
+          ]);
       })
       .catch(() => {})
       .finally(() => {
         checking.current = false;
       });
-  }, [characterHome]);
+  }, []);
   useFocusEffect(runCheckIn);
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
@@ -79,6 +91,7 @@ export function HomeScreen() {
         }}
         footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
         onDetails={() => setBasis(true)}
+        onOverHelp={() => setOverHelp(true)}
       />
       {seed.data && (
         <SeedMoneyCard
@@ -99,44 +112,90 @@ export function HomeScreen() {
         <ErrorNotice error={result.error} retry={result.retry} />
         {s && status && (
           <>
-            {style === "character" ? (
-              <CharacterStage
-                level={status.level}
-                character={
-                  <OutfitView
-                    outfitId={wallet?.equippedOutfitId ?? null}
-                    style={{ flex: 1 }}
-                    accessibilityLabel={`Lv.${status.level} 캐릭터`}
+            <CharacterStage
+              level={status.level}
+              character={
+                <OutfitView
+                  outfitId={wallet?.equippedOutfitId ?? null}
+                  style={{ flex: 1 }}
+                  accessibilityLabel={`Lv.${status.level} 캐릭터`}
+                />
+              }
+              coin={<CoinChip balance={wallet?.balance ?? 0} />}
+              gauge={status}
+              help={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="레벨업 조건 및 가이드"
+                  hitSlop={8}
+                  onPress={() => setLevelHelp(true)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    minHeight: 40,
+                  }}
+                >
+                  <T size={12}>레벨 안내</T>
+                  <Ionicons
+                    name="help-circle-outline"
+                    size={20}
+                    color={colors.textSub}
                   />
-                }
-                coin={<CoinChip balance={wallet?.balance ?? 0} />}
-                gauge={status}
-              >
-                {hero}
-              </CharacterStage>
-            ) : (
-              hero
-            )}
+                </Pressable>
+              }
+            >
+              {hero}
+            </CharacterStage>
             <View style={styles.pair}>
-              <Card style={[styles.half, s.weekAvailable < 0 && styles.navy]}>
-                <T size={13} color={s.weekAvailable < 0 ? colors.onBrand : colors.textSub}>
+              <Card
+                style={[styles.half, s.weekAvailable < 0 && styles.navy]}
+                onPress={() => setWeek(true)}
+                accessibilityLabel="이번 주 일별 지출 내역 보기"
+              >
+                <T
+                  size={13}
+                  color={s.weekAvailable < 0 ? colors.onBrand : colors.textSub}
+                >
                   이번 주 쓸 수 있는 돈
                 </T>
-                <T size={20} weight="800" num color={s.weekAvailable < 0 ? colors.onBrand : colors.text}>
+                <T
+                  size={20}
+                  weight="800"
+                  num
+                  color={s.weekAvailable < 0 ? colors.onBrand : colors.text}
+                >
                   {money(s.weekAvailable)}원
                 </T>
-                <T size={12} color={s.weekAvailable < 0 ? colors.onBrandSub : colors.textMuted} num>
+                <T
+                  size={12}
+                  color={
+                    s.weekAvailable < 0 ? colors.onBrandSub : colors.textMuted
+                  }
+                  num
+                >
                   남은 {s.weekDaysLeft}일 · 이번 주 쓴 돈 {money(s.weekSpent)}원
                 </T>
               </Card>
               <Card style={[styles.half, s.remaining < 0 && styles.navy]}>
-                <T size={13} color={s.remaining < 0 ? colors.onBrand : colors.textSub}>
+                <T
+                  size={13}
+                  color={s.remaining < 0 ? colors.onBrand : colors.textSub}
+                >
                   다음 수입일까지
                 </T>
-                <T size={20} weight="800" num color={s.remaining < 0 ? colors.onBrand : colors.text}>
+                <T
+                  size={20}
+                  weight="800"
+                  num
+                  color={s.remaining < 0 ? colors.onBrand : colors.text}
+                >
                   {money(Math.max(0, s.remaining))}원
                 </T>
-                <T size={12} color={s.remaining < 0 ? colors.onBrandSub : colors.textMuted}>
+                <T
+                  size={12}
+                  color={s.remaining < 0 ? colors.onBrandSub : colors.textMuted}
+                >
                   남은 생활비
                 </T>
               </Card>
@@ -155,6 +214,63 @@ export function HomeScreen() {
                 </T>
               </Card>
             )}
+            <Sheet
+              visible={levelHelp}
+              onClose={() => setLevelHelp(false)}
+              title="레벨업 조건 및 가이드"
+            >
+              <ScrollView contentContainerStyle={{ gap: 12 }}>
+                <T>
+                  하루 예산 이하로 쓰면 +15점, 넘으면 −50점이에요. 점수는
+                  0~200점이며 오늘 결과는 내일 반영돼요
+                </T>
+                <T>Lv.1은 0~99점, Lv.2는 100~199점, Lv.3은 200점이에요</T>
+                <T>
+                  고정지출 자동 기록은 판정에서 제외해요. 앱을 열지 않은 날은
+                  마지막으로 확인한 하루 예산을 기준으로 해요
+                </T>
+                <T>
+                  한 번 달성한 레벨의 코스튬은 점수가 내려가도 해금 상태가
+                  유지돼요
+                </T>
+              </ScrollView>
+            </Sheet>
+            <Sheet
+              visible={overHelp}
+              onClose={() => setOverHelp(false)}
+              title="오늘 예산을 넘었어요"
+            >
+              <View style={{ gap: 12 }}>
+                <T>
+                  오늘 쓴 돈 {money(s.todaySpent)}원 · 하루 예산{" "}
+                  {money(s.dailyBudget)}원
+                </T>
+                <T>
+                  입력한 잔액·기록 기준 추정이에요. 기록한 지출과 예산 설정을
+                  확인해 주세요
+                </T>
+                <Button
+                  label="기록한 지출 확인"
+                  onPress={() => {
+                    setOverHelp(false);
+                    router.push("/transactions");
+                  }}
+                />
+                <Button
+                  label="소비 분석 보기"
+                  variant="soft"
+                  onPress={() => {
+                    setOverHelp(false);
+                    router.push("/analysis");
+                  }}
+                />
+              </View>
+            </Sheet>
+            <WeekExpensesSheet
+              visible={week}
+              date={s.date}
+              onClose={() => setWeek(false)}
+            />
             <Sheet
               visible={basis}
               onClose={() => setBasis(false)}
@@ -211,6 +327,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.9)",
+  },
+  calendar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.9)",
   },
 });

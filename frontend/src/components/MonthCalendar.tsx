@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "./ui";
 import { colors } from "@/theme";
 import { DOW, won } from "@/utils/format";
@@ -10,6 +10,20 @@ function short(n: number) {
   return n >= 10000 ? `${Math.floor(n / 1000) / 10}만` : won(n);
 }
 
+/** 일요일부터 시작하는 주 단위 칸. 그달이 아닌 칸은 null */
+export function monthWeeks(year: number, month: number) {
+  const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const cells: (number | null)[] = [
+    ...Array<null>(first).fill(null),
+    ...Array.from({ length: days }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7) cells.push(null);
+  return Array.from({ length: cells.length / 7 }, (_, i) =>
+    cells.slice(i * 7, i * 7 + 7),
+  );
+}
+
 /**
  * 한 달 달력에 날짜별 지출(-)·수입(+) 합계를 표시한다. 일요일부터 시작한다.
  * 합계는 화면이 받은 거래 금액을 날짜별로 더한 값을 props로 받는다.
@@ -19,6 +33,7 @@ export function MonthCalendar({
   month,
   today,
   totals,
+  onSelect,
 }: {
   year: number;
   /** 1~12 */
@@ -27,17 +42,9 @@ export function MonthCalendar({
   today: string;
   /** "YYYY-MM-DD" → 그날 합계 */
   totals: Map<string, DayTotals>;
+  onSelect?: (date: string) => void;
 }) {
-  const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const cells: (number | null)[] = [
-    ...Array<null>(first).fill(null),
-    ...Array.from({ length: days }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7) cells.push(null);
-  const weeks = Array.from({ length: cells.length / 7 }, (_, i) =>
-    cells.slice(i * 7, i * 7 + 7),
-  );
+  const weeks = monthWeeks(year, month);
   const prefix = `${year}-${String(month).padStart(2, "0")}-`;
   return (
     <View style={{ gap: 4 }}>
@@ -69,11 +76,15 @@ export function MonthCalendar({
               .filter(Boolean)
               .join(", ");
             return (
-              <View
+              <Pressable
                 key={i}
                 style={styles.cell}
                 accessible
                 accessibilityLabel={label}
+                accessibilityRole={onSelect ? "button" : undefined}
+                disabled={!onSelect || date > today}
+                accessibilityState={{ disabled: date > today }}
+                onPress={() => onSelect?.(date)}
               >
                 <View style={[styles.date, on && styles.today]}>
                   <T
@@ -101,7 +112,7 @@ export function MonthCalendar({
                     +{short(t.income)}
                   </T>
                 )}
-              </View>
+              </Pressable>
             );
           })}
         </View>
