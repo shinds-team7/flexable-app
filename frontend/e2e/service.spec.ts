@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { createHash } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import appConfig from "../app.json";
 const apiBase = "http://localhost:8080/api/v1";
 const password = "Testpass1234";
 // The form CTA reads 기록하기 for a new transaction and 저장하기 when editing.
@@ -572,7 +573,9 @@ test("expired token returns to start; public routes remain accessible", async ({
     ),
   ).toBeVisible();
   await page.goto("/support");
-  await expect(page.getByText("앱 버전 1.5.0", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`앱 버전 ${appConfig.expo.version}`, { exact: true }),
+  ).toBeVisible();
   // 시연은 웹사이트 저장소(flexable-web)의 /m 으로 옮겼다. 시작 화면에는 링크만 남는다.
   await page.goto("/");
   await expect(page.getByText("시연 보기", { exact: true })).toBeVisible();

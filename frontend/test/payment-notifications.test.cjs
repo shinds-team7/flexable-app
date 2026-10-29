@@ -263,3 +263,147 @@ test("disabling collection after request preparation prevents sending it or ackn
   await importPaymentNotices([notice()], e.deps);
   assert.equal(e.calls.length, 0);
 });
+
+function settingsScreen(platform = "android", present = true) {
+  const slots = [];
+  const calls = [];
+  let cursor = 0;
+  const data = {
+    owner: "42",
+    status: {
+      enabled: false,
+      allowed: false,
+      connected: false,
+      pending: 0,
+      dropped: 0,
+    },
+    problems: [],
+    saved: 0,
+    busy: false,
+  };
+  const element = (type, props) => ({ type, props });
+  const modules = {
+    "react/jsx-runtime": { jsx: element, jsxs: element },
+    react: {
+      useState(initial) {
+        const i = cursor++;
+        if (!(i in slots)) slots[i] = initial;
+        return [
+          slots[i],
+          (v) => {
+            slots[i] = typeof v === "function" ? v(slots[i]) : v;
+          },
+        ];
+      },
+    },
+    "expo-router": { router: { push() {} } },
+    "react-native": {
+      Platform: { OS: platform },
+      View: "View",
+      Pressable: "Pressable",
+    },
+    "@/components/ui": {
+      Button: "Button",
+      Card: "Card",
+      Screen: "Screen",
+      T: "T",
+    },
+    "@/components/SubHeader": { SubHeader: "SubHeader" },
+    "./Session": { useSession: () => ({ user: { id: 42 } }) },
+    "./ui": { ErrorNotice: "ErrorNotice" },
+    "./api/client": { sessionGeneration: () => 1 },
+    "./paymentNotifications/native": {
+      paymentNative: present
+        ? {
+            configure: async (...args) => calls.push(args),
+            openSettings: async () => calls.push("settings"),
+          }
+        : null,
+      mutatePaymentCollection: (fn, current) => {
+        assert.equal(current(), true);
+        return fn();
+      },
+    },
+    "./paymentNotifications/usePaymentImport": {
+      usePaymentImportState: () => data,
+      refreshPaymentImport() {},
+      interruptPaymentImport() {},
+    },
+  };
+  const exports = {};
+  vm.runInNewContext(
+    ts.transpileModule(
+      fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "../src/service/PaymentNotificationsScreen.tsx",
+        ),
+        "utf8",
+      ),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+          jsx: ts.JsxEmit.ReactJSX,
+        },
+      },
+    ).outputText,
+    {
+      exports,
+      Date,
+      require: (name) => {
+        assert.ok(name in modules, name);
+        return modules[name];
+      },
+    },
+  );
+  function render() {
+    cursor = 0;
+    const nodes = [];
+    function walk(node) {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      nodes.push(node);
+      walk(node.props?.children);
+    }
+    walk(exports.PaymentNotificationsScreen());
+    return nodes;
+  }
+  return { data, calls, render };
+}
+
+test("settings never auto-enable: optional consent starts unchecked and permission alone is insufficient", async () => {
+  const screen = settingsScreen();
+  const enable = () =>
+    screen
+      .render()
+      .find((node) => node.props?.label === "동의하고 자동 기록 켜기").props;
+  const checkbox = () =>
+    screen.render().find((node) => node.props?.accessibilityRole === "checkbox")
+      .props;
+  assert.equal(checkbox().accessibilityState.checked, false);
+  assert.equal(enable().disabled, true);
+  screen.data.status.allowed = true;
+  assert.equal(enable().disabled, true);
+  assert.equal(screen.calls.length, 0);
+  checkbox().onPress();
+  assert.equal(checkbox().accessibilityState.checked, true);
+  assert.equal(enable().disabled, false);
+  await enable().onPress();
+  assert.deepEqual(screen.calls, [["42", true]]);
+});
+
+test("web or an older Android build without the native collector never offers collection permission or enable controls", () => {
+  for (const screen of [
+    settingsScreen("web"),
+    settingsScreen("android", false),
+  ]) {
+    const labels = screen.render().map((node) => node.props?.label);
+    assert.equal(labels.includes("동의하고 자동 기록 켜기"), false);
+    assert.equal(labels.includes("Android 알림 접근 설정 열기"), false);
+    assert.equal(screen.calls.length, 0);
+  }
+});

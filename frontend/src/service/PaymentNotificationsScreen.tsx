@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router } from "expo-router";
-import { Platform, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { useSession } from "./Session";
@@ -20,7 +20,11 @@ export function PaymentNotificationsScreen() {
   const { user } = useSession();
   const owner = user ? String(user.id) : undefined;
   const data = usePaymentImportState();
-  const [consent, setConsent] = useState(false);
+  const [agreement, setAgreement] = useState<{
+    owner?: string;
+    accepted: boolean;
+  }>({ accepted: false });
+  const consent = agreement.owner === owner && agreement.accepted;
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
   const available = Platform.OS === "android" && !!paymentNative;
@@ -93,16 +97,25 @@ export function PaymentNotificationsScreen() {
                 수집과 미반영 원문 보관을 중단해요.
               </T>
               {!status?.enabled && (
-                <Button
-                  variant="soft"
-                  label={
-                    consent
-                      ? "✓ (선택) 위 내용을 확인하고 자동 기록에 동의해요"
-                      : "□ (선택) 위 내용을 확인하고 자동 기록에 동의해요"
-                  }
-                  onPress={() => setConsent((value) => !value)}
-                />
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityLabel="선택 신한카드 알림 자동 기록 개인정보 수집·이용 동의"
+                  accessibilityState={{ checked: consent }}
+                  aria-checked={consent}
+                  onPress={() => setAgreement({ owner, accepted: !consent })}
+                  style={{ paddingVertical: 12 }}
+                >
+                  <T>
+                    {consent ? "☑" : "☐"} (선택) 위 내용을 확인하고 자동 기록에
+                    동의해요
+                  </T>
+                </Pressable>
               )}
+              <Button
+                variant="soft"
+                label="개인정보처리방침 보기"
+                onPress={() => router.push("/privacy")}
+              />
               <Button
                 variant="soft"
                 label="Android 알림 접근 설정 열기"
@@ -115,7 +128,10 @@ export function PaymentNotificationsScreen() {
                   label="자동 기록 끄고 대기 알림 지우기"
                   disabled={busy}
                   onPress={() =>
-                    act(() => paymentNative!.configure(owner!, false))
+                    act(async () => {
+                      await paymentNative!.configure(owner!, false);
+                      setAgreement({ owner, accepted: false });
+                    })
                   }
                 />
               ) : (
