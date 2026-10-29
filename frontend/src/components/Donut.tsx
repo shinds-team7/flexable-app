@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
+import { T } from './ui';
 
 /** label: 조각 위에 작게 쓰는 글자(예: '65%'). 좁은 조각은 비워 둔다 */
 type Seg = { value: number; color: string; label?: string };
@@ -59,22 +60,22 @@ export function Donut({
         // 조각 가운데 각도(12시 방향에서 시계 방향)로 링 위에 글자를 놓는다
         const angle = ((a.start + a.len / 2) / c) * 2 * Math.PI - Math.PI / 2;
         return (
-          <Text
+          <T
             key={`l${i}`}
+            size={11}
+            weight="700"
+            color="#fff"
             style={{
               position: 'absolute',
               left: size / 2 + r * Math.cos(angle) - 20,
               top: size / 2 + r * Math.sin(angle) - 8,
               width: 40,
               textAlign: 'center',
-              fontSize: 11,
               lineHeight: 16,
-              fontWeight: '700',
-              color: '#fff',
             }}
           >
             {a.label}
-          </Text>
+          </T>
         );
       })}
       {children}
