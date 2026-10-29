@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Button, Card, T } from "@/components/ui";
 import { validDate } from "./occurredAt";
-import type { Transaction } from "./types";
+import type { Transaction, ScheduledExpense } from "./types";
 import {
   ErrorNotice,
   Loading,
@@ -16,6 +16,9 @@ export function DayTransactionsScreen() {
   const valid = !!date && validDate(date) && date <= seoulDate();
   const result = useResource<{ items: Transaction[] }>(
     valid ? `/transactions?from=${date}&to=${date}&type=EXPENSE` : null,
+  );
+  const planned = useResource<{ items: ScheduledExpense[] }>(
+    valid ? `/scheduled-expenses?from=${date}&to=${date}` : null,
   );
   return (
     <Page title="날짜별 지출 기록">
@@ -33,6 +36,27 @@ export function DayTransactionsScreen() {
             }
           />
           <ErrorNotice error={result.error} retry={result.retry} />
+          <ErrorNotice error={planned.error} retry={planned.retry} />
+          {!!planned.data?.items.length && (
+            <Card style={{ gap: 8 }}>
+              <T weight="700">이 날짜에 남은 지출 예정</T>
+              {planned.data.items.map((item) => (
+                <T key={item.id}>
+                  {item.title} · {money(item.amount)}원
+                </T>
+              ))}
+              <Button
+                label="예정 기록 관리"
+                variant="soft"
+                onPress={() =>
+                  router.push({
+                    pathname: "/scheduled-expenses",
+                    params: { date },
+                  })
+                }
+              />
+            </Card>
+          )}
           {result.loading && <Loading />}
           {!result.loading && result.data?.items.length === 0 && (
             <T>기록한 지출이 없어요</T>

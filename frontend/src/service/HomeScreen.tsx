@@ -37,7 +37,6 @@ export function HomeScreen() {
   const [basis, setBasis] = useState(false);
   const [attendance, setAttendance] = useState(false);
   const [levelHelp, setLevelHelp] = useState(false);
-  const [overHelp, setOverHelp] = useState(false);
   const [week, setWeek] = useState(false);
   const [remind] = useSeedReminderSetting();
   const wallet = useWallet();
@@ -93,7 +92,14 @@ export function HomeScreen() {
         }}
         footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
         onDetails={() => setBasis(true)}
-        onOverHelp={() => setOverHelp(true)}
+        onOverHelp={() =>
+          router.push({
+            pathname: "/chatbot",
+            params: {
+              question: "오늘 예산을 넘겼어요. 기록을 바탕으로 도움을 주세요",
+            },
+          })
+        }
       />
       {seed.data && (
         <SeedMoneyCard
@@ -251,37 +257,6 @@ export function HomeScreen() {
                   유지돼요
                 </T>
               </ScrollView>
-            </Sheet>
-            <Sheet
-              visible={overHelp}
-              onClose={() => setOverHelp(false)}
-              title="오늘 예산을 넘었어요"
-            >
-              <View style={{ gap: 12 }}>
-                <T>
-                  오늘 쓴 돈 {money(s.todaySpent)}원 · 하루 예산{" "}
-                  {money(s.dailyBudget)}원
-                </T>
-                <T>
-                  입력한 잔액·기록 기준 추정이에요. 기록한 지출과 예산 설정을
-                  확인해 주세요
-                </T>
-                <Button
-                  label="기록한 지출 확인"
-                  onPress={() => {
-                    setOverHelp(false);
-                    router.push("/transactions");
-                  }}
-                />
-                <Button
-                  label="소비 분석 보기"
-                  variant="soft"
-                  onPress={() => {
-                    setOverHelp(false);
-                    router.push("/analysis");
-                  }}
-                />
-              </View>
             </Sheet>
             <WeekExpensesSheet
               visible={week}

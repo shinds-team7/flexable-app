@@ -43,11 +43,12 @@ export async function api<T>(
     key?: string;
     token?: string | null;
     signal?: AbortSignal;
+    timeoutMs?: number;
   } = {},
 ): Promise<T> {
   const url = apiUrl(path);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 15000);
   const abort = () => controller.abort();
   options.signal?.addEventListener("abort", abort);
   try {

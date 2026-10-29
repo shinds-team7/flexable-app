@@ -98,11 +98,17 @@ export function TransactionsScreen() {
           today={seoulDate()}
           totals={daily}
           onSelect={(date) =>
-            router.push({ pathname: "/transactions/day", params: { date } })
+            router.push({
+              pathname:
+                date > seoulDate()
+                  ? "/scheduled-expenses"
+                  : "/transactions/day",
+              params: { date },
+            })
           }
         />
         <T size={12} color={colors.textMuted}>
-          오늘 또는 지난 날짜를 눌러 지출을 확인하고 기록할 수 있어요
+          지난 날짜는 지출 기록을, 미래 날짜는 지출 예정을 등록할 수 있어요
         </T>
       </Card>
       <Segment

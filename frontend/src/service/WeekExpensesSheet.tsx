@@ -4,7 +4,7 @@ import { Card, Sheet, T } from "@/components/ui";
 import type { Transaction } from "./types";
 import { ErrorNotice, Loading, money, toSeoulInput, useResource } from "./ui";
 
-/** 서버의 주간 집계와 같이 월요일부터, 고정지출 자동 기록은 제외한다. */
+/** 이번 주 월~금 중 오늘까지의 직접 지출. 예산 계산은 서버 값을 유지한다. */
 export function WeekExpensesSheet({
   visible,
   date,
@@ -16,20 +16,23 @@ export function WeekExpensesSheet({
 }) {
   const end = new Date(date + "T00:00:00Z");
   const weekday = (end.getUTCDay() + 6) % 7;
-  const days = Array.from({ length: weekday + 1 }, (_, i) =>
+  const days = Array.from({ length: Math.min(weekday, 4) + 1 }, (_, i) =>
     new Date(end.getTime() - (weekday - i) * 86400000)
       .toISOString()
       .slice(0, 10),
   );
   const result = useResource<{ items: Transaction[] }>(
-    visible ? `/transactions?from=${days[0]}&to=${date}&type=EXPENSE` : null,
+    visible
+      ? `/transactions?from=${days[0]}&to=${days[days.length - 1]}&type=EXPENSE`
+      : null,
   );
   const transactions = result.data?.items ?? [];
   return (
-    <Sheet visible={visible} onClose={onClose} title="이번 주 일별 지출 내역">
+    <Sheet visible={visible} onClose={onClose} title="이번 주 평일 지출 내역">
       <ScrollView contentContainerStyle={{ gap: 12 }}>
         <T size={13}>
-          이번 주 월요일부터 오늘까지예요. 고정지출 자동 기록은 제외해요
+          이번 주 월요일부터 오늘까지, 금요일까지만 보여 드려요. 고정지출 자동
+          기록은 제외해요
         </T>
         <ErrorNotice error={result.error} retry={result.retry} />
         {result.loading && <Loading />}

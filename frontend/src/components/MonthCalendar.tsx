@@ -82,8 +82,7 @@ export function MonthCalendar({
                 accessible
                 accessibilityLabel={label}
                 accessibilityRole={onSelect ? "button" : undefined}
-                disabled={!onSelect || date > today}
-                accessibilityState={{ disabled: date > today }}
+                disabled={!onSelect}
                 onPress={() => onSelect?.(date)}
               >
                 <View style={[styles.date, on && styles.today]}>

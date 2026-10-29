@@ -3,6 +3,7 @@ package com.flexable.api.category;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.HashSet;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,8 @@ import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.TxType;
 import com.flexable.api.transaction.TransactionRepository;
+import com.flexable.api.scheduled.ScheduledExpenseRepository;
+import com.flexable.api.category.CategoryDtos.OrderRequest;
 
 @Service
 public class CategoryService {
@@ -43,19 +46,24 @@ public class CategoryService {
 	private final CategoryRepository categories;
 	private final TransactionRepository transactions;
 	private final Clock clock;
+	private final ScheduledExpenseRepository scheduled;
 
-	public CategoryService(CategoryRepository categories, TransactionRepository transactions, Clock clock) {
+	public CategoryService(CategoryRepository categories, TransactionRepository transactions, Clock clock, ScheduledExpenseRepository scheduled) {
 		this.categories = categories;
 		this.transactions = transactions;
 		this.clock = clock;
+		this.scheduled = scheduled;
 	}
 
 	@Transactional
 	public void createDefaults(long userId) {
 		Instant now = clock.instant();
-		categories.saveAll(DEFAULTS.stream()
-			.map(p -> new Category(userId, p.name(), p.type(), p.color(), p.icon(), true, now))
-			.toList());
+		for (int i=0; i<DEFAULTS.size(); i++) {
+			Preset p=DEFAULTS.get(i);
+			Category c=new Category(userId,p.name(),p.type(),p.color(),p.icon(),true,now);
+			c.reorder(i);
+			categories.save(c);
+		}
 	}
 
 	@Transactional(readOnly = true)
@@ -70,9 +78,11 @@ public class CategoryService {
 		if (categories.existsByUserIdAndTypeAndName(userId, req.type(), name)) {
 			throw new ApiException(ErrorCode.CATEGORY_DUPLICATE);
 		}
-		Category saved = categories.save(new Category(userId, name, req.type(),
+		Category created = new Category(userId, name, req.type(),
 				req.color() == null ? DEFAULT_COLOR : req.color().toUpperCase(),
-				req.icon() == null ? DEFAULT_ICON : req.icon(), false, clock.instant()));
+				req.icon() == null ? DEFAULT_ICON : req.icon(), false, clock.instant());
+		created.reorder(categories.findAllOrdered(userId,req.type()).stream().mapToLong(Category::getSortOrder).max().orElse(-1)+1);
+		Category saved=categories.save(created);
 		return CategoryResponse.of(saved);
 	}
 
@@ -93,15 +103,34 @@ public class CategoryService {
 	@Transactional
 	public void delete(long userId, long id) {
 		Category c = get(userId, id);
-		if (c.isDefault()) {
-			throw new ApiException(ErrorCode.CATEGORY_DEFAULT);
+		if (!transactions.existsByUserIdAndCategoryId(userId,id) && !scheduled.existsByUserIdAndCategoryId(userId,id)) {
+			categories.delete(c);
+			return;
 		}
 		String fallbackName = c.getType() == TxType.EXPENSE ? EXPENSE_FALLBACK : INCOME_FALLBACK;
-		Category fallback = categories.findByUserIdAndTypeAndNameAndIsDefaultTrue(userId, c.getType(), fallbackName)
-			.or(() -> categories.findAllOrdered(userId, c.getType()).stream().filter(Category::isDefault).findFirst())
-			.orElseThrow(() -> new IllegalStateException("No default category for user " + userId));
+		List<Category> remaining=categories.findAllOrdered(userId,c.getType()).stream().filter(x->!x.getId().equals(id)).toList();
+		Category fallback=remaining.stream().filter(x->x.getName().equals(fallbackName)).findFirst()
+			.orElse(remaining.isEmpty()?null:remaining.get(0));
+		if (fallback==null) {
+			// 마지막 '기타' 자체를 지울 때도 이름 유니크 제약을 지키면서 새 ID로 기록을 옮긴다.
+			c.rename("_"+id);
+			categories.flush();
+			fallback=categories.save(new Category(userId,fallbackName,c.getType(),DEFAULT_COLOR,DEFAULT_ICON,false,clock.instant()));
+		}
 		transactions.moveCategory(userId, c.getId(), fallback.getId());
+		scheduled.moveCategory(userId,c.getId(),fallback.getId());
 		categories.delete(c);
+	}
+
+	@Transactional
+	public List<CategoryResponse> reorder(long userId, OrderRequest req) {
+		List<Category> current=categories.findAllOrdered(userId,req.type());
+		var expected=new HashSet<>(current.stream().map(Category::getId).toList());
+		if (req.ids().size()!=current.size() || new HashSet<>(req.ids()).size()!=req.ids().size() || !expected.equals(new HashSet<>(req.ids())))
+			throw ApiException.invalid("ids","현재 카테고리 전체를 중복 없이 보내 주세요. 목록을 새로고침해 주세요");
+		var byId=current.stream().collect(java.util.stream.Collectors.toMap(Category::getId,x->x));
+		for (int i=0;i<req.ids().size();i++) byId.get(req.ids().get(i)).reorder(i);
+		return req.ids().stream().map(id->CategoryResponse.of(byId.get(id))).toList();
 	}
 
 	/** 본인 소유이고 종류가 맞는 카테고리인지 확인한다. */

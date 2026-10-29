@@ -40,6 +40,9 @@ public class Category {
 	@Column(name = "is_default", nullable = false)
 	private boolean isDefault;
 
+	@Column(name = "sort_order", nullable = false)
+	private long sortOrder;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -84,6 +87,9 @@ public class Category {
 	public boolean isDefault() {
 		return isDefault;
 	}
+
+	public long getSortOrder() { return sortOrder; }
+	public void reorder(long sortOrder) { this.sortOrder = sortOrder; }
 
 	public void rename(String name) {
 		this.name = name;
