@@ -24,7 +24,15 @@ export function parseShinhanNotice(notice: PaymentNotice): PaymentParse {
     return reject("결제 승인 알림인지 확인해 주세요");
   const lines = text
     .split("\n")
-    .map((line) => line.trim())
+    // SOL Pay's expanded debit notice prefixes its labelled fields with "- ".
+    .map((line) =>
+      line
+        .trim()
+        .replace(
+          /^-\s+(?=승인\s*(?:금액|일시)\s*[:：]|(?:가맹점(?:명)?|이용처)\s*[:：])/,
+          "",
+        ),
+    )
     .filter(Boolean);
   const amounts = lines.flatMap((line, index) => {
     if (/누적|합계|잔액|한도|예정|청구/.test(line)) return [];
@@ -68,8 +76,8 @@ export function parseShinhanNotice(notice: PaymentNotice): PaymentParse {
   if (!occurredAt) return reject("알림의 결제 일시를 확인해 주세요");
   // Supported templates put a merchant on its own line, or explicitly label it.
   const explicit = lines
-    .filter((line) => /^(?:가맹점|이용처)\s*[:：]/.test(line))
-    .map((line) => line.replace(/^(?:가맹점|이용처)\s*[:：]\s*/, ""));
+    .filter((line) => /^(?:가맹점(?:명)?|이용처)\s*[:：]/.test(line))
+    .map((line) => line.replace(/^(?:가맹점(?:명)?|이용처)\s*[:：]\s*/, ""));
   const plain = lines.filter(
     (line) =>
       !/신한|승인|님|카드|누적|합계|잔액|한도|예정|청구|일시불|개월|체크|\d{1,2}[/.]\d{1,2}|\d+\s*원|\*|^\[/.test(

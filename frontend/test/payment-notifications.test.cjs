@@ -38,6 +38,41 @@ const notice = (
 });
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
+// Transcribed layout from the user's collapsed/expanded SOL Pay screenshots.
+// Customer, card suffix and merchant are synthetic; no screenshot is committed.
+const expandedNotice = () => ({
+  ...notice(),
+  title: "[신한카드]",
+  body: "[신한체크승인] 가*나(0000)\n- 승인일시: 10/29 12:36\n- 승인금액: 9,000원\n- 가맹점명: 가상식당\n[신한카드 1544-7000]",
+  postedAt: Date.parse("2026-10-29T12:36:10+09:00"),
+});
+
+test("expanded SOL Pay screenshot layout reads labelled debit approval without customer, card or footer", () => {
+  assert.deepEqual(plain(parseShinhanNotice(expandedNotice())), {
+    approval: {
+      title: "가상식당",
+      amount: 9000,
+      occurredAt: "2026-10-29T12:36:00+09:00",
+    },
+  });
+});
+
+test("collapsed preview, missing fields, duplicate labels, cancellation and foreign payment need review", () => {
+  const n = expandedNotice();
+  for (const body of [
+    "[신한체크승인] 가*나(0000)\n- 승인일시: 10/29 12:36...",
+    n.body.replace("- 승인금액: 9,000원\n", ""),
+    n.body.replace("- 가맹점명: 가상식당\n", ""),
+    n.body.replace("- 가맹점명: 가상식당", "- 가맹점명:"),
+    n.body + "\n- 승인금액: 1,000원",
+    n.body + "\n- 가맹점명: 다른가상매장",
+    n.body.replace("신한체크승인", "신한체크승인취소"),
+    n.body.replace("9,000원", "USD 9.00"),
+  ]) {
+    assert.equal(parseShinhanNotice({ ...n, body }).approval, undefined, body);
+  }
+});
+
 test("Shinhan domestic approval: amount/date/merchant are explicit; customer/card data never becomes the transaction", () => {
   assert.deepEqual(plain(parseShinhanNotice(notice())), {
     approval: {
@@ -119,6 +154,33 @@ function environment() {
     },
   };
 }
+
+test("screenshot-format approval imports only transaction fields; collapsed preview never sends", async () => {
+  const e = environment();
+  const result = await importPaymentNotices([expandedNotice()], e.deps);
+  assert.equal(result.saved, 1);
+  assert.deepEqual(e.calls.find((call) => call[0] === "save")[2], {
+    type: "EXPENSE",
+    title: "가상식당",
+    amount: 9000,
+    categoryId: 7,
+    occurredAt: "2026-10-29T12:36:00+09:00",
+    memo: "신한카드 결제 알림에서 자동 기록",
+  });
+  const collapsed = environment();
+  const pending = await importPaymentNotices(
+    [
+      {
+        ...expandedNotice(),
+        body: "[신한체크승인] 가*나(0000)\n- 승인일시: 10/29 12:36...",
+      },
+    ],
+    collapsed.deps,
+  );
+  assert.equal(pending.saved, 0);
+  assert.equal(pending.problems.length, 1);
+  assert.equal(collapsed.calls.length, 0);
+});
 
 test("automatic import persists the exact request before sending and acknowledges only after success", async () => {
   const e = environment();
