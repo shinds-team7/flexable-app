@@ -3,7 +3,11 @@ import { AppState } from "react-native";
 import { api, sessionGeneration } from "../api/client";
 import { useSession } from "../Session";
 import type { Category, Transaction } from "../types";
-import { paymentNative, type CollectionStatus } from "./native";
+import {
+  mutatePaymentCollection,
+  paymentNative,
+  type CollectionStatus,
+} from "./native";
 import {
   importPaymentNotices,
   type PaymentBody,
@@ -101,7 +105,10 @@ export function useAutomaticPaymentImport() {
             ).items,
           prepare: async (id, body) =>
             JSON.parse(
-              await native.prepare(owner, id, JSON.stringify(body)),
+              await mutatePaymentCollection(
+                () => native.prepare(owner, id, JSON.stringify(body)),
+                current,
+              ),
             ) as PaymentBody,
           save: async (id, body) => {
             await api("/transactions", {
@@ -112,7 +119,10 @@ export function useAutomaticPaymentImport() {
             if (current()) session.invalidate();
           },
           acknowledge: async (id) => {
-            await native.acknowledge(owner, id);
+            await mutatePaymentCollection(
+              () => native.acknowledge(owner, id),
+              current,
+            );
           },
         });
         if (!current()) return;

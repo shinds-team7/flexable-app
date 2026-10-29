@@ -117,8 +117,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [clear, expired, attempt]);
   const accept = async (auth: AuthResponse) => {
-    if (userId.current !== null && userId.current !== auth.user.id)
+    if (userId.current !== null && userId.current !== auth.user.id) {
+      setApiSession(null);
       await clearPaymentNotifications();
+    }
     await writeStorage(KEY, auth.accessToken);
     setApiSession(auth.accessToken, expired);
     userId.current = auth.user.id;

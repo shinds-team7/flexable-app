@@ -190,3 +190,66 @@ test("unclear/cancelled notices remain pending, and missing default category nev
   assert.equal(result.problems.length, 2);
   assert.equal(e.calls.length, 0);
 });
+
+function nativeAdapter() {
+  const calls = [];
+  const native = {
+    clear: async () => {
+      calls.push("clear");
+    },
+  };
+  const exports = {};
+  vm.runInNewContext(
+    ts.transpileModule(
+      fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "../src/service/paymentNotifications/native.ts",
+        ),
+        "utf8",
+      ),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+        },
+      },
+    ).outputText,
+    { exports, require: () => ({ requireOptionalNativeModule: () => native }) },
+  );
+  return { ...exports, calls };
+}
+
+test("logout cleanup follows an in-flight consent change, so a late native response cannot re-enable collection", async () => {
+  const bridge = nativeAdapter();
+  let finish;
+  const consent = bridge.mutatePaymentCollection(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await new Promise(setImmediate);
+  const logout = bridge.clearPaymentNotifications();
+  await new Promise(setImmediate);
+  assert.deepEqual(bridge.calls, []);
+  finish();
+  await consent;
+  await logout;
+  assert.deepEqual(bridge.calls, ["clear"]);
+});
+
+test("queued work rechecks its session before it can touch native storage, including after a failed operation", async () => {
+  const bridge = nativeAdapter();
+  let active = true;
+  const stale = bridge.mutatePaymentCollection(
+    async () => {
+      throw Error("must not execute");
+    },
+    () => active,
+  );
+  active = false;
+  await assert.rejects(stale, /계정/);
+  await bridge.clearPaymentNotifications();
+  assert.deepEqual(bridge.calls, ["clear"]);
+});

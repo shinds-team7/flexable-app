@@ -27,6 +27,23 @@ export type PaymentNative = {
 export const paymentNative = requireOptionalNativeModule<PaymentNative>(
   "PaymentNotifications",
 );
+let mutations: Promise<unknown> = Promise.resolve();
+/** Keep consent changes, request preparation and logout cleanup in native order. */
+export function mutatePaymentCollection<T>(
+  task: () => Promise<T>,
+  current = () => true,
+): Promise<T> {
+  const run = mutations
+    .catch(() => {})
+    .then(() => {
+      if (!current()) throw new Error("계정이 변경됐어요. 다시 확인해 주세요");
+      return task();
+    });
+  mutations = run;
+  return run;
+}
 export async function clearPaymentNotifications() {
-  await paymentNative?.clear();
+  await mutatePaymentCollection(async () => {
+    await paymentNative?.clear();
+  });
 }

@@ -5,7 +5,11 @@ import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { useSession } from "./Session";
 import { ErrorNotice } from "./ui";
-import { paymentNative } from "./paymentNotifications/native";
+import {
+  mutatePaymentCollection,
+  paymentNative,
+} from "./paymentNotifications/native";
+import { sessionGeneration } from "./api/client";
 import {
   refreshPaymentImport,
   usePaymentImportState,
@@ -23,10 +27,14 @@ export function PaymentNotificationsScreen() {
   const problems = data.owner === owner ? data.problems : [];
   const act = async (fn: () => Promise<void>) => {
     if (busy) return;
+    const generation = sessionGeneration();
     setBusy(true);
     setError(undefined);
     try {
-      await fn();
+      await mutatePaymentCollection(
+        fn,
+        () => generation === sessionGeneration(),
+      );
       refreshPaymentImport();
     } catch (e) {
       setError(e);
