@@ -825,38 +825,6 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Category' }
-    ScheduledExpenseInput:
-      type: object
-      required: [amount, categoryId, title, date]
-      additionalProperties: false
-      properties:
-        amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
-        categoryId: { type: integer, format: int64, description: 본인 소유 지출 카테고리 }
-        title: { type: string, minLength: 1, maxLength: 40 }
-        date: { type: string, format: date }
-    ScheduledExpense:
-      type: object
-      required: [id, amount, categoryId, category, title, date, createdAt, updatedAt]
-      additionalProperties: false
-      properties:
-        id: { type: integer, format: int64 }
-        amount: { type: integer, format: int64 }
-        categoryId: { type: integer, format: int64 }
-        category:
-          type: object
-          nullable: true
-          required: [id, name, color, icon]
-          additionalProperties: false
-          properties:
-            id: { type: integer, format: int64 }
-            name: { type: string }
-            color: { type: string }
-            icon: { type: string }
-        title: { type: string }
-        date: { type: string, format: date }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
     Transaction:
       description: 거래
       content:
@@ -1155,6 +1123,38 @@ components:
         color: { type: string, description: '#RRGGBB' }
         icon: { type: string, description: 'Ionicons 이름' }
         isDefault: { type: boolean }
+    ScheduledExpenseInput:
+      type: object
+      required: [amount, categoryId, title, date]
+      additionalProperties: false
+      properties:
+        amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+        categoryId: { type: integer, format: int64, description: 본인 소유 지출 카테고리 }
+        title: { type: string, minLength: 1, maxLength: 40 }
+        date: { type: string, format: date }
+    ScheduledExpense:
+      type: object
+      required: [id, amount, categoryId, category, title, date, createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id: { type: integer, format: int64 }
+        amount: { type: integer, format: int64 }
+        categoryId: { type: integer, format: int64 }
+        category:
+          type: object
+          nullable: true
+          required: [id, name, color, icon]
+          additionalProperties: false
+          properties:
+            id: { type: integer, format: int64 }
+            name: { type: string }
+            color: { type: string }
+            icon: { type: string }
+        title: { type: string }
+        date: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
     Transaction:
       type: object
       required: [id, type, amount, categoryId, category, title, memo, occurredAt, createdAt, fromFixed]
