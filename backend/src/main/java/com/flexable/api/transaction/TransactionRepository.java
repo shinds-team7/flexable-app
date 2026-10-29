@@ -15,6 +15,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 	Optional<Transaction> findByUserIdAndIdempotencyKey(Long userId, String idempotencyKey);
 
 	boolean existsByUserId(Long userId);
+	boolean existsByUserIdAndCategoryId(Long userId, Long categoryId);
 
 	/** [from, to) 구간, 최신순 */
 	@Query("select t from Transaction t where t.userId = :userId and t.occurredAt >= :from and t.occurredAt < :to"

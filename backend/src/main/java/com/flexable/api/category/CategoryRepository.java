@@ -11,10 +11,10 @@ import com.flexable.api.common.TxType;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-	@Query("select c from Category c where c.userId = :userId order by c.isDefault desc, c.id asc")
+	@Query("select c from Category c where c.userId = :userId order by c.sortOrder asc, c.id asc")
 	List<Category> findAllOrdered(Long userId);
 
-	@Query("select c from Category c where c.userId = :userId and c.type = :type order by c.isDefault desc, c.id asc")
+	@Query("select c from Category c where c.userId = :userId and c.type = :type order by c.sortOrder asc, c.id asc")
 	List<Category> findAllOrdered(Long userId, TxType type);
 
 	Optional<Category> findByIdAndUserId(Long id, Long userId);

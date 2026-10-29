@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "./ui";
 import { colors } from "@/theme";
 import { DOW, won } from "@/utils/format";
@@ -33,6 +33,7 @@ export function MonthCalendar({
   month,
   today,
   totals,
+  onSelect,
 }: {
   year: number;
   /** 1~12 */
@@ -41,6 +42,7 @@ export function MonthCalendar({
   today: string;
   /** "YYYY-MM-DD" → 그날 합계 */
   totals: Map<string, DayTotals>;
+  onSelect?: (date: string) => void;
 }) {
   const weeks = monthWeeks(year, month);
   const prefix = `${year}-${String(month).padStart(2, "0")}-`;
@@ -74,11 +76,14 @@ export function MonthCalendar({
               .filter(Boolean)
               .join(", ");
             return (
-              <View
+              <Pressable
                 key={i}
                 style={styles.cell}
                 accessible
                 accessibilityLabel={label}
+                accessibilityRole={onSelect ? "button" : undefined}
+                disabled={!onSelect}
+                onPress={() => onSelect?.(date)}
               >
                 <View style={[styles.date, on && styles.today]}>
                   <T
@@ -106,7 +111,7 @@ export function MonthCalendar({
                     +{short(t.income)}
                   </T>
                 )}
-              </View>
+              </Pressable>
             );
           })}
         </View>

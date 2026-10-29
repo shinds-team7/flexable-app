@@ -11,7 +11,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { Button, RadioMark, T } from "@/components/ui";
+import { Button, RadioMark, Sheet, T } from "@/components/ui";
 import { colors, floating, radius } from "@/theme";
 import { styles as heroStyles } from "@/components/HomeStyles";
 import { api } from "./api/client";
@@ -32,6 +32,7 @@ export function SeedMoneyCard({
   style?: StyleProp<ViewStyle>;
 }) {
   const [later, setLater] = useState<string | null>(null);
+  const [history, setHistory] = useState(false);
   const pending = seed.pending;
   return (
     <>
@@ -55,9 +56,15 @@ export function SeedMoneyCard({
               원
             </T>
           </T>
-          <View style={styles.icon}>
+          <Pressable
+            style={styles.icon}
+            accessibilityRole="button"
+            accessibilityLabel="시드머니 모은 기록 보기"
+            hitSlop={8}
+            onPress={() => setHistory(true)}
+          >
             <Ionicons name="wallet-outline" size={32} color={colors.onBrand} />
-          </View>
+          </Pressable>
         </View>
         <View style={[heroStyles.heroFoot, styles.foot]}>
           <T size={12} color={colors.onBrandSub} num>
@@ -66,6 +73,46 @@ export function SeedMoneyCard({
           </T>
         </View>
       </View>
+      <Sheet
+        visible={history}
+        onClose={() => setHistory(false)}
+        title="시드머니 모은 기록"
+      >
+        <ScrollView contentContainerStyle={{ gap: 16 }}>
+          <T>
+            모아둔 돈 {money(seed.base)}원 · 반영한 돈 {money(seed.saved)}원
+          </T>
+          <T size={13} color={colors.textMuted}>
+            최근 12개 반영 기록이에요
+          </T>
+          {seed.entries.length === 0 && (
+            <T>아직 시드머니에 반영한 기록이 없어요</T>
+          )}
+          {seed.entries.map((entry) => (
+            <View
+              key={entry.cycleEnd}
+              style={{
+                gap: 4,
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.line,
+              }}
+            >
+              <T weight="700">{money(entry.amount)}원</T>
+              <T size={13}>
+                {entry.cycleEnd}까지 ·{" "}
+                {
+                  {
+                    GOAL: "매달 저축할 돈",
+                    ALL: "남은 돈 전부",
+                    MANUAL: "직접 입력",
+                  }[entry.choice]
+                }
+              </T>
+            </View>
+          ))}
+        </ScrollView>
+      </Sheet>
       {pending && later !== pending.cycleEnd && (
         <ReflectModal
           // A new cycle starts with a fresh choice.

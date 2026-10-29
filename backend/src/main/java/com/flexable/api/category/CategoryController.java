@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +21,7 @@ import com.flexable.api.auth.CurrentUser;
 import com.flexable.api.category.CategoryDtos.CategoryResponse;
 import com.flexable.api.category.CategoryDtos.CreateRequest;
 import com.flexable.api.category.CategoryDtos.UpdateRequest;
+import com.flexable.api.category.CategoryDtos.OrderRequest;
 import com.flexable.api.common.TxType;
 
 import jakarta.validation.Valid;
@@ -55,5 +57,10 @@ public class CategoryController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
 		service.delete(CurrentUser.id(jwt), id);
+	}
+
+	@PutMapping("/order")
+	List<CategoryResponse> order(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody OrderRequest req) {
+		return service.reorder(CurrentUser.id(jwt), req);
 	}
 }

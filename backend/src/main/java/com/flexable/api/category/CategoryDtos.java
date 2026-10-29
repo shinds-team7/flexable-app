@@ -1,6 +1,7 @@
 package com.flexable.api.category;
 
 import com.flexable.api.common.TxType;
+import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -13,6 +14,8 @@ public final class CategoryDtos {
 
 	private CategoryDtos() {
 	}
+
+	public record OrderRequest(@NotNull TxType type, @NotNull List<@NotNull Long> ids) { }
 
 	public record CreateRequest(
 			@NotNull(message = "카테고리 이름을 입력해 주세요") @Size(min = 1, max = 20, message = "카테고리 이름은 20자 이하로 입력해 주세요") String name,

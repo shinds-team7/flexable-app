@@ -23,6 +23,8 @@ public enum ErrorCode {
 	LINK_CODE_INVALID(HttpStatus.BAD_REQUEST, "연동 코드가 맞지 않거나 시간이 지났어요. 앱에서 새 코드를 받아 주세요"),
 	LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "앱 연동이 해제됐어요"),
 	TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요"),
+	CHAT_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "지금은 AI 메이트를 쓸 수 없어요"),
+	CHAT_FAILED(HttpStatus.BAD_GATEWAY, "AI 메이트가 답하지 못했어요. 잠시 후 다시 시도해 주세요"),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요");
 
 	private final HttpStatus status;

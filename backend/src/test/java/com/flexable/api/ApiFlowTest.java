@@ -270,8 +270,7 @@ class ApiFlowTest {
 		mvc.perform(json(get("/api/v1/transactions/" + txId), token, null))
 			.andExpect(jsonPath("$.category.name", is("기타")));
 		mvc.perform(json(delete("/api/v1/categories/" + food), token, null))
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.code", is("CATEGORY_DEFAULT")));
+			.andExpect(status().isNoContent());
 
 		// 다른 사용자는 볼 수 없다
 		String other = signup("other@example.com");

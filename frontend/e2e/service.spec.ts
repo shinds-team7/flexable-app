@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { createHash } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import appConfig from "../app.json";
 const apiBase = "http://localhost:8080/api/v1";
 const password = "Testpass1234";
 // The form CTA reads 기록하기 for a new transaction and 저장하기 when editing.
@@ -249,7 +250,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     .getByRole("button", { name: "삭제", exact: true })
     .click();
   await expect(
-    page.getByText("이 카테고리의 거래는 '기타'로 옮겨져요", { exact: true }),
+    page.getByText("기록한 거래와 예정 지출은 같은 종류의 다른 카테고리로 옮겨져요. 옮길 곳이 없으면 '기타'를 새로 만들어요", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "삭제", exact: true }).last().click();
   // The hidden 내역 tab still lists the old category name until it regains focus, so count only what is visible.
@@ -565,7 +566,9 @@ test("expired token returns to start; public routes remain accessible", async ({
     ),
   ).toBeVisible();
   await page.goto("/support");
-  await expect(page.getByText("앱 버전 1.5.0", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`앱 버전 ${appConfig.expo.version}`, { exact: true }),
+  ).toBeVisible();
   // 시연은 웹사이트 저장소(flexable-web)의 /m 으로 옮겼다. 시작 화면에는 링크만 남는다.
   await page.goto("/");
   await expect(page.getByText("시연 보기", { exact: true })).toBeVisible();

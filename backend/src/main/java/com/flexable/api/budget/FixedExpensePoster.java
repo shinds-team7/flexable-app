@@ -218,7 +218,6 @@ public class FixedExpensePoster {
 	private Long category(long userId) {
 		List<Category> defaults = categories.findAllOrdered(userId, TxType.EXPENSE)
 			.stream()
-			.filter(Category::isDefault)
 			.toList();
 		return defaults.stream()
 			.filter(c -> c.getName().equals(CATEGORY))
@@ -227,6 +226,6 @@ public class FixedExpensePoster {
 			.or(() -> defaults.stream().filter(c -> c.getName().equals(FALLBACK)).findFirst())
 			.or(() -> defaults.stream().findFirst())
 			.map(Category::getId)
-			.orElseThrow(() -> new IllegalStateException("No default expense category for user " + userId));
+			.orElseGet(() -> categories.save(new Category(userId,CATEGORY,TxType.EXPENSE,"#667085","repeat",false,clock.instant())).getId());
 	}
 }
