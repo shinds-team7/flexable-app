@@ -34,6 +34,7 @@ export function MonthCalendar({
   today,
   totals,
   onSelect,
+  allowFuture = true,
 }: {
   year: number;
   /** 1~12 */
@@ -43,6 +44,7 @@ export function MonthCalendar({
   /** "YYYY-MM-DD" → 그날 합계 */
   totals: Map<string, DayTotals>;
   onSelect?: (date: string) => void;
+  allowFuture?: boolean;
 }) {
   const weeks = monthWeeks(year, month);
   const prefix = `${year}-${String(month).padStart(2, "0")}-`;
@@ -82,7 +84,7 @@ export function MonthCalendar({
                 accessible
                 accessibilityLabel={label}
                 accessibilityRole={onSelect ? "button" : undefined}
-                disabled={!onSelect}
+                disabled={!onSelect || (!allowFuture && date > today)}
                 onPress={() => onSelect?.(date)}
               >
                 <View style={[styles.date, on && styles.today]}>

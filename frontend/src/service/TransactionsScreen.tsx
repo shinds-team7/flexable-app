@@ -15,6 +15,7 @@ import {
 } from "./ui";
 import type { Transaction } from "./types";
 import { colors } from "@/theme";
+import { useServerExtensions } from "./serverExtensions";
 // 서버가 거래의 카테고리를 찾지 못하면 category가 null로 온다(docs/contracts/app-api.yaml Transaction).
 const NO_CATEGORY = {
   name: "카테고리 없음",
@@ -23,6 +24,7 @@ const NO_CATEGORY = {
 };
 const categoryOf = (t: Transaction) => t.category ?? NO_CATEGORY;
 export function TransactionsScreen() {
+  const extensions = useServerExtensions();
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState("ALL");
   const [y, m] = seoulDate().split("-").map(Number);
@@ -97,6 +99,7 @@ export function TransactionsScreen() {
           month={month.getUTCMonth() + 1}
           today={seoulDate()}
           totals={daily}
+          allowFuture={extensions.available}
           onSelect={(date) =>
             router.push({
               pathname:
@@ -108,7 +111,9 @@ export function TransactionsScreen() {
           }
         />
         <T size={12} color={colors.textMuted}>
-          지난 날짜는 지출 기록을, 미래 날짜는 지출 예정을 등록할 수 있어요
+          {extensions.available
+            ? "지난 날짜는 지출 기록을, 미래 날짜는 지출 예정을 등록할 수 있어요"
+            : "오늘과 지난 날짜의 지출을 기록할 수 있어요. 지출 예정 기능은 준비 중이에요"}
         </T>
       </Card>
       <Segment

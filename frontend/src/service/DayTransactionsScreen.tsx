@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Button, Card, T } from "@/components/ui";
 import { validDate } from "./occurredAt";
+import { useServerExtensions } from "./serverExtensions";
 import type { Transaction, ScheduledExpense } from "./types";
 import {
   ErrorNotice,
@@ -12,13 +13,16 @@ import {
 } from "./ui";
 
 export function DayTransactionsScreen() {
+  const extensions = useServerExtensions();
   const { date } = useLocalSearchParams<{ date?: string }>();
   const valid = !!date && validDate(date) && date <= seoulDate();
   const result = useResource<{ items: Transaction[] }>(
     valid ? `/transactions?from=${date}&to=${date}&type=EXPENSE` : null,
   );
   const planned = useResource<{ items: ScheduledExpense[] }>(
-    valid ? `/scheduled-expenses?from=${date}&to=${date}` : null,
+    valid && extensions.available
+      ? `/scheduled-expenses?from=${date}&to=${date}`
+      : null,
   );
   return (
     <Page title="날짜별 지출 기록">

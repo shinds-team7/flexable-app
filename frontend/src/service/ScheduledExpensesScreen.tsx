@@ -8,6 +8,7 @@ import { DateField } from "./DateField";
 import { CategorySheet } from "./CategorySheet";
 import { validDate } from "./occurredAt";
 import { useSession } from "./Session";
+import { useServerExtensions } from "./serverExtensions";
 import type { Category, ScheduledExpense } from "./types";
 import {
   ErrorNotice,
@@ -23,9 +24,22 @@ import {
 const tomorrow = () =>
   new Date(Date.now() + 9 * 3600000 + 86400000).toISOString().slice(0, 10);
 export function ScheduledExpensesScreen() {
+  const extensions = useServerExtensions();
   const params = useLocalSearchParams<{ date?: string }>();
   const initial =
     params.date && validDate(params.date) ? params.date : tomorrow();
+  if (!extensions.available)
+    return (
+      <Page title="지출 예정 등록">
+        {extensions.checking ? (
+          <Loading />
+        ) : (
+          <T>
+            지출 예정 기능을 준비하고 있어요. 현재는 거래 기록을 이용해 주세요
+          </T>
+        )}
+      </Page>
+    );
   return <ScheduledForm key={initial} initial={initial} />;
 }
 function ScheduledForm({ initial }: { initial: string }) {

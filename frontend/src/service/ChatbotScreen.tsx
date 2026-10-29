@@ -6,7 +6,8 @@ import { colors } from "@/theme";
 import { api, ApiError, sessionGeneration } from "./api/client";
 import { useSession } from "./Session";
 import { readStorage, writeStorage } from "./storage";
-import { ErrorNotice, Field, Page } from "./ui";
+import { ErrorNotice, Field, Loading, Page } from "./ui";
+import { useServerExtensions } from "./serverExtensions";
 import type { ChatRequest, ChatResponse } from "./types";
 
 type Mate = NonNullable<ChatRequest["mate"]>;
@@ -40,6 +41,23 @@ const topics = [
 
 /** #202의 메이트 선택·질문·대화 흐름을 #200의 실제 Gemini API로 연결한다. */
 export function ChatbotScreen() {
+  const extensions = useServerExtensions();
+  if (!extensions.available)
+    return (
+      <Page title="AI 메이트">
+        {extensions.checking ? (
+          <Loading />
+        ) : (
+          <T>
+            AI 메이트를 준비 중이에요. 현재는 기록한 지출과 소비 분석을 확인해
+            주세요
+          </T>
+        )}
+      </Page>
+    );
+  return <ChatbotRoom />;
+}
+function ChatbotRoom() {
   const params = useLocalSearchParams<{ question?: string }>();
   const [mate, setMate] = useState<Mate>("ANALYST");
   const [choosing, setChoosing] = useState(true);
