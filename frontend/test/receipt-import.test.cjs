@@ -396,3 +396,173 @@ test("OCR digit guesses never rewrite a merchant number or an unreadable amount"
   );
   assert.deepEqual(brief(r), [["10-24", "상품 24", "EXPENSE", 500]]);
 });
+
+// Actual Android OCR-2 line order/coordinates and missing punctuation/currency suffixes.
+// Dates, amounts and names below are synthetic because the shared diagnostic masks all numbers and names.
+const KAKAOPAY_ANDROID = lines([
+  [49, [74, "4:00 x"]],
+  [575, [30, "26일 월요일 -42,000원"]],
+  [1102, [71, "mark"]],
+  [1321, [71, "mark"]],
+  [316, [229, "내역"]],
+  [1540, [71, "mark"]],
+  [942, [46, "25일 일요일 -4,800원"]],
+  [768, [199, "-42,000"]],
+  [2272, [72, "mark"]],
+  [445, [354, "10월 페이머니"]],
+  [698, [179, "송금 카카오페이머니 가상친구"]],
+  [1064, [179, "송금 카카오페이머니 가상계좌"]],
+  [1131, [191, "-5,100"]],
+  [1284, [194, "My 구독 - 가상클라우드"]],
+  [1351, [193, "-900"]],
+  [1505, [194, "My 구독- 가상이모티콘"]],
+  [1571, [198, "-3,900"]],
+  [1746, [48, "24일 토요일 -10,000원"]],
+  [1937, [198, "-10,000"]],
+  [2112, [48, "23일 금요일 -22,000원"]],
+  [318, [705, "카드만들기"]],
+  [1868, [193, "송금 가상수단 - 가상친구"]],
+  [50, [802, "xx00"]],
+  [2235, [192, "송금 카카오페이머니 가상계좌"]],
+  [2291, [202, "xx0x"]],
+]);
+
+test("Android kakaopay: no month dot, no payment pipe or won suffix, and unreadable left logos", () => {
+  const result = parseReceipt(KAKAOPAY_ANDROID, TODAY);
+  assert.equal(result.source, "kakaopay");
+  assert.deepEqual(brief(result), [
+    ["10-26", "카카오페이머니 가상친구", "EXPENSE", 42000],
+    ["10-25", "카카오페이머니 가상계좌", "EXPENSE", 5100],
+    ["10-25", "가상클라우드", "EXPENSE", 900],
+    ["10-25", "가상이모티콘", "EXPENSE", 3900],
+    ["10-24", "가상수단 - 가상친구", "EXPENSE", 10000],
+  ]);
+  assert.ok(result.items.every((item) => item.review.length === 0));
+  const counts = api.receiptDiagnostics(KAKAOPAY_ANDROID);
+  assert.equal(counts.payMonths, 1);
+  assert.equal(counts.payDetails, 6);
+  assert.equal(counts.amounts, 9);
+});
+
+test("missing won is accepted only below a known kakaopay transaction, never a time, unsigned number or date total", () => {
+  const result = parseReceipt(
+    lines([
+      [100, [200, "10월 페이머니"]],
+      [200, [40, "26일 월요일 -9,000원"]],
+      [300, [190, "송금 가상친구"]],
+      [350, [190, "21:02"]],
+      [400, [190, "-9,000"]],
+      [500, [190, "My 구독 - 가상서비스"]],
+      [550, [190, "12345678"]],
+      [600, [190, "송금 다른친구"]],
+      [650, [40, "25일 일요일 -1,000원"]],
+      [700, [190, "결제 가상상점"]],
+      [750, [190, "-1,000"]],
+    ]),
+    TODAY,
+  );
+  assert.deepEqual(brief(result), [["10-25", "가상상점", "EXPENSE", 1000]]);
+});
+
+test("a missing payment divider does not misclassify a Toss merchant as kakaopay", () => {
+  const result = parseReceipt(
+    lines([
+      [100, [100, "채우기"], [400, "보내기"]],
+      [200, [40, "10.26"], [150, "송금 가상상점"], [600, "-900원"]],
+      [250, [150, "체크카드"], [600, "10,000원"]],
+    ]),
+    TODAY,
+  );
+  assert.equal(result.source, "toss");
+  assert.deepEqual(brief(result), [["10-26", "송금 가상상점", "EXPENSE", 900]]);
+});
+
+// Android Toss OCR-2 coordinates, with synthetic text and numbers. x stands for an unreadable currency glyph.
+const TOSS_ANDROID = lines([
+  [47, [51, "4:00 xxx"]],
+  [169, [52, "← 가상통장"]],
+  [343, [43, "10.25 가상카드출금"], [810, "-20,000"]],
+  [404, [187, "21:02"], [930, "300원"]],
+  [522, [187, "가상친구"], [826, "20,000"]],
+  [586, [188, "21:02"], [898, "20,300"]],
+  [704, [40, "10.23 가상상점1"], [833, "-1,000x"]],
+  [766, [188, "23:38"], [931, "300원"]],
+  [884, [162, "가상상점24"], [835, "-2,000x"]],
+  [948, [188, "19:31"], [900, "1,3000x"]],
+  [1067, [187, "가상상점25"], [839, "-3,000"]],
+  [1127, [188, "12:54"], [921, "3,300"]],
+  [1246, [187, "가상페이"], [845, "-4,000x"]],
+  [1309, [188, "08:10"], [892, "06,3000"]],
+  [1430, [43, "10.22 가상택시0"], [830, "-10,0000"]],
+  [1490, [188, "02:50"], [888, "10,300"]],
+  [1610, [187, "가상노래방"], [834, "-5,000"]],
+  [1672, [188, "01:40"], [879, "20,300xx"]],
+  [1791, [42, "10.21 가상매장"], [845, "-6,000x"]],
+  [1853, [188, "20:57"], [879, "25,300"]],
+  [1972, [189, "가상커피"], [837, "-7,000"]],
+  [2034, [188, "13:33"], [877, "31,300x"]],
+  [2164, [206, "채우기"], [703, "보내기"]],
+]);
+
+test("Android Toss: paired time and right balance column recover missing or unreadable won, with mandatory review", () => {
+  const result = parseReceipt(TOSS_ANDROID, TODAY);
+  assert.equal(result.source, "toss");
+  assert.deepEqual(brief(result), [
+    ["10-25", "가상카드출금", "EXPENSE", 20000],
+    ["10-25", "가상친구", "INCOME", 20000],
+    ["10-23", "가상상점1", "EXPENSE", 1000],
+    ["10-23", "가상상점24", "EXPENSE", 2000],
+    ["10-23", "가상상점25", "EXPENSE", 3000],
+    ["10-23", "가상페이", "EXPENSE", 4000],
+    ["10-22", "가상노래방", "EXPENSE", 5000],
+    ["10-21", "가상매장", "EXPENSE", 6000],
+    ["10-21", "가상커피", "EXPENSE", 7000],
+  ]);
+  assert.ok(result.items.every((item) => item.review.length > 0));
+  assert.equal(result.items[3].balance, null);
+  assert.equal(result.items[5].balance, null);
+  // A misread digit after the comma is never removed or silently turned into the original amount.
+  assert.equal(
+    result.items.some((item) => item.title === "가상택시0"),
+    false,
+  );
+});
+
+test("Android Toss: header cards, account digits and rates before the first date are never imported", () => {
+  const header = lines([
+    [313, [56, "가상통장 12345678901234"]],
+    [402, [43, "300원"]],
+    [524, [107, "2.5x"]],
+    [727, [234, "가상 혜택 1x xx"], [910, "xx"]],
+    [865, [205, "가상 10x xx + 20x xx"]],
+    [921, [190, "가상 카드 혜택"]],
+    [1052, [58, "전체"]],
+  ]);
+  const visible = TOSS_ANDROID.filter(
+    (line) => line.y >= 343 && line.y <= 1129,
+  ).map((line) => ({ ...line, y: line.y + 842 }));
+  const result = parseReceipt(
+    [
+      ...header,
+      ...visible,
+      ...lines([[2164, [206, "채우기"], [703, "보내기"]]]),
+    ],
+    TODAY,
+  );
+  assert.equal(result.items.length, 5);
+  assert.equal(result.items[0].title, "가상카드출금");
+});
+
+test("missing bank currency needs a time and a separate right balance column; random numeric text stays rejected", () => {
+  const result = parseReceipt(
+    lines([
+      [100, [40, "10.25 가상상점"], [810, "-2,000"]],
+      [160, [187, "다른 내용"], [930, "300"]],
+      [250, [187, "가상항목"], [810, "-3,000"]],
+      [310, [187, "21:00"], [250, "300"]],
+      [400, [187, "채우기"]],
+    ]),
+    TODAY,
+  );
+  assert.equal(result.items.length, 0);
+});
