@@ -1,47 +1,19 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors } from "@/theme";
 import { useInbox, type InboxItem } from "./inbox";
-import { markInboxSeen } from "./inboxStore";
+import { markInboxItemRead } from "./inboxStore";
 import { ErrorNotice, Loading, seoulDate } from "./ui";
 
 /**
  * 알림함. 헤더 종 아이콘에서 들어온다. 최근 30일의 코인 적립·사용, 고정지출 자동 기록,
- * 오늘 예산 상태, 이 기기에서 보낸 시드머니·기록 알림을 최신순으로 보여 준다. 열면 모두 읽은 것으로 한다.
+ * 오늘 예산 상태, 이 기기에서 보낸 시드머니·기록 알림을 최신순으로 보여 준다. 직접 누른 항목만 읽음으로 한다.
  */
 export function NotificationsScreen() {
-  const { id, items, seen, error, loading, retry } = useInbox();
-  // 첫 진입의 새 알림 강조는 유지하되 상세 화면에서 돌아오면 강조를 지운다.
-  const [opened, setOpened] = useState<{ id: number; at: number }>();
-  if (id && seen !== undefined && opened?.id !== id)
-    setOpened({ id, at: seen });
-  const latest = useRef({ id, at: 0 });
-  useEffect(() => {
-    latest.current = {
-      id,
-      at: Math.max(seen ?? 0, ...(items ?? []).map((item) => item.at)),
-    };
-  }, [id, seen, items]);
-  useFocusEffect(
-    useCallback(
-      () => () => {
-        const { id, at } = latest.current;
-        if (id) setOpened({ id, at });
-      },
-      [],
-    ),
-  );
-  // 가장 최근 알림 시각까지만 읽음으로 한다. 지금 시각을 쓰면 읽음 기록이 바뀔 때마다 다시 읽고 또 기록하게 된다.
-  useFocusEffect(
-    useCallback(() => {
-      if (!id || !items?.length) return;
-      markInboxSeen(id, Math.max(...items.map((i) => i.at))).catch(() => {});
-    }, [id, items]),
-  );
+  const { id, items, isUnread, error, loading, retry } = useInbox();
 
   const groups = new Map<string, InboxItem[]>();
   (items ?? []).forEach((item) => {
@@ -86,15 +58,9 @@ export function NotificationsScreen() {
                     <Row
                       key={item.key}
                       item={item}
-                      fresh={
-                        !!opened && opened.id === id && item.at > opened.at
-                      }
+                      fresh={isUnread(item)}
                       onOpen={() => {
-                        if (id)
-                          setOpened({
-                            id,
-                            at: Math.max(opened?.at ?? 0, item.at),
-                          });
+                        if (id) markInboxItemRead(id, item).catch(() => {});
                         router.push(item.href);
                       }}
                     />

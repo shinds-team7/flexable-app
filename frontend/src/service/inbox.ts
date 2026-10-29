@@ -6,7 +6,13 @@ import { colors } from "@/theme";
 import { api, sessionGeneration } from "./api/client";
 import { getLedger } from "./coinApi";
 import { ledgerDetail, ledgerTitle } from "./coinLedger";
-import { hasUnread, type BudgetNote, type ReminderTime } from "./inboxRecords";
+import {
+  hasUnread,
+  isUnread,
+  type BudgetNote,
+  type ReminderTime,
+  type ReadReceipt,
+} from "./inboxRecords";
 import {
   readInbox,
   recordBudget,
@@ -98,11 +104,12 @@ type Local = {
   sent: ReminderTime[];
   budget: BudgetNote[];
   seen: number;
+  read: ReadReceipt[];
 };
 
 /**
  * 알림함 항목(최근 30일, 최신순)과 안 읽은 알림이 있는지.
- * 코인 내역 첫 쪽·최근 30일 거래·오늘 예산은 서버에서, 보낸 기기 알림·예산 상태·읽은 시각은 기기에서 읽는다.
+ * 코인 내역 첫 쪽·최근 30일 거래·오늘 예산은 서버에서, 보낸 기기 알림·예산 상태·항목별 읽음은 기기에서 읽는다.
  */
 export function useInbox() {
   const { user, revision } = useSession();
@@ -176,13 +183,16 @@ export function useInbox() {
       .filter((i) => !Number.isNaN(i.at) && i.at >= since)
       .sort((a, b) => b.at - a.at);
   }, [id, server, local]);
-  const seen = local?.id === id ? local?.seen : undefined;
+  const readState = local?.id === id ? local : undefined;
   return {
     id,
     items,
-    seen,
+    isUnread: (item: InboxItem) =>
+      !!readState && isUnread(item, readState.seen, readState.read),
     unread:
-      !!items && seen !== undefined && hasUnread(items.map((i) => i.at), seen),
+      !!items &&
+      !!readState &&
+      hasUnread(items, readState.seen, readState.read),
     error,
     loading: !items && !error,
     retry: () => retry((x) => x + 1),
