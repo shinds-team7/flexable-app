@@ -103,6 +103,13 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await closeGift(page);
+  // Web must not ask for OS notification access or silently enable the Android payment collector.
+  await page.goto("/payment-notifications");
+  await expect(page.getByText(/이 앱에는 아직 알림 수집/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "동의하고 자동 기록 켜기" }),
+  ).toHaveCount(0);
+  await page.goto("/home");
   await expect(
     page.getByText("아직 기록한 거래가 없어요", { exact: true }),
   ).toBeVisible();
