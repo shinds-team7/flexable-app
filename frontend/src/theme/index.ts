@@ -67,8 +67,14 @@ export const type = { tab: 12, caption: 13, meta: 14, body: 16, title: 18, amoun
 
 export const font = Platform.select({
   web: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif',
-  default: undefined,
+  default: 'Pretendard-Regular',
 });
+
+export function fontForWeight(weight: string | number = '400') {
+  if (Platform.OS === 'web') return font;
+  const n = Number(weight === 'bold' ? 700 : weight);
+  return n >= 800 ? 'Pretendard-ExtraBold' : n >= 700 ? 'Pretendard-Bold' : n >= 600 ? 'Pretendard-SemiBold' : n >= 500 ? 'Pretendard-Medium' : 'Pretendard-Regular';
+}
 
 /** 모션 토큰 — emil-design-eng 기준 */
 export const motion = {

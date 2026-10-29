@@ -1,4 +1,5 @@
 import { randomUUID } from "expo-crypto";
+import { useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Button, ConfirmModal, Segment, T } from "@/components/ui";
@@ -24,6 +25,9 @@ import {
 } from "./ui";
 import type { Category, Kind, Transaction } from "./types";
 export function TransactionForm({ id }: { id?: string }) {
+  const { date } = useLocalSearchParams<{ date?: string }>();
+  const initialDate =
+    date && validDate(date) && date <= seoulDate() ? date : undefined;
   const loaded = useResource<Transaction>(id ? `/transactions/${id}` : null);
   if (id && loaded.loading && !loaded.data) return <Loading />;
   if (id && loaded.error)
@@ -32,9 +36,21 @@ export function TransactionForm({ id }: { id?: string }) {
         <ErrorNotice error={loaded.error} retry={loaded.retry} />
       </Page>
     );
-  return <Form key={id ?? "new"} existing={loaded.data} />;
+  return (
+    <Form
+      key={id ?? `new:${initialDate ?? "today"}`}
+      existing={loaded.data}
+      initialDate={initialDate}
+    />
+  );
 }
-function Form({ existing }: { existing?: Transaction }) {
+function Form({
+  existing,
+  initialDate,
+}: {
+  existing?: Transaction;
+  initialDate?: string;
+}) {
   const session = useSession();
   const toast = useToast();
   const [type, setType] = useState<Kind>(existing?.type ?? "EXPENSE");
@@ -47,7 +63,9 @@ function Form({ existing }: { existing?: Transaction }) {
   const memo = existing?.memo ?? "";
   // Only the day is picked; occurredAtFor() decides the time sent to the server.
   const [date, setDate] = useState(() =>
-    existing ? toSeoulInput(existing.occurredAt).slice(0, 10) : seoulDate(),
+    existing
+      ? toSeoulInput(existing.occurredAt).slice(0, 10)
+      : (initialDate ?? seoulDate()),
   );
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);

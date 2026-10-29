@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
@@ -15,9 +15,26 @@ import { ErrorNotice, Loading, seoulDate } from "./ui";
  */
 export function NotificationsScreen() {
   const { id, items, seen, error, loading, retry } = useInbox();
-  // 화면을 연 순간의 읽은 시각. 읽음 처리 뒤에도 이번에 새로 온 알림은 바탕색으로 표시해 둔다.
-  const [opened, setOpened] = useState<number>();
-  if (opened === undefined && seen !== undefined) setOpened(seen);
+  // 첫 진입의 새 알림 강조는 유지하되 상세 화면에서 돌아오면 강조를 지운다.
+  const [opened, setOpened] = useState<{ id: number; at: number }>();
+  if (id && seen !== undefined && opened?.id !== id)
+    setOpened({ id, at: seen });
+  const latest = useRef({ id, at: 0 });
+  useEffect(() => {
+    latest.current = {
+      id,
+      at: Math.max(seen ?? 0, ...(items ?? []).map((item) => item.at)),
+    };
+  }, [id, seen, items]);
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        const { id, at } = latest.current;
+        if (id) setOpened({ id, at });
+      },
+      [],
+    ),
+  );
   // 가장 최근 알림 시각까지만 읽음으로 한다. 지금 시각을 쓰면 읽음 기록이 바뀔 때마다 다시 읽고 또 기록하게 된다.
   useFocusEffect(
     useCallback(() => {
@@ -69,7 +86,17 @@ export function NotificationsScreen() {
                     <Row
                       key={item.key}
                       item={item}
-                      fresh={opened !== undefined && item.at > opened}
+                      fresh={
+                        !!opened && opened.id === id && item.at > opened.at
+                      }
+                      onOpen={() => {
+                        if (id)
+                          setOpened({
+                            id,
+                            at: Math.max(opened?.at ?? 0, item.at),
+                          });
+                        router.push(item.href);
+                      }}
                     />
                   ))}
                 </View>
@@ -86,15 +113,28 @@ function seoulDay(at: number) {
   return new Date(at + 9 * 3600000).toISOString().slice(0, 10);
 }
 
-function Row({ item, fresh }: { item: InboxItem; fresh: boolean }) {
+function Row({
+  item,
+  fresh,
+  onOpen,
+}: {
+  item: InboxItem;
+  fresh: boolean;
+  onOpen: () => void;
+}) {
   const time = new Date(item.at + 9 * 3600000).toISOString().slice(11, 16);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={[fresh ? "새 알림" : "", item.title, item.detail, time]
+      accessibilityLabel={[
+        fresh ? "새 알림" : "",
+        item.title,
+        item.detail,
+        time,
+      ]
         .filter(Boolean)
         .join(", ")}
-      onPress={() => router.push(item.href)}
+      onPress={onOpen}
       style={[styles.row, fresh && styles.fresh]}
     >
       <View style={[styles.icon, { backgroundColor: item.color + "1F" }]}>

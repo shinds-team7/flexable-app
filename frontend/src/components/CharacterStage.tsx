@@ -30,7 +30,7 @@ export function pointsStatus(points: number, label: string): PaceStatus {
  * 코인 잔액(coin)은 영상 좌측 상단, 출석 달력 버튼(attendance)은 우측 상단에 띄운다(#197). [모으기]·코스튬은 코인 칩 → 코인 내역의 상점 버튼 → 상점 화면에 있다.
  * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
  */
-export function CharacterStage({ level, character, coin, attendance, gauge, children }: { level: Level; character: ReactNode; coin?: ReactNode; attendance?: ReactNode; gauge: PaceStatus; children: ReactNode }) {
+export function CharacterStage({ level, character, coin, attendance, gauge, help, children }: { level: Level; character: ReactNode; coin?: ReactNode; attendance?: ReactNode; gauge: PaceStatus; help?: ReactNode; children: ReactNode }) {
   const accent = ACCENTS[level];
 
   return (
@@ -44,6 +44,7 @@ export function CharacterStage({ level, character, coin, attendance, gauge, chil
       </View>
 
       <Gauge status={gauge} accent={accent} />
+      {help && <View style={{ alignSelf: 'flex-end' }}>{help}</View>}
 
       {/* 오늘 쓸 수 있는 돈 — 캐릭터와 게이지 아래 */}
       <View style={styles.heroSlot}>{children}</View>

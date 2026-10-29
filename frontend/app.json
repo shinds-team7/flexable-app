@@ -2,7 +2,7 @@
   "expo": {
     "name": "텅장관리",
     "slug": "flexable",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -40,6 +40,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      ["expo-navigation-bar", { "hidden": true }],
       [
         "expo-secure-store",
         {
