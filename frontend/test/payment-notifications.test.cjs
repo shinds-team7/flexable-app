@@ -253,3 +253,13 @@ test("queued work rechecks its session before it can touch native storage, inclu
   await bridge.clearPaymentNotifications();
   assert.deepEqual(bridge.calls, ["clear"]);
 });
+
+test("disabling collection after request preparation prevents sending it or acknowledging an unsaved item", async () => {
+  const e = environment();
+  e.deps.prepare = async (id, body) => {
+    e.active = false;
+    return body;
+  };
+  await importPaymentNotices([notice()], e.deps);
+  assert.equal(e.calls.length, 0);
+});

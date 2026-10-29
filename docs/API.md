@@ -11,7 +11,7 @@
 - 요청·응답은 JSON(UTF-8). 인증이 필요한 요청은 `Authorization: Bearer <accessToken>`.
 - **금액은 원 단위 정수**(`long`). 소수·문자열 금액 금지. 거래 금액은 항상 양수이고 부호는 `type`으로 구분한다.
 - 날짜 `YYYY-MM-DD`, 일시 ISO-8601 offset 포함(`2026-10-13T12:32:00+09:00`). 서버의 "오늘"은 `Asia/Seoul` 기준.
-- 이번 MVP는 온라인 전용이다(SQLite·outbox 없음). 거래 생성만 `Idempotency-Key`로 중복 재전송을 막는다.
+- 거래 조회·저장은 온라인 전용이다(오프라인 수동 거래 저장용 SQLite·outbox 없음). Android 신한카드 자동 기록은 알림만 기기에 암호화해 모으고 활성 앱에서 기존 거래 API로 반영한다. 거래 생성만 `Idempotency-Key`로 중복 재전송을 막는다.
 
 ### 오류 형식
 

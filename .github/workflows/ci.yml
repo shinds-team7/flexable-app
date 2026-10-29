@@ -47,7 +47,7 @@ jobs:
           npx expo prebuild --platform android --no-install
       - name: 로컬 알림 모듈·Manifest 검사
         working-directory: frontend/android
-        run: ./gradlew :payment-notifications:compileDebugKotlin :payment-notifications:processDebugManifest --console=plain
+        run: ./gradlew :payment-notifications:testDebugUnitTest :payment-notifications:processDebugManifest --console=plain
 
   backend:
     name: 백엔드 테스트

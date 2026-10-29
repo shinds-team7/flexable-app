@@ -12,6 +12,7 @@ import {
 import { sessionGeneration } from "./api/client";
 import {
   refreshPaymentImport,
+  interruptPaymentImport,
   usePaymentImportState,
 } from "./paymentNotifications/usePaymentImport";
 
@@ -28,6 +29,7 @@ export function PaymentNotificationsScreen() {
   const act = async (fn: () => Promise<void>) => {
     if (busy) return;
     const generation = sessionGeneration();
+    interruptPaymentImport();
     setBusy(true);
     setError(undefined);
     try {
@@ -147,6 +149,14 @@ export function PaymentNotificationsScreen() {
             error={error ?? (data.owner === owner ? data.error : undefined)}
             retry={refreshPaymentImport}
           />
+          {available && !!(error ?? data.error) && (
+            <Button
+              variant="soft"
+              label="수집 끄고 이 기기의 대기 알림 초기화"
+              disabled={busy}
+              onPress={() => act(() => paymentNative!.clear())}
+            />
+          )}
         </Card>
         {problems.map((item) => (
           <Card key={item.id} style={{ gap: 10 }}>

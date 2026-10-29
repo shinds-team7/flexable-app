@@ -90,9 +90,11 @@ internal object PaymentStore {
 
   @Synchronized fun clear(context: Context) { file(context).delete() }
 
-  @Synchronized fun enqueue(context: Context, row: JSONObject): Boolean {
+  @Synchronized fun enqueue(context: Context, postedAt: Long, content: () -> JSONObject?): Boolean {
     val state = prune(read(context))
-    if (!state.optBoolean("enabled") || row.getLong("postedAt") < state.optLong("enabledAt")) return false
+    // Do not even extract notification text until consent and the collection start time are checked.
+    if (!state.optBoolean("enabled") || postedAt < state.optLong("enabledAt")) return false
+    val row = content() ?: return false
     val queue = state.getJSONArray("queue")
     val id = row.getString("id")
     if (state.getJSONObject("done").has(id) || (0 until queue.length()).any { queue.getJSONObject(it).getString("id") == id }) return false

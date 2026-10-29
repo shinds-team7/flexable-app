@@ -36,6 +36,10 @@ function update(next: Partial<State>) {
 }
 let queue: Promise<unknown> = Promise.resolve();
 let refresh: (() => void) | undefined;
+let importRevision = 0;
+export function interruptPaymentImport() {
+  importRevision++;
+}
 export const refreshPaymentImport = () => refresh?.();
 export function usePaymentImportState() {
   return useSyncExternalStore(
@@ -65,7 +69,7 @@ export function useAutomaticPaymentImport() {
     let alive = true;
     let requested = false;
     const generation = sessionGeneration();
-    const current = () =>
+    const sessionCurrent = () =>
       alive &&
       generation === sessionGeneration() &&
       AppState.currentState === "active";
@@ -78,7 +82,9 @@ export function useAutomaticPaymentImport() {
       saved: 0,
     });
     const run = async () => {
-      if (!current()) return;
+      if (!sessionCurrent()) return;
+      const started = importRevision;
+      const current = () => sessionCurrent() && started === importRevision;
       update({ busy: true, error: undefined });
       try {
         const status = await native.status(owner);
@@ -140,7 +146,7 @@ export function useAutomaticPaymentImport() {
       }
     };
     const request = () => {
-      if (requested || !current()) return;
+      if (requested || !sessionCurrent()) return;
       requested = true;
       queue = queue
         .catch(() => {})

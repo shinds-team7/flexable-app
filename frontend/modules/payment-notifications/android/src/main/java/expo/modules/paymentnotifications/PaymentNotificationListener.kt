@@ -27,13 +27,16 @@ class PaymentNotificationListener : NotificationListenerService() {
     if (notification.packageName != "com.shcard.smartpay") return
     val item = notification.notification
     if (item.flags and Notification.FLAG_GROUP_SUMMARY != 0 || item.flags and Notification.FLAG_ONGOING_EVENT != 0) return
-    val title = item.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty().take(300)
-    val body = (item.extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: item.extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(2000)
-    if (!Regex("승인|결제|이용|취소").containsMatchIn("$title\n$body")) return
-    val identity = "${notification.key}\n${item.`when`.takeIf { it > 0 } ?: notification.postTime}\n$title\n$body"
-    val id = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     try {
-      if (PaymentStore.enqueue(this, JSONObject().put("id", id).put("postedAt", notification.postTime).put("title", title).put("body", body))) PaymentEvents.changed()
+      val collected = PaymentStore.enqueue(this, notification.postTime) {
+        val title = item.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty().take(300)
+        val body = (item.extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: item.extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(2000)
+        if (!Regex("승인|결제|이용|취소").containsMatchIn("$title\n$body")) return@enqueue null
+        val identity = "${notification.key}\n${item.`when`.takeIf { it > 0 } ?: notification.postTime}\n$title\n$body"
+        val id = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        JSONObject().put("id", id).put("postedAt", notification.postTime).put("title", title).put("body", body)
+      }
+      if (collected) PaymentEvents.changed()
     } catch (_: Exception) {
       // Fail closed. Never fall back to plaintext or log financial notification content.
     }
