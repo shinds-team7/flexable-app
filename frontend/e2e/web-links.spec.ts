@@ -16,10 +16,11 @@ async function session(page: Page) {
       },
     }),
   );
-  // My page also asks for coins, and the header inbox for coins, transactions and today's budget.
+  // My page and the header also check coins, referrals, budget, transactions and server extensions.
   // Answer like a server without them so the fake token never reaches the real API (a 401 would log out).
-  await page.route(/\/api\/v1\/(coins|referrals|transactions|budget)/, (route) =>
-    route.fulfill({ status: 404, json: { code: "NOT_FOUND" } }),
+  await page.route(
+    /\/api\/v1\/(coins|referrals|transactions|budget|scheduled-expenses)/,
+    (route) => route.fulfill({ status: 404, json: { code: "NOT_FOUND" } }),
   );
 }
 

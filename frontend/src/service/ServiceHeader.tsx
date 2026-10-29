@@ -7,6 +7,7 @@ import { AppHeaderView, BottomTabBar } from "@/components/AppHeaderView";
 import { colors, pressTransition } from "@/theme";
 import { AddTransactionSheet } from "./AddTransactionSheet";
 import { useInbox } from "./inbox";
+import { useServerExtensions } from "./serverExtensions";
 const tabs = [
   {
     href: "/home" as const,
@@ -40,12 +41,13 @@ const tabs = [
 // Tabs live in the bottom icon bar for every home style; the header keeps the logo row and the inbox bell.
 // The shop is reached from the coin history, opened by the coin chip on the character home.
 export function ServiceHeader() {
+  const extensions = useServerExtensions();
   return (
     <AppHeaderView
       homeHref="/home"
       right={
         <View style={styles.right}>
-          <ChatbotButton />
+          {extensions.available && <ChatbotButton />}
           <InboxButton />
         </View>
       }

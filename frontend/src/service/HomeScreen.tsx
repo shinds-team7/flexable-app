@@ -30,7 +30,9 @@ import { cancelSeedReminder, scheduleSeedReminder } from "./seedReminder";
 import { ErrorNotice, Loading, money, useResource } from "./ui";
 import type { CoinReward, SeedMoney, Today } from "./types";
 import { publishWallet, useWallet } from "./wallet";
+import { useServerExtensions } from "./serverExtensions";
 export function HomeScreen() {
+  const extensions = useServerExtensions();
   const result = useResource<Today>("/budget/today");
   // Seed money is the hero's second page, swiped in from the right.
   const seed = useResource<SeedMoney>("/budget/seed-money");
@@ -93,12 +95,15 @@ export function HomeScreen() {
         footerCaption={`마지막 확인 ${result.confirmedAt?.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" }) ?? ""}`}
         onDetails={() => setBasis(true)}
         onOverHelp={() =>
-          router.push({
-            pathname: "/chatbot",
-            params: {
-              question: "오늘 예산을 넘겼어요. 기록을 바탕으로 도움을 주세요",
-            },
-          })
+          extensions.available
+            ? router.push({
+                pathname: "/chatbot",
+                params: {
+                  question:
+                    "오늘 예산을 넘겼어요. 기록을 바탕으로 도움을 주세요",
+                },
+              })
+            : setBasis(true)
         }
       />
       {seed.data && (

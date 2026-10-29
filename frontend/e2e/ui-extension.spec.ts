@@ -191,3 +191,48 @@ test("weekend home detail stops at Friday", async ({ page }) => {
     page.getByText("2026-10-31 · 오늘", { exact: true }),
   ).toHaveCount(0);
 });
+
+test("an older server keeps basic screens usable and does not expose unsupported writes", async ({
+  page,
+}) => {
+  await session(page);
+  let writes = 0;
+  page.on("request", (r) => {
+    if (
+      r.method() !== "GET" &&
+      /scheduled-expenses|categories\/order|chat\/messages/.test(r.url())
+    )
+      writes++;
+  });
+  await page.route("**/api/v1/scheduled-expenses**", (route) =>
+    route.fulfill({
+      status: 404,
+      json: { code: "NOT_FOUND", message: "not available" },
+    }),
+  );
+  await page.goto("/categories");
+  await expect(page.getByText("식비", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "식비 아래로 이동", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "삭제", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/transactions");
+  await expect(
+    page.getByRole("button", { name: "10월 30일", exact: true }),
+  ).toBeDisabled();
+  await page.goto("/chatbot");
+  await expect(page.getByText(/^AI 메이트를 준비 중이에요/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "보내기", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/scheduled-expenses?date=2026-10-30");
+  await expect(
+    page.getByText(/^지출 예정 기능을 준비하고 있어요/),
+  ).toBeVisible();
+  await expect(page.getByLabel("예정 금액 (원)", { exact: true })).toHaveCount(
+    0,
+  );
+  expect(writes).toBe(0);
+});

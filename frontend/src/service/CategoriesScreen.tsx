@@ -6,6 +6,7 @@ import { CategorySheet } from "./CategorySheet";
 import { useSession } from "./Session";
 import { CategoryIcon, ErrorNotice, Loading, Page, useResource } from "./ui";
 import type { Category, Kind } from "./types";
+import { useServerExtensions } from "./serverExtensions";
 export function CategoriesScreen() {
   const [type, setType] = useState<Kind>("EXPENSE");
   const [sheet, setSheet] = useState(false);
@@ -14,9 +15,10 @@ export function CategoriesScreen() {
   const lock = useRef(false);
   const [error, setError] = useState<unknown>();
   const session = useSession();
+  const extensions = useServerExtensions();
   const result = useResource<Category[]>(`/categories?type=${type}`);
   const move = async (index: number, step: number) => {
-    if (lock.current || !result.data) return;
+    if (lock.current || !result.data || !extensions.available) return;
     const next = [...result.data];
     const target = index + step;
     if (target < 0 || target >= next.length) return;
@@ -38,7 +40,12 @@ export function CategoriesScreen() {
     }
   };
   const remove = async () => {
-    if (!selected || lock.current) return;
+    if (
+      !selected ||
+      lock.current ||
+      (selected.isDefault && !extensions.available)
+    )
+      return;
     lock.current = true;
     setBusy(true);
     setError(undefined);
@@ -79,30 +86,34 @@ export function CategoriesScreen() {
               <T weight="600">{c.name}</T>
               {c.isDefault && <T size={12}>기본 카테고리</T>}
             </View>
-            <View style={{ gap: 2 }}>
+            {extensions.available && (
+              <View style={{ gap: 2 }}>
+                <Button
+                  label="↑"
+                  accessibilityLabel={`${c.name} 위로 이동`}
+                  variant="ghost"
+                  disabled={busy || index === 0}
+                  onPress={() => move(index, -1)}
+                  style={{ minHeight: 32, paddingVertical: 4 }}
+                />
+                <Button
+                  label="↓"
+                  accessibilityLabel={`${c.name} 아래로 이동`}
+                  variant="ghost"
+                  disabled={busy || index === result.data!.length - 1}
+                  onPress={() => move(index, 1)}
+                  style={{ minHeight: 32, paddingVertical: 4 }}
+                />
+              </View>
+            )}
+            {(extensions.available || !c.isDefault) && (
               <Button
-                label="↑"
-                accessibilityLabel={`${c.name} 위로 이동`}
+                label="삭제"
                 variant="ghost"
-                disabled={busy || index === 0}
-                onPress={() => move(index, -1)}
-                style={{ minHeight: 32, paddingVertical: 4 }}
+                disabled={busy}
+                onPress={() => setSelected(c)}
               />
-              <Button
-                label="↓"
-                accessibilityLabel={`${c.name} 아래로 이동`}
-                variant="ghost"
-                disabled={busy || index === result.data!.length - 1}
-                onPress={() => move(index, 1)}
-                style={{ minHeight: 32, paddingVertical: 4 }}
-              />
-            </View>
-            <Button
-              label="삭제"
-              variant="ghost"
-              disabled={busy}
-              onPress={() => setSelected(c)}
-            />
+            )}
           </Card>
         ))
       )}
