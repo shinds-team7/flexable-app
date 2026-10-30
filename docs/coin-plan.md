@@ -4,13 +4,13 @@
 API 요청·응답은 [`API.md` "코인·코스튬"](API.md#코인코스튬), DB는 `backend/src/main/resources/db/migration/V8__coins_outfits.sql`과 그 뒤 V9~V11.
 규칙을 바꾸면 이 문서·API.md도 함께 갱신한다. 이미 있는 마이그레이션은 수정하지 않고 다음 번호(V12)부터 추가한다.
 
-## 0. 지금 상태(2026-10-24, `main` `83c7981`)
+## 0. 지금 상태(2026-10-30 통합 작업)
 
 - 레벨 코스튬 3개: 광부 Lv.1(`costume-lv1`)·직장냥이 Lv.2(`outfit-02`)·잭팟 Lv.3(`outfit-01`). 코인으로 살 수 없다(V10)
-- 코인으로 파는 상품 2개: 선비냥이(`outfit-03`)·유령냥이(`outfit-04`), 각 200코인(V11). 나머지 상점 자리(`outfit-05`~`10`, `costume-lv2`~`lv5`)는 꺼져 있다
-- 앱에 들어 있는 영상 5개: `costume-lv1`, `outfit-01`~`04`(`frontend/assets/outfits/`, 연결은 `src/service/outfits.ts`)
+- 코인으로 파는 상품 3개: 선비냥이(`outfit-03`)·유령냥이(`outfit-04`), 각 200코인(V11), 고양마녀(`outfit-05`) 200코인(V13). 나머지 상점 자리(`outfit-06`~`10`, `costume-lv2`~`lv5`)는 꺼져 있다
+- 앱에 들어 있는 영상 6개: `costume-lv1`, `outfit-01`~`05`(`frontend/assets/outfits/`, 연결은 `src/service/outfits.ts`). 고양마녀 MP4·첫 장면 JPG는 #208의 원본과 같다
 - 화면: 캐릭터 홈 헤더 오른쪽 셔츠 모양 상점 버튼 → 상점. 보유 코인은 홈 영상 좌측 상단 칩, 우측 상단은 출석 달력 버튼(#197). [모으기]는 상점 위쪽에 있다(10-22 홈에서 옮김). check-in은 캐릭터 홈일 때만 부른다
-- 운영 반영: V11까지 운영 서버에 적용(10-23), 실기기 확인 기록은 [HANDOFF](HANDOFF.md) §0
+- 운영 반영: 고양마녀 V13까지 운영 서버에 적용, 고양마녀 실기기 확인 완료(10-30 사용자 확인). 카테고리 정렬·예정 지출은 후속 V14·V15이며 아직 서버 배포 전. 자세한 기록은 [HANDOFF](HANDOFF.md)
 
 ## 1. 확정한 규칙
 

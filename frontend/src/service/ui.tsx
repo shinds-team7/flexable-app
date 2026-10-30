@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
-import { colors, fontForWeight, noOutline, radius } from "@/theme";
+import { colors, fontStyle, noOutline, radius } from "@/theme";
 import { useSession } from "./Session";
 import { api, errorText } from "./api/client";
 export const money = (n: number) => n.toLocaleString("ko-KR");
@@ -79,12 +79,7 @@ export function Field({
             noOutline,
             right ? { paddingRight: 52 } : undefined,
             props.style,
-            {
-              fontFamily: fontForWeight(
-                StyleSheet.flatten(props.style)?.fontWeight,
-              ),
-              ...(Platform.OS !== "web" ? { fontWeight: "400" } : {}),
-            },
+            fontStyle(StyleSheet.flatten(props.style)?.fontWeight),
           ]}
         />
         {right && (
