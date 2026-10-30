@@ -89,9 +89,10 @@ public class ChatService {
 			throw new ApiException(ErrorCode.CHAT_FAILED);
 		}
 
+		String proposed = r.proposedPreset() != null ? r.proposedPreset() : mentioned(r.text(), context.proposable());
 		ChatAction action = context.proposable()
 			.stream()
-			.filter(p -> p.name().equals(r.proposedPreset()))
+			.filter(p -> p.name().equals(proposed))
 			.findFirst()
 			.map(p -> new ChatAction(ActionType.DAY_PRESET, p, ChatPrompt.label(p)))
 			.orElse(null);
@@ -107,6 +108,15 @@ public class ChatService {
 			throw new ApiException(ErrorCode.CHAT_FAILED);
 		}
 		return new ChatResponse(reply, action);
+	}
+
+	/**
+	 * 모델이 도구를 부르지 않고 말로만 배분을 권한 경우(가벼운 모델에서 자주 생긴다). 바꿀 수 있는 배분 이름이 답에
+	 * 딱 하나만 나오면 그것을 제안으로 본다. 저장은 여전히 사용자가 확인해야 한다.
+	 */
+	static String mentioned(String text, List<Preset> proposable) {
+		List<Preset> found = proposable.stream().filter(p -> text.contains(ChatPrompt.label(p))).toList();
+		return found.size() == 1 ? found.get(0).name() : null;
 	}
 
 	private ChatPrompt.Context context(long userId) {

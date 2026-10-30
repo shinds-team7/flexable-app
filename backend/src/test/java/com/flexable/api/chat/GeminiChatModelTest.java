@@ -24,7 +24,7 @@ import com.flexable.api.chat.ChatDtos.Role;
 import com.flexable.api.config.ChatProperties;
 
 class GeminiChatModelTest {
-	private static final String URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+	private static final String URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent";
 	private MockRestServiceServer server;
 	private GeminiChatModel model;
 
@@ -47,6 +47,7 @@ class GeminiChatModelTest {
 			.andExpect(jsonPath("$.contents[0].parts[0].text").value("안녕\n주말에 더 쓰고 싶어"))
 			.andExpect(jsonPath("$.contents[1].role").value("model"))
 			.andExpect(jsonPath("$.contents[2].role").value("user"))
+			.andExpect(jsonPath("$.generationConfig.thinkingConfig.thinkingLevel").value("low"))
 			.andExpect(jsonPath("$.tools[0].functionDeclarations[0].name").value("propose_day_preset"))
 			.andExpect(jsonPath("$.tools[0].functionDeclarations[0].parameters.properties.preset.enum",
 					Matchers.contains("WEEKEND", "WEEKDAY")))

@@ -50,7 +50,8 @@ public class GeminiChatModel implements ChatModel {
 									"description", "EVEN 기본 배분, RECORD 내 기록 기준, WEEKEND 주말 넉넉히, WEEKDAY 평일 넉넉히")),
 							"required", List.of("preset")))))));
 		}
-		body.put("generationConfig", Map.of("temperature", 0.6));
+		// 생각 단계를 줄여 응답을 빠르게 한다(Gemini 3 계열 thinkingLevel).
+		body.put("generationConfig", Map.of("temperature", 0.6, "thinkingConfig", Map.of("thinkingLevel", "low")));
 
 		Map<String, Object> res;
 		try {

@@ -39,9 +39,8 @@ test("home help, weekly expenses and seed history use recorded data", async ({
     .scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "오늘 예산 초과 도움말" }).click();
   await expect(page).toHaveURL(/\/chatbot\?/);
-  await page
-    .getByRole("button", { name: "똑똑한 분석가", exact: true })
-    .click();
+  await page.getByRole("radio", { name: "똑똑한 분석가", exact: true }).click();
+  await page.getByRole("button", { name: "선택하고 시작하기" }).click();
   await expect(
     page.getByLabel("AI 메이트에게 질문", { exact: true }),
   ).toHaveValue("오늘 예산을 넘겼어요. 기록을 바탕으로 도움을 주세요");

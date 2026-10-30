@@ -140,7 +140,8 @@ test("Gemini setup failure retries the same question and budget proposal require
   });
   await page.goto("/home");
   await page.getByRole("button", { name: "AI 메이트", exact: true }).click();
-  await page.getByRole("button", { name: "다정한 친구", exact: true }).click();
+  await page.getByRole("radio", { name: "다정한 친구", exact: true }).click();
+  await page.getByRole("button", { name: "선택하고 시작하기" }).click();
   await page
     .getByLabel("AI 메이트에게 질문", { exact: true })
     .fill("주말 예산을 늘리고 싶어요");
@@ -152,21 +153,16 @@ test("Gemini setup failure retries the same question and budget proposal require
       exact: true,
     }),
   ).toBeVisible();
-  expect(changes).toBe(0);
-  await page
-    .getByRole("button", { name: "주말 넉넉히 적용 확인", exact: true })
-    .click();
-  await page.getByRole("button", { name: "취소", exact: true }).click();
-  expect(changes).toBe(0);
-  await page
-    .getByRole("button", { name: "주말 넉넉히 적용 확인", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "확인하고 변경", exact: true })
-    .click();
+  // 제안만 보여 주고, [확인]을 누르기 전에는 저장하지 않는다
   await expect(
-    page.getByRole("button", { name: "배분 변경 완료", exact: true }),
-  ).toBeDisabled();
+    page.getByRole("button", { name: "그대로 둘게", exact: true }),
+  ).toBeVisible();
+  expect(changes).toBe(0);
+  await page.getByRole("button", { name: "확인", exact: true }).click();
+  await expect(page.getByText(/주말 넉넉히.*바꿨어요/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "확인", exact: true }),
+  ).toHaveCount(0);
   expect(changes).toBe(1);
   await page.reload();
   await expect(

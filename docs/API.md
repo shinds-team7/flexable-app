@@ -410,7 +410,7 @@ POST 본문:
 - 모델은 금액을 다시 계산하지 않고 받은 값만 쓰도록 지시한다(예산 최종값은 서버 `BudgetCalculator`).
 - `action`은 **제안만** 한다. 지금 배분과 같은 프리셋, 기록이 부족한 `RECORD`, `CUSTOM`은 제안하지 않는다. 앱은 확인 버튼을 보여 주고, 누르면 `PUT /budget/day-weights {"preset": action.preset}`을 부른다. 제안이 없으면 `null`.
 - 사용자별 1시간 30번(서버 메모리). 넘으면 429 `TOO_MANY_ATTEMPTS` + `retryAfterSeconds`.
-- 키는 서버 `.env`의 `GEMINI_API_KEY`, 모델은 `GEMINI_MODEL`(기본 `gemini-2.5-flash`). 키는 요청 헤더(`x-goog-api-key`)로 보낸다.
+- 키는 서버 `.env`의 `GEMINI_API_KEY`, 모델은 `GEMINI_MODEL`(기본 `gemini-3.5-flash-lite`). 키는 요청 헤더(`x-goog-api-key`)로 보낸다.
 
 
 ## 코인·코스튬
