@@ -1,12 +1,12 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Pressable, View } from "react-native";
+import { AppState, Linking, Pressable, View } from "react-native";
 import { Button, Card, ConfirmModal, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { useToast } from "@/components/Toast";
 import { colors } from "@/theme";
 import { api, sessionGeneration } from "./api/client";
-import { OPERATOR_NAME } from "./config";
+import { OPERATOR_NAME, WEBSITE_URL } from "./config";
 import { ErrorNotice, Loading, parseTime, useResource } from "./ui";
 
 type LinkCode = { code: string; expiresAt: string };
@@ -191,6 +191,7 @@ function WebLinksContent({
   onIssue: () => void;
   onSelect: (link: WebLink) => void;
 }) {
+  const [openError, setOpenError] = useState<unknown>();
   return (
     <Screen>
       <Card style={{ gap: 12 }}>
@@ -262,6 +263,22 @@ function WebLinksContent({
               {Math.floor(remaining / 60)}분{" "}
               {String(remaining % 60).padStart(2, "0")}초 남았어요
             </T>
+            <Button
+              label="웹사이트에서 연동하기"
+              icon="open-outline"
+              onPress={() => {
+                setOpenError(undefined);
+                Linking.openURL(WEBSITE_URL).catch(() =>
+                  setOpenError(
+                    "웹사이트를 열지 못했어요. 잠시 후 다시 시도해 주세요",
+                  ),
+                );
+              }}
+            />
+            <T size={12}>
+              solpa.shinhanacademy.co.kr에서 로그인한 뒤 코드를 입력해 주세요
+            </T>
+            <ErrorNotice error={openError} />
           </View>
         )}
         {code && remaining === 0 && (

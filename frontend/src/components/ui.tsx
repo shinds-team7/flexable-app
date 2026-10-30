@@ -16,7 +16,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, elevation1, floating, font, motion, pressTransition, radius, touch } from '@/theme';
+import { colors, elevation1, floating, fontStyle, motion, pressTransition, radius, touch } from '@/theme';
 
 type TProps = TextProps & {
   size?: number;
@@ -33,14 +33,13 @@ export function T({ size = 15, weight = '400', color = colors.text, num, style, 
       style={[
         {
           fontSize: size,
-          fontWeight: weight,
           color,
-          fontFamily: font,
           // 큰 글씨일수록 자간을 조금 더 좁힌다
           letterSpacing: size >= 28 ? -0.8 : size >= 20 ? -0.4 : -0.2,
         },
         num && { fontVariant: ['tabular-nums'] },
         style,
+        fontStyle(StyleSheet.flatten(style)?.fontWeight ?? weight),
       ]}
     />
   );

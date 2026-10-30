@@ -12,7 +12,7 @@
  * - 모션: ease-out(0.23,1,0.32,1), 300ms 이하. 사용자가 누른 것에만 반응한다.
  * 시안: https://claude.ai/artifact/1mmbGZNgazLQ3p5AqvNfCY (디자인 토큰·컴포넌트 규격 보드)
  */
-import { Easing, Platform } from 'react-native';
+import { Easing, Platform, type TextStyle } from 'react-native';
 
 export const colors = {
   /** 신한 블루 — 행동·선택·오늘. 앱에서 쓰는 파랑은 이 계열뿐이다 */
@@ -67,8 +67,22 @@ export const type = { tab: 12, caption: 13, meta: 14, body: 16, title: 18, amoun
 
 export const font = Platform.select({
   web: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif',
-  default: undefined,
+  default: 'Pretendard-Regular',
 });
+
+export function fontForWeight(weight: string | number = '400') {
+  if (Platform.OS === 'web') return font;
+  const n = Number(weight === 'bold' ? 700 : weight);
+  return n >= 800 ? 'Pretendard-ExtraBold' : n >= 700 ? 'Pretendard-Bold' : n >= 600 ? 'Pretendard-SemiBold' : n >= 500 ? 'Pretendard-Medium' : 'Pretendard-Regular';
+}
+
+/** 굵기별 로컬 파일을 직접 선택하고 네이티브의 합성 굵기·시스템 글꼴 대체를 막는다. */
+export function fontStyle(weight: TextStyle['fontWeight'] = '400'): TextStyle {
+  return {
+    fontFamily: fontForWeight(weight),
+    fontWeight: Platform.OS === 'web' ? weight : 'normal',
+  };
+}
 
 /** 모션 토큰 — emil-design-eng 기준 */
 export const motion = {

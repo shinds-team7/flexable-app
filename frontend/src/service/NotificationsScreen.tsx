@@ -1,30 +1,19 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors } from "@/theme";
 import { useInbox, type InboxItem } from "./inbox";
-import { markInboxSeen } from "./inboxStore";
+import { markInboxItemRead } from "./inboxStore";
 import { ErrorNotice, Loading, seoulDate } from "./ui";
 
 /**
  * 알림함. 헤더 종 아이콘에서 들어온다. 최근 30일의 코인 적립·사용, 고정지출 자동 기록,
- * 오늘 예산 상태, 이 기기에서 보낸 시드머니·기록 알림을 최신순으로 보여 준다. 열면 모두 읽은 것으로 한다.
+ * 오늘 예산 상태, 이 기기에서 보낸 시드머니·기록 알림을 최신순으로 보여 준다. 직접 누른 항목만 읽음으로 한다.
  */
 export function NotificationsScreen() {
-  const { id, items, seen, error, loading, retry } = useInbox();
-  // 화면을 연 순간의 읽은 시각. 읽음 처리 뒤에도 이번에 새로 온 알림은 바탕색으로 표시해 둔다.
-  const [opened, setOpened] = useState<number>();
-  if (opened === undefined && seen !== undefined) setOpened(seen);
-  // 가장 최근 알림 시각까지만 읽음으로 한다. 지금 시각을 쓰면 읽음 기록이 바뀔 때마다 다시 읽고 또 기록하게 된다.
-  useFocusEffect(
-    useCallback(() => {
-      if (!id || !items?.length) return;
-      markInboxSeen(id, Math.max(...items.map((i) => i.at))).catch(() => {});
-    }, [id, items]),
-  );
+  const { id, items, isUnread, error, loading, retry } = useInbox();
 
   const groups = new Map<string, InboxItem[]>();
   (items ?? []).forEach((item) => {
@@ -69,7 +58,11 @@ export function NotificationsScreen() {
                     <Row
                       key={item.key}
                       item={item}
-                      fresh={opened !== undefined && item.at > opened}
+                      fresh={isUnread(item)}
+                      onOpen={() => {
+                        if (id) markInboxItemRead(id, item).catch(() => {});
+                        router.push(item.href);
+                      }}
                     />
                   ))}
                 </View>
@@ -86,15 +79,28 @@ function seoulDay(at: number) {
   return new Date(at + 9 * 3600000).toISOString().slice(0, 10);
 }
 
-function Row({ item, fresh }: { item: InboxItem; fresh: boolean }) {
+function Row({
+  item,
+  fresh,
+  onOpen,
+}: {
+  item: InboxItem;
+  fresh: boolean;
+  onOpen: () => void;
+}) {
   const time = new Date(item.at + 9 * 3600000).toISOString().slice(11, 16);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={[fresh ? "새 알림" : "", item.title, item.detail, time]
+      accessibilityLabel={[
+        fresh ? "새 알림" : "",
+        item.title,
+        item.detail,
+        time,
+      ]
         .filter(Boolean)
         .join(", ")}
-      onPress={() => router.push(item.href)}
+      onPress={onOpen}
       style={[styles.row, fresh && styles.fresh]}
     >
       <View style={[styles.icon, { backgroundColor: item.color + "1F" }]}>

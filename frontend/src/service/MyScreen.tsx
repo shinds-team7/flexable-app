@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   ConfirmModal,
-  RadioMark,
   Row,
   Screen,
   SwitchMark,
@@ -17,7 +16,6 @@ import { colors } from "@/theme";
 import { api, sessionGeneration } from "./api/client";
 import { getReferral, registerReferral } from "./coinApi";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config";
-import { useHomeStyle } from "./homeStyle";
 import {
   useEntryReminderSetting,
   useSeedReminderSetting,
@@ -145,7 +143,6 @@ export function MyScreen() {
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState<unknown>();
-  const [homeStyle, setHomeStyle] = useHomeStyle();
   // Turning it off cancels the scheduled reminder; the home screen reschedules when it is back on.
   const [remind, setRemind] = useSeedReminderSetting();
   // Same for the reminder to record; the service layout reschedules it.
@@ -181,40 +178,6 @@ export function MyScreen() {
             내 계정
           </T>
           {session.user && <AccountLine user={session.user} />}
-        </View>
-      </Card>
-      <Card style={styles.group}>
-        <T
-          size={14}
-          weight="700"
-          color={colors.textSub}
-          style={styles.groupTitle}
-        >
-          홈 화면
-        </T>
-        <View accessibilityRole="radiogroup">
-          {(
-            [
-              [
-                "character",
-                "캐릭터 홈",
-                "예산을 지킨 날이 쌓이면 캐릭터가 자라요",
-              ],
-              ["classic", "기본 홈", "캐릭터 없이 금액만 보여 드려요"],
-            ] as const
-          ).map(([key, label, caption], i) => (
-            <Row
-              key={key}
-              first={i === 0}
-              label={label}
-              caption={caption}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: homeStyle === key }}
-              aria-checked={homeStyle === key}
-              right={<RadioMark on={homeStyle === key} />}
-              onPress={() => setHomeStyle(key)}
-            />
-          ))}
         </View>
       </Card>
       <ReferralCard />

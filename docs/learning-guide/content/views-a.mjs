@@ -8,7 +8,7 @@ export function viewsA({ SC, SHA, BRANCH, DIRTY }) {
     summary: "텅장관리 앱이 무엇이고 어디부터 읽을지",
     html: `<div class="hero"><p class="eyebrow">텅장관리(Flex-able) · 팀 학습 자료</p><h1>텅장관리 학습 가이드</h1>
 <p class="lead">사회초년생용 생활비 관리 앱이다. 사용자가 <b>직접 입력한</b> 잔액·수입일·고정지출·거래로 서버가 <b>오늘 쓸 수 있는 돈</b>을 계산해 보여 준다. 이 가이드는 그 계산과 저장이 화면 → 서버 → DB를 어떻게 지나가는지 실제 코드로 따라간다.</p>
-<p class="meta-line">기준: <code>${BRANCH || "detached HEAD"}</code> <code>${SHA.slice(0, 7)}</code> · 갱신 2026-10-25 · 분석 대상 코드의 커밋 안 된 변경 ${DIRTY ? "있음" : "없음"} · {{v:scope|분석 기준과 검증 범위}}</p></div>
+<p class="meta-line">기준: <code>${BRANCH || "detached HEAD"}</code> <code>${SHA.slice(0, 7)}</code> · 갱신 2026-10-28 · 분석 대상 코드의 커밋 안 된 변경 ${DIRTY ? "있음" : "없음"} · {{v:scope|분석 기준과 검증 범위}}</p></div>
 ${h2("home.q", "질문으로 바로 들어가기")}
 <div class="qgrid">
 <a class="qcard" href="#arch.inputs" data-go="arch.inputs"><b>우리 앱은 무엇을 하는가?</b><span>입력한 값과 서버가 계산하는 값</span></a>
@@ -21,9 +21,9 @@ ${h2("home.q", "질문으로 바로 들어가기")}
 <a class="qcard" href="#change" data-go="change"><b>이 기능을 바꾸려면 어디를 봐야 하는가?</b><span>상황별 파일·영향·테스트</span></a>
 </div>
 ${h2("home.real", "실제 앱에 있는 것과 없는 것")}
-<p>이 저장소의 앱(Android·웹)에 있는 기능만 다룬다. 계좌 연결, AI 소비 분석·추천, 결제 알림·문자 자동 기록, 예정 지출·정산은 <b>시연에만</b> 있고 실제 앱에는 없다. 시연은 별도 저장소 <code>shinds-team7/flexable-web</code>의 <code>/m</code>에 있다(<code>docs/FEATURES.md</code> {{b:doc}}). 분석 탭의 '소비 분석'은 입력한 기록을 기간별로 더한 <b>집계</b>이고 AI가 아니다(<code>AnalysisController</code> {{b:code}}).</p>
+<p>이 저장소의 앱(Android·웹)에 있는 기능만 다룬다. 계좌 연결, AI 소비 분석·추천, 결제 알림·문자 자동 기록, 예정 지출·정산은 <b>시연에만</b> 있고 실제 앱에는 없다. 시연은 별도 저장소 <code>shinds-team7/flexable-web</code>의 <code>/m</code>에 있다(<code>docs/FEATURES.md</code> {{b:doc}}). 스크린샷 가져오기는 사용자가 고른 이미지 1장을 <b>기기 안에서</b> 읽을 뿐 계좌 연결이나 자동 수집이 아니고, 앱 안 알림함도 외부 카드·페이 알림을 가져오는 기능이 아니다. 분석 탭의 '소비 분석'은 입력한 기록을 기간별로 더한 <b>집계</b>이고 AI가 아니다(<code>AnalysisController</code> {{b:code}}).</p>
 <div class="two">
-<div class="box-ok"><b>실제 앱(이 저장소)</b>${ul(["이메일·카카오·Google 가입·로그인", "초기 예산 설정 8단계", "오늘·이번 주 쓸 수 있는 돈(서버 계산)", "거래 직접 기록·수정·삭제, 카테고리", "고정지출 자동 기록(조회할 때 서버가 기록)", "기간별 지출 집계(분석 탭)", "시드머니, 코인·코스튬·추천 코드", "기기 안 알림(수입일 전날 시드머니, 24시간 기록 없음)", "웹사이트 연동 코드(선택 동의)", "계정·데이터 삭제"])}</div>
+<div class="box-ok"><b>실제 앱(이 저장소)</b>${ul(["이메일·카카오·Google 가입·로그인", "초기 예산 설정 8단계", "오늘·이번 주 쓸 수 있는 돈(서버 계산)", "요일별 생활비 배분(프리셋·직접 조정, 서버 계산)", "거래 직접 기록·수정·삭제, 카테고리", "거래내역 스크린샷 가져오기(기기 안 글자 인식, 검토 후 저장)", "지출 달력, 코인 내역, 앱 안 알림함", "고정지출 자동 기록(조회할 때 서버가 기록)", "기간별 지출 집계(분석 탭)", "시드머니, 코인·코스튬·추천 코드", "기기 안 알림(수입일 전날 시드머니, 24시간 기록 없음)", "웹사이트 연동 코드(선택 동의)", "계정·데이터 삭제"])}</div>
 <div class="box-no"><b>시연에만 있거나 아직 없음</b>${ul(["계좌 연결(오픈뱅킹)", "AI 소비 분석·추천", "결제 알림·문자 자동 기록, 서버 푸시", "예정 지출·고액 지출 계획, 정산", "비밀번호 찾기, 이메일 인증", "오프라인 저장(앱은 온라인 전용)"])}</div></div>
 ${h2("home.legend", "표기 읽는 법")}
 <p>문장마다 근거의 종류를 배지로 붙였다. 코드에 있다고 운영에 배포됐다는 뜻이 아니고, 테스트를 읽었다고 통과했다는 뜻이 아니다.</p>
@@ -116,7 +116,7 @@ ${topic({
         ["토큰 저장", "SecureStore", "localStorage"],
         ["API 주소", "EAS 환경변수 <code>EXPO_PUBLIC_API_URL</code>", "<code>.env.production</code>"],
       ]),
-      code: "분기는 몇 군데뿐이다: {{c:storage}}(<code>Platform.OS === \"web\"</code>), <code>DateTimeField.tsx</code>/<code>DateTimeField.web.tsx</code>, <code>seedReminder.ts</code>/<code>seedReminder.web.ts</code>(파일 이름 끝 <code>.web</code>이면 웹에서 그 파일을 쓴다), {{c:RootLayout}}(Android만 필수 업데이트 창).",
+      code: "분기는 몇 군데뿐이다: {{c:storage}}(<code>Platform.OS === \"web\"</code>), <code>DateField.tsx</code>/<code>DateField.web.tsx</code>, <code>seedReminder.ts</code>/<code>seedReminder.web.ts</code>(파일 이름 끝 <code>.web</code>이면 웹에서 그 파일을 쓴다), {{c:RootLayout}}(Android만 필수 업데이트 창).",
       io: "같은 소스 → 두 빌드 → 같은 API 서버",
       next: "{{v:front|프론트엔드 코드 지도}}",
     })}
@@ -193,7 +193,7 @@ ${topic({
         ["DB", "MySQL 8(RDS)", "H2 파일 <code>backend/build/localdb/</code>", "H2 메모리(<code>jdbc:h2:mem:test</code>)"],
         ["설정 파일", "<code>application.yml</code> + 서버 <code>.env</code>", "<code>application-local.yml</code>", "<code>src/test/resources/application.yml</code>"],
         ["모드", "—", "<code>MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE</code>", "<code>MODE=MySQL;DATABASE_TO_LOWER=TRUE</code>"],
-        ["스키마", "Flyway V1~V11 (문서상 운영 적용 10-23 {{b:doc}})", "Flyway가 처음 켤 때 V1~V11 적용(직접 확인 {{b:ran}})", "테스트 시작 때 Flyway 적용"],
+        ["스키마", "Flyway V1~V12 (V11까지 문서상 운영 적용 10-23 {{b:doc}})", "Flyway가 처음 켤 때 V1~V12 적용(직접 확인 {{b:ran}})", "테스트 시작 때 Flyway 적용"],
         ["데이터 수명", "영구", "폴더를 지울 때까지", "테스트 실행이 끝나면 사라짐"],
       ]),
       code: snip("cfg-local-yml") + snip("cfg-test-yml") + "H2 드라이버는 <code>developmentOnly</code>·<code>testRuntimeOnly</code>라서 운영 <code>app.jar</code>에는 들어가지 않는다 {{b:config}}. " + snip("cfg-gradle-deps"),

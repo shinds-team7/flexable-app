@@ -1,6 +1,8 @@
 package com.flexable.api.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -26,6 +28,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -35,14 +38,16 @@ import com.atlassian.oai.validator.model.Request;
 import com.atlassian.oai.validator.model.SimpleResponse;
 import com.atlassian.oai.validator.report.LevelResolver;
 import com.atlassian.oai.validator.report.ValidationReport;
+import com.flexable.api.chat.ChatModel;
 import com.jayway.jsonpath.JsonPath;
 
 /**
  * 계약 테스트: 실제 응답(상태 코드·본문)을 docs/contracts/app-api.yaml·web-link-api.yaml로 검사한다.
  * 스펙에 없는 상태 코드나 필드가 나오면 실패한다. 엔드포인트마다 정상·오류 응답을 한 번 이상 부른다.
  * 시드머니 반영 대기는 날짜에 달려 있어 시계를 고정한다. 토큰 만료는 실제 시각으로 검사하므로 가입은 지금 시각에 한다.
+ * AI 메이트는 실제 Gemini 대신 가짜 모델(ChatModel)로 답한다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "app.chat.gemini-api-key=test-gemini-key")
 @AutoConfigureMockMvc
 class ContractTest {
 
@@ -88,6 +93,9 @@ class ContractTest {
 
 	@Autowired
 	MutableClock clock;
+
+	@MockitoBean
+	ChatModel chatModel;
 
 	private static OpenApiInteractionValidator validator(String file) {
 		try {
@@ -278,7 +286,7 @@ class ContractTest {
 		app(auth(json(post("/api/v1/categories"), "{\"name\":\"\",\"type\":\"EXPENSE\"}"), token), 400);
 		app(auth(json(patch("/api/v1/categories/" + created), "{\"color\":\"#12B76A\"}"), token), 200);
 		app(auth(json(patch("/api/v1/categories/999999999"), "{\"name\":\"없음\"}"), token), 404);
-		app(auth(delete("/api/v1/categories/" + defaultId), token), 409);
+		app(auth(delete("/api/v1/categories/" + defaultId), token), 204);
 
 		String body = "{\"type\":\"EXPENSE\",\"amount\":8500,\"categoryId\":" + created + ",\"title\":\"김밥\",\"memo\":\"점심\"}";
 		String key = UUID.randomUUID().toString();
@@ -300,6 +308,49 @@ class ContractTest {
 		app(auth(get("/api/v1/transactions/" + txId), token), 200);
 		app(auth(delete("/api/v1/transactions/" + txId), token), 204);
 		app(auth(delete("/api/v1/transactions/" + txId), token), 404);
+	}
+
+	@Test
+	void AI_메이트() throws Exception {
+		String token = signup();
+		String ask = "{\"messages\":[{\"role\":\"MODEL\",\"text\":\"무엇을 도와드릴까요?\"},"
+				+ "{\"role\":\"USER\",\"text\":\"주말에 좀 더 쓰고 싶어\"}],\"mate\":\"FRIEND\"}";
+		app(json(post("/api/v1/chat/messages"), ask), 401);
+		app(auth(json(post("/api/v1/chat/messages"), "{\"messages\":[]}"), token), 400);
+		app(auth(json(post("/api/v1/chat/messages"), "{\"messages\":[{\"role\":\"MODEL\",\"text\":\"안녕\"}]}"), token), 400);
+
+		// 예산 설정 전에도 답한다(제안 없음)
+		when(chatModel.generate(any(), any(), any())).thenReturn(new ChatModel.Reply("초기 예산을 먼저 설정해 주세요.", null));
+		app(auth(json(post("/api/v1/chat/messages"), ask), token), 200);
+
+		app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+		when(chatModel.generate(any(), any(), any())).thenReturn(new ChatModel.Reply("", "WEEKEND"));
+		MvcResult proposed = app(auth(json(post("/api/v1/chat/messages"), ask), token), 200);
+		assertThat(read(proposed, "$.action.preset")).isEqualTo("WEEKEND");
+
+		when(chatModel.generate(any(), any(), any())).thenThrow(new ChatModel.Failure("test"));
+		app(auth(json(post("/api/v1/chat/messages"), ask), token), 502);
+	}
+
+	@Test
+	void 예정_지출과_카테고리_순서() throws Exception {
+		String token=signup();
+		clock.seoulNoon("2026-10-30");
+		MvcResult found=app(auth(get("/api/v1/categories?type=EXPENSE"),token),200);
+		java.util.List<Integer> ids=JsonPath.read(found.getResponse().getContentAsString(StandardCharsets.UTF_8),"$[*].id");
+		app(auth(json(put("/api/v1/categories/order"),"{\"type\":\"EXPENSE\",\"ids\":"+ids+"}"),token),200);
+		app(auth(json(put("/api/v1/categories/order"),"{\"type\":\"EXPENSE\",\"ids\":[]}"),token),400);
+		app(json(put("/api/v1/categories/order"),"{\"type\":\"EXPENSE\",\"ids\":[]}"),401);
+		String body="{\"amount\":10000,\"categoryId\":"+ids.get(0)+",\"title\":\"선물\",\"date\":\"2026-10-31\"}";
+		app(json(post("/api/v1/scheduled-expenses"),body),401);
+		String id=read(app(auth(json(post("/api/v1/scheduled-expenses"),body),token),201),"$.id");
+		app(auth(get("/api/v1/scheduled-expenses?from=2026-10-31&to=2026-10-31"),token),200);
+		app(auth(get("/api/v1/scheduled-expenses?from=2026-11-01&to=2026-10-31"),token),400);
+		app(auth(json(post("/api/v1/scheduled-expenses"),body.replace("2026-10-31","2026-10-30")),token),400);
+		app(auth(json(put("/api/v1/scheduled-expenses/"+id),body),token),200);
+		app(auth(json(put("/api/v1/scheduled-expenses/999999999"),body),token),404);
+		app(auth(delete("/api/v1/scheduled-expenses/"+id),token),204);
+		app(auth(delete("/api/v1/scheduled-expenses/"+id),token),404);
 	}
 
 	@Test

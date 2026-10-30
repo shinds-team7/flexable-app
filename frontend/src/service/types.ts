@@ -3,7 +3,9 @@
 import type { components, paths } from "./api/schema";
 
 type S = components["schemas"];
-type Json<R> = R extends { content: { "application/json": infer B } } ? B : never;
+type Json<R> = R extends { content: { "application/json": infer B } }
+  ? B
+  : never;
 
 export type Kind = S["TxType"];
 export type User = S["User"];
@@ -24,16 +26,27 @@ export type Today = S["Today"];
 export type DayPreset = S["DayPreset"];
 export type DayWeights = S["DayWeights"];
 export type Analysis = S["AnalysisSummary"];
+export type ScheduledExpense = S["ScheduledExpense"];
+export type ChatRequest = S["ChatRequest"];
+export type ChatResponse = S["ChatResponse"];
 
 export type CoinWallet = S["Wallet"];
 export type CoinReward = S["Reward"];
 export type CheckIn = Json<paths["/coins/check-in"]["post"]["responses"][200]>;
 export type CoinLedgerEntry = S["LedgerEntry"];
-export type CoinLedgerPage = Json<paths["/coins/ledger"]["get"]["responses"][200]>;
+export type CoinLedgerPage = Json<
+  paths["/coins/ledger"]["get"]["responses"][200]
+>;
 export type Attendance = S["Attendance"];
-export type AttendResult = Json<paths["/coins/attendance"]["post"]["responses"][200]>;
-export type CollectResult =Json<paths["/coins/collect"]["post"]["responses"][200]>;
+export type AttendResult = Json<
+  paths["/coins/attendance"]["post"]["responses"][200]
+>;
+export type CollectResult = Json<
+  paths["/coins/collect"]["post"]["responses"][200]
+>;
 export type OutfitList = S["OutfitList"];
 export type Outfit = OutfitList["items"][number];
 export type Referral = Json<paths["/referrals/me"]["get"]["responses"][200]>;
-export type ReferralResult = Json<paths["/referrals"]["post"]["responses"][200]>;
+export type ReferralResult = Json<
+  paths["/referrals"]["post"]["responses"][200]
+>;

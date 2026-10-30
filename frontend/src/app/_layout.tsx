@@ -1,8 +1,9 @@
 import { Stack } from "expo-router";
+import { NavigationBar } from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { AppState, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ToastProvider } from "@/components/Toast";
@@ -14,6 +15,7 @@ import {
 } from "@/service/LaunchUpdate";
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
+import { useAppFonts } from "@/service/AppFonts";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
@@ -22,31 +24,43 @@ const SPLASH_MIN_MS = 1000;
 const startedAt = Date.now();
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function SplashGate() {
+function SplashGate({ fontsReady }: { fontsReady: boolean }) {
   const { ready } = useSession();
   const updateSettled = useLaunchUpdateSettled();
   useEffect(() => {
-    if (!ready || !updateSettled) return;
+    if (!ready || !updateSettled || !fontsReady) return;
     const t = setTimeout(
       () => SplashScreen.hideAsync().catch(() => {}),
       Math.max(0, startedAt + SPLASH_MIN_MS - Date.now()),
     );
     return () => clearTimeout(t);
-  }, [ready, updateSettled]);
+  }, [ready, updateSettled, fontsReady]);
   return null;
 }
 
 /** 공통 틀(안전영역·폰 프레임·토스트)과 세션을 둔다. */
 export default function RootLayout() {
   useFetchUpdateOnResume();
+  const [fontsReady, fontError] = useAppFonts();
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") NavigationBar.setHidden(true);
+    });
+    return () => sub.remove();
+  }, []);
+  if (fontError) throw fontError;
+  // 세션 복원 중 화면 이동이 일어나기 전에 네비게이터가 함께 마운트되게 한다.
+  if (!fontsReady) return null;
   return (
     <SafeAreaProvider>
       <View style={styles.outer}>
         <SafeAreaView style={styles.phone} edges={["top", "bottom"]}>
           <StatusBar style="dark" />
+          {Platform.OS === "android" && <NavigationBar hidden />}
           <ToastProvider>
             <SessionProvider>
-              <SplashGate />
+              <SplashGate fontsReady={fontsReady} />
               <BudgetDraftProvider>
                 {Platform.OS === "android" && <ForceUpdate />}
                 <Stack
