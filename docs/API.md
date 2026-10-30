@@ -41,6 +41,8 @@
 | 400 | `LINK_CODE_INVALID` | 웹 연동 코드 없음·만료·이미 사용(웹 서버 전용 API) |
 | 404 | `LINK_NOT_FOUND` | 웹 연동이 해제됐거나 앱 계정이 탈퇴함(웹 서버 전용 API) |
 | 429 | `TOO_MANY_ATTEMPTS` | 로그인 연속 실패(10분 내 5회)·실패 기록 저장 상한, 웹 연동 코드 실패(서비스 전체 10분 내 30회). `retryAfterSeconds` 추가 |
+| 502 | `CHAT_FAILED` | AI 메이트: Gemini 호출 실패·시간 초과·답변 없음 |
+| 503 | `CHAT_UNAVAILABLE` | AI 메이트: 서버에 `GEMINI_API_KEY`가 없음 |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |
 
 화면 문구는 `message`를 그대로 써도 되도록 한국어 존댓말로 내려준다. 분기는 반드시 `code`로 한다.
@@ -381,6 +383,35 @@ POST 본문:
 - 고정지출 자동 기록(`fromFixed`)도 지출로 센다(`expenseTotal`·`expenseCount`·`byCategory`·`daily`). `GET /budget/today`의 오늘·이번 주 쓴 돈에서는 빠지는 것과 다르다.
 - `daily`는 `from`~`to` 모든 날짜를 0 포함해 채운다. 최대 366일.
 - 이번 주/이번 정산 주기 탭은 클라이언트가 기간을 계산해 호출한다(정산 주기 시작은 `/budget/today.cycleStart`).
+
+## AI 메이트(챗봇)
+
+### `POST /chat/messages` → 200 | 400 | 429 | 502 `CHAT_FAILED` | 503 `CHAT_UNAVAILABLE`
+
+```json
+// 요청: 오래된 것부터, 마지막은 USER. 최대 20개, 메시지당 1000자
+{
+  "messages": [
+    { "role": "MODEL", "text": "무엇을 도와드릴까요?" },
+    { "role": "USER", "text": "주말에 좀 더 쓰고 싶어" }
+  ],
+  "mate": "FRIEND"
+}
+// 응답
+{
+  "reply": "요일별 배분을 **주말 넉넉히**로 바꿀까요?\n확인을 누르면 오늘 하루 예산부터 바뀌어요.",
+  "action": { "type": "DAY_PRESET", "preset": "WEEKEND", "label": "주말 넉넉히" }
+}
+```
+
+- 대화는 서버에 저장하지 않는다. 앱이 화면의 대화를 그대로 보낸다. 첫 USER 앞의 MODEL(인사말)은 서버가 건너뛰고, 같은 역할이 이어지면 한 턴으로 합쳐 Gemini에 보낸다.
+- `mate`: `ANALYST`(똑똑한 분석가, 기본)·`FRIEND`(다정한 친구)·`COACH`(따끔한 조언가). 말투만 바뀐다.
+- 서버가 시스템 지시에 넣는 것: 오늘 날짜, `GET /budget/today`와 같은 계산의 오늘·이번 주 쓸 수 있는 돈·하루 예산·다음 수입일·남은 생활비·부족액·요일별 하루 예산, 지금 요일별 배분과 바꿀 수 있는 프리셋, 이번 주기(`cycleStart`~오늘)와 직전 같은 일수의 카테고리별 지출 합계·건수(많은 순 8개 + 그 외, 고정지출 자동 기록 포함). 거래 제목·메모·개별 거래는 넣지 않는다. 예산을 설정하지 않았으면 이번 달 1일부터 합계만 넣고 변경 제안은 하지 않는다.
+- 모델은 금액을 다시 계산하지 않고 받은 값만 쓰도록 지시한다(예산 최종값은 서버 `BudgetCalculator`).
+- `action`은 **제안만** 한다. 지금 배분과 같은 프리셋, 기록이 부족한 `RECORD`, `CUSTOM`은 제안하지 않는다. 앱은 확인 버튼을 보여 주고, 누르면 `PUT /budget/day-weights {"preset": action.preset}`을 부른다. 제안이 없으면 `null`.
+- 사용자별 1시간 30번(서버 메모리). 넘으면 429 `TOO_MANY_ATTEMPTS` + `retryAfterSeconds`.
+- 키는 서버 `.env`의 `GEMINI_API_KEY`, 모델은 `GEMINI_MODEL`(기본 `gemini-2.5-flash`). 키는 요청 헤더(`x-goog-api-key`)로 보낸다.
+
 
 ## 코인·코스튬
 
