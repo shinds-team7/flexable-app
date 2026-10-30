@@ -37,7 +37,7 @@
 | 원격 업데이트 적용 | 안내 없이 적용: 실행 때 스플래시 3초 안에 받으면 바로, 늦으면 다음에 앱을 새로 켤 때. 켜 둔 채 돌아오면 10분 간격으로 미리 받음 → `service/LaunchUpdate.ts` (10-22 "지금 적용" 배너 삭제, 웹 해당 없음) | `expo-updates` | Android 실기기 |
 | 고객지원 FAQ | `/support`: 질문을 누르면 답변을 열고 다시 누르면 닫는 아코디언. 한 번에 한 질문을 연다 | 서버 변경 없음 | E2E `ui-ux.spec.ts`(토글·펼침 접근성 상태) |
 | Android 하단 시스템 바·입력 글꼴 | `app/_layout.tsx`: SDK 57 `expo-navigation-bar`로 하단 바를 숨기고 스와이프 때 일시 표시. 재진입·다이얼로그에도 적용. Pretendard 5개 굵기를 앱에 포함해 `T`·입력·placeholder에 적용(`AppFonts.ts`, 라이선스 `assets/fonts/OFL.txt`). 웹 placeholder는 입력 글꼴을 상속 | 서버 변경 없음. **앱 1.6.0 새 빌드 필요**(네이티브 모듈 추가). 웹은 기존 서브셋 사용 | 웹 placeholder E2E `ui-ux.spec.ts`. 갤럭시 3버튼·제스처·키보드·모달·복귀·기기 글꼴 변경은 실기기 확인 필요 |
-| 예정 지출 | /scheduled-expenses: 미래 날짜에 별도 등록·수정·삭제. 날짜가 되어도 자동 거래 생성/예산 차감 없음 | /scheduled-expenses GET·POST, /{id} PUT·DELETE. V14 별도 테이블, 탈퇴 시 함께 삭제 | 소유권·입력·예산 미반영·탈퇴 검사, 계약 검사, E2E CRUD |
+| 예정 지출 | /scheduled-expenses: 미래 날짜에 별도 등록·수정·삭제. 날짜가 되어도 자동 거래 생성/예산 차감 없음 | /scheduled-expenses GET·POST, /{id} PUT·DELETE. V15 별도 테이블, 탈퇴 시 함께 삭제 | 소유권·입력·예산 미반영·탈퇴 검사, 계약 검사, E2E CRUD |
 | AI 메이트(Gemini) | 헤더/예산 초과 (?) → /chatbot. 메이트 말투·자유 질문·실패 재시도·대화 초기화. 더미 답변 없음. 배분 변경은 확인 뒤 저장. 대화 영구 저장 없음 | #200 POST /chat/messages. 예산 요약·카테고리 합계·보낸 대화만 전송, 키는 서버 환경변수. 빈 키 503·모델 실패 502·횟수 제한 429 | ChatFlowTest·GeminiChatModelTest·ChatUnavailableTest·ContractTest, E2E 재시도/확인 전 미저장/초기화. 운영 반영은 HANDOFF |
 | 구버전 서버 호환 | 예정 지출 API를 지원하지 않으면 미래 날짜 선택·카테고리 순서 변경·기본 카테고리 삭제·헤더 AI 버튼을 숨긴다. 예정 지출/AI 직접 진입은 준비 안내, 예산 초과 도움말은 기존 예산 설명으로 표시 | `GET /scheduled-expenses?from=&to=` 읽기로 지원 여부 확인(`service/serverExtensions.ts`). 미지원 쓰기 요청 차단 | E2E `ui-extension.spec.ts`의 구버전 서버 회귀 검사 |
 
