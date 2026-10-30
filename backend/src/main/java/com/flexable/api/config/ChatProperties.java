@@ -14,6 +14,6 @@ public record ChatProperties(String geminiApiKey, String geminiModel) {
 	}
 
 	public String model() {
-		return geminiModel == null || geminiModel.isBlank() ? "gemini-2.5-flash" : geminiModel.trim();
+		return geminiModel == null || geminiModel.isBlank() ? "gemini-3.5-flash-lite" : geminiModel.trim();
 	}
 }

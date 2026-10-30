@@ -175,6 +175,32 @@ class ChatFlowTest {
 	}
 
 	@Test
+	void treatsSingleMentionedPresetAsProposal() throws Exception {
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+
+		// 도구 없이 말로만 권해도 바꿀 수 있는 배분이 하나뿐이면 제안으로 붙인다
+		when(model.generate(anyString(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("**주말 넉넉히** 배분이 잘 맞겠어요.", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.action.preset", is("WEEKEND")));
+
+		// 둘 이상이거나 지금 배분(기본 배분)만 나오면 붙이지 않는다
+		when(model.generate(anyString(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("주말 넉넉히와 평일 넉넉히 중에 고를 수 있어요.", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.action", nullValue()));
+		when(model.generate(anyString(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("지금은 기본 배분이에요.", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.action", nullValue()));
+		mvc.perform(auth(get("/api/v1/budget/day-weights"), token, null)).andExpect(jsonPath("$.preset", is("EVEN")));
+	}
+
+	@Test
 	@SuppressWarnings("unchecked")
 	void answersWithoutBudgetButOffersNoChange() throws Exception {
 		String token = signup();

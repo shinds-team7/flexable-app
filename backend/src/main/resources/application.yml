@@ -61,4 +61,4 @@ app:
   chat:
     # AI 메이트(POST /chat/messages). 비우면 503 CHAT_UNAVAILABLE. 키는 .env에만 둔다(공개 저장소)
     gemini-api-key: ${GEMINI_API_KEY:}
-    gemini-model: ${GEMINI_MODEL:gemini-2.5-flash}
+    gemini-model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
