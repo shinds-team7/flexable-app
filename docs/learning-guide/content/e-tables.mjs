@@ -1,4 +1,4 @@
-// 최종 스키마(V1~V11 SQL + V3 Java를 순서대로 적용한 결과). 빌드가 H2 information_schema 추출본과 대조한다.
+// 최종 스키마(V1~V15 SQL + V3 Java를 순서대로 적용한 결과). 빌드가 H2 information_schema 추출본과 대조한다.
 // 예시 행은 가이드 시나리오(가상 사용자 learner@example.com)용이며 실제 사용자 데이터가 아니다.
 const C = (name, type, o = {}) => ({ name, type, nullable: !!o.n, default: o.d ?? null, key: o.k || "", note: o.note || "", since: o.v || "" });
 const U = (t) => ({ name: `fk_${t}`, column: "user_id", refTable: "users", refColumn: "id", onDelete: "CASCADE" });
@@ -6,12 +6,33 @@ const U = (t) => ({ name: `fk_${t}`, column: "user_id", refTable: "users", refCo
 export const GROUPS = [
   { id: "account", title: "계정", tables: ["users", "user_identities"] },
   { id: "budget", title: "예산 설정·계산 기록", tables: ["budget_settings", "fixed_expenses", "protected_items", "fixed_expense_postings", "daily_budgets", "seed_money_entries"] },
-  { id: "money", title: "거래", tables: ["categories", "transactions"] },
+  { id: "money", title: "거래", tables: ["categories", "transactions", "scheduled_expenses"] },
   { id: "coin", title: "코인·코스튬·추천", tables: ["coin_wallets", "coin_ledger", "outfits", "user_outfits", "referrals"] },
   { id: "web", title: "웹사이트 연동", tables: ["web_link_codes", "web_links"] },
 ];
 
 export const TABLES = {
+  scheduled_expenses: {
+    group: "money",
+    summary: "예정 지출은 실제 거래와 별도로 보관한다. 예정일이 지나도 거래·예산·캐릭터에 자동 반영하지 않는다.",
+    columns: [
+      C("id", "BIGINT AUTO_INCREMENT", { k: "PK" }),
+      C("user_id", "BIGINT", { k: "FK" }),
+      C("category_id", "BIGINT", { k: "FK" }),
+      C("amount", "BIGINT"),
+      C("title", "VARCHAR(40)"),
+      C("planned_date", "DATE"),
+      C("created_at", "DATETIME(6)"),
+      C("updated_at", "DATETIME(6)"),
+    ],
+    pk: ["id"], uniques: [],
+    fks: [
+      { name: "fk_scheduled_user", column: "user_id", refTable: "users", refColumn: "id", onDelete: "CASCADE" },
+      { name: "fk_scheduled_category", column: "category_id", refTable: "categories", refColumn: "id", onDelete: "NO ACTION" },
+    ],
+    indexes: [{ name: "idx_scheduled_user_date", columns: ["user_id", "planned_date"] }],
+    migrations: ["V15"],
+  },
   users: {
     group: "account",
     summary: "가입한 사람 한 명이 한 행이다. 다른 사용자 데이터 테이블은 거의 모두 <code>user_id</code>로 이 테이블의 <code>id</code>를 가리킨다.",
@@ -65,6 +86,8 @@ export const TABLES = {
       C("updated_at", "DATETIME(6)"),
       C("fixed_posting_since", "DATETIME(6)", { n: true, note: "고정지출 자동 기록 도입 전 사용자만 값이 있다(V3가 채움)", v: "V2·V3" }),
       C("seed_base", "BIGINT", { d: "0", note: "모아둔 돈(시드머니 시작 금액)", v: "V7" }),
+      C("day_preset", "VARCHAR(10)", { d: "'EVEN'", note: "요일 배분 프리셋(EVEN·RECORD·WEEKEND·WEEKDAY·CUSTOM). 저장한 적 없으면 EVEN", v: "V12" }),
+      C("day_weights", "VARCHAR(40)", { d: "'14,14,14,14,14,14,14'", note: "요일 비중 월~일 7개를 쉼표로 이은 문자열(각 5~30). 기본은 모두 같음 = 기존 하루 예산 그대로", v: "V12" }),
     ],
     pk: ["user_id"],
     uniques: [],
@@ -72,8 +95,8 @@ export const TABLES = {
     indexes: [],
     entity: "BudgetSettings",
     repo: "SettingsRepository",
-    migrations: ["V1", "V2", "V3", "V7"],
-    rows: [["user_id", "balance", "balance_at", "payday", "card_unpaid", "seed_base"], [1, 1250000, "2026-10-13 01:00:00.000000", 25, 0, 500000]],
+    migrations: ["V1", "V2", "V3", "V7", "V12"],
+    rows: [["user_id", "balance", "balance_at", "payday", "card_unpaid", "seed_base", "day_preset"], [1, 1250000, "2026-10-13 01:00:00.000000", 25, 0, 500000, "EVEN"]],
   },
   fixed_expenses: {
     group: "budget",
@@ -181,16 +204,17 @@ export const TABLES = {
       C("type", "VARCHAR(10)", { k: "UQ", note: "<code>EXPENSE</code>·<code>INCOME</code>(자바 enum <code>TxType</code>을 문자열로 저장)" }),
       C("color", "VARCHAR(7)", { note: "#RRGGBB" }),
       C("icon", "VARCHAR(40)", { note: "Ionicons 이름" }),
-      C("is_default", "BOOLEAN", { d: "FALSE", note: "기본 카테고리는 삭제할 수 없다" }),
+      C("is_default", "BOOLEAN", { d: "FALSE", note: "초기 기본 항목 표시. 기본 항목도 기록을 옮긴 뒤 삭제할 수 있다" }),
       C("created_at", "DATETIME(6)"),
+      C("sort_order", "BIGINT", { d: "0", v: "V14", note: "지출·수입별 사용자 지정 순서. 기존 항목은 id로 초기화" }),
     ],
     pk: ["id"],
     uniques: [{ name: "uk_categories_name", columns: ["user_id", "type", "name"] }],
     fks: [{ name: "fk_categories_user", column: "user_id", refTable: "users", refColumn: "id", onDelete: "CASCADE" }],
-    indexes: [],
+    indexes: [{ name: "idx_categories_user_order", columns: ["user_id", "type", "sort_order"] }],
     entity: "Category",
     repo: "CategoryRepository",
-    migrations: ["V1"],
+    migrations: ["V1", "V14"],
     rows: [["id", "user_id", "name", "type", "is_default"], [1, 1, "식비", "EXPENSE", "TRUE"], [7, 1, "고정지출", "EXPENSE", "TRUE"], [9, 1, "급여", "INCOME", "TRUE"]],
   },
   transactions: {
@@ -376,6 +400,7 @@ export const TABLES = {
 
 // ERD 배치(가로 1180 기준). 클릭하면 테이블 상세로 간다.
 export const ERD_LAYOUT = {
+  scheduled_expenses: [810, 430],
   users: [40, 330],
   user_identities: [40, 560],
   budget_settings: [330, 40],

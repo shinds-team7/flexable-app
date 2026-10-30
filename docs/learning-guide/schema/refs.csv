@@ -10,6 +10,8 @@
 "fk_protected_user","users","id","CASCADE"
 "fk_referral_invitee","users","id","CASCADE"
 "fk_referral_inviter","users","id","SET NULL"
+"fk_scheduled_category","categories","id","NO ACTION"
+"fk_scheduled_user","users","id","CASCADE"
 "fk_seed_entry_user","users","id","CASCADE"
 "fk_transactions_category","categories","id","NO ACTION"
 "fk_transactions_user","users","id","CASCADE"

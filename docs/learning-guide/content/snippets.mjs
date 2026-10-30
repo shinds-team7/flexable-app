@@ -16,12 +16,12 @@ export const SNIPPETS = [
   { id: "fe-tabs-layout", path: F + "app/(service)/(tabs)/_layout.tsx", whole: true, title: "탭 화면 묶음" },
   { id: "fe-start-redirect", path: F + "app/index.tsx", from: "const s = useSession();", to: 'return <Redirect href={s.user.onboarded ? "/home" : "/onboarding"} />;', title: "시작 화면 분기" },
   // ---------- 거래 입력 폼 ----------
-  { id: "fe-form-wrapper", path: F + "service/TransactionForm.tsx", from: "export function TransactionForm", to: "return <Form key=", toOffset: 1, title: "등록·수정 공통 진입" },
-  { id: "fe-form-state", path: F + "service/TransactionForm.tsx", from: "function Form({ existing }", to: "const categories = useResource", title: "입력 상태(useState·useRef)" },
+  { id: "fe-form-wrapper", path: F + "service/TransactionForm.tsx", from: "export function TransactionForm", to: "function Form({", toOffset: -1, title: "등록·수정 공통 진입" },
+  { id: "fe-form-state", path: F + "service/TransactionForm.tsx", from: "function Form({", to: "const categories = useResource", title: "입력 상태(useState·useRef)" },
   { id: "fe-form-done", path: F + "service/TransactionForm.tsx", from: "const unlock = () =>", to: 'goBack("/transactions");', toOffset: 1, title: "성공·실패 뒤 처리" },
   { id: "fe-form-save", path: F + "service/TransactionForm.tsx", from: "const save = async () =>", to: "const remove = async", toOffset: -1, title: "저장 버튼 이벤트 함수" },
   { id: "fe-form-amount", path: F + "service/TransactionForm.tsx", from: 'label="금액"', fromOffset: -2, to: "onChangeText={(s) => setAmount(digits(s))}", title: "금액 입력칸" },
-  { id: "fe-form-time", path: F + "service/TransactionForm.tsx", from: "<DateTimeField", to: "/>", after: "help=\"비워 두면", title: "날짜·시간 입력" },
+    { id: "fe-form-time", path: F + "service/TransactionForm.tsx", from: "<DateField", to: "/>", title: "날짜 입력(시각 없음)" },
   // ---------- API 클라이언트·세션 ----------
   { id: "fe-client-session", path: F + "service/api/client.ts", from: "let token: string | null = null;", to: "return generation;", toOffset: 1, title: "토큰과 세션 세대(generation)" },
   { id: "fe-client-api", path: F + "service/api/client.ts", from: "export async function api<T>(", to: "export function errorText", toOffset: -1, title: "api() — 모든 요청이 지나는 함수" },
@@ -146,6 +146,7 @@ export const SNIPPETS = [
   { id: "mig-v9", path: MIG + "V9__salary_cat_outfit.sql", whole: true, title: "V9 직장냥이" },
   { id: "mig-v10", path: MIG + "V10__level_costumes.sql", whole: true, title: "V10 레벨 코스튬·환급" },
   { id: "mig-v11", path: MIG + "V11__seonbi_ghost_outfits.sql", whole: true, title: "V11 선비냥이·유령냥이" },
+  { id: "mig-v12", path: MIG + "V12__day_weights.sql", whole: true, title: "V12 요일별 비중" },
   { id: "mig-v1-tx", path: MIG + "V1__init.sql", from: "CREATE TABLE transactions (", to: "CREATE INDEX idx_transactions_user_time", title: "transactions 테이블 정의" },
   // ---------- 테스트 ----------
   { id: "t-idem-race", path: T + "ApiFlowTest.java", from: "void concurrentRetriesWithSameIdempotencyKeyCreateOneTransaction()", fromOffset: -1, to: "assertThat(ids).containsOnly(ids.get(0));", toOffset: 3, title: "같은 키 동시 재시도 6번 → 거래 1건" },

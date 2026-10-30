@@ -44,7 +44,7 @@ export function build({ SC }) {
     {
       id: "p4", title: "핵심 ERD", time: "1.5분",
       diagram: erdSvg(),
-      points: ["17개 테이블, 거의 모두 user_id → users(ON DELETE CASCADE)", "거래 → 카테고리는 삭제 제한 · 고정지출 기록·적용 코스튬은 FK 없는 논리 관계", "Flyway V1~V11(V3만 Java) · 계산값(오늘 쓸 돈·점수)은 저장하지 않음"],
+      points: ["17개 테이블, 거의 모두 user_id → users(ON DELETE CASCADE)", "거래 → 카테고리는 삭제 제한 · 고정지출 기록·적용 코스튬은 FK 없는 논리 관계", "Flyway V1~V12(V3만 Java) · 계산값(오늘 쓸 돈·점수)은 저장하지 않음"],
       notes: {
         say: "users 하나에 기능별 묶음이 매달린 모양이라고 설명하고, 거래·카테고리 선을 짚는다.",
         point: "{{t:transactions}}, {{t:fixed_expense_postings}}, {{p:backend/src/main/resources/db/migration}}",

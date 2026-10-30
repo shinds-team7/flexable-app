@@ -133,7 +133,7 @@ const ERD = {
   users: [30, 60], user_identities: [30, 210], web_link_codes: [30, 430], web_links: [30, 580],
   budget_settings: [320, 60], fixed_expenses: [600, 60], protected_items: [880, 60],
   daily_budgets: [320, 210], fixed_expense_postings: [600, 210], seed_money_entries: [880, 210],
-  categories: [320, 420], transactions: [600, 420],
+  categories: [320, 420], transactions: [600, 420], scheduled_expenses: [880, 420],
   coin_wallets: [320, 620], outfits: [600, 620], coin_ledger: [880, 620],
   referrals: [320, 770], user_outfits: [600, 770],
 };
@@ -178,6 +178,6 @@ export function erdSvg() {
     rows += `<text x="${x + 12}" y="${y + h - 8}" class="d-xs">${more > 0 ? `+ 다른 열 ${more}개` : "모든 열 표시"}</text>`;
     b += `<g class="d-link erd-t" data-go="t.${name}" tabindex="0" role="link" aria-label="테이블 ${name}"><rect x="${x}" y="${y}" width="${W}" height="${h}" rx="9" class="d-box"/><rect x="${x}" y="${y}" width="${W}" height="${HEAD}" rx="9" class="d-head-r"/>${dots}<text x="${nameX}" y="${y + 20}" class="d-t">${esc(name)}</text>${rows}</g>`;
   }
-  return svg("dg-erd", 1130, 900, b, "최종 스키마 ERD(V1~V11 적용 결과, 17개 테이블)") +
-    `<figcaption>키 열만 보인다(PK·FK·UQ, 논리 = 제약 없이 다른 행의 id를 담는 열). 이름 앞의 <span class="udot"></span> 점은 <code>users.id</code>를 가리키는 FK다(점 두 개 = 두 열). users를 가리키는 FK는 <code>referrals.inviter_id</code>(SET NULL) 하나만 빼고 모두 <code>ON DELETE CASCADE</code>다. 테이블을 누르면 모든 열·제약·예시 행을 볼 수 있다. 이 그림의 열·키 목록은 빌드할 때 H2에 V1~V11을 실제로 적용해 뽑은 스키마와 자동으로 대조했다({{b:ran}}).</figcaption></figure>`;
+  return svg("dg-erd", 1130, 900, b, `최종 스키마 ERD(V1~V15 적용 결과, ${Object.keys(TABLES).length}개 테이블)`) +
+    `<figcaption>키 열만 보인다(PK·FK·UQ, 논리 = 제약 없이 다른 행의 id를 담는 열). 이름 앞의 <span class="udot"></span> 점은 <code>users.id</code>를 가리키는 FK다(점 두 개 = 두 열). users를 가리키는 FK는 <code>referrals.inviter_id</code>(SET NULL) 하나만 빼고 모두 <code>ON DELETE CASCADE</code>다. 테이블을 누르면 모든 열·제약·예시 행을 볼 수 있다. 이 그림의 열·키 목록은 로컬 H2에 V1~V15를 적용해 뽑은 스키마와 자동으로 대조한다({{b:ran}}).</figcaption></figure>`;
 }

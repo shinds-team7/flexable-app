@@ -16,9 +16,9 @@ ${design({
 <li><b>다음 수입일</b> = 오늘 <b>이후</b> 가장 가까운 수입일(31 = 말일, 토·일·공휴일이면 다음 평일). <b>남은 날</b> = 오늘부터 수입일 전날까지(오늘 포함, 최소 1)</li>
 <li><b>남은 고정지출</b> = 고정지출마다 금액 × (내일 ~ 수입일 전날 사이에 그 날짜가 오는 횟수). 오늘까지의 고정지출은 이미 거래로 기록돼 1번에서 빠졌다</li>
 <li><b>남은 생활비</b>(remaining) = 추정 잔액 − 남은 고정지출 − 카드 미결제 − 매달 저축할 돈 합</li>
-<li><b>하루 예산</b> = max(0, 남은 생활비 + <b>오늘 쓴 돈</b>) ÷ 남은 날 (내림). 오늘 쓴 돈을 다시 더하므로 오늘 지출이 오늘의 하루 예산을 줄이지 않는다</li>
+<li><b>하루 예산</b> = max(0, 남은 생활비 + <b>오늘 쓴 돈</b>) × 오늘 요일 비중 ÷ 남은 날의 요일 비중 합(내림). <code>BudgetCalculator.compute</code>가 <code>DayWeights.split</code>으로 요일별 금액을 계산한다. 기본 배분은 모든 요일의 비중이 같아 ÷ 남은 날과 같다. 오늘 쓴 돈을 다시 더하므로 오늘 지출이 오늘의 하루 예산을 줄이지 않는다. 이 가이드의 시뮬레이터만 기본 배분을 다룬다(정본은 <code>docs/policies.md</code> §2·§5)</li>
 <li><b>오늘 쓸 수 있는 돈</b> = 하루 예산 − 오늘 쓴 돈(넘으면 음수). 오늘 쓴 돈에는 자동 기록 고정지출이 들어가지 않는다</li>
-<li><b>이번 주</b>: 남은 날 = 오늘 ~ (이번 주 일요일과 수입일 전날 중 빠른 날), 쓸 수 있는 돈 = max(0, 하루 예산 × 남은 날 − 오늘 쓴 돈)</li></ol>
+<li><b>이번 주</b>: 남은 날 = 오늘 ~ (이번 주 일요일과 수입일 전날 중 빠른 날), 쓸 수 있는 돈 = max(0, 해당 날짜마다 그 요일 하루 예산을 더한 값 − 오늘 쓴 돈). 기본 배분일 때는 하루 예산 × 남은 날과 같다</li></ol>
 ${h3("design.calc-check", "숫자로 검산(가이드 시나리오)")}
 <p>가상 사용자: 2026-10-13(화) 10:00 잔액 1,250,000 · 수입일 25일(10-25가 일요일이라 10-26 월) · 15일 월세 450,000 · 매달 저축 300,000 · 카드 0. 점심 9,000원을 12:30에 기록.</p>
 ${table(["단계", "저장 전", "9,000원 저장 후"], [
@@ -211,7 +211,7 @@ ${table(["볼 파일", "같이 흔들리는 것", "확인"], [
 ${p("배포: 웹은 머지하면 Vercel, 앱은 EAS 원격 업데이트(새 설치 없이).")}
 ${h2("change.field", "거래 입력 항목 추가(예: '결제 수단')")}
 ${steps([
-  ["DB", "<code>V12__transaction_payment.sql</code> 추가(기존 파일 수정 금지). 이미 있는 행과 옛 앱을 생각해 NULL 허용이나 기본값."],
+  ["DB", "<code>V13__transaction_payment.sql</code> 추가(기존 파일 수정 금지). 이미 있는 행과 옛 앱을 생각해 NULL 허용이나 기본값."],
   ["엔티티", "{{c:Transaction}} 필드 + <code>@Column</code>, 생성자, <code>update()</code>. <code>ddl-auto: validate</code>라 DB에 열이 없으면 서버가 뜨지 않는다."],
   ["DTO", "{{c:TransactionDtos}} <code>CreateRequest</code>(검증 어노테이션), <code>UpdateRequest</code>, <code>TransactionResponse.of</code>."],
   ["서비스", "{{c:TransactionService}} <code>createOnce</code>·<code>update</code>에서 값 넘기기."],
@@ -229,7 +229,7 @@ ${h2("change.response", "API 응답 필드 추가")}
 ${ul(["백엔드: 응답 record(예: <code>BudgetDtos.TodayResponse</code>)에 필드 추가, 만드는 곳(<code>compute</code>, <code>withCharacter</code>) 수정.", "계약: <code>docs/contracts/app-api.yaml</code>에 먼저 적는다. 스키마가 <code>additionalProperties: false</code>라 적지 않은 필드를 내보내면 {{x:ContractTest}}가 실패한다. 테스트: <code>jsonPath(\"$.새필드\")</code>.", "프론트: <code>npm run gen:api</code>로 타입을 다시 만들면 {{c:types}}를 거쳐 화면에 바로 반영된다. 옛 서버가 아직 안 주는 기간이 있으면 계약에서 그 필드를 필수(<code>required</code>)에 넣지 않으면 된다.", "옛 앱은 모르는 필드를 무시하므로 백엔드를 먼저 내도 된다 {{b:infer}}."])}
 ${snip("cfg-contract-tx")}
 ${h2("change.column", "DB 컬럼 추가")}
-${ol(["<code>backend/src/main/resources/db/migration/V12__설명.sql</code>을 <b>추가</b>(V1~V11과 V3 Java는 수정·삭제 금지). 시각 값을 넣는 데이터 변경처럼 DB 세션 시간대에 기대면 안 되는 것은 Java 마이그레이션.", "NOT NULL 열은 기존 행 때문에 DEFAULT가 필요하다(<code>from_fixed BOOLEAN NOT NULL DEFAULT FALSE</code>가 예).", "엔티티에 <code>@Column</code>. 로컬 <code>bootRun</code>으로 Flyway 적용·검증 통과 확인 → <code>./gradlew test</code>(H2에서도 같은 SQL이 돌아야 한다).", "배포하면 새 <code>app.jar</code>가 켜질 때 운영 RDS에 적용된다. Flyway는 자동으로 되돌리지 않는다. 되돌리려면 새 번호의 마이그레이션을 만든다.", "HANDOFF에 적용 기록을 남긴다(지금 'V11까지 운영 적용' 기록이 있음)."])}
+${ol(["<code>backend/src/main/resources/db/migration/V13__설명.sql</code>을 <b>추가</b>(V1~V12와 V3 Java는 수정·삭제 금지). 시각 값을 넣는 데이터 변경처럼 DB 세션 시간대에 기대면 안 되는 것은 Java 마이그레이션.", "NOT NULL 열은 기존 행 때문에 DEFAULT가 필요하다(<code>from_fixed BOOLEAN NOT NULL DEFAULT FALSE</code>가 예).", "엔티티에 <code>@Column</code>. 로컬 <code>bootRun</code>으로 Flyway 적용·검증 통과 확인 → <code>./gradlew test</code>(H2에서도 같은 SQL이 돌아야 한다).", "배포하면 새 <code>app.jar</code>가 켜질 때 운영 RDS에 적용된다. Flyway는 자동으로 되돌리지 않는다. 되돌리려면 새 번호의 마이그레이션을 만든다.", "HANDOFF에 적용 기록을 남긴다(지금 'V11까지 운영 적용' 기록이 있음)."])}
 ${h2("change.logout", "'로그인이 풀려요' 조사")}
 ${table(["가능한 원인", "확인할 곳", "어떻게"], [
   ["토큰 30일 만료", "{{c:TokenService}}(<code>ttl-days: 30</code>)", "로그인한 날짜"],

@@ -414,7 +414,7 @@ const meta = {
   commitDate: COMMIT_DATE,
   dirty: DIRTY ? "있음" : "없음",
   built: new Date().toISOString(),
-  analysisDate: "2026-10-25",
+  analysisDate: "2026-10-28",
   counts: {
     snippets: Object.keys(snippets).length,
     links: Object.values(backlinks).reduce((a, s) => a + s.size, 0),
