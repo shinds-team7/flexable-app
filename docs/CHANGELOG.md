@@ -2,11 +2,11 @@
 
 기준 문서(`AGENTS.md`·`frontend/AGENTS.md`·`backend/AGENTS.md`·`docs/PRD.md`·`docs/policies.md`·`docs/contracts/`·`docs/decisions/`·`tests/policy/`)를 바꾼 PR은 여기에 한 줄을 더한다. 최신이 위다. `spec-change` 라벨 PR이 병합되면 작업 브랜치를 rebase하고 AI 세션을 새로 시작한다([작업 방식](decisions/2026-10-25-dev-process.md), 정본은 [웹 저장소](https://github.com/shinds-team7/flexable-web/blob/main/docs/decisions/2026-10-25-dev-process.md) §7).
 
-형식: `- [#PR] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
+형식: `- [#223] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
 ## 2026-10-31
 
-- [#PR] 출석 보상을 누적 일수 기준으로 바꾸고 출석 화면을 모달로 합쳤다: 누적 3일째 +50, 7일째 코스튬 `outfit-06` 1회, 8일째부터 7일 주기의 3·7번째 날 +50, 그 밖에는 +5(coin-plan §1 "출석"). `Attendance`의 `streak`·`days`를 `total`·`todayOutfitId`로 바꾸고 `POST /coins/attendance` 응답에 `outfitId`를 더했다(`app-api.yaml`). 어제 예산을 지킨 보너스는 같은 모달에 합쳐 보인다. `outfit-06`은 V16 — 영향: 앱 서버(배포 먼저, V16)·앱 화면
+- [#223] 출석 보상을 누적 일수 기준으로 바꾸고 출석 화면을 모달로 합쳤다: 누적 3일째 +50, 7일째 코스튬 `outfit-06` 1회, 8일째부터 7일 주기의 3·7번째 날 +50, 그 밖에는 +5(coin-plan §1 "출석"). `Attendance`의 `streak`·`days`를 `total`·`todayOutfitId`로 바꾸고 `POST /coins/attendance` 응답에 `outfitId`를 더했다(`app-api.yaml`). 어제 예산을 지킨 보너스는 같은 모달에 합쳐 보인다. `outfit-06`은 V16 — 영향: 앱 서버(배포 먼저, V16)·앱 화면
 
 ## 2026-10-30
 
