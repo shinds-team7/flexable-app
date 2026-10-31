@@ -40,14 +40,14 @@ public final class CoinDtos {
 	}
 
 	/**
-	 * days: 이번 달 출석한 날, 오래된 순. streak: 오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수.
-	 * todayReward: 오늘 출석하면(했으면) 받는 코인
+	 * total: 누적 출석 일수(오늘 했으면 오늘 포함, 빠진 날이 있어도 초기화하지 않는다).
+	 * todayReward: 오늘 출석하면(했으면) 받는 코인. todayOutfitId: 그때 받는 코스튬 id(누적 7일째 한 번만, 아니면 null)
 	 */
-	public record Attendance(LocalDate today, List<LocalDate> days, int streak, boolean checkedToday,
-			int todayReward) {
+	public record Attendance(LocalDate today, int total, boolean checkedToday, int todayReward,
+			String todayOutfitId) {
 	}
 
-	/** rewarded: 이번 요청으로 받은 코인, 이미 출석했으면 0 */
-	public record AttendResponse(int rewarded, Attendance attendance, Wallet wallet) {
+	/** rewarded: 이번 요청으로 받은 코인, outfitId: 이번 요청으로 받은 코스튬(없으면 null). 이미 출석했으면 0·null */
+	public record AttendResponse(int rewarded, String outfitId, Attendance attendance, Wallet wallet) {
 	}
 }

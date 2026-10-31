@@ -6,9 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
@@ -27,6 +25,8 @@ import com.flexable.api.coin.CoinDtos.Wallet;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.Times;
 import com.flexable.api.config.AppProperties;
+import com.flexable.api.outfit.UserOutfit;
+import com.flexable.api.outfit.UserOutfitRepository;
 
 /**
  * 앱 안에서만 쓰는 코인. 규칙은 docs/coin-plan.md §1, API는 docs/API.md "코인·코스튬".
@@ -40,8 +40,11 @@ public class CoinService {
 	public static final int PASSIVE_LIMIT = 10;
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
 	public static final int ATTENDANCE_REWARD = 5;
-	public static final int ATTENDANCE_STREAK = 7;
-	public static final int ATTENDANCE_STREAK_REWARD = 30;
+	/** 누적 출석 보상: 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날 */
+	public static final int ATTENDANCE_MILESTONE_REWARD = 50;
+	public static final int ATTENDANCE_CYCLE = 7;
+	/** 누적 7일째에 한 번만 주는 코스튬. 상점에서는 팔지 않는다(V16) */
+	public static final String ATTENDANCE_OUTFIT = "outfit-06";
 	public static final String ONCE = "once";
 	public static final int LEDGER_DEFAULT_LIMIT = 30;
 	public static final int LEDGER_MAX_LIMIT = 100;
@@ -49,14 +52,16 @@ public class CoinService {
 	private final CoinWalletRepository wallets;
 	private final CoinLedgerRepository ledger;
 	private final BudgetService budget;
+	private final UserOutfitRepository userOutfits;
 	private final Clock clock;
 	private final ZoneId zone;
 
-	public CoinService(CoinWalletRepository wallets, CoinLedgerRepository ledger, BudgetService budget, Clock clock,
-			AppProperties props) {
+	public CoinService(CoinWalletRepository wallets, CoinLedgerRepository ledger, BudgetService budget,
+			UserOutfitRepository userOutfits, Clock clock, AppProperties props) {
 		this.wallets = wallets;
 		this.ledger = ledger;
 		this.budget = budget;
+		this.userOutfits = userOutfits;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -111,38 +116,39 @@ public class CoinService {
 		return attendance(userId, today());
 	}
 
-	/** 오늘 출석. 이미 했으면 아무것도 주지 않고 rewarded 0. 받은 코인은 출석 달력에서 바로 보여 주므로 모달로 보내지 않는다. */
+	/** 오늘 출석. 이미 했으면 아무것도 주지 않고 rewarded 0. 받은 코인·코스튬은 출석 모달에서 바로 보여 주므로 check-in 모달로 보내지 않는다. */
 	@Transactional
 	public AttendResponse attend(long userId) {
 		LocalDate today = today();
 		CoinWallet w = lockWallet(userId);
 		Attendance before = attendance(userId, today);
 		if (before.checkedToday()) {
-			return new AttendResponse(0, before, view(w));
+			return new AttendResponse(0, null, before, view(w));
 		}
 		post(w, CoinReason.ATTENDANCE, today.toString(), before.todayReward(), true);
-		return new AttendResponse(before.todayReward(), attendance(userId, today), view(w));
+		String outfit = before.todayOutfitId();
+		if (outfit != null) {
+			userOutfits.save(new UserOutfit(userId, outfit, clock.instant()));
+		}
+		return new AttendResponse(before.todayReward(), outfit, attendance(userId, today), view(w));
 	}
 
-	/** 연속 n일째 출석의 보상. 7·14·21…일째는 기본 대신 보너스 */
-	public static int attendanceReward(int streakDay) {
-		return streakDay % ATTENDANCE_STREAK == 0 ? ATTENDANCE_STREAK_REWARD : ATTENDANCE_REWARD;
+	/** 누적 n번째 출석의 코인. 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5 */
+	public static int attendanceReward(int n) {
+		int day = (n - 1) % ATTENDANCE_CYCLE + 1;
+		boolean milestone = n == 3 || n > ATTENDANCE_CYCLE && (day == 3 || day == ATTENDANCE_CYCLE);
+		return milestone ? ATTENDANCE_MILESTONE_REWARD : ATTENDANCE_REWARD;
 	}
 
 	private Attendance attendance(long userId, LocalDate today) {
-		Set<LocalDate> days = new HashSet<>();
-		for (String key : ledger.findRefKeys(userId, CoinReason.ATTENDANCE)) {
-			days.add(LocalDate.parse(key));
-		}
-		boolean checkedToday = days.contains(today);
-		int streak = 0;
-		for (LocalDate d = checkedToday ? today : today.minusDays(1); days.contains(d); d = d.minusDays(1)) {
-			streak++;
-		}
-		LocalDate first = today.withDayOfMonth(1);
-		List<LocalDate> month = days.stream().filter(d -> !d.isBefore(first) && !d.isAfter(today)).sorted().toList();
-		return new Attendance(today, month, streak, checkedToday,
-				attendanceReward(checkedToday ? streak : streak + 1));
+		List<String> keys = ledger.findRefKeys(userId, CoinReason.ATTENDANCE);
+		boolean checkedToday = keys.contains(today.toString());
+		int total = keys.size();
+		int next = checkedToday ? total : total + 1;
+		// 누적 7일째에 한 번만. 이미 가졌으면(그날 출석한 뒤 포함 아님) 주지 않는다
+		boolean costume = next == ATTENDANCE_CYCLE
+				&& (checkedToday || !userOutfits.existsByUserIdAndOutfitId(userId, ATTENDANCE_OUTFIT));
+		return new Attendance(today, total, checkedToday, attendanceReward(next), costume ? ATTENDANCE_OUTFIT : null);
 	}
 
 	/** 적립·사용 내역, 최신순. before가 없으면 가장 최근부터. limit+1개를 읽어 다음 쪽이 있는지 본다. */
