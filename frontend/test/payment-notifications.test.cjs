@@ -1,0 +1,471 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const path = require("node:path");
+const ts = require("typescript");
+const cache = {};
+function load(file) {
+  file = path.resolve(__dirname, "../src/service", file);
+  if (cache[file]) return cache[file];
+  const exports = {};
+  cache[file] = exports;
+  vm.runInNewContext(
+    ts.transpileModule(fs.readFileSync(file, "utf8"), {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText,
+    {
+      exports,
+      Date,
+      require: (name) => load(path.resolve(path.dirname(file), name + ".ts")),
+    },
+  );
+  return exports;
+}
+const { parseShinhanNotice } = load("paymentNotifications/parse.ts");
+const { importPaymentNotices } = load("paymentNotifications/process.ts");
+const notice = (
+  body = "가*나님\n1,200원 일시불\n10/29 10:00\n가상커피\n누적 50,000원",
+) => ({
+  id: "a".repeat(64),
+  title: "신한카드 승인",
+  body,
+  postedAt: Date.parse("2026-10-29T10:00:10+09:00"),
+  prepared: "",
+});
+const plain = (value) => JSON.parse(JSON.stringify(value));
+
+// Transcribed layout from the user's collapsed/expanded SOL Pay screenshots.
+// Customer, card suffix and merchant are synthetic; no screenshot is committed.
+const expandedNotice = () => ({
+  ...notice(),
+  title: "[신한카드]",
+  body: "[신한체크승인] 가*나(0000)\n- 승인일시: 10/29 12:36\n- 승인금액: 9,000원\n- 가맹점명: 가상식당\n[신한카드 1544-7000]",
+  postedAt: Date.parse("2026-10-29T12:36:10+09:00"),
+});
+
+test("expanded SOL Pay screenshot layout reads labelled debit approval without customer, card or footer", () => {
+  assert.deepEqual(plain(parseShinhanNotice(expandedNotice())), {
+    approval: {
+      title: "가상식당",
+      amount: 9000,
+      occurredAt: "2026-10-29T12:36:00+09:00",
+    },
+  });
+});
+
+test("collapsed preview, missing fields, duplicate labels, cancellation and foreign payment need review", () => {
+  const n = expandedNotice();
+  for (const body of [
+    "[신한체크승인] 가*나(0000)\n- 승인일시: 10/29 12:36...",
+    n.body.replace("- 승인금액: 9,000원\n", ""),
+    n.body.replace("- 가맹점명: 가상식당\n", ""),
+    n.body.replace("- 가맹점명: 가상식당", "- 가맹점명:"),
+    n.body + "\n- 승인금액: 1,000원",
+    n.body + "\n- 가맹점명: 다른가상매장",
+    n.body.replace("신한체크승인", "신한체크승인취소"),
+    n.body.replace("9,000원", "USD 9.00"),
+  ]) {
+    assert.equal(parseShinhanNotice({ ...n, body }).approval, undefined, body);
+  }
+});
+
+test("Shinhan domestic approval: amount/date/merchant are explicit; customer/card data never becomes the transaction", () => {
+  assert.deepEqual(plain(parseShinhanNotice(notice())), {
+    approval: {
+      title: "가상커피",
+      amount: 1200,
+      occurredAt: "2026-10-29T10:00:00+09:00",
+    },
+  });
+  const explicit = notice(
+    "가*나님\n승인금액: 1,200원\n10/29 10:00\n가맹점: 가상커피\n누적 50,000원",
+  );
+  assert.equal(parseShinhanNotice(explicit).approval.title, "가상커피");
+});
+
+test("cancellation, foreign currency, OTP, missing/ambiguous amounts and invalid dates never auto-save", () => {
+  for (const body of [
+    notice().body + "\n승인취소",
+    notice().body + "\n해외 USD",
+    notice().body + "\n인증번호 123456",
+    notice().body.replace("1,200원 일시불", "누적 1,200원"),
+    notice().body.replace("1,200원", "1,2000원"),
+    notice().body + "\n2,000원",
+    notice().body.replace("10/29", "02/30"),
+    notice().body.replace("10:00", "25:00"),
+    notice().body.replace("10/29", "10/10"),
+    notice().body.replace("가상커피", "가상커피\n추가 안내"),
+  ])
+    assert.equal(parseShinhanNotice(notice(body)).approval, undefined, body);
+  assert.equal(
+    parseShinhanNotice({ ...notice(), title: "승인 안내" }).approval,
+    undefined,
+  );
+});
+
+test("a January notification can refer to a December payment, but never a future or unrelated date", () => {
+  const n = {
+    ...notice("1,200원\n12/31 23:59\n가상매장"),
+    postedAt: Date.parse("2027-01-01T00:00:10+09:00"),
+  };
+  assert.equal(
+    parseShinhanNotice(n).approval.occurredAt,
+    "2026-12-31T23:59:00+09:00",
+  );
+});
+
+function environment() {
+  const calls = [];
+  let active = true;
+  let fail = false;
+  let existing = [];
+  const prepared = new Map();
+  const deps = {
+    current: () => active,
+    category: async () => 7,
+    existing: async () => existing,
+    prepare: async (id, body) => {
+      calls.push("prepare");
+      prepared.set(id, plain(body));
+      return body;
+    },
+    save: async (id, body) => {
+      calls.push(["save", id, plain(body)]);
+      if (fail) throw Error("response lost");
+    },
+    acknowledge: async (id) => calls.push(["ack", id]),
+  };
+  return {
+    calls,
+    deps,
+    prepared,
+    set active(v) {
+      active = v;
+    },
+    set fail(v) {
+      fail = v;
+    },
+    set existing(v) {
+      existing = v;
+    },
+  };
+}
+
+test("screenshot-format approval imports only transaction fields; collapsed preview never sends", async () => {
+  const e = environment();
+  const result = await importPaymentNotices([expandedNotice()], e.deps);
+  assert.equal(result.saved, 1);
+  assert.deepEqual(e.calls.find((call) => call[0] === "save")[2], {
+    type: "EXPENSE",
+    title: "가상식당",
+    amount: 9000,
+    categoryId: 7,
+    occurredAt: "2026-10-29T12:36:00+09:00",
+    memo: "신한카드 결제 알림에서 자동 기록",
+  });
+  const collapsed = environment();
+  const pending = await importPaymentNotices(
+    [
+      {
+        ...expandedNotice(),
+        body: "[신한체크승인] 가*나(0000)\n- 승인일시: 10/29 12:36...",
+      },
+    ],
+    collapsed.deps,
+  );
+  assert.equal(pending.saved, 0);
+  assert.equal(pending.problems.length, 1);
+  assert.equal(collapsed.calls.length, 0);
+});
+
+test("automatic import persists the exact request before sending and acknowledges only after success", async () => {
+  const e = environment();
+  const result = await importPaymentNotices([notice()], e.deps);
+  assert.equal(result.saved, 1);
+  assert.equal(e.calls[0], "prepare");
+  assert.equal(e.calls[1][0], "save");
+  assert.equal(e.calls[2][0], "ack");
+  assert.equal(e.calls[1][2].categoryId, 7);
+  assert.equal(JSON.stringify(e.calls).includes("가*나"), false);
+});
+
+test("lost responses reuse the saved body and identity, without mistaking the accepted transaction for a duplicate", async () => {
+  const e = environment();
+  e.fail = true;
+  await assert.rejects(importPaymentNotices([notice()], e.deps));
+  assert.equal(
+    e.calls.some((c) => c[0] === "ack"),
+    false,
+  );
+  const body = e.prepared.get(notice().id);
+  e.existing = [{ ...body }];
+  e.fail = false;
+  e.deps.category = async () => {
+    throw Error("must keep original category");
+  };
+  await importPaymentNotices(
+    [{ ...notice(), prepared: JSON.stringify(body) }],
+    e.deps,
+  );
+  const saves = e.calls.filter((c) => c[0] === "save");
+  assert.deepEqual(saves[0], saves[1]);
+  assert.equal(e.calls.at(-1)[0], "ack");
+});
+
+test("possible manual/screenshot duplicate or two identical purchases in one minute need confirmation", async () => {
+  const e = environment();
+  e.existing = [
+    {
+      type: "EXPENSE",
+      amount: 1200,
+      title: "가상 커피",
+      occurredAt: "2026-10-29T10:00:30+09:00",
+    },
+  ];
+  const result = await importPaymentNotices([notice()], e.deps);
+  assert.equal(result.saved, 0);
+  assert.equal(result.problems.length, 1);
+  assert.equal(e.calls.length, 0);
+});
+
+test("account change during lookup cannot prepare, save or acknowledge the previous user's notification", async () => {
+  const e = environment();
+  e.deps.existing = async () => {
+    e.active = false;
+    return [];
+  };
+  await importPaymentNotices([notice()], e.deps);
+  assert.equal(e.calls.length, 0);
+});
+
+test("unclear/cancelled notices remain pending, and missing default category never picks a random category", async () => {
+  const e = environment();
+  e.deps.category = async () => null;
+  const result = await importPaymentNotices(
+    [notice(), notice(notice().body + "\n취소")],
+    e.deps,
+  );
+  assert.equal(result.problems.length, 2);
+  assert.equal(e.calls.length, 0);
+});
+
+function nativeAdapter() {
+  const calls = [];
+  const native = {
+    clear: async () => {
+      calls.push("clear");
+    },
+  };
+  const exports = {};
+  vm.runInNewContext(
+    ts.transpileModule(
+      fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "../src/service/paymentNotifications/native.ts",
+        ),
+        "utf8",
+      ),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+        },
+      },
+    ).outputText,
+    { exports, require: () => ({ requireOptionalNativeModule: () => native }) },
+  );
+  return { ...exports, calls };
+}
+
+test("logout cleanup follows an in-flight consent change, so a late native response cannot re-enable collection", async () => {
+  const bridge = nativeAdapter();
+  let finish;
+  const consent = bridge.mutatePaymentCollection(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await new Promise(setImmediate);
+  const logout = bridge.clearPaymentNotifications();
+  await new Promise(setImmediate);
+  assert.deepEqual(bridge.calls, []);
+  finish();
+  await consent;
+  await logout;
+  assert.deepEqual(bridge.calls, ["clear"]);
+});
+
+test("queued work rechecks its session before it can touch native storage, including after a failed operation", async () => {
+  const bridge = nativeAdapter();
+  let active = true;
+  const stale = bridge.mutatePaymentCollection(
+    async () => {
+      throw Error("must not execute");
+    },
+    () => active,
+  );
+  active = false;
+  await assert.rejects(stale, /계정/);
+  await bridge.clearPaymentNotifications();
+  assert.deepEqual(bridge.calls, ["clear"]);
+});
+
+test("disabling collection after request preparation prevents sending it or acknowledging an unsaved item", async () => {
+  const e = environment();
+  e.deps.prepare = async (id, body) => {
+    e.active = false;
+    return body;
+  };
+  await importPaymentNotices([notice()], e.deps);
+  assert.equal(e.calls.length, 0);
+});
+
+function settingsScreen(platform = "android", present = true) {
+  const slots = [];
+  const calls = [];
+  let cursor = 0;
+  const data = {
+    owner: "42",
+    status: {
+      enabled: false,
+      allowed: false,
+      connected: false,
+      pending: 0,
+      dropped: 0,
+    },
+    problems: [],
+    saved: 0,
+    busy: false,
+  };
+  const element = (type, props) => ({ type, props });
+  const modules = {
+    "react/jsx-runtime": { jsx: element, jsxs: element },
+    react: {
+      useState(initial) {
+        const i = cursor++;
+        if (!(i in slots)) slots[i] = initial;
+        return [
+          slots[i],
+          (v) => {
+            slots[i] = typeof v === "function" ? v(slots[i]) : v;
+          },
+        ];
+      },
+    },
+    "expo-router": { router: { push() {} } },
+    "react-native": {
+      Platform: { OS: platform },
+      View: "View",
+      Pressable: "Pressable",
+    },
+    "@/components/ui": {
+      Button: "Button",
+      Card: "Card",
+      Screen: "Screen",
+      T: "T",
+    },
+    "@/components/SubHeader": { SubHeader: "SubHeader" },
+    "./Session": { useSession: () => ({ user: { id: 42 } }) },
+    "./ui": { ErrorNotice: "ErrorNotice" },
+    "./api/client": { sessionGeneration: () => 1 },
+    "./paymentNotifications/native": {
+      paymentNative: present
+        ? {
+            configure: async (...args) => calls.push(args),
+            openSettings: async () => calls.push("settings"),
+          }
+        : null,
+      mutatePaymentCollection: (fn, current) => {
+        assert.equal(current(), true);
+        return fn();
+      },
+    },
+    "./paymentNotifications/usePaymentImport": {
+      usePaymentImportState: () => data,
+      refreshPaymentImport() {},
+      interruptPaymentImport() {},
+    },
+  };
+  const exports = {};
+  vm.runInNewContext(
+    ts.transpileModule(
+      fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "../src/service/PaymentNotificationsScreen.tsx",
+        ),
+        "utf8",
+      ),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+          jsx: ts.JsxEmit.ReactJSX,
+        },
+      },
+    ).outputText,
+    {
+      exports,
+      Date,
+      require: (name) => {
+        assert.ok(name in modules, name);
+        return modules[name];
+      },
+    },
+  );
+  function render() {
+    cursor = 0;
+    const nodes = [];
+    function walk(node) {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      nodes.push(node);
+      walk(node.props?.children);
+    }
+    walk(exports.PaymentNotificationsScreen());
+    return nodes;
+  }
+  return { data, calls, render };
+}
+
+test("settings never auto-enable: optional consent starts unchecked and permission alone is insufficient", async () => {
+  const screen = settingsScreen();
+  const enable = () =>
+    screen
+      .render()
+      .find((node) => node.props?.label === "동의하고 자동 기록 켜기").props;
+  const checkbox = () =>
+    screen.render().find((node) => node.props?.accessibilityRole === "checkbox")
+      .props;
+  assert.equal(checkbox().accessibilityState.checked, false);
+  assert.equal(enable().disabled, true);
+  screen.data.status.allowed = true;
+  assert.equal(enable().disabled, true);
+  assert.equal(screen.calls.length, 0);
+  checkbox().onPress();
+  assert.equal(checkbox().accessibilityState.checked, true);
+  assert.equal(enable().disabled, false);
+  await enable().onPress();
+  assert.deepEqual(screen.calls, [["42", true]]);
+});
+
+test("web or an older Android build without the native collector never offers collection permission or enable controls", () => {
+  for (const screen of [
+    settingsScreen("web"),
+    settingsScreen("android", false),
+  ]) {
+    const labels = screen.render().map((node) => node.props?.label);
+    assert.equal(labels.includes("동의하고 자동 기록 켜기"), false);
+    assert.equal(labels.includes("Android 알림 접근 설정 열기"), false);
+    assert.equal(screen.calls.length, 0);
+  }
+});
