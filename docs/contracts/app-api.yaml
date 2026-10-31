@@ -569,7 +569,7 @@ paths:
   /coins/attendance:
     get:
       tags: [coin]
-      summary: 이번 달 출석과 연속 출석 일수
+      summary: 누적 출석 일수와 오늘 받을 보상
       responses:
         '200':
           description: 출석 현황
@@ -582,15 +582,16 @@ paths:
       summary: 오늘 출석(여러 번 불러도 한 번만 지급, 이미 했으면 rewarded 0)
       responses:
         '200':
-          description: 받은 코인, 출석 현황, 지갑
+          description: 받은 코인·코스튬, 출석 현황, 지갑
           content:
             application/json:
               schema:
                 type: object
-                required: [rewarded, attendance, wallet]
+                required: [rewarded, outfitId, attendance, wallet]
                 additionalProperties: false
                 properties:
                   rewarded: { type: integer }
+                  outfitId: { type: string, nullable: true, description: '이번 요청으로 받은 코스튬 id, 없으면 null' }
                   attendance: { $ref: '#/components/schemas/Attendance' }
                   wallet: { $ref: '#/components/schemas/Wallet' }
         '401': { $ref: '#/components/responses/Error' }
@@ -1300,14 +1301,14 @@ components:
         createdAt: { type: string, format: date-time }
     Attendance:
       type: object
-      required: [today, days, streak, checkedToday, todayReward]
+      required: [today, total, checkedToday, todayReward, todayOutfitId]
       additionalProperties: false
       properties:
         today: { type: string, format: date, description: '서버 기준 오늘(KST)' }
-        days: { type: array, items: { type: string, format: date }, description: '이번 달 출석한 날, 오래된 순' }
-        streak: { type: integer, description: '오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수' }
+        total: { type: integer, description: '누적 출석 일수(오늘 했으면 오늘 포함). 빠진 날이 있어도 초기화하지 않는다' }
         checkedToday: { type: boolean }
-        todayReward: { type: integer, description: '오늘 출석하면(했으면) 받는 코인. 연속 7·14·21…일째는 30, 그 밖에는 5' }
+        todayReward: { type: integer, description: '오늘 출석하면(했으면) 받는 코인. 누적 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5' }
+        todayOutfitId: { type: string, nullable: true, description: '오늘 출석하면(했으면) 받는 코스튬 id. 누적 7일째에 한 번만, 아니면 null' }
     OutfitList:
       type: object
       required: [balance, equippedOutfitId, peakLevel, items]

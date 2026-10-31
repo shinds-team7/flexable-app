@@ -471,23 +471,23 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 
 ### `GET /coins/attendance` → 200 `Attendance`
 
-홈 캐릭터 오른쪽 위 출석 달력 버튼 → 출석 달력(`service/AttendanceSheet.tsx`)이 쓴다. 날짜는 모두 KST.
+홈 캐릭터 오른쪽 위 출석 버튼 → 출석 모달(`service/AttendanceModal.tsx`)이 쓴다. 날짜는 모두 KST.
 
 ```json
-{ "today": "2026-10-28", "days": ["2026-10-26", "2026-10-27"], "streak": 2, "checkedToday": false, "todayReward": 5 }
+{ "today": "2026-10-28", "total": 2, "checkedToday": false, "todayReward": 50, "todayOutfitId": null }
 ```
 
-- `days` = 이번 달 1일~오늘 중 출석한 날, 오래된 순
-- `streak` = 오늘까지 연속 출석 일수. 오늘 아직 안 했으면 어제까지(어제도 안 했으면 0). 달이 바뀌어도 이어진다
-- `todayReward` = 오늘 출석하면(이미 했으면 받은) 코인. 연속 7·14·21…일째는 30, 그 밖에는 5
+- `total` = 누적 출석 일수(오늘 했으면 오늘 포함). 빠진 날이 있어도 초기화하지 않는다
+- `todayReward` = 오늘 출석하면(이미 했으면 받은) 코인. 누적 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5
+- `todayOutfitId` = 오늘 출석하면(했으면) 받는 코스튬. 누적 7일째에 `outfit-06` 한 번만, 아니면 null
 
 ### `POST /coins/attendance` → 200
 
 ```json
-{ "rewarded": 5, "attendance": { "...": "Attendance" }, "wallet": { "...": "CoinWallet" } }
+{ "rewarded": 5, "outfitId": "outfit-06", "attendance": { "...": "Attendance" }, "wallet": { "...": "CoinWallet" } }
 ```
 
-오늘 출석하고 `todayReward`만큼 준다. 이미 했으면 `rewarded: 0`(오류 아님). 내역은 `ATTENDANCE`(`ref_key` = 날짜)로 남기고, 받은 코인은 달력에서 바로 보여 주므로 check-in `rewards`(모달)에는 넣지 않는다.
+오늘 출석하고 `todayReward`만큼 준다. 누적 7일째면 코스튬(`outfitId`)도 `user_outfits`에 넣는다(`GET /outfits`에서 `owned`로 보인다). 이미 했으면 `rewarded: 0`, `outfitId: null`(오류 아님). 내역은 `ATTENDANCE`(`ref_key` = 날짜)로 남기고, 받은 보상은 출석 모달에서 바로 보여 주므로 check-in `rewards`(모달)에는 넣지 않는다.
 
 ### `GET /coins/ledger?before={id}&limit=30` → 200
 

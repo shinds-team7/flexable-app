@@ -216,15 +216,15 @@ class CoinFlowTest {
 		clock.seoul("2026-10-21T09:00");
 		String token = signup();
 		attendance(token).andExpect(jsonPath("$.today").value("2026-10-21"))
-			.andExpect(jsonPath("$.days", hasSize(0)))
-			.andExpect(jsonPath("$.streak").value(0))
+			.andExpect(jsonPath("$.total").value(0))
 			.andExpect(jsonPath("$.checkedToday").value(false))
-			.andExpect(jsonPath("$.todayReward").value(5));
+			.andExpect(jsonPath("$.todayReward").value(5))
+			.andExpect(jsonPath("$.todayOutfitId").doesNotExist());
 
 		attend(token).andExpect(jsonPath("$.rewarded").value(5))
+			.andExpect(jsonPath("$.outfitId").doesNotExist())
 			.andExpect(jsonPath("$.wallet.balance").value(5))
-			.andExpect(jsonPath("$.attendance.days", contains("2026-10-21")))
-			.andExpect(jsonPath("$.attendance.streak").value(1))
+			.andExpect(jsonPath("$.attendance.total").value(1))
 			.andExpect(jsonPath("$.attendance.checkedToday").value(true));
 		clock.seoul("2026-10-21T23:59");
 		attend(token).andExpect(jsonPath("$.rewarded").value(0)).andExpect(jsonPath("$.wallet.balance").value(5));
@@ -233,45 +233,53 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.items", hasSize(1)))
 			.andExpect(jsonPath("$.items[0].reason").value("ATTENDANCE"))
 			.andExpect(jsonPath("$.items[0].amount").value(5));
-		// 출석 코인은 달력에서 바로 보여 주므로 check-in 모달에는 가입 선물만 온다
+		// 출석 코인은 출석 모달에서 바로 보여 주므로 check-in 모달에는 가입 선물만 온다
 		checkIn(token).andExpect(jsonPath("$.rewards", hasSize(1)))
 			.andExpect(jsonPath("$.rewards[0].reason").value("SIGNUP_GIFT"));
 	}
 
 	@Test
-	void everySeventhDayInARowPaysTheBonusAndAMissedDayResets() throws Exception {
+	void thirdDayPays50AndTheSeventhGivesTheCostumeOnceEvenAfterMissingDays() throws Exception {
 		clock.seoul("2026-10-01T09:00");
 		String token = signup();
-		for (int day = 1; day <= 6; day++) {
-			clock.seoul("2026-10-0" + day + "T09:00");
-			attend(token).andExpect(jsonPath("$.rewarded").value(5));
+		attend(token).andExpect(jsonPath("$.rewarded").value(5));
+		clock.seoul("2026-10-02T09:00");
+		attend(token).andExpect(jsonPath("$.rewarded").value(5));
+		clock.seoul("2026-10-03T09:00");
+		attendance(token).andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.todayReward").value(50));
+		attend(token).andExpect(jsonPath("$.rewarded").value(50)).andExpect(jsonPath("$.wallet.balance").value(60));
+		// 빠진 날이 있어도 누적이라 초기화하지 않는다: 10-04~10-08 건너뛰고 4~6번째 출석
+		for (String day : new String[] { "09", "10", "11" }) {
+			clock.seoul("2026-10-" + day + "T09:00");
+			attend(token).andExpect(jsonPath("$.rewarded").value(5)).andExpect(jsonPath("$.outfitId").doesNotExist());
 		}
-		clock.seoul("2026-10-07T09:00");
-		attendance(token).andExpect(jsonPath("$.streak").value(6)).andExpect(jsonPath("$.todayReward").value(30));
-		attend(token).andExpect(jsonPath("$.rewarded").value(30))
-			.andExpect(jsonPath("$.wallet.balance").value(60))
-			.andExpect(jsonPath("$.attendance.streak").value(7))
-			.andExpect(jsonPath("$.attendance.todayReward").value(30));
-		clock.seoul("2026-10-08T09:00");
-		attend(token).andExpect(jsonPath("$.rewarded").value(5)).andExpect(jsonPath("$.attendance.streak").value(8));
-
-		// 9일을 건너뛰면 어제까지의 연속이 끊긴다
-		clock.seoul("2026-10-10T09:00");
-		attendance(token).andExpect(jsonPath("$.streak").value(0)).andExpect(jsonPath("$.todayReward").value(5));
+		clock.seoul("2026-10-12T09:00");
+		attendance(token).andExpect(jsonPath("$.total").value(6))
+			.andExpect(jsonPath("$.todayReward").value(5))
+			.andExpect(jsonPath("$.todayOutfitId").value("outfit-06"));
 		attend(token).andExpect(jsonPath("$.rewarded").value(5))
-			.andExpect(jsonPath("$.attendance.streak").value(1))
-			.andExpect(jsonPath("$.attendance.days", hasSize(9)));
+			.andExpect(jsonPath("$.outfitId").value("outfit-06"))
+			.andExpect(jsonPath("$.attendance.total").value(7));
+		// 받은 코스튬은 상점 목록에 보이고, 다시 눌러도 또 주지 않는다
+		mvc.perform(auth(get("/api/v1/outfits"), token, null))
+			.andExpect(jsonPath("$.items[?(@.id=='outfit-06')].owned").value(true));
+		attend(token).andExpect(jsonPath("$.rewarded").value(0)).andExpect(jsonPath("$.outfitId").doesNotExist());
 	}
 
 	@Test
-	void attendanceShowsThisMonthButTheStreakCrossesMonths() throws Exception {
-		clock.seoul("2026-10-31T09:00");
+	void afterTheFirstSevenDaysEveryThirdAndSeventhDayPays50() throws Exception {
+		clock.seoul("2026-10-01T09:00");
 		String token = signup();
-		attend(token);
-		clock.seoul("2026-11-01T09:00");
-		attendance(token).andExpect(jsonPath("$.days", hasSize(0))).andExpect(jsonPath("$.streak").value(1));
-		attend(token).andExpect(jsonPath("$.attendance.days", contains("2026-11-01")))
-			.andExpect(jsonPath("$.attendance.streak").value(2));
+		int[] expected = { 5, 5, 50, 5, 5, 5, 5, /* 8일째부터 */ 5, 5, 50, 5, 5, 5, 50, 5 };
+		for (int i = 0; i < expected.length; i++) {
+			clock.seoul(String.format("2026-10-%02dT09:00", i + 1));
+			attend(token).andExpect(jsonPath("$.rewarded").value(expected[i]))
+				.andExpect(jsonPath("$.attendance.total").value(i + 1));
+			if (i + 1 > 7) {
+				// 코스튬은 첫 7일에만
+				attend(token).andExpect(jsonPath("$.outfitId").doesNotExist());
+			}
+		}
 	}
 
 	// ---- 내역 ----
