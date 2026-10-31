@@ -1250,7 +1250,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 이번 달 출석과 연속 출석 일수 */
+        /** 누적 출석 일수와 오늘 받을 보상 */
         get: {
             parameters: {
                 query?: never;
@@ -1283,7 +1283,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 받은 코인, 출석 현황, 지갑 */
+                /** @description 받은 코인·코스튬, 출석 현황, 지갑 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1291,6 +1291,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             rewarded: number;
+                            /** @description 이번 요청으로 받은 코스튬 id, 없으면 null */
+                            outfitId: string | null;
                             attendance: components["schemas"]["Attendance"];
                             wallet: components["schemas"]["Wallet"];
                         };
@@ -2323,13 +2325,13 @@ export interface components {
              * @description 서버 기준 오늘(KST)
              */
             today: string;
-            /** @description 이번 달 출석한 날, 오래된 순 */
-            days: string[];
-            /** @description 오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수 */
-            streak: number;
+            /** @description 누적 출석 일수(오늘 했으면 오늘 포함). 빠진 날이 있어도 초기화하지 않는다 */
+            total: number;
             checkedToday: boolean;
-            /** @description 오늘 출석하면(했으면) 받는 코인. 연속 7·14·21…일째는 30, 그 밖에는 5 */
+            /** @description 오늘 출석하면(했으면) 받는 코인. 누적 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5 */
             todayReward: number;
+            /** @description 오늘 출석하면(했으면) 받는 코스튬 id. 누적 7일째에 한 번만, 아니면 null */
+            todayOutfitId: string | null;
         };
         OutfitList: {
             /** Format: int64 */
