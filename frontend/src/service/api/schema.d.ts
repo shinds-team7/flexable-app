@@ -565,6 +565,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/budget/seed-money/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 지금 예산에서 시드머니로 바로 옮기기(아무 때나 여러 번, 남은 생활비까지) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: int64
+                         * @description 옮길 금액. movable보다 크면 400
+                         */
+                        amount: number;
+                    };
+                };
+            };
+            responses: {
+                201: components["responses"]["SeedMoney"];
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budget/seed-money/base": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 모아둔 돈(seedBase)만 고치기. 반영·옮긴 기록과 예산 계산은 그대로 */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int64 */
+                        base: number;
+                    };
+                };
+            };
+            responses: {
+                200: components["responses"]["SeedMoney"];
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/categories": {
         parameters: {
             query?: never;
@@ -1250,7 +1329,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 이번 달 출석과 연속 출석 일수 */
+        /** 누적 출석 일수와 오늘 받을 보상 */
         get: {
             parameters: {
                 query?: never;
@@ -1283,7 +1362,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 받은 코인, 출석 현황, 지갑 */
+                /** @description 받은 코인·코스튬, 출석 현황, 지갑 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1291,6 +1370,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             rewarded: number;
+                            /** @description 이번 요청으로 받은 코스튬 id, 없으면 null */
+                            outfitId: string | null;
                             attendance: components["schemas"]["Attendance"];
                             wallet: components["schemas"]["Wallet"];
                         };
@@ -1786,6 +1867,11 @@ export interface components {
          * @enum {string}
          */
         SeedChoice: "GOAL" | "ALL" | "MANUAL";
+        /**
+         * @description 기록에 보이는 방법. GOAL·ALL·MANUAL은 수입일 전날 반영, EXTRA는 지금 예산에서 바로 옮김
+         * @enum {string}
+         */
+        SeedEntryChoice: "GOAL" | "ALL" | "MANUAL" | "EXTRA";
         User: {
             /** Format: int64 */
             id: number;
@@ -2078,6 +2164,7 @@ export interface components {
          *       "saved": 0,
          *       "total": 500000,
          *       "monthlyGoal": 300000,
+         *       "movable": 1200000,
          *       "pending": {
          *         "cycleEnd": "2026-10-25",
          *         "payday": "2026-10-26",
@@ -2105,6 +2192,11 @@ export interface components {
              * @description 매달 저축할 돈 합
              */
             monthlyGoal: number;
+            /**
+             * Format: int64
+             * @description 지금 예산에서 시드머니로 바로 보낼 수 있는 최대 금액(남은 생활비, 0 이상)
+             */
+            movable: number;
             /** @description 반영할 주기. 없으면 null */
             pending: {
                 /** Format: date */
@@ -2120,9 +2212,12 @@ export interface components {
             entries: components["schemas"]["SeedEntry"][];
         };
         SeedEntry: {
-            /** Format: date */
+            /**
+             * Format: date
+             * @description EXTRA는 옮긴 날짜
+             */
             cycleEnd: string;
-            choice: components["schemas"]["SeedChoice"];
+            choice: components["schemas"]["SeedEntryChoice"];
             /** Format: int64 */
             amount: number;
             /** Format: date-time */
@@ -2323,13 +2418,13 @@ export interface components {
              * @description 서버 기준 오늘(KST)
              */
             today: string;
-            /** @description 이번 달 출석한 날, 오래된 순 */
-            days: string[];
-            /** @description 오늘까지(오늘 안 했으면 어제까지) 연속 출석 일수 */
-            streak: number;
+            /** @description 누적 출석 일수(오늘 했으면 오늘 포함). 빠진 날이 있어도 초기화하지 않는다 */
+            total: number;
             checkedToday: boolean;
-            /** @description 오늘 출석하면(했으면) 받는 코인. 연속 7·14·21…일째는 30, 그 밖에는 5 */
+            /** @description 오늘 출석하면(했으면) 받는 코인. 기본 5에, 누적 3일째와 8일째부터 7일 주기의 3·7번째 날은 보너스 50을 더해 55 */
             todayReward: number;
+            /** @description 오늘 출석하면(했으면) 받는 코스튬 id. 누적 7일째에 한 번만, 아니면 null */
+            todayOutfitId: string | null;
         };
         OutfitList: {
             /** Format: int64 */

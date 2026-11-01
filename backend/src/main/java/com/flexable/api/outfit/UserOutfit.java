@@ -32,7 +32,7 @@ public class UserOutfit {
 	protected UserOutfit() {
 	}
 
-	UserOutfit(long userId, String outfitId, Instant now) {
+	public UserOutfit(long userId, String outfitId, Instant now) {
 		this.userId = userId;
 		this.outfitId = outfitId;
 		this.acquiredAt = now;

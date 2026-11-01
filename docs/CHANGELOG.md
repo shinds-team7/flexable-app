@@ -2,7 +2,19 @@
 
 기준 문서(`AGENTS.md`·`frontend/AGENTS.md`·`backend/AGENTS.md`·`docs/PRD.md`·`docs/policies.md`·`docs/contracts/`·`docs/decisions/`·`tests/policy/`)를 바꾼 PR은 여기에 한 줄을 더한다. 최신이 위다. `spec-change` 라벨 PR이 병합되면 작업 브랜치를 rebase하고 AI 세션을 새로 시작한다([작업 방식](decisions/2026-10-25-dev-process.md), 정본은 [웹 저장소](https://github.com/shinds-team7/flexable-web/blob/main/docs/decisions/2026-10-25-dev-process.md) §7).
 
-형식: `- [#PR] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
+형식: `- [#223] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
+
+## 2026-11-01
+
+- [#226] `docs/HANDOFF.md`를 현재 상태와 11/2 출근 할 일 중심으로 다시 썼다(완료된 날짜별 기록·게시 그룹 로그 제거, 이력은 git log). PRD·server-migration의 HANDOFF 절 이름 참조를 새 구조에 맞췄다. 제품 규칙·계약은 그대로 — 영향: 문서만
+
+- [#225] 시드머니 카드 개편: 카드를 누르면 기록 시트(맨 아래 [시드머니 수정])가 열리고, 지갑 아이콘 대신 [+]로 지금 예산에서 시드머니로 바로 보낸다(수입일과 무관, 여러 번, `movable`까지). `POST /budget/seed-money/transfers`·`PUT /budget/seed-money/base`·`SeedMoney.movable`·`SeedEntryChoice(EXTRA)`를 `app-api.yaml`에, 웹 연동 `SeedChoice`에 `EXTRA`를 더했다. 보낸 돈은 `seed_money_additions`(V17)에 남고 policies §3에 규칙을 적었다 — 영향: 앱 서버(배포 먼저, V17)·앱 화면·**웹(flexable-web)**: 웹 연동 `entries`에 `choice: EXTRA`가 올 수 있음
+
+- [#224] 출석 보너스를 합산으로 정했다: 누적 3일째와 8일째부터 7일 주기의 3·7번째 날은 기본 +5에 보너스 +50을 더해 55(대체 아님). `todayReward` 설명을 고쳤고 응답 형태는 그대로다 — 영향: 앱 서버(배포)·앱 화면 문구 없음
+
+## 2026-10-31
+
+- [#223] 출석 보상을 누적 일수 기준으로 바꾸고 출석 화면을 모달로 합쳤다: 누적 3일째 +50, 7일째 코스튬 `outfit-06` 1회, 8일째부터 7일 주기의 3·7번째 날 +50, 그 밖에는 +5(coin-plan §1 "출석"). `Attendance`의 `streak`·`days`를 `total`·`todayOutfitId`로 바꾸고 `POST /coins/attendance` 응답에 `outfitId`를 더했다(`app-api.yaml`). 어제 예산을 지킨 보너스는 같은 모달에 합쳐 보인다. `outfit-06`은 V16 — 영향: 앱 서버(배포 먼저, V16)·앱 화면
 
 ## 2026-10-30
 

@@ -14,7 +14,7 @@ import {
   pointsStatus,
   type PaceStatus,
 } from "@/components/CharacterStage";
-import { AttendanceSheet } from "./AttendanceSheet";
+import { AttendanceModal } from "./AttendanceModal";
 import { WeekExpensesSheet } from "./WeekExpensesSheet";
 import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
@@ -52,11 +52,15 @@ export function HomeScreen() {
     checkIn()
       .then((r) => {
         publishWallet(r.wallet, generation);
-        if (r.rewards.length)
+        if (r.rewards.length) {
           setRewards((q) => [
             ...q,
             ...r.rewards.filter((x) => !q.some((y) => y.id === x.id)),
           ]);
+          // 어제 예산을 지킨 보너스는 따로 모달을 띄우지 않고 출석 모달에 합쳐 보여 준다
+          if (r.rewards.some((x) => x.reason === "BUDGET_BONUS"))
+            setAttendance(true);
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -70,11 +74,18 @@ export function HomeScreen() {
     });
     return () => sub.remove();
   }, [runCheckIn]);
+  const budgetBonus = rewards.find((x) => x.reason === "BUDGET_BONUS") ?? null;
+  const shownReward = rewards.find((x) => x.reason !== "BUDGET_BONUS") ?? null;
+  const ackReward = (reward: CoinReward) => {
+    setRewards((q) => q.filter((x) => x.id !== reward.id));
+    ackRewards([reward.id]).catch(() => {});
+  };
   const closeReward = () => {
-    const [first] = rewards;
-    if (!first) return;
-    setRewards((q) => q.slice(1));
-    ackRewards([first.id]).catch(() => {});
+    if (shownReward) ackReward(shownReward);
+  };
+  const closeAttendance = () => {
+    setAttendance(false);
+    if (budgetBonus) ackReward(budgetBonus);
   };
   const s = result.data;
   const status = s && statusOf(s);
@@ -138,7 +149,7 @@ export function HomeScreen() {
               attendance={
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="출석체크 달력 열기"
+                  accessibilityLabel="출석체크 열기"
                   onPress={() => setAttendance(true)}
                   hitSlop={8}
                   style={styles.calendar}
@@ -308,10 +319,11 @@ export function HomeScreen() {
           </>
         )}
       </Screen>
-      <RewardModal reward={rewards[0] ?? null} onClose={closeReward} />
-      <AttendanceSheet
-        visible={attendance}
-        onClose={() => setAttendance(false)}
+      <RewardModal reward={shownReward} onClose={closeReward} />
+      <AttendanceModal
+        visible={attendance && !shownReward}
+        budgetBonus={budgetBonus}
+        onClose={closeAttendance}
       />
     </View>
   );
