@@ -3,8 +3,10 @@ import { useEntryReminder, useEntryReminderTap } from "@/service/entryReminder";
 import { useInboxOwner } from "@/service/inbox";
 import { useSeedReminderTap } from "@/service/seedReminder";
 import { Guard } from "@/service/ui";
+import { useAutomaticPaymentImport } from "@/service/paymentNotifications/usePaymentImport";
 export default function Layout() {
   useInboxOwner();
+  useAutomaticPaymentImport();
   useSeedReminderTap();
   useEntryReminder();
   useEntryReminderTap();

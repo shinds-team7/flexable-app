@@ -181,6 +181,16 @@ export function MyScreen() {
         </View>
       </Card>
       <ReferralCard />
+      {Platform.OS === "android" && (
+        <Card style={styles.group}>
+          <Row
+            first
+            label="신한카드 자동 기록"
+            caption="결제 알림을 읽어 지출로 기록해요"
+            onPress={() => router.push("/payment-notifications")}
+          />
+        </Card>
+      )}
       {Platform.OS !== "web" && (
         <Card style={styles.group}>
           <Row
