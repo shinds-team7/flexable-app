@@ -245,6 +245,10 @@ class ContractTest {
 		app(auth(get("/api/v1/budget/today"), token), 200);
 		app(auth(get("/api/v1/budget/seed-money"), token), 200);
 		app(auth(json(post("/api/v1/budget/seed-money/entries"), "{\"cycleEnd\":\"2026-09-25\",\"choice\":\"GOAL\"}"), token), 409);
+		app(auth(json(post("/api/v1/budget/seed-money/transfers"), "{\"amount\":1}"), token), 201);
+		app(auth(json(post("/api/v1/budget/seed-money/transfers"), "{\"amount\":0}"), token), 400);
+		app(auth(json(put("/api/v1/budget/seed-money/base"), "{\"base\":10}"), token), 200);
+		app(auth(json(put("/api/v1/budget/seed-money/base"), "{\"base\":-1}"), token), 400);
 
 		// 수입일 전날: 반영 대기가 있고, 반영하면 기록이 생긴다
 		clock.seoulNoon("2026-10-25");

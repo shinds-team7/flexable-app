@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.flexable.api.auth.CurrentUser;
 import com.flexable.api.budget.BudgetDtos.DayWeightsRequest;
 import com.flexable.api.budget.BudgetDtos.DayWeightsResponse;
+import com.flexable.api.budget.BudgetDtos.SeedBaseRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyResponse;
+import com.flexable.api.budget.BudgetDtos.SeedTransferRequest;
 import com.flexable.api.budget.BudgetDtos.SettingsRequest;
 import com.flexable.api.budget.BudgetDtos.SettingsResponse;
 import com.flexable.api.budget.BudgetDtos.TodayResponse;
@@ -68,5 +70,16 @@ public class BudgetController {
 	@ResponseStatus(HttpStatus.CREATED)
 	SeedMoneyResponse confirmSeedMoney(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SeedMoneyRequest req) {
 		return seedMoney.confirm(CurrentUser.id(jwt), req);
+	}
+
+	@PostMapping("/seed-money/transfers")
+	@ResponseStatus(HttpStatus.CREATED)
+	SeedMoneyResponse transferSeedMoney(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SeedTransferRequest req) {
+		return seedMoney.transfer(CurrentUser.id(jwt), req.amount());
+	}
+
+	@PutMapping("/seed-money/base")
+	SeedMoneyResponse putSeedBase(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SeedBaseRequest req) {
+		return seedMoney.setBase(CurrentUser.id(jwt), req.base());
 	}
 }

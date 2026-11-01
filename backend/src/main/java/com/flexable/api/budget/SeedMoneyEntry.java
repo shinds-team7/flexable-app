@@ -17,9 +17,9 @@ import jakarta.persistence.Table;
 @Table(name = "seed_money_entries")
 public class SeedMoneyEntry {
 
-	/** GOAL: 매달 저축할 돈만, ALL: 매달 저축할 돈 + 남은 돈 전부, MANUAL: 직접 입력 */
+	/** GOAL: 매달 저축할 돈만, ALL: 매달 저축할 돈 + 남은 돈 전부, MANUAL: 직접 입력, EXTRA: 지금 예산에서 바로 옮김(이 표에는 저장하지 않고 seed_money_additions에서 온다) */
 	public enum Choice {
-		GOAL, ALL, MANUAL
+		GOAL, ALL, MANUAL, EXTRA
 	}
 
 	@Id

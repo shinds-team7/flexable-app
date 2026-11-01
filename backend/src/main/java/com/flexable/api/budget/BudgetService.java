@@ -43,12 +43,14 @@ public class BudgetService {
 	private final FixedExpensePoster fixedPoster;
 	private final DailyBudgetRepository dailyBudgets;
 	private final SeedMoneyEntryRepository seedEntries;
+	private final SeedMoneyAdditionRepository seedAdditions;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public BudgetService(SettingsRepository settings, FixedExpenseRepository fixed,
 			ProtectedItemRepository protectedItems, TransactionRepository transactions, UserRepository users,
 			FixedExpensePoster fixedPoster, DailyBudgetRepository dailyBudgets, SeedMoneyEntryRepository seedEntries,
+			SeedMoneyAdditionRepository seedAdditions,
 			Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
@@ -58,6 +60,7 @@ public class BudgetService {
 		this.fixedPoster = fixedPoster;
 		this.dailyBudgets = dailyBudgets;
 		this.seedEntries = seedEntries;
+		this.seedAdditions = seedAdditions;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -128,7 +131,8 @@ public class BudgetService {
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
 				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
 				!txs.isEmpty() || transactions.existsByUserId(userId),
-				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()), s.getDays());
+				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()) + seedAdditions.sumCreatedAfter(userId, s.getBalanceAt()),
+				s.getDays());
 		TodayResponse r = BudgetCalculator.compute(input, today, zone);
 		dailyBudgets.upsert(userId, today, r.dailyBudget());
 		return r.withCharacter(characterScore(userId, today));

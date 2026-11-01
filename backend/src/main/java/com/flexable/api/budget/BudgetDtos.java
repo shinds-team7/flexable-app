@@ -55,8 +55,19 @@ public final class BudgetDtos {
 			OffsetDateTime createdAt) {
 	}
 
-	public record SeedMoneyResponse(long base, long saved, long total, long monthlyGoal, SeedMoneyPending pending,
-			List<SeedMoneyEntryItem> entries) {
+	/** movable: 지금 예산에서 시드머니로 바로 보낼 수 있는 최대 금액(남은 생활비, 0 이상) */
+	public record SeedMoneyResponse(long base, long saved, long total, long monthlyGoal, long movable,
+			SeedMoneyPending pending, List<SeedMoneyEntryItem> entries) {
+	}
+
+	/** 지금 예산에서 시드머니로 바로 옮길 금액 */
+	public record SeedTransferRequest(
+			@NotNull(message = "금액을 입력해 주세요") @Min(value = 1, message = "1원 이상 입력해 주세요") @Max(value = MAX_AMOUNT, message = "금액이 너무 커요") Long amount) {
+	}
+
+	/** 고칠 모아둔 돈(seedBase) */
+	public record SeedBaseRequest(
+			@NotNull(message = "금액을 입력해 주세요") @Min(value = 0, message = "금액은 0원 이상이어야 해요") @Max(value = MAX_AMOUNT, message = "금액이 너무 커요") Long base) {
 	}
 
 	public record SeedMoneyRequest(

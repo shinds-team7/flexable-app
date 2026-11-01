@@ -276,12 +276,14 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
   "saved": 950000,
   "total": 1450000,
   "monthlyGoal": 300000,
+  "movable": 700000,
   "pending": { "cycleEnd": "2026-11-25", "payday": "2026-11-26", "goalAmount": 300000, "allAmount": 820000 },
   "entries": [{ "cycleEnd": "2026-10-25", "choice": "ALL", "amount": 950000, "createdAt": "2026-10-28T12:00:00+09:00" }]
 }
 ```
 
-- `pending`은 없으면 null. `entries`는 최근 12개, 최신순
+- `pending`은 없으면 null. `entries`는 반영한 돈과 바로 보낸 돈(`EXTRA`, `cycleEnd`는 보낸 날짜)을 합친 최근 12개, 최신순
+- `saved` = 반영한 돈과 바로 보낸 돈의 합. `movable` = 지금 예산에서 바로 보낼 수 있는 최대 금액(남은 생활비, 0 이상)
 
 ### `POST /budget/seed-money/entries` → 201 (응답은 GET과 같음)
 
@@ -292,7 +294,24 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 - `cycleEnd`는 지금 `pending.cycleEnd`와 같아야 한다. 다르거나 이미 반영했으면 409 `SEED_NOT_PENDING`
 - `GOAL`·`ALL`의 금액은 서버가 정한다(보낸 `amount`는 무시). `MANUAL`은 `amount` 필수(0 이상 1조 미만, 없으면 400 field `amount`)
 - 조회·반영 모두 먼저 날짜가 된 고정지출을 자동 기록한다(아래 "고정지출 자동 기록")
-- 주기당 한 번만 반영된다(설정 행 잠금 + `(user_id, cycle_end)` 고유 키)
+- 주기당 한 번만 반영된다(설정 행 잠금 + `(user_id, cycle_end)` 고유 키). `choice`로 `EXTRA`는 보낼 수 없다(400)
+
+### `POST /budget/seed-money/transfers` → 201 (응답은 GET과 같음)
+
+```json
+{ "amount": 100000 }
+```
+
+- 홈 시드머니 카드의 [+]가 쓴다. 수입일과 상관없이 아무 때나 여러 번 보낼 수 있다. `amount`는 1원 이상이고 응답의 `movable`(남은 생활비)보다 크면 400 `VALIDATION_FAILED`(`fields.amount`)
+- 보낸 돈은 `seed_money_additions`(V17)에 남고 추정 잔액에서 빠진다. 기록에는 `choice: "EXTRA"`로 보인다
+
+### `PUT /budget/seed-money/base` → 200 (응답은 GET과 같음)
+
+```json
+{ "base": 200000 }
+```
+
+- 시드머니 기록 시트 맨 아래 [시드머니 수정]이 쓴다. 모아둔 돈(`seedBase`)만 바꾸고 반영·보낸 기록과 예산 계산은 그대로다. 0 이상 1조 미만, 아니면 400, 예산 설정 전 404 `BUDGET_NOT_SET`
 
 ## 카테고리
 
@@ -606,7 +625,7 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 }
 ```
 
-- `entries`는 `POST /budget/seed-money/entries`로 저장된 **확정 기록 전부**, `cycleEnd` 오름차순이다. 앱 사용자 API(`GET /budget/seed-money`)의 최근 12건·최신순과 다르다. `choice`는 `GOAL` / `ALL` / `MANUAL`, `amount`는 저장된 원 단위 정수, `createdAt`은 실제 반영 시각(Asia/Seoul, `+09:00`)이다. `cycleEnd`는 주기 종료일이며 실제 반영일은 그 이후일 수 있다.
+- `entries`는 `POST /budget/seed-money/entries`로 저장된 **확정 기록 전부**(바로 보낸 `EXTRA` 포함), 시간 오름차순이다. 앱 사용자 API(`GET /budget/seed-money`)의 최근 12건·최신순과 다르다. `choice`는 `GOAL` / `ALL` / `MANUAL` / `EXTRA`(앱에서 바로 보낸 돈, `cycleEnd`는 보낸 날짜, 2026-11-01), `amount`는 저장된 원 단위 정수, `createdAt`은 실제 반영 시각(Asia/Seoul, `+09:00`)이다. `cycleEnd`는 주기 종료일이며 실제 반영일은 그 이후일 수 있다.
 - 사용자가 `MANUAL`로 **0원 반영을 완료한 기록도 포함**한다. 미반영 주기는 만들거나 0원으로 채우지 않는다. 기록이 없으면 `entries: []`, `lastEntry: null`, `total == base`다. 반영 대기(`pending`), 반영 후보 금액(`goalAmount`·`allAmount`), 거래 기록은 제공하지 않는다.
 - `totalAfter`는 **조회 시점의 `base` + 해당 주기까지 확정 금액의 합**이다. `total`은 같은 `base` + 전체 확정 금액의 합이므로 마지막 `totalAfter == total`이다. `base`는 `PUT /budget/settings`의 `seedBase`로 수정할 수 있다. 수정 후에는 모든 `totalAfter`를 현재 `base`로 다시 계산한다(반영 당시 base의 스냅숏이 아님). 저장된 `amount`·`choice`·`cycleEnd`·`createdAt`은 바꾸지 않는다. 웹은 누적 금액을 따로 계산하지 않는다.
 - `startedOn`은 사용자의 **`daily_budgets` 첫 `budget_date`**다. 설정의 `updatedAt`·잔액 기준일은 수정할 수 있고 설정 생성일은 별도로 저장하지 않아 선택하지 않았다. 첫 하루 예산 조회 전에는 `null`이고, 이후 설정·모아둔 돈을 고쳐도 시작일은 유지된다. 웹은 `null`이면 시작점 없이 표시한다. 조회로 하루 예산이나 반영 기록을 생성하지 않는다.

@@ -18,7 +18,8 @@ import { api } from "./api/client";
 import { ErrorNotice, MoneyField, money } from "./ui";
 import type { SeedChoice, SeedMoney } from "./types";
 /**
- * 시드머니 합계와, 수입일 전날부터 뜨는 반영 창. 반영하기 전까지는 홈에 올 때마다 다시 뜬다
+ * 시드머니 합계 카드. 카드를 누르면 모은 기록(맨 아래 [시드머니 수정])이 열리고, [+]를 누르면 지금 예산에서 시드머니로 보낼 돈을 적는 창이 열린다.
+ * 수입일 전날부터는 반영 창이 뜬다. 반영하기 전까지는 홈에 올 때마다 다시 뜬다
  * (다음 수입일 전날이 되면 서버가 지난 주기를 넘긴다). 반영한 돈은 생활비 잔액에서 빠지므로 onChanged로 홈과 시드머니를 다시 읽는다.
  * seed는 홈이 GET /budget/seed-money로 읽어 넘긴다(서버가 이 기능 전이면 홈이 카드를 그리지 않는다).
  */
@@ -33,11 +34,18 @@ export function SeedMoneyCard({
 }) {
   const [later, setLater] = useState<string | null>(null);
   const [history, setHistory] = useState(false);
+  const [transfer, setTransfer] = useState(false);
+  const [edit, setEdit] = useState(false);
   const pending = seed.pending;
   return (
     <>
-      {/* Same blue panel as the today card it sits beside. */}
-      <View style={[heroStyles.hero, style]}>
+      {/* Same blue panel as the today card it sits beside. Pressing it opens the history. */}
+      <Pressable
+        style={[heroStyles.hero, style]}
+        accessibilityRole="button"
+        accessibilityLabel="시드머니 모은 기록 보기"
+        onPress={() => setHistory(true)}
+      >
         <T size={15} weight="700" color={colors.onBrand}>
           시드머니
         </T>
@@ -59,11 +67,11 @@ export function SeedMoneyCard({
           <Pressable
             style={styles.icon}
             accessibilityRole="button"
-            accessibilityLabel="시드머니 모은 기록 보기"
+            accessibilityLabel="시드머니로 돈 보내기"
             hitSlop={8}
-            onPress={() => setHistory(true)}
+            onPress={() => setTransfer(true)}
           >
-            <Ionicons name="wallet-outline" size={32} color={colors.onBrand} />
+            <Ionicons name="add" size={36} color={colors.onBrand} />
           </Pressable>
         </View>
         <View style={[heroStyles.heroFoot, styles.foot]}>
@@ -72,7 +80,7 @@ export function SeedMoneyCard({
             매달 {money(seed.monthlyGoal)}원 저축
           </T>
         </View>
-      </View>
+      </Pressable>
       <Sheet
         visible={history}
         onClose={() => setHistory(false)}
@@ -100,19 +108,68 @@ export function SeedMoneyCard({
             >
               <T weight="700">{money(entry.amount)}원</T>
               <T size={13}>
-                {entry.cycleEnd}까지 ·{" "}
+                {entry.choice === "EXTRA" ? entry.cycleEnd : `${entry.cycleEnd}까지`} ·{" "}
                 {
                   {
                     GOAL: "매달 저축할 돈",
                     ALL: "남은 돈 전부",
                     MANUAL: "직접 입력",
+                    EXTRA: "바로 보냄",
                   }[entry.choice]
                 }
               </T>
             </View>
           ))}
         </ScrollView>
+        <Button
+          label="시드머니 수정"
+          variant="soft"
+          style={{ marginTop: 16 }}
+          onPress={() => {
+            setHistory(false);
+            setEdit(true);
+          }}
+        />
       </Sheet>
+      {transfer && (
+        <AmountModal
+          title="시드머니로 보내기"
+          caption={`지금 예산에서 최대 ${money(seed.movable)}원까지 보낼 수 있어요. 보낸 돈은 생활비 잔액에서 빠져요`}
+          label="보낼 금액 (원)"
+          initial={0}
+          min={1}
+          max={seed.movable}
+          confirmLabel="보내기"
+          busyLabel="보내는 중…"
+          onClose={() => setTransfer(false)}
+          submit={async (amount) => {
+            await api("/budget/seed-money/transfers", {
+              method: "POST",
+              body: { amount },
+            });
+            onChanged();
+          }}
+        />
+      )}
+      {edit && (
+        <AmountModal
+          title="시드머니 수정"
+          caption="모아둔 돈만 고쳐요. 반영한 돈과 보낸 돈 기록은 그대로예요"
+          label="모아둔 돈 (원)"
+          initial={seed.base}
+          min={0}
+          confirmLabel="저장"
+          busyLabel="저장하는 중…"
+          onClose={() => setEdit(false)}
+          submit={async (base) => {
+            await api("/budget/seed-money/base", {
+              method: "PUT",
+              body: { base },
+            });
+            onChanged();
+          }}
+        />
+      )}
       {pending && later !== pending.cycleEnd && (
         <ReflectModal
           // A new cycle starts with a fresh choice.
@@ -126,6 +183,93 @@ export function SeedMoneyCard({
   );
 }
 type Pending = NonNullable<SeedMoney["pending"]>;
+/** 금액 하나를 적어 저장하는 가운데 창. min·max를 벗어나면 저장할 수 없다. */
+function AmountModal({
+  title,
+  caption,
+  label,
+  initial,
+  min,
+  max,
+  confirmLabel,
+  busyLabel,
+  onClose,
+  submit,
+}: {
+  title: string;
+  caption: string;
+  label: string;
+  initial: number;
+  min: number;
+  max?: number;
+  confirmLabel: string;
+  busyLabel: string;
+  onClose: () => void;
+  submit: (amount: number) => Promise<void>;
+}) {
+  const [amount, setAmount] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const tooMuch = max !== undefined && amount > max;
+  const save = async () => {
+    if (busy || tooMuch || amount < min) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await submit(amount);
+      onClose();
+    } catch (e) {
+      setError(e);
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.dim}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={[styles.dialog, floating]} accessibilityViewIsModal>
+          <ScrollView
+            contentContainerStyle={{ gap: 16 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={{ gap: 6 }}>
+              <T size={18} weight="700" accessibilityRole="header">
+                {title}
+              </T>
+              <T size={14} color={colors.textSub} style={{ lineHeight: 21 }}>
+                {caption}
+              </T>
+            </View>
+            <MoneyField label={label} value={amount} onChange={setAmount} />
+            {tooMuch && (
+              <T size={13} color={colors.danger} accessibilityRole="alert">
+                보낼 수 있는 돈({money(max)}원)보다 많아요
+              </T>
+            )}
+            <ErrorNotice error={error} />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Button
+                label="취소"
+                variant="soft"
+                disabled={busy}
+                style={{ flex: 1 }}
+                onPress={onClose}
+              />
+              <Button
+                label={busy ? busyLabel : confirmLabel}
+                disabled={busy || tooMuch || amount < min}
+                style={{ flex: 1 }}
+                onPress={save}
+              />
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
 /**
  * 가운데 모달. 바깥을 눌러도 닫히지 않고 [나중에]로만 닫는다(Android 뒤로 가기도 나중에와 같다).
  * 금액은 서버가 정한 값을 그대로 보여 준다. 직접 입력만 사용자가 금액을 넣는다.
