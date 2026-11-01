@@ -57,7 +57,7 @@ test("attendance marks the milestone bonus day", () => {
   assert.equal(ledgerTitle({ reason: "ATTENDANCE", amount: 5 }), "+5 출석체크");
   assert.equal(ledgerDetail({ reason: "ATTENDANCE", amount: 5 }), "");
   assert.equal(
-    ledgerDetail({ reason: "ATTENDANCE", amount: 50 }),
+    ledgerDetail({ reason: "ATTENDANCE", amount: 55 }),
     "누적 출석 보너스",
   );
 });

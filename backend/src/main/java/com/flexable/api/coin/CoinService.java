@@ -40,7 +40,7 @@ public class CoinService {
 	public static final int PASSIVE_LIMIT = 10;
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
 	public static final int ATTENDANCE_REWARD = 5;
-	/** 누적 출석 보상: 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날 */
+	/** 누적 출석 보너스: 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날. 그날 기본 5에 더해서 준다 */
 	public static final int ATTENDANCE_MILESTONE_REWARD = 50;
 	public static final int ATTENDANCE_CYCLE = 7;
 	/** 누적 7일째에 한 번만 주는 코스튬. 상점에서는 팔지 않는다(V16) */
@@ -133,11 +133,11 @@ public class CoinService {
 		return new AttendResponse(before.todayReward(), outfit, attendance(userId, today), view(w));
 	}
 
-	/** 누적 n번째 출석의 코인. 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5 */
+	/** 누적 n번째 출석의 코인. 기본 5에, 3일째와 8일째부터 7일 주기의 3·7번째 날은 보너스 50을 더해 55 */
 	public static int attendanceReward(int n) {
 		int day = (n - 1) % ATTENDANCE_CYCLE + 1;
 		boolean milestone = n == 3 || n > ATTENDANCE_CYCLE && (day == 3 || day == ATTENDANCE_CYCLE);
-		return milestone ? ATTENDANCE_MILESTONE_REWARD : ATTENDANCE_REWARD;
+		return milestone ? ATTENDANCE_REWARD + ATTENDANCE_MILESTONE_REWARD : ATTENDANCE_REWARD;
 	}
 
 	private Attendance attendance(long userId, LocalDate today) {
