@@ -474,11 +474,11 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 홈 캐릭터 오른쪽 위 출석 버튼 → 출석 모달(`service/AttendanceModal.tsx`)이 쓴다. 날짜는 모두 KST.
 
 ```json
-{ "today": "2026-10-28", "total": 2, "checkedToday": false, "todayReward": 50, "todayOutfitId": null }
+{ "today": "2026-10-28", "total": 2, "checkedToday": false, "todayReward": 55, "todayOutfitId": null }
 ```
 
 - `total` = 누적 출석 일수(오늘 했으면 오늘 포함). 빠진 날이 있어도 초기화하지 않는다
-- `todayReward` = 오늘 출석하면(이미 했으면 받은) 코인. 누적 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5
+- `todayReward` = 오늘 출석하면(이미 했으면 받은) 코인. 기본 5에, 누적 3일째와 8일째부터 7일 주기의 3·7번째 날은 보너스 50을 더해 55
 - `todayOutfitId` = 오늘 출석하면(했으면) 받는 코스튬. 누적 7일째에 `outfit-06` 한 번만, 아니면 null
 
 ### `POST /coins/attendance` → 200

@@ -2328,7 +2328,7 @@ export interface components {
             /** @description 누적 출석 일수(오늘 했으면 오늘 포함). 빠진 날이 있어도 초기화하지 않는다 */
             total: number;
             checkedToday: boolean;
-            /** @description 오늘 출석하면(했으면) 받는 코인. 누적 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날은 50, 그 밖에는 5 */
+            /** @description 오늘 출석하면(했으면) 받는 코인. 기본 5에, 누적 3일째와 8일째부터 7일 주기의 3·7번째 날은 보너스 50을 더해 55 */
             todayReward: number;
             /** @description 오늘 출석하면(했으면) 받는 코스튬 id. 누적 7일째에 한 번만, 아니면 null */
             todayOutfitId: string | null;

@@ -239,15 +239,15 @@ class CoinFlowTest {
 	}
 
 	@Test
-	void thirdDayPays50AndTheSeventhGivesTheCostumeOnceEvenAfterMissingDays() throws Exception {
+	void thirdDayPays55AndTheSeventhGivesTheCostumeOnceEvenAfterMissingDays() throws Exception {
 		clock.seoul("2026-10-01T09:00");
 		String token = signup();
 		attend(token).andExpect(jsonPath("$.rewarded").value(5));
 		clock.seoul("2026-10-02T09:00");
 		attend(token).andExpect(jsonPath("$.rewarded").value(5));
 		clock.seoul("2026-10-03T09:00");
-		attendance(token).andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.todayReward").value(50));
-		attend(token).andExpect(jsonPath("$.rewarded").value(50)).andExpect(jsonPath("$.wallet.balance").value(60));
+		attendance(token).andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.todayReward").value(55));
+		attend(token).andExpect(jsonPath("$.rewarded").value(55)).andExpect(jsonPath("$.wallet.balance").value(65));
 		// 빠진 날이 있어도 누적이라 초기화하지 않는다: 10-04~10-08 건너뛰고 4~6번째 출석
 		for (String day : new String[] { "09", "10", "11" }) {
 			clock.seoul("2026-10-" + day + "T09:00");
@@ -267,10 +267,10 @@ class CoinFlowTest {
 	}
 
 	@Test
-	void afterTheFirstSevenDaysEveryThirdAndSeventhDayPays50() throws Exception {
+	void afterTheFirstSevenDaysEveryThirdAndSeventhDayPays55() throws Exception {
 		clock.seoul("2026-10-01T09:00");
 		String token = signup();
-		int[] expected = { 5, 5, 50, 5, 5, 5, 5, /* 8일째부터 */ 5, 5, 50, 5, 5, 5, 50, 5 };
+		int[] expected = { 5, 5, 55, 5, 5, 5, 5, /* 8일째부터 */ 5, 5, 55, 5, 5, 5, 55, 5 };
 		for (int i = 0; i < expected.length; i++) {
 			clock.seoul(String.format("2026-10-%02dT09:00", i + 1));
 			attend(token).andExpect(jsonPath("$.rewarded").value(expected[i]))
