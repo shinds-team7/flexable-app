@@ -6,6 +6,8 @@
 
 ## 2026-11-01
 
+- [#226] `docs/HANDOFF.md`를 현재 상태와 11/2 출근 할 일 중심으로 다시 썼다(완료된 날짜별 기록·게시 그룹 로그 제거, 이력은 git log). PRD·server-migration의 HANDOFF 절 이름 참조를 새 구조에 맞췄다. 제품 규칙·계약은 그대로 — 영향: 문서만
+
 - [#225] 시드머니 카드 개편: 카드를 누르면 기록 시트(맨 아래 [시드머니 수정])가 열리고, 지갑 아이콘 대신 [+]로 지금 예산에서 시드머니로 바로 보낸다(수입일과 무관, 여러 번, `movable`까지). `POST /budget/seed-money/transfers`·`PUT /budget/seed-money/base`·`SeedMoney.movable`·`SeedEntryChoice(EXTRA)`를 `app-api.yaml`에, 웹 연동 `SeedChoice`에 `EXTRA`를 더했다. 보낸 돈은 `seed_money_additions`(V17)에 남고 policies §3에 규칙을 적었다 — 영향: 앱 서버(배포 먼저, V17)·앱 화면·**웹(flexable-web)**: 웹 연동 `entries`에 `choice: EXTRA`가 올 수 있음
 
 - [#224] 출석 보너스를 합산으로 정했다: 누적 3일째와 8일째부터 7일 주기의 3·7번째 날은 기본 +5에 보너스 +50을 더해 55(대체 아님). `todayReward` 설명을 고쳤고 응답 형태는 그대로다 — 영향: 앱 서버(배포)·앱 화면 문구 없음
