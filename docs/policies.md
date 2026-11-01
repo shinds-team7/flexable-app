@@ -83,11 +83,15 @@
 | 1,000,000 · 500,000 · 없음 | 10-01 → 11-25 | 11-25(11-26), 10-25 주기는 넘어감 | 300,000 · 950,000 | — | — | — |
 | 1,000,000 · 500,000 · 없음 | 10-25 → 10-25 | 없음(마지막 날에 시작) | — | — | — | — |
 
+지금 예산에서 바로 보내기(`POST /budget/seed-money/transfers`, 2026-11-01): 수입일과 상관없이 아무 때나 여러 번 보낼 수 있다(`EXTRA`, 기록은 `seed_money_additions`). 보낼 수 있는 최대 금액 `movable` = max(0, 오늘까지 기록 기준 남은 생활비). 이보다 크거나 1원 미만이면 400 `VALIDATION_FAILED`(`fields.amount`). 보낸 돈도 반영한 돈처럼 §2 추정 잔액에서 빠지고(보낸 시각이 잔액 기준 시각 이후인 것만) 시드머니 합계(`saved`)에 더한다. 수입일 반영의 `ALL` 금액은 이미 보낸 돈이 빠진 뒤의 남은 돈이다. 예: 잔액 1,000,000·모아둔 돈 500,000·매달 저축할 돈 300,000에서 100,000을 보내면 시드머니 600,000, `movable`은 100,000 줄고 추정 잔액은 900,000이다.
+
+모아둔 돈만 고치기(`PUT /budget/seed-money/base`, 2026-11-01): `seedBase`만 바꾸고 반영·보낸 기록과 예산 계산은 그대로다(0 이상, 1조 미만).
+
 웹 연동용 시드머니(`/internal/v1/web-links/{linkId}/seed-money`)는 확정 기록만 주고 반영 대기·후보 금액은 주지 않는다([API.md](API.md#웹사이트-연동)).
 
 웹에서 고친 총액(`PUT` 같은 경로, 2026-10-27): 모아둔 돈 = 총액 − 반영한 돈 합. 반영 기록과 §2 추정 잔액은 바뀌지 않는다. 총액이 반영한 돈 합보다 작으면 거절한다(400 `VALIDATION_FAILED`). 예: 모아둔 돈 500,000 + 반영 300,000에서 웹이 1,200,000으로 고치면 모아둔 돈 900,000, 299,999로 고치면 거절, 300,000이면 모아둔 돈 0.
 
-검사: `SeedMoneyPolicyTest`(이 표), `SeedMoneyFlowTest`(웹에서 고친 총액은 `webEditsTotalByChangingSeedBase`).
+검사: `SeedMoneyPolicyTest`(이 표), `SeedMoneyFlowTest`(웹에서 고친 총액은 `webEditsTotalByChangingSeedBase`, 바로 보내기·모아둔 돈 고치기는 `transferAnytimeUpToMovableAndEditSeedBase`).
 
 ## 4. 캐릭터 점수(`budget.CharacterScore`)
 

@@ -454,6 +454,7 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
         saved: posted ? 120000 : 0,
         total: posted ? 620000 : 500000,
         monthlyGoal: 300000,
+        movable: 700000,
         pending: posted ? null : pending,
         entries: [],
       },
@@ -502,6 +503,65 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
     path: "test-results/service-seed-money.png",
     fullPage: true,
   });
+});
+
+test("seed money card: + sends money from the current budget, the card opens the history with an edit button at the bottom", async ({
+  page,
+}) => {
+  await signup(page, email());
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
+  for (let i = 0; i < 4; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByLabel("모아둔 돈 (원)", { exact: true }).fill("500000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page
+    .getByRole("button", { name: "+ 저축할 돈 추가", exact: true })
+    .click();
+  await page.getByLabel("이름", { exact: true }).fill("적금");
+  await page.getByLabel("금액 (원)", { exact: true }).fill("300000");
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await page.getByRole("button", { name: "홈으로", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await closeGift(page);
+  await expect(
+    page.getByLabel("시드머니 500,000원", { exact: true }),
+  ).toBeVisible();
+
+  // [+] sends money from the current budget at any time; more than the spendable money is refused in the window.
+  await page
+    .getByRole("button", { name: "시드머니로 돈 보내기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "시드머니로 보내기", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("보낼 금액 (원)", { exact: true }).fill("99999999");
+  await expect(page.getByText(/보낼 수 있는 돈\(.*\)보다 많아요/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "보내기", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("보낼 금액 (원)", { exact: true }).fill("100000");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(
+    page.getByLabel("시드머니 600,000원", { exact: true }),
+  ).toBeVisible();
+
+  // The card opens the history; the edit button sits below it and changes only the money already set aside.
+  await page
+    .getByRole("button", { name: "시드머니 모은 기록 보기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "시드머니 모은 기록", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/ · 바로 보냄$/)).toBeVisible();
+  await page.getByRole("button", { name: "시드머니 수정", exact: true }).click();
+  const edit = page.getByRole("dialog").filter({ hasText: "시드머니 수정" });
+  await edit.getByLabel("모아둔 돈 (원)", { exact: true }).fill("200000");
+  await edit.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(
+    page.getByLabel("시드머니 300,000원", { exact: true }),
+  ).toBeVisible();
+  expect((await snapshot(page, "/budget/settings")).seedBase).toBe(200000);
 });
 
 test("public deletion without budget setup and offline failure preserves credentials", async ({

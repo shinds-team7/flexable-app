@@ -182,6 +182,63 @@ class SeedMoneyFlowTest {
 	}
 
 	@Test
+	void transferAnytimeUpToMovableAndEditSeedBase() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}"))
+			.andExpect(status().isOk());
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(status().isOk());
+		// 설정을 저장한 뒤의 시각에 옮겨야 잔액에서 빠진 돈으로 센다.
+		clock.seoulNoon("2026-10-02");
+		long movable = Long.parseLong(read(mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null)), "$.movable"));
+		org.assertj.core.api.Assertions.assertThat(movable).isPositive();
+		long balance = Long.parseLong(read(mvc.perform(auth(get("/api/v1/budget/today"), token, null)), "$.estimatedBalance"));
+
+		// 수입일 전날이 아니어도, 여러 번, 남은 생활비까지 보낼 수 있다.
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token, "{\"amount\":100000}"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.base").value(500000))
+			.andExpect(jsonPath("$.saved").value(100000))
+			.andExpect(jsonPath("$.total").value(600000))
+			.andExpect(jsonPath("$.movable").value(movable - 100000))
+			.andExpect(jsonPath("$.pending").value(nullValue()))
+			.andExpect(jsonPath("$.entries[0].choice").value("EXTRA"))
+			.andExpect(jsonPath("$.entries[0].cycleEnd").value("2026-10-02"))
+			.andExpect(jsonPath("$.entries[0].amount").value(100000));
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token, "{\"amount\":50000}"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.saved").value(150000))
+			.andExpect(jsonPath("$.entries", hasSize(2)));
+		// 옮긴 돈은 통장 잔액에서 빠진다.
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance").value(balance - 150000));
+
+		// 남은 생활비보다 많거나 1원 미만은 받지 않는다.
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token,
+				"{\"amount\":" + (movable - 150000 + 1) + "}"))
+			.andExpect(status().isBadRequest());
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token, "{\"amount\":0}"))
+			.andExpect(status().isBadRequest());
+
+		// 모아둔 돈만 고친다. 옮긴 돈 기록과 잔액은 그대로다.
+		mvc.perform(auth(put("/api/v1/budget/seed-money/base"), token, "{\"base\":200000}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.base").value(200000))
+			.andExpect(jsonPath("$.saved").value(150000))
+			.andExpect(jsonPath("$.total").value(350000))
+			.andExpect(jsonPath("$.entries", hasSize(2)));
+		mvc.perform(auth(put("/api/v1/budget/seed-money/base"), token, "{\"base\":-1}")).andExpect(status().isBadRequest());
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance").value(balance - 150000));
+
+		// 반영 대기가 있어도 수입일 반영 요청의 방법으로 EXTRA는 쓸 수 없다.
+		clock.seoulNoon("2026-10-25");
+		mvc.perform(auth(post("/api/v1/budget/seed-money/entries"), token,
+				"{\"cycleEnd\":\"2026-10-25\",\"choice\":\"EXTRA\"}"))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void unansweredCycleIsSkippedAtNextCycleEnd() throws Exception {
 		clock.seoulNoon("2026-10-01");
 		String token = signup();

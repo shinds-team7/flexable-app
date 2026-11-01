@@ -250,6 +250,42 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /budget/seed-money/transfers:
+    post:
+      tags: [budget]
+      summary: 지금 예산에서 시드머니로 바로 옮기기(아무 때나 여러 번, 남은 생활비까지)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999, description: '옮길 금액. movable보다 크면 400' }
+      responses:
+        '201': { $ref: '#/components/responses/SeedMoney' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /budget/seed-money/base:
+    put:
+      tags: [budget]
+      summary: 모아둔 돈(seedBase)만 고치기. 반영·옮긴 기록과 예산 계산은 그대로
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [base]
+              properties:
+                base: { type: integer, format: int64, minimum: 0, maximum: 999999999999 }
+      responses:
+        '200': { $ref: '#/components/responses/SeedMoney' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
 
   /categories:
     get:
@@ -869,6 +905,10 @@ components:
       type: string
       enum: [GOAL, ALL, MANUAL]
       description: 'GOAL 매달 저축할 돈, ALL 남은 돈 전부, MANUAL 직접 입력'
+    SeedEntryChoice:
+      type: string
+      enum: [GOAL, ALL, MANUAL, EXTRA]
+      description: '기록에 보이는 방법. GOAL·ALL·MANUAL은 수입일 전날 반영, EXTRA는 지금 예산에서 바로 옮김'
 
     User:
       type: object
@@ -1073,13 +1113,14 @@ components:
         record: { from: '2026-09-29', to: '2026-10-26', days: 28, weekdays: 7, minDays: 7, minWeekdays: 3 }
     SeedMoney:
       type: object
-      required: [base, saved, total, monthlyGoal, pending, entries]
+      required: [base, saved, total, monthlyGoal, movable, pending, entries]
       additionalProperties: false
       properties:
         base: { type: integer, format: int64, description: '모아둔 돈(seedBase)' }
         saved: { type: integer, format: int64, description: '주기마다 옮긴 돈의 합' }
         total: { type: integer, format: int64 }
         monthlyGoal: { type: integer, format: int64, description: '매달 저축할 돈 합' }
+        movable: { type: integer, format: int64, description: '지금 예산에서 시드머니로 바로 보낼 수 있는 최대 금액(남은 생활비, 0 이상)' }
         pending:
           type: object
           nullable: true
@@ -1101,6 +1142,7 @@ components:
         saved: 0
         total: 500000
         monthlyGoal: 300000
+        movable: 1200000
         pending: { cycleEnd: '2026-10-25', payday: '2026-10-26', goalAmount: 300000, allAmount: 950000 }
         entries: []
     SeedEntry:
@@ -1108,8 +1150,8 @@ components:
       required: [cycleEnd, choice, amount, createdAt]
       additionalProperties: false
       properties:
-        cycleEnd: { type: string, format: date }
-        choice: { $ref: '#/components/schemas/SeedChoice' }
+        cycleEnd: { type: string, format: date, description: 'EXTRA는 옮긴 날짜' }
+        choice: { $ref: '#/components/schemas/SeedEntryChoice' }
         amount: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
 
