@@ -37,7 +37,7 @@
 ### 출시·Play Console
 - [ ] 1.6.0이 테스터에게 나간 뒤 **테스터 12명 이상 14일 유지 → 프로덕션 액세스 신청**(`play-store/README.md` §5)
 - [ ] 데이터 보안 양식 반영(`play-store/README.md` §3.6), 금융 기능 선언 실제 선택지 기록(§3.7 TODO), 스토어 설명 끝 "문의:" 줄을 `ucmnuniverse@gmail.com`으로, 알림 권한 반영 여부(§3.8)
-- [ ] 신한카드 결제 알림 자동 기록 [#206](https://github.com/shinds-team7/flexable-app/pull/206)(#205, 11-02 main 병합): 새 네이티브 빌드(1.6.0 versionCode 17 이상)로 실제 승인·취소, 권한, 앱 종료·복귀, 중복, 계정 전환, 권한 철회를 실기기에서 확인한다. 방침 개정(시행 7일 전 고지는 비공개 테스트 단계라 생략 가능)·공개 페이지·Play 데이터 보안 안내를 맞춘 뒤에 배포
+- [ ] 신한카드 결제 알림 자동 기록 [#206](https://github.com/shinds-team7/flexable-app/pull/206)(#205, 11-02 main 병합): 새 네이티브 빌드(1.6.0 versionCode 17 이상)로 실제 승인·취소, 권한, 앱 종료·복귀, 중복, 계정 전환, 권한 철회를 실기기에서 확인한다. 방침 개정·공개 페이지·Play 데이터 보안 안내를 맞춘 뒤에 배포(고지 기간은 사람이 판단)
 
 ### 서버·인프라
 - [ ] **EC2 로컬 DB로 복귀 11-14~16 → 아카데미 VM 데이터 삭제 11-17**(계획 [`server-migration.md`](server-migration.md) §8). 복귀 뒤에는 이 PC에서 `backend/deploy/deploy.sh`로 배포할 수 있다. 개인정보처리방침 백업 문구 손보기(§9)
