@@ -177,7 +177,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   const salary = page.getByRole("button", { name: "직장냥이", exact: true });
   // Converted costumes are unlocked by level and cannot be bought.
-  await expect(salary).toContainText("Lv.2");
+  await expect(salary).toContainText("묘목");
   await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
   await salary.click();
   await expect(
@@ -185,7 +185,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   ).toBeVisible();
   await expect(page.getByText("직장냥이", { exact: true })).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Lv.2 달성 시 열림", exact: true }),
+    page.getByRole("button", { name: "🌿 묘목 달성 시 열림", exact: true }),
   ).toBeDisabled();
   // A real salary-cat video loads and plays, rather than the default fallback poster.
   await expect
@@ -338,7 +338,7 @@ test("level three caps the home gauge and a costume refund is acknowledged once"
   const gauge = page.getByRole("progressbar");
   await expect(gauge).toHaveAccessibleName(/최고 단계/);
   await expect(gauge).toContainText("최고 단계");
-  await expect(gauge).toContainText("Lv.3");
+  await expect(gauge).toContainText("나무");
   await expect(gauge).not.toContainText("%");
   await expect(
     page.getByText("광부에서 시작! 예산을 지키면 조금씩 올라가요", {

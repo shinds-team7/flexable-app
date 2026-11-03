@@ -612,7 +612,7 @@ class CoinFlowTest {
 		String token = signup();
 		setUpBudget(token);
 
-		// 10/1~10/7 7일 지킴 → 105점(Lv.2)
+		// 10/1~10/7 7일 지킴 → 140점(Lv.2)
 		clock.seoul("2026-10-08T12:00");
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(jsonPath("$.peakLevel").value(2))
@@ -621,12 +621,12 @@ class CoinFlowTest {
 		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
 			.andExpect(status().isOk());
 
-		// 10/8·10/9 넘김 → 5점(Lv.1)으로 내려가도 Lv.2 코스튬은 그대로
+		// 10/8·10/9 넘김 → 40점(Lv.1)으로 내려가도 Lv.2 코스튬은 그대로
 		spend(token, 500_000);
 		clock.seoul("2026-10-09T12:00");
 		spend(token, 300_000);
 		clock.seoul("2026-10-10T12:00");
-		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(jsonPath("$.characterPoints").value(5));
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(jsonPath("$.characterPoints").value(40));
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(jsonPath("$.peakLevel").value(2))
 			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-02"))

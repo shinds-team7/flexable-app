@@ -1,11 +1,12 @@
 /**
- * 캐릭터 홈 상단 UI — 예산을 잘 지킬수록 높은 단계(지금은 Lv.3까지), 못 지킬수록 Lv.1(광부).
+ * 캐릭터 홈 상단 UI — 예산을 잘 지키고 출석할수록 높은 단계(새싹→묘목→나무, 지금은 3단계까지), 못 지킬수록 새싹.
  * 단계·게이지 값은 부르는 쪽(서비스 홈, 서버 점수 pointsStatus)이 계산해서 넘긴다.
  */
 import { useEffect, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme';
+import { LevelIcon, levelName } from './LevelIcon';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3;
@@ -68,21 +69,37 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
       style={styles.gauge}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={top ? `최고 단계, ${label}` : `Lv.${level} 승급 게이지 ${pct}%, ${label}`}
+      accessibilityLabel={top ? `최고 단계, ${label}` : `${levelName(level)} 단계, 승급 게이지 ${pct}%, ${label}`}
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
       <View style={styles.gaugeHead}>
-        <T size={12} weight="600" color={colors.textMuted}>
-          {level === 1 ? 'Lv.1' : `▼ Lv.${level - 1}`}
-        </T>
+        <View style={styles.end}>
+          {level > 1 && (
+            <T size={12} weight="600" color={colors.textMuted}>
+              ▼
+            </T>
+          )}
+          <LevelIcon level={Math.max(1, level - 1)} size={16} />
+          <T size={12} weight="600" color={colors.textMuted}>
+            {levelName(Math.max(1, level - 1))}
+          </T>
+        </View>
         {top && (
           <T size={13} weight="800" color={accent}>
             최고 단계
           </T>
         )}
-        <T size={12} weight="600" color={colors.textMuted}>
-          {top ? `Lv.${TOP_LEVEL}` : `Lv.${level + 1} ▲`}
-        </T>
+        <View style={styles.end}>
+          <LevelIcon level={top ? TOP_LEVEL : level + 1} size={16} />
+          <T size={12} weight="600" color={colors.textMuted}>
+            {levelName(top ? TOP_LEVEL : level + 1)}
+          </T>
+          {!top && (
+            <T size={12} weight="600" color={colors.textMuted}>
+              ▲
+            </T>
+          )}
+        </View>
       </View>
       <View style={styles.track}>
         <Animated.View
@@ -97,6 +114,7 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
 }
 
 const styles = StyleSheet.create({
+  end: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Screen 의 좌우·상단 여백(16)을 상쇄해 화면 폭을 꽉 채우고, 아래 항목 바로 위에서 끊는다(gap 12 상쇄)
   wrap: {
     marginHorizontal: -16,

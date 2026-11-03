@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
+import { levelLabel } from "@/components/LevelIcon";
 import { colors, radius } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import {
@@ -276,7 +277,7 @@ function Action({
   if (outfit.unlockLevel !== null)
     return (
       <Button
-        label={`Lv.${outfit.unlockLevel} 달성 시 열림`}
+        label={`${levelLabel(outfit.unlockLevel)} 달성 시 열림`}
         variant="soft"
         icon="lock-closed"
         disabled
@@ -317,7 +318,7 @@ function Grid({
               ? "적용 중"
               : o.owned
                 ? "보유"
-                : `Lv.${o.unlockLevel}`;
+                : levelLabel(o.unlockLevel);
         return (
           <Pressable
             key={o.id}

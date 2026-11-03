@@ -6,8 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
@@ -25,7 +27,9 @@ class CharacterPolicyTest {
 		JsonNode root = JsonMapper.builder().build().readTree(Files.readString(Path.of("..", "tests", "policy", "character.json")));
 		return root.get("cases").valueStream().map(c -> DynamicTest.dynamicTest(c.get("name").asString(), () -> {
 			NavigableMap<LocalDate, Long> budgets = new TreeMap<>(byDate(c.get("budgets")));
-			var r = CharacterScore.compute(budgets, byDate(c.get("spent")), LocalDate.parse(c.get("today").asString()));
+			Set<LocalDate> attended = new HashSet<>();
+			c.get("attended").forEach(d -> attended.add(LocalDate.parse(d.asString())));
+			var r = CharacterScore.compute(budgets, byDate(c.get("spent")), attended, LocalDate.parse(c.get("today").asString()));
 			JsonNode ex = c.get("expected");
 			assertThat(r.points()).isEqualTo(ex.get("points").asInt());
 			assertThat(r.delta()).isEqualTo(ex.get("delta").asInt());

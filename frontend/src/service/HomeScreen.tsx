@@ -14,12 +14,14 @@ import {
   pointsStatus,
   type PaceStatus,
 } from "@/components/CharacterStage";
+import { LevelGuide } from "./LevelGuide";
 import { AttendanceModal } from "./AttendanceModal";
 import { WeekExpensesSheet } from "./WeekExpensesSheet";
 import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
 import { sessionGeneration } from "./api/client";
 import { ackRewards, checkIn } from "./coinApi";
+import { levelName } from "@/components/LevelIcon";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors } from "@/theme";
 import { SeedMoneyCard } from "./SeedMoneyCard";
@@ -142,7 +144,7 @@ export function HomeScreen() {
                 <OutfitView
                   outfitId={wallet?.equippedOutfitId ?? null}
                   style={{ flex: 1 }}
-                  accessibilityLabel={`Lv.${status.level} 캐릭터`}
+                  accessibilityLabel={`${levelName(status.level)} 단계 캐릭터`}
                 />
               }
               coin={<CoinChip balance={wallet?.balance ?? 0} />}
@@ -258,20 +260,8 @@ export function HomeScreen() {
               onClose={() => setLevelHelp(false)}
               title="레벨업 조건 및 가이드"
             >
-              <ScrollView contentContainerStyle={{ gap: 12 }}>
-                <T>
-                  하루 예산 이하로 쓰면 +15점, 넘으면 −50점이에요. 점수는
-                  0~200점이며 오늘 결과는 내일 반영돼요
-                </T>
-                <T>Lv.1은 0~99점, Lv.2는 100~199점, Lv.3은 200점이에요</T>
-                <T>
-                  고정지출 자동 기록은 판정에서 제외해요. 앱을 열지 않은 날은
-                  마지막으로 확인한 하루 예산을 기준으로 해요
-                </T>
-                <T>
-                  한 번 달성한 레벨의 코스튬은 점수가 내려가도 해금 상태가
-                  유지돼요
-                </T>
+              <ScrollView>
+                <LevelGuide />
               </ScrollView>
             </Sheet>
             <WeekExpensesSheet
@@ -351,9 +341,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.9)",
   },
 });
-// Mirrors the server rule in docs/API.md: a kept day adds 15 points, an overspent day takes 50, within 0-200 (Lv.3 for now).
-const UP = 15;
-const DOWN = 50;
+// Mirrors the server rule in docs/policies.md §4: attending adds 10, a kept day adds 20, an overspent day takes 50, within 0-200.
+// The home screen shows after the attendance modal, so the hint counts today's attendance: kept 10+20, overspent 10-50.
+const UP = 30;
+const DOWN = 40;
 const MAX = 200;
 function statusOf(s: Today): PaceStatus {
   const points = Math.min(MAX, Math.max(0, s.characterPoints ?? 0));

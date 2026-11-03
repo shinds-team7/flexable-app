@@ -7,14 +7,18 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.flexable.api.coin.CoinLedgerRepository;
+import com.flexable.api.coin.CoinReason;
 import com.flexable.api.budget.BudgetDtos.DayPresetItem;
 import com.flexable.api.budget.BudgetDtos.DayRecordInfo;
 import com.flexable.api.budget.BudgetDtos.DayWeightsRequest;
@@ -44,13 +48,14 @@ public class BudgetService {
 	private final DailyBudgetRepository dailyBudgets;
 	private final SeedMoneyEntryRepository seedEntries;
 	private final SeedMoneyAdditionRepository seedAdditions;
+	private final CoinLedgerRepository coinLedger;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public BudgetService(SettingsRepository settings, FixedExpenseRepository fixed,
 			ProtectedItemRepository protectedItems, TransactionRepository transactions, UserRepository users,
 			FixedExpensePoster fixedPoster, DailyBudgetRepository dailyBudgets, SeedMoneyEntryRepository seedEntries,
-			SeedMoneyAdditionRepository seedAdditions,
+			SeedMoneyAdditionRepository seedAdditions, CoinLedgerRepository coinLedger,
 			Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
@@ -61,6 +66,7 @@ public class BudgetService {
 		this.dailyBudgets = dailyBudgets;
 		this.seedEntries = seedEntries;
 		this.seedAdditions = seedAdditions;
+		this.coinLedger = coinLedger;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -210,11 +216,11 @@ public class BudgetService {
 	/** 하루 예산을 처음 기록한 날부터 어제까지 그날 예산을 지켰는지로 캐릭터 점수를 낸다. */
 	private CharacterScore.Result characterScore(long userId, LocalDate today) {
 		History h = history(userId);
-		return CharacterScore.compute(h.budgets(), h.spent(), today);
+		return CharacterScore.compute(h.budgets(), h.spent(), h.attended(), today);
 	}
 
-	/** budgets: 날짜별 하루 예산, spent: 첫 기록일부터 날짜별 지출 합(고정지출 자동 기록 제외) */
-	private record History(NavigableMap<LocalDate, Long> budgets, Map<LocalDate, Long> spent) {
+	/** budgets: 날짜별 하루 예산, spent: 첫 기록일부터 날짜별 지출 합(고정지출 자동 기록 제외), attended: 출석한 날짜 */
+	private record History(NavigableMap<LocalDate, Long> budgets, Map<LocalDate, Long> spent, Set<LocalDate> attended) {
 	}
 
 	private History history(long userId) {
@@ -222,14 +228,16 @@ public class BudgetService {
 		dailyBudgets.findOrdered(userId).forEach(d -> budgets.put(d.getDate(), d.getDailyBudget()));
 		Map<LocalDate, Long> spent = new HashMap<>();
 		if (budgets.isEmpty()) {
-			return new History(budgets, spent);
+			return new History(budgets, spent, Set.of());
 		}
 		for (var t : transactions.findSince(userId, budgets.firstKey().atStartOfDay(zone).toInstant())) {
 			if (t.getType() == TxType.EXPENSE && !t.isFromFixed()) {
 				spent.merge(t.getOccurredAt().atZone(zone).toLocalDate(), t.getAmount(), Long::sum);
 			}
 		}
-		return new History(budgets, spent);
+		Set<LocalDate> attended = new HashSet<>();
+		coinLedger.findRefKeys(userId, CoinReason.ATTENDANCE).forEach(k -> attended.add(LocalDate.parse(k)));
+		return new History(budgets, spent, attended);
 	}
 
 	private BudgetSettings require(long userId) {
