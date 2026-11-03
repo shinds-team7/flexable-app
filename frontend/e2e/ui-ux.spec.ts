@@ -11,7 +11,9 @@ test("home help, weekly expenses and seed history use recorded data", async ({
   await session(page);
   await page.goto("/home");
   await page.getByRole("button", { name: "레벨업 조건 및 가이드" }).click();
-  await expect(page.getByText(/하루 예산 이하로 쓰면 \+15점/)).toBeVisible();
+  await expect(page.getByText("하루 예산을 지키면", { exact: true })).toBeVisible();
+  await expect(page.getByText("+20점", { exact: true })).toBeVisible();
+  await expect(page.getByText("출석만 해도", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "닫기", exact: true }).last().click();
   await page
     .getByRole("button", { name: "이번 주 일별 지출 내역 보기" })

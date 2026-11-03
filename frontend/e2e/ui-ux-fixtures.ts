@@ -64,8 +64,8 @@ export async function session(page: Page, today = date) {
         weekDaysLeft: 4,
         weekAvailable: 28000,
         hasTransactions: true,
-        characterPoints: 30,
-        characterDelta: 15,
+        characterPoints: 40,
+        characterDelta: 20,
         dayPreset: "EVEN",
         dayBudgets: [10000, 10000, 10000, 10000, 10000, 10000, 10000],
       });
