@@ -95,3 +95,28 @@ test("legacy read timestamp survives and expired receipts are pruned on the next
     ["coin:new"],
   );
 });
+
+test("mark-all-read saves every key once and deleted notifications persist per user", async () => {
+  const store = loadStore();
+  const at = Date.now();
+  await store.markInboxItemsRead(1, [
+    { key: "coin:1", at },
+    { key: "coin:2", at },
+    { key: "coin:1", at },
+  ]);
+  await store.deleteInboxItem(1, { key: "coin:2", at });
+  await store.deleteInboxItem(1, { key: "coin:2", at });
+  const restarted = loadStore(store.saved);
+  const mine = await restarted.readInbox(1);
+  assert.deepEqual(
+    Array.from(mine.read, (r) => r.key),
+    ["coin:1", "coin:2"],
+  );
+  assert.deepEqual(
+    Array.from(mine.deleted, (r) => r.key),
+    ["coin:2"],
+  );
+  assert.equal((await restarted.readInbox(2)).deleted.length, 0);
+  await restarted.clearInbox(1);
+  assert.equal((await restarted.readInbox(1)).deleted.length, 0);
+});

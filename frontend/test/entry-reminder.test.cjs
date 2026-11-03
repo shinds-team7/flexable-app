@@ -63,3 +63,25 @@ test("keeps a night reminder that was moved past now", () => {
     at(26, 9).getTime(),
   ]);
 });
+
+test("uses the chosen time of day on the following days", () => {
+  const nine = { hour: 9, minute: 0 };
+  assert.deepEqual(
+    Array.from(
+      entryReminderTimes(at(25, 12, 30), at(25, 13), 3, nine),
+      (x) => x.getTime(),
+    ),
+    [at(26, 9).getTime(), at(27, 9).getTime(), at(28, 9).getTime()],
+  );
+});
+
+test("a chosen time later today is still ahead after a day without records", () => {
+  // 마지막 기록 25일 7시, 지금 26일 8시: 26일 21시가 아직 오지 않았다.
+  assert.deepEqual(
+    Array.from(
+      entryReminderTimes(at(25, 7), at(26, 8), 2, { hour: 21, minute: 30 }),
+      (x) => x.getTime(),
+    ),
+    [at(26, 21, 30).getTime(), at(27, 21, 30).getTime()],
+  );
+});

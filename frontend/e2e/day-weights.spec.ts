@@ -33,6 +33,10 @@ async function signupAndOnboard(page: Page) {
     page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "확인", exact: true }).click();
 }
 async function today(page: Page) {
   const auth = await page.evaluate(() =>

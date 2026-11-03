@@ -256,13 +256,13 @@ class CoinFlowTest {
 		clock.seoul("2026-10-12T09:00");
 		attendance(token).andExpect(jsonPath("$.total").value(6))
 			.andExpect(jsonPath("$.todayReward").value(5))
-			.andExpect(jsonPath("$.todayOutfitId").value("outfit-06"));
+			.andExpect(jsonPath("$.todayOutfitId").value("outfit-07"));
 		attend(token).andExpect(jsonPath("$.rewarded").value(5))
-			.andExpect(jsonPath("$.outfitId").value("outfit-06"))
+			.andExpect(jsonPath("$.outfitId").value("outfit-07"))
 			.andExpect(jsonPath("$.attendance.total").value(7));
 		// 받은 코스튬은 상점 목록에 보이고, 다시 눌러도 또 주지 않는다
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
-			.andExpect(jsonPath("$.items[?(@.id=='outfit-06')].owned").value(true));
+			.andExpect(jsonPath("$.items[?(@.id=='outfit-07')].owned").value(true));
 		attend(token).andExpect(jsonPath("$.rewarded").value(0)).andExpect(jsonPath("$.outfitId").doesNotExist());
 	}
 
