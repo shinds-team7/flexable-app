@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("17");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("18");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -65,7 +65,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into user_outfits(user_id,outfit_id,acquired_at) values(1,'outfit-05',CURRENT_TIMESTAMP)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(4);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(5);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -80,6 +80,9 @@ class MigrationUpgradeTest {
 		assertThat(jdbc.queryForObject("select name from outfits where id='outfit-05'", String.class)).isEqualTo("고양마녀");
 		assertThat(jdbc.queryForObject("select price from outfits where id='outfit-05'", Integer.class)).isEqualTo(200);
 		assertThat(jdbc.queryForObject("select active from outfits where id='outfit-05'", Boolean.class)).isTrue();
+		assertThat(jdbc.queryForObject("select name from outfits where id='outfit-07'", String.class)).isEqualTo("달밤 낚시 고양이");
+		assertThat(jdbc.queryForObject("select price from outfits where id='outfit-07'", Integer.class)).isEqualTo(200);
+		assertThat(jdbc.queryForObject("select active from outfits where id='outfit-07'", Boolean.class)).isTrue();
 		jdbc.queryForList("select sort_order from categories");
 		assertThat(jdbc.queryForObject("select count(*) from scheduled_expenses", Integer.class)).isZero();
 	}
