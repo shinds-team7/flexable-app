@@ -53,7 +53,7 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
   );
 }
 
-/** 지금 단계 안에서 하락(왼쪽) ~ 승급(오른쪽) 사이 어디쯤인지. 퍼센트 숫자는 보여 주지 않는다(10-22) */
+/** 지금 단계(왼쪽 아이콘)에서 다음 단계(오른쪽 아이콘)까지 어디쯤인지. 최고 단계는 오른쪽이 비고 '최고 단계'를 보인다. 퍼센트 숫자는 보여 주지 않는다(10-22) */
 function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
   const { level, progress, label } = status;
   const top = level === TOP_LEVEL;
@@ -73,33 +73,13 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
       <View style={styles.gaugeHead}>
-        <View style={styles.end}>
-          {level > 1 && (
-            <T size={12} weight="600" color={colors.textMuted}>
-              ▼
-            </T>
-          )}
-          <LevelIcon level={Math.max(1, level - 1)} size={16} />
-          <T size={12} weight="600" color={colors.textMuted}>
-            {levelName(Math.max(1, level - 1))}
-          </T>
-        </View>
+        <LevelIcon level={level} size={18} />
         {top && (
           <T size={13} weight="800" color={accent}>
             최고 단계
           </T>
         )}
-        <View style={styles.end}>
-          <LevelIcon level={top ? TOP_LEVEL : level + 1} size={16} />
-          <T size={12} weight="600" color={colors.textMuted}>
-            {levelName(top ? TOP_LEVEL : level + 1)}
-          </T>
-          {!top && (
-            <T size={12} weight="600" color={colors.textMuted}>
-              ▲
-            </T>
-          )}
-        </View>
+        {top ? <View style={{ width: 18 }} /> : <LevelIcon level={level + 1} size={18} />}
       </View>
       <View style={styles.track}>
         <Animated.View
@@ -114,7 +94,6 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
 }
 
 const styles = StyleSheet.create({
-  end: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Screen 의 좌우·상단 여백(16)을 상쇄해 화면 폭을 꽉 채우고, 아래 항목 바로 위에서 끊는다(gap 12 상쇄)
   wrap: {
     marginHorizontal: -16,

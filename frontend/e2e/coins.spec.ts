@@ -338,7 +338,7 @@ test("level three caps the home gauge and a costume refund is acknowledged once"
   const gauge = page.getByRole("progressbar");
   await expect(gauge).toHaveAccessibleName(/최고 단계/);
   await expect(gauge).toContainText("최고 단계");
-  await expect(gauge).toContainText("나무");
+  await expect(gauge).toContainText("🌳");
   await expect(gauge).not.toContainText("%");
   await expect(
     page.getByText("광부에서 시작! 예산을 지키면 조금씩 올라가요", {
