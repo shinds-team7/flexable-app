@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("18");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("19");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -63,9 +63,10 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into transactions(user_id,category_id,type,amount,title,occurred_at,created_at,updated_at) "
 			+ "values(1,1,'EXPENSE',12000,'점심',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
 		jdbc.update("insert into user_outfits(user_id,outfit_id,acquired_at) values(1,'outfit-05',CURRENT_TIMESTAMP)");
+		jdbc.update("insert into coin_wallets(user_id,balance,created_at) values(1,50,CURRENT_TIMESTAMP)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(5);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(6);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -73,6 +74,10 @@ class MigrationUpgradeTest {
 		assertThat(jdbc.queryForObject("select amount from transactions where category_id=1", Long.class)).isEqualTo(12000L);
 		assertThat(jdbc.queryForObject("select outfit_id from user_outfits where user_id=1", String.class)).isEqualTo("outfit-05");
 		assertExtensionsAndWitchCat(jdbc);
+		// V19 업데이트 기념 200코인: 지갑이 있던 사용자에게 한 번, 모달로 안내할 내역(notified_at 비움)과 함께
+		assertThat(jdbc.queryForObject("select balance from coin_wallets where user_id=1", Long.class)).isEqualTo(250L);
+		assertThat(jdbc.queryForObject("select count(*) from coin_ledger where user_id=1 and reason='SIGNUP_GIFT' "
+			+ "and ref_key='update-1.6.0' and amount=200 and notified_at is null", Integer.class)).isEqualTo(1);
 		assertThat(flyway.migrate().migrationsExecuted).isZero();
 	}
 

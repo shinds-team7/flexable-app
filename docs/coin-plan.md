@@ -120,3 +120,5 @@ id: `costume-lv1` … `costume-lv5`, `outfit-01` … `outfit-10`. 현재 들어�
 - 공유 파일(`types.ts`, `coinApi.ts`, `outfits.ts`, API.md)은 A·B·C 모두 고치지 않는다. 틀렸으면 보고만 하고 D가 고친다
 - 검증: A `./gradlew test`, B·C `npx tsc --noEmit`·`npx expo lint`. E2E와 웹 빌드는 D만 돌린다
 - 커밋 메시지 `feat(backend): …` / `feat(frontend): …`. PR은 D가 올린다
+
+**업데이트 기념 200코인(2026-11-03, V19):** 마이그레이션이 적용될 때 지갑이 있는 모든 사용자에게 한 번 준다(`SIGNUP_GIFT`, ref_key `update-1.6.0`, 모달 안내). 계약의 reason 목록을 바꾸지 않으려고 사유를 새로 만들지 않았고, 코인 내역에는 "가입 선물"로 보인다.
