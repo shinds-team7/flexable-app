@@ -44,7 +44,7 @@ public class CoinService {
 	public static final int ATTENDANCE_MILESTONE_REWARD = 50;
 	public static final int ATTENDANCE_CYCLE = 7;
 	/** 누적 7일째에 한 번만 주는 코스튬. 상점에서는 팔지 않는다(V16) */
-	public static final String ATTENDANCE_OUTFIT = "outfit-06";
+	public static final String ATTENDANCE_OUTFIT = "outfit-07";
 	public static final String ONCE = "once";
 	public static final int LEDGER_DEFAULT_LIMIT = 30;
 	public static final int LEDGER_MAX_LIMIT = 100;

@@ -44,6 +44,11 @@ async function closeGift(page: Page) {
     page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
+  // The first visit of the day then attends by itself in the attendance modal.
+  await expect(
+    page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "확인", exact: true }).click();
 }
 async function login(page: Page, address: string) {
   await page
@@ -257,7 +262,10 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     .getByRole("button", { name: "삭제", exact: true })
     .click();
   await expect(
-    page.getByText("기록한 거래와 예정 지출은 같은 종류의 다른 카테고리로 옮겨져요. 옮길 곳이 없으면 '기타'를 새로 만들어요", { exact: true }),
+    page.getByText(
+      "기록한 거래와 예정 지출은 같은 종류의 다른 카테고리로 옮겨져요. 옮길 곳이 없으면 '기타'를 새로 만들어요",
+      { exact: true },
+    ),
   ).toBeVisible();
   await page.getByRole("button", { name: "삭제", exact: true }).last().click();
   // The hidden 내역 tab still lists the old category name until it regains focus, so count only what is visible.
@@ -543,7 +551,9 @@ test("seed money card: + sends money from the current budget, the card opens the
     page.getByRole("heading", { name: "시드머니로 보내기", exact: true }),
   ).toBeVisible();
   await page.getByLabel("보낼 금액 (원)", { exact: true }).fill("99999999");
-  await expect(page.getByText(/보낼 수 있는 돈\(.*\)보다 많아요/)).toBeVisible();
+  await expect(
+    page.getByText(/보낼 수 있는 돈\(.*\)보다 많아요/),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "보내기", exact: true }),
   ).toBeDisabled();
@@ -561,7 +571,9 @@ test("seed money card: + sends money from the current budget, the card opens the
     page.getByRole("heading", { name: "시드머니 모은 기록", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/ · 바로 보냄$/)).toBeVisible();
-  await page.getByRole("button", { name: "시드머니 수정", exact: true }).click();
+  await page
+    .getByRole("button", { name: "시드머니 수정", exact: true })
+    .click();
   const edit = page.getByRole("dialog").filter({ hasText: "시드머니 수정" });
   await edit.getByLabel("모아둔 돈 (원)", { exact: true }).fill("200000");
   await edit.getByRole("button", { name: "저장", exact: true }).click();

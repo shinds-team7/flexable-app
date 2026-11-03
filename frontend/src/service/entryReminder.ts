@@ -6,7 +6,11 @@ import { api, sessionGeneration } from "./api/client";
 import { entryReminderTimes } from "./entryReminderTimes";
 import { recordReminders } from "./inboxStore";
 import { ensureChannel, notificationsAllowed } from "./localNotifications";
-import { useEntryReminderSetting } from "./reminderSetting";
+import {
+  parseReminderTime,
+  useEntryReminderSetting,
+  useEntryReminderTime,
+} from "./reminderSetting";
 import { ENTRY_REMINDER } from "./reminderTexts";
 import { useSession } from "./Session";
 import type { Transaction } from "./types";
@@ -37,15 +41,24 @@ export function cancelEntryReminder() {
     await recordReminders("entry", []);
   });
 }
-/** 마지막 기록부터 24시간마다(밤이면 9시로 미뤄) 앞으로 COUNT번을 다시 예약한다. */
-function scheduleEntryReminder(last: Date, generation: number) {
+/** 마지막 기록부터 24시간마다(밤이면 9시로 미뤄, 시각을 정했으면 그 시각에) 앞으로 COUNT번을 다시 예약한다. */
+function scheduleEntryReminder(
+  last: Date,
+  generation: number,
+  time: string | null,
+) {
   return serial(async () => {
     // 그사이 로그아웃·다른 계정 로그인이 있었으면 그 세션의 예약을 건드리지 않는다.
     if (generation !== sessionGeneration()) return;
     if (!(await notificationsAllowed())) return;
     await ensureChannel(CHANNEL, "기록 알림");
     await cancelAll();
-    const times = entryReminderTimes(last, new Date(), COUNT);
+    const times = entryReminderTimes(
+      last,
+      new Date(),
+      COUNT,
+      parseReminderTime(time),
+    );
     for (const [i, at] of times.entries())
       await Notifications.scheduleNotificationAsync({
         identifier: `${PREFIX}${i}`,
@@ -85,6 +98,7 @@ async function lastEntry(signup: string) {
 export function useEntryReminder() {
   const { user, revision } = useSession();
   const [on] = useEntryReminderSetting();
+  const [time] = useEntryReminderTime();
   const [resumed, resume] = useState(0);
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
@@ -104,9 +118,9 @@ export function useEntryReminder() {
     const generation = sessionGeneration();
     // 예약이 실패해도 기록은 그대로 할 수 있으므로 조용히 넘긴다.
     lastEntry(signup)
-      .then((last) => scheduleEntryReminder(last, generation))
+      .then((last) => scheduleEntryReminder(last, generation, time))
       .catch(() => {});
-  }, [userId, onboarded, signup, on, revision, resumed]);
+  }, [userId, onboarded, signup, on, time, revision, resumed]);
 }
 // 같은 알림 응답으로 화면이 다시 열릴 때 또 이동하지 않도록 처리한 응답을 기억한다.
 const handled = new Set<string>();

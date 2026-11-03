@@ -11,7 +11,9 @@ test("home help, weekly expenses and seed history use recorded data", async ({
   await session(page);
   await page.goto("/home");
   await page.getByRole("button", { name: "레벨업 조건 및 가이드" }).click();
-  await expect(page.getByText("하루 예산을 지키면", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("하루 예산을 지키면", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("+20점", { exact: true })).toBeVisible();
   await expect(page.getByText("출석만 해도", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "닫기", exact: true }).last().click();
@@ -53,6 +55,7 @@ test("analysis resets to current month after navigating away and chart selects e
 }) => {
   await session(page);
   await page.goto("/analysis");
+  await page.getByRole("tab", { name: "이번 달", exact: true }).click();
   await expect(page.getByText("2026년 10월", { exact: true })).toBeVisible();
   // Click the actual SVG paths: both slices must work, including the earlier slice beneath the later one.
   const chartLocator = page
@@ -80,7 +83,11 @@ test("analysis resets to current month after navigating away and chart selects e
     page.getByRole("radio", { name: "기본 홈", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("tab", { name: "분석", exact: true }).click();
-  await expect(page.getByText("2026년 10월", { exact: true })).toBeVisible();
+  // 다시 들어오면 기본인 이번 주로 돌아온다(월 선택 줄 없음)
+  await expect(page.getByText("2026년 10월", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("tab", { name: "이번 주", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
 });
 
 test("only tapped notifications lose their highlight, including after re-entry and reload", async ({

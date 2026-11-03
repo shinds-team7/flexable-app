@@ -74,6 +74,7 @@
 - [ ] AI 메이트(Gemini): `POST /chat/messages`(#214, #221). 기본 모델 `gemini-3.5-flash-lite`, 운영 `.env`의 `GEMINI_MODEL` 정리, 운영 키 사용은 개인정보처리방침 개정 조건을 따른다
 - [ ] 출석 누적 보상 V16(#223·#224): 누적 3일째 55·7일째 코스튬 `outfit-06` 1회·8일째부터 7일 주기 3·7번째 55. `Attendance`에서 `streak`·`days` 제거, `total`·`todayOutfitId` 추가
 - [ ] 시드머니 바로 보내기·모아둔 돈 고치기 V17(#225): `POST /budget/seed-money/transfers`, `PUT /budget/seed-money/base`, `SeedMoney.movable`, 웹 연동 `entries[].choice`에 `EXTRA`
+- [ ] 출석 7일째 코스튬을 `outfit-06`→`outfit-07`로 변경(#240): 서버는 상수만 바뀌어 마이그레이션 없음. 앱 출석 모달이 `outfit-07` 그림을 쓰므로 **앱 원격 업데이트(runtime 1.6.0) 뒤 서버를 배포**한다
 
 **앱(1.6.0 스토어 빌드 vc16)**
 - [ ] 위 서버 변경을 쓰는 화면 전부와 NavigationBar 숨김, 최신 홈·분석·알림·OCR·글꼴·고양마녀. **서버를 먼저 배포하고 그다음 테스터에게 배포한다**

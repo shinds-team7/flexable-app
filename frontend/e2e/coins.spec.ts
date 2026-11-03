@@ -67,12 +67,27 @@ async function api(page: Page, method: "GET" | "POST", path: string) {
   expect(response.ok()).toBeTruthy();
   return response.json();
 }
-async function closeReward(page: Page, title: string, amount: number) {
+// A new account's first home visit also opens the attendance modal, which pays today by itself; `attendance` closes it too.
+async function closeReward(
+  page: Page,
+  title: string,
+  amount: number,
+  attendance = true,
+) {
   const dialog = page.getByRole("heading", { name: title, exact: true });
   await expect(dialog).toBeVisible();
   await expect(page.getByText(`+${amount}`, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  if (attendance) {
+    await expect(
+      page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "확인", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
+    ).toHaveCount(0);
+  }
 }
 const balance = (page: Page, n: number) =>
   expect(page.getByLabel(`코인 ${n}개`, { exact: true })).toBeVisible();
@@ -119,7 +134,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   const collect = page.getByRole("button", { name: "모으기", exact: true });
   await expect(collect).toHaveCount(0);
   await openShop(page);
-  await balance(page, 200);
+  await balance(page, 205);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
   // Local mode also lists inactive reserve costumes, so no empty slot is needed.
   await expect(
@@ -219,21 +234,22 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   // Back on the home with the new costume; the shop shows the balance spent.
   await expect(page).toHaveURL(/\/home$/);
   const wallet = await api(page, "GET", "/coins");
-  expect(wallet.balance).toBe(0);
+  expect(wallet.balance).toBe(5);
   expect(wallet.equippedOutfitId).toBe("outfit-03");
   // The coin chip over the video opens the history, newest first with the amount in front.
   await page
-    .getByRole("button", { name: "보유 코인 0개, 코인 내역 보기", exact: true })
+    .getByRole("button", { name: "보유 코인 5개, 코인 내역 보기", exact: true })
     .click();
   await expect(page).toHaveURL(/\/coins\/history$/);
   const rows = page.getByLabel(/^[+-]\d[\d,]* .+, \d\d:\d\d$/);
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toHaveText(/^-200 코스튬 구매/);
-  await expect(rows.nth(1)).toHaveText(/^\+200 가입 선물/);
+  await expect(rows.nth(1)).toHaveText(/^\+5 출석체크/);
+  await expect(rows.nth(2)).toHaveText(/^\+200 가입 선물/);
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await openShop(page);
-  await balance(page, 0);
+  await balance(page, 5);
   await expect(
     page.getByLabel("선비냥이 미리보기", { exact: true }),
   ).toBeVisible();
@@ -252,6 +268,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   // Referral: the invitee enters the code on My page.
   const { code } = await api(page, "GET", "/referrals/me");
   await page.goto("/my");
+  await page.getByRole("button", { name: "추천 코드", exact: true }).click();
   await expect(page.getByText(code, { exact: true })).toBeVisible();
   // Own code is rejected.
   await page.getByLabel("친구에게 받은 추천 코드", { exact: true }).fill(code);
@@ -265,6 +282,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await onboard(page);
   await closeReward(page, "업데이트 기념 200코인 선물", 200);
   await page.goto("/my");
+  await page.getByRole("button", { name: "추천 코드", exact: true }).click();
   // My page keeps only the referral; the shop is reached from the coin history alone.
   await expect(page.getByRole("button", { name: "상점" })).toHaveCount(0);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
@@ -277,7 +295,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByText("코인 100개를 받았어요", { exact: true }),
   ).toBeVisible();
-  expect((await api(page, "GET", "/coins")).balance).toBe(300);
+  expect((await api(page, "GET", "/coins")).balance).toBe(305);
   await expect(
     page.getByLabel("친구에게 받은 추천 코드", { exact: true }),
   ).toHaveCount(0);
@@ -286,10 +304,11 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   // The code owner gets a modal at the next check-in.
   await login(page, inviter);
   await expect(page).toHaveURL(/\/home$/);
-  await closeReward(page, "추천 코드가 사용됐어요", 100);
+  await closeReward(page, "추천 코드가 사용됐어요", 100, false);
   await openShop(page);
-  await balance(page, 100);
+  await balance(page, 105);
   await page.goto("/my");
+  await page.getByRole("button", { name: "추천 코드", exact: true }).click();
   await expect(page.getByText(/\(지금까지 1명\)/)).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -333,7 +352,7 @@ test("level three caps the home gauge and a costume refund is acknowledged once"
   });
   await Promise.all([checkedIn(page), page.reload()]);
   await expect(page.getByText(/코스튬은 계속 쓸 수 있어요/)).toBeVisible();
-  await closeReward(page, "코스튬 구매 코인을 돌려드려요", 200);
+  await closeReward(page, "코스튬 구매 코인을 돌려드려요", 200, false);
   await expect.poll(() => pending).toBe(false);
   const gauge = page.getByRole("progressbar");
   await expect(gauge).toHaveAccessibleName(/최고 단계/);
@@ -441,24 +460,20 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   expect(collects).toBe(1);
 });
 
-test("attendance: the button on the character opens the attendance modal, counts cumulative days and pays once a day", async ({
+test("attendance: the first visit of the day opens the modal and pays by itself, counts cumulative days and pays once a day", async ({
   page,
 }) => {
   await signup(page, email("attendance"));
   await onboard(page);
-  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+  await closeReward(page, "업데이트 기념 200코인 선물", 200, false);
 
-  await page
-    .getByRole("button", { name: "출석체크 열기", exact: true })
-    .click();
+  // No button press: after midnight the first visit opens the modal and attends. Day 3 shows +50, day 7 the costume.
   await expect(
-    page.getByRole("heading", { name: "오늘 출석하기", exact: true }),
+    page.getByLabel("3일차, 50코인 보상", { exact: true }),
   ).toBeVisible();
-  // Day 3 shows the +50 coins, day 7 the costume; nothing is paid until the button is pressed.
-  await expect(page.getByLabel("3일차, 50코인 보상", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("7일차, 코스튬 보상", { exact: true })).toBeVisible();
-  expect((await api(page, "GET", "/coins/attendance")).total).toBe(0);
-  await page.getByRole("button", { name: "출석하기", exact: true }).click();
+  await expect(
+    page.getByLabel("7일차, 코스튬 보상", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
   ).toBeVisible();
@@ -466,9 +481,14 @@ test("attendance: the button on the character opens the attendance modal, counts
   // The coin chip, now on the character's left, follows the new balance without a reward modal.
   await page.getByRole("button", { name: "확인", exact: true }).last().click();
   await expect(
-    page.getByRole("button", { name: "보유 코인 205개, 코인 내역 보기", exact: true }),
+    page.getByRole("button", {
+      name: "보유 코인 205개, 코인 내역 보기",
+      exact: true,
+    }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "코인을 받았어요" })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "코인을 받았어요" }),
+  ).toHaveCount(0);
 
   // Reopening reads the server again; a second attendance the same day pays nothing.
   await page

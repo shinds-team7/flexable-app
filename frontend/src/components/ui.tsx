@@ -265,12 +265,15 @@ export function Sheet({
   visible,
   onClose,
   title,
+  titleAccessory,
   subtitle,
   children,
 }: {
   visible: boolean;
   onClose: () => void;
   title: string;
+  /** 제목 바로 옆에 붙는 작은 버튼(예: ? 도움말) */
+  titleAccessory?: ReactNode;
   subtitle?: string;
   children: ReactNode;
 }) {
@@ -312,9 +315,11 @@ export function Sheet({
           <View style={{ flexShrink: 1 }}>
             <View style={styles.grabber} />
             <View style={styles.sheetHead}>
-              <T size={19} weight="700" style={{ flex: 1 }} accessibilityRole="header">
+              <T size={19} weight="700" style={{ flexShrink: 1 }} accessibilityRole="header">
                 {title}
               </T>
+              {titleAccessory}
+              <View style={{ flex: 1 }} />
               <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="닫기" style={styles.close}>
                 <Ionicons name="close" size={22} color={colors.textSub} />
               </Pressable>

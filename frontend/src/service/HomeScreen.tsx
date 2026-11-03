@@ -20,7 +20,7 @@ import { WeekExpensesSheet } from "./WeekExpensesSheet";
 import { OutfitView } from "./OutfitView";
 import { RewardModal } from "./RewardModal";
 import { sessionGeneration } from "./api/client";
-import { ackRewards, checkIn } from "./coinApi";
+import { ackRewards, checkIn, getAttendance } from "./coinApi";
 import { levelName } from "@/components/LevelIcon";
 import { TodayHeroView } from "@/components/TodayHeroView";
 import { colors } from "@/theme";
@@ -46,6 +46,8 @@ export function HomeScreen() {
   const wallet = useWallet();
   const [rewards, setRewards] = useState<CoinReward[]>([]);
   const checking = useRef(false);
+  // 자동 출석 모달은 하루(서버 날짜)에 한 번만 연다. 실패하거나 닫아도 같은 날 또 띄우지 않는다.
+  const autoDay = useRef<string | null>(null);
   // Opening or returning to the home runs check-in; the header shop button reads the wallet it returns.
   const runCheckIn = useCallback(() => {
     if (checking.current) return;
@@ -63,6 +65,13 @@ export function HomeScreen() {
           if (r.rewards.some((x) => x.reason === "BUDGET_BONUS"))
             setAttendance(true);
         }
+      })
+      .then(() => getAttendance())
+      .then((a) => {
+        // 자정이 지난 뒤 처음 열었으면 출석 모달이 열려 출석을 자동으로 처리한다
+        if (a.checkedToday || autoDay.current === a.today) return;
+        autoDay.current = a.today;
+        setAttendance(true);
       })
       .catch(() => {})
       .finally(() => {
