@@ -8,16 +8,18 @@ import { levelLabel } from "@/components/LevelIcon";
 import { colors, radius } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import {
-  collectCoins,
   equipOutfit,
   getOutfits,
   getWallet,
   purchaseOutfit,
 } from "./coinApi";
+import { AdRewardCard } from "./AdRewardCard";
+import { showRewardedAd } from "./adReward";
+import { useSession } from "./Session";
 import { DEFAULT_OUTFIT_ID } from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
-import type { CoinWallet, Outfit, OutfitList } from "./types";
+import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
 
@@ -32,6 +34,8 @@ export function CustomizeScreen() {
   const [bought, setBought] = useState<Outfit | null>(null);
   const [busy, setBusy] = useState(false);
   const wallet = useWallet();
+  const { user } = useSession();
+  const [adMessage, setAdMessage] = useState("");
   const lock = useRef(false);
   const focus = useRef(0);
 
@@ -39,7 +43,7 @@ export function CustomizeScreen() {
     const seq = ++focus.current;
     const generation = sessionGeneration();
     setLoadError(undefined);
-    // Only the collect button needs the wallet; without it the shop still works from the outfit list.
+    // Only the ad button needs the wallet; without it the shop still works from the outfit list.
     getWallet()
       .then((w) => publishWallet(w, generation))
       .catch(() => {});
@@ -97,12 +101,32 @@ export function CustomizeScreen() {
         publishWallet({ ...wallet, balance: next.balance }, generation);
       setBought(outfit);
     });
-  const collect = () =>
+  // 보상은 구글 검증 콜백이 서버에서 지급하므로, 광고를 본 뒤 지갑을 다시 읽어 늘었는지 확인한다(몇 초 걸릴 수 있다).
+  const watchAd = () =>
     run(async () => {
+      if (!user) return;
+      setAdMessage("");
       const generation = sessionGeneration();
-      const r = await collectCoins();
-      publishWallet(r.wallet, generation);
-      setList((l) => l && { ...l, balance: r.wallet.balance });
+      const before = wallet?.ad.rewardedToday ?? 0;
+      const result = await showRewardedAd(user.id);
+      if (result === "failed") {
+        setAdMessage("광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요");
+        return;
+      }
+      if (result === "closed") {
+        setAdMessage("광고를 끝까지 봐야 코인을 받아요");
+        return;
+      }
+      for (let i = 0; i < 8; i++) {
+        const w = await getWallet();
+        publishWallet(w, generation);
+        if (w.ad.rewardedToday > before) {
+          setList((l) => l && { ...l, balance: w.balance });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      setAdMessage("코인 지급이 조금 늦어지고 있어요. 잠시 후 다시 확인해 주세요");
     });
   const apply = (id: string) =>
     run(async () => {
@@ -126,11 +150,12 @@ export function CustomizeScreen() {
         {!list && !loadError && <Loading />}
         {list && selected && (
           <>
-            <CoinCard
+            <AdRewardCard
               balance={list.balance}
               wallet={wallet}
               busy={busy}
-              onCollect={collect}
+              message={adMessage}
+              onWatch={watchAd}
             />
             <Card style={{ alignItems: "center", gap: 12 }}>
               <OutfitView
@@ -188,64 +213,6 @@ export function CustomizeScreen() {
         onClose={() => setBought(null)}
       />
     </View>
-  );
-}
-
-/** 잔액과 [모으기]. 지갑을 못 받았으면(코인 API가 없는 서버) 잔액만 보인다 */
-function CoinCard({
-  balance,
-  wallet,
-  busy,
-  onCollect,
-}: {
-  balance: number;
-  wallet: CoinWallet | null;
-  busy: boolean;
-  onCollect: () => void;
-}) {
-  const ready = wallet?.passive.collectable ?? 0;
-  const hint = wallet && ready <= 0 ? collectHint(wallet) : "";
-  return (
-    <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-      <View style={{ flex: 1, gap: 2 }}>
-        <View accessible accessibilityLabel={`코인 ${balance}개`}>
-          <T size={24} weight="800" num>
-            🪙 {money(balance)}
-          </T>
-        </View>
-        {hint !== "" && (
-          <T size={12} color={colors.textMuted}>
-            {hint}
-          </T>
-        )}
-      </View>
-      {wallet && (
-        <View>
-          <Button
-            label={ready > 0 ? `모으기 +${ready}` : "모으기"}
-            disabled={busy || ready <= 0}
-            onPress={onCollect}
-            style={{ minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 }}
-          />
-          {ready > 0 && (
-            <View
-              accessibilityLabel="모을 코인 있음"
-              style={{
-                position: "absolute",
-                top: 2,
-                right: 2,
-                width: 9,
-                height: 9,
-                borderRadius: 5,
-                borderWidth: 1.5,
-                borderColor: colors.card,
-                backgroundColor: colors.danger,
-              }}
-            />
-          )}
-        </View>
-      )}
-    </Card>
   );
 }
 
@@ -395,15 +362,3 @@ const grid = StyleSheet.create({
   },
   center: { alignItems: "center", justifyContent: "center" },
 });
-
-function collectHint(w: CoinWallet): string {
-  const { collectedToday, dailyLimit, nextAt } = w.passive;
-  if (collectedToday >= dailyLimit) return "오늘 코인을 모두 모았어요";
-  if (!nextAt) return "";
-  const at = new Date(nextAt).toLocaleTimeString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `다음 코인은 ${at}에 쌓여요`;
-}

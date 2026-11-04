@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.flexable.api.budget.BudgetService;
 import com.flexable.api.coin.CoinDtos.AttendResponse;
+import com.flexable.api.coin.CoinDtos.AdReward;
 import com.flexable.api.coin.CoinDtos.Attendance;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
 import com.flexable.api.coin.CoinDtos.CollectResponse;
@@ -39,6 +40,8 @@ public class CoinService {
 	public static final int BUDGET_BONUS = 5;
 	public static final int PASSIVE_LIMIT = 10;
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
+	public static final int AD_REWARD = 10;
+	public static final int AD_DAILY_LIMIT = 3;
 	public static final int ATTENDANCE_REWARD = 5;
 	/** 누적 출석 보너스: 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날. 그날 기본 5에 더해서 준다 */
 	public static final int ATTENDANCE_MILESTONE_REWARD = 50;
@@ -94,7 +97,7 @@ public class CoinService {
 	public Wallet wallet(long userId) {
 		return wallets.findById(userId)
 			.map(this::view)
-			.orElseGet(() -> new Wallet(0, new Passive(0, 0, PASSIVE_LIMIT, null), null));
+			.orElseGet(() -> new Wallet(0, new Passive(0, 0, PASSIVE_LIMIT, null), new AdReward(0, AD_DAILY_LIMIT, AD_REWARD), null));
 	}
 
 	/** 오늘 쌓인 시간 적립을 받는다. 받을 게 없으면 0. */
@@ -109,6 +112,23 @@ public class CoinService {
 		post(w, CoinReason.PASSIVE, today() + "#" + accrued, collectable, true);
 		w.collectPassive(accrued);
 		return new CollectResponse(collectable, view(w));
+	}
+
+	/**
+	 * 광고 시청 보상. AdMob 서버 검증(SSV) 콜백이 서명을 확인한 뒤 부른다. 같은 transaction_id는 한 번만, 하루 3회까지.
+	 * 지급하면 true, 이미 줬거나 오늘 한도를 넘었으면 false(콜백은 어느 쪽이든 성공으로 답해 재시도를 막는다).
+	 */
+	@Transactional
+	public boolean rewardAd(long userId, String transactionId) {
+		CoinWallet w = lockWallet(userId);
+		if (adsToday(userId) >= AD_DAILY_LIMIT) {
+			return false;
+		}
+		return post(w, CoinReason.AD_REWARD, transactionId, AD_REWARD, true);
+	}
+
+	private int adsToday(long userId) {
+		return ledger.countSince(userId, CoinReason.AD_REWARD, today().atStartOfDay(zone).toInstant());
 	}
 
 	@Transactional(readOnly = true)
@@ -188,7 +208,8 @@ public class CoinService {
 		int accrued = accrued(w);
 		int collected = collectedToday(w);
 		Passive passive = new Passive(accrued - collected, collected, PASSIVE_LIMIT, nextAt(w, accrued));
-		return new Wallet(w.getBalance(), passive, w.getEquippedOutfitId());
+		return new Wallet(w.getBalance(), passive, new AdReward(adsToday(w.getUserId()), AD_DAILY_LIMIT, AD_REWARD),
+				w.getEquippedOutfitId());
 	}
 
 	private LocalDate today() {

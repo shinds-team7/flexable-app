@@ -91,12 +91,14 @@ async function closeReward(
 }
 const balance = (page: Page, n: number) =>
   expect(page.getByLabel(`코인 ${n}개`, { exact: true })).toBeVisible();
-// Coins, collecting and costumes live in the shop: coin chip on the character home → coin history → 상점.
+// Costumes and the ad button live in the shop (tap the character on the home); [모으기] is on the coin history (tap the coin chip).
 async function openShop(page: Page) {
+  await page.getByRole("button", { name: /상점 열기$/ }).click();
+  await expect(page).toHaveURL(/\/customize$/);
+}
+async function openCoins(page: Page) {
   await page.getByRole("button", { name: /코인 내역 보기$/ }).click();
   await expect(page).toHaveURL(/\/coins\/history$/);
-  await page.getByRole("button", { name: "상점", exact: true }).click();
-  await expect(page).toHaveURL(/\/customize$/);
 }
 const checkedIn = (page: Page) =>
   page.waitForResponse((r) => r.url().endsWith("/api/v1/coins/check-in"));
@@ -140,6 +142,13 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByLabel("준비 중인 코스튬", { exact: true }),
   ).toHaveCount(0);
+  // The shop's top card has the ad button instead of [모으기]; the web build cannot show ads, so it is disabled.
+  await expect(collect).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "광고 보기 0/3", exact: true }),
+  ).toBeDisabled();
+  await page.goBack();
+  await openCoins(page);
   await expect(collect).toBeDisabled();
   // When the next coin would land after midnight (from 23:00 KST) the server sends no nextAt
   // and the shop shows no hint, so expect what the server actually answered (#157).
@@ -147,8 +156,6 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   if ((await api(page, "GET", "/coins")).passive.nextAt)
     await expect(hint).toBeVisible();
   else await expect(hint).toHaveCount(0);
-  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
-  await expect(page).toHaveURL(/\/coins\/history$/);
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await Promise.all([checkedIn(page), page.reload()]);
@@ -170,9 +177,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
       await page.getByRole("button", { name, exact: true }).click();
       await expectVideoPlaying(page);
     }
-    // Back goes through the coin history the shop was opened from.
-    await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
-    await expect(page).toHaveURL(/\/coins\/history$/);
+    // The shop is opened from the home, so back returns to it.
     await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
     await expect(page).toHaveURL(/\/home$/);
     await expectVideoPlaying(page);
@@ -445,10 +450,12 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   });
   await Promise.all([checkedIn(page), page.reload()]);
   await openShop(page);
-  await balance(page, 200);
   await expect(
     page.getByLabel("준비 중인 코스튬", { exact: true }),
   ).toHaveCount(2);
+  await page.goBack();
+  await openCoins(page);
+  await balance(page, 200);
   await page.getByRole("button", { name: "모으기 +3", exact: true }).click();
   await balance(page, 203);
   await expect(

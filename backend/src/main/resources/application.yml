@@ -44,6 +44,9 @@ app:
     ttl-days: 30
   cors-origins: ${CORS_ORIGINS:http://localhost:8081}
   zone: Asia/Seoul
+  ad:
+    # AdMob 보상형 광고 단위 ID(ca-app-pub-.../숫자). 정하면 그 광고 단위의 검증 콜백만 받는다. 비우면 모든 단위를 받는다
+    unit-id: ${ADMOB_REWARDED_UNIT_ID:}
   web-link:
     # 웹 서버(flexable-web)가 /internal/** 을 부를 때 쓰는 키. 쉼표 구분(교체 중 두 개), 32자 이상. 비우면 internal API는 401
     service-keys: ${WEB_LINK_SERVICE_KEYS:}

@@ -60,6 +60,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/oauth/exchange").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/oauth/providers",
 						"/api/v1/auth/oauth/*/start", "/api/v1/auth/oauth/*/callback").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/v1/ads/reward-callback").permitAll()
 				.requestMatchers("/api/v1/health", "/actuator/health/**", "/error").permitAll()
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(rs -> rs

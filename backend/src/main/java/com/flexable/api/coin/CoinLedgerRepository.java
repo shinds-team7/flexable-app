@@ -29,6 +29,10 @@ public interface CoinLedgerRepository extends JpaRepository<CoinLedger, Long> {
 	/** before보다 오래된 내 내역, 최신순 */
 	List<CoinLedger> findByUserIdAndIdLessThanOrderByIdDesc(Long userId, Long before, Limit limit);
 
+	/** 오늘(from 이후) 받은 사유별 내역 수 */
+	@Query("select count(l) from CoinLedger l where l.userId = :userId and l.reason = :reason and l.createdAt >= :from")
+	int countSince(Long userId, CoinReason reason, Instant from);
+
 	@Modifying
 	@Query("delete from CoinLedger l where l.userId = :userId")
 	void deleteByUserId(Long userId);

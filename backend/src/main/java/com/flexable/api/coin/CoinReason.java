@@ -17,5 +17,7 @@ public enum CoinReason {
 	/** 산 코스튬이 레벨 코스튬으로 바뀌어 돌려준 코인(코스튬 id). V10에서만 생긴다 */
 	REFUND,
 	/** 홈 출석 달력에서 출석함(그 날짜). 연속 7일째마다 금액이 커진다 */
-	ATTENDANCE
+	ATTENDANCE,
+	/** 보상형 광고를 끝까지 봄(AdMob 서버 검증의 transaction_id). 하루 3회, 1회 10코인 */
+	AD_REWARD
 }

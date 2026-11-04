@@ -13,8 +13,12 @@ public final class CoinDtos {
 	public record Passive(int collectable, int collectedToday, int dailyLimit, OffsetDateTime nextAt) {
 	}
 
+	/** 광고 보상. rewardedToday: 오늘 받은 횟수, dailyLimit: 하루 한도, reward: 1회 코인 */
+	public record AdReward(int rewardedToday, int dailyLimit, int reward) {
+	}
+
 	/** equippedOutfitId가 null이면 기본 캐릭터(costume-lv1) */
-	public record Wallet(long balance, Passive passive, String equippedOutfitId) {
+	public record Wallet(long balance, Passive passive, AdReward ad, String equippedOutfitId) {
 	}
 
 	/** refDate: BUDGET_BONUS일 때 지킨 날짜, 그 밖에는 null */
