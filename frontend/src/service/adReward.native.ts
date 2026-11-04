@@ -26,6 +26,8 @@ export async function showRewardedAd(userId: number): Promise<AdResult> {
   }
   return new Promise<AdResult>((resolve) => {
     const ad = RewardedAd.createForAdRequest(UNIT, {
+      // 개인정보처리방침 11장: 맞춤형 광고에는 쓰지 않도록 요청한다
+      requestNonPersonalizedAdsOnly: true,
       serverSideVerificationOptions: { userId: String(userId) },
     });
     let earned = false;
