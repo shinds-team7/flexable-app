@@ -150,18 +150,21 @@ export function HomeScreen() {
             <CharacterStage
               level={status.level}
               character={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${levelName(status.level)} 단계 캐릭터, 상점 열기`}
-                  onPress={() => router.push("/customize")}
-                  style={{ flex: 1 }}
-                >
+                // Android의 영상 뷰(네이티브)가 터치를 먹어 Pressable로 감싸면 눌러도 반응이 없었다.
+                // 영상은 터치를 받지 않게 하고, 그 위에 투명한 Pressable을 따로 덮는다.
+                <View style={{ flex: 1 }}>
                   <OutfitView
                     outfitId={wallet?.equippedOutfitId ?? null}
                     style={{ flex: 1 }}
                     accessibilityLabel={`${levelName(status.level)} 단계 캐릭터`}
                   />
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${levelName(status.level)} 단계 캐릭터, 상점 열기`}
+                    onPress={() => router.push("/customize")}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </View>
               }
               coin={<CoinChip balance={wallet?.balance ?? 0} />}
               attendance={
