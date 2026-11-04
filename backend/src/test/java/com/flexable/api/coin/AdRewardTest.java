@@ -78,6 +78,12 @@ class AdRewardTest {
 	}
 
 	@Test
+	void unknownUserGetsOkWithoutReward() throws Exception {
+		// AdMob 콘솔의 URL 확인은 없는 user_id로 부르기도 한다. 500이 아니라 200이어야 한다
+		callback("999999999", "tx1", "ok").andExpect(status().isOk());
+	}
+
+	@Test
 	void rejectsBadSignatureAndMalformedRequests() throws Exception {
 		String[] me = signup();
 		callback(me[1], "tx1", "forged").andExpect(status().isForbidden());

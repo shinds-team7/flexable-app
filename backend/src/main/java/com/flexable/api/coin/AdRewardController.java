@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.flexable.api.user.UserRepository;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -21,12 +23,14 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AdRewardController {
 
 	private final CoinService coins;
+	private final UserRepository users;
 	private final AdSignatureVerifier verifier;
 	private final String adUnit;
 
-	public AdRewardController(CoinService coins, AdSignatureVerifier verifier,
+	public AdRewardController(CoinService coins, UserRepository users, AdSignatureVerifier verifier,
 			@Value("${app.ad.unit-id:}") String adUnit) {
 		this.coins = coins;
+		this.users = users;
 		this.verifier = verifier;
 		this.adUnit = adUnit;
 	}
@@ -52,7 +56,10 @@ public class AdRewardController {
 		catch (NumberFormatException e) {
 			return ResponseEntity.badRequest().build();
 		}
-		coins.rewardAd(id, transactionId);
+		// 없는 사용자(AdMob 콘솔의 테스트 호출 등)는 지갑을 만들 수 없으므로 주지 않고 200으로 답한다. 500이면 구글이 재시도한다.
+		if (users.existsById(id)) {
+			coins.rewardAd(id, transactionId);
+		}
 		return ResponseEntity.ok().build();
 	}
 
