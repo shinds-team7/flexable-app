@@ -278,14 +278,13 @@ function Grid({
     <View style={grid.wrap}>
       {items.map((o) => {
         const on = o.id === selected;
-        const caption =
-          o.unlockLevel === null
-            ? `🪙 ${money(o.price ?? 0)}`
-            : o.equipped
-              ? "적용 중"
-              : o.owned
-                ? "보유"
-                : levelLabel(o.unlockLevel);
+        const caption = o.equipped
+          ? "적용 중"
+          : o.owned
+            ? "보유 중"
+            : o.unlockLevel === null
+              ? `🪙 ${money(o.price ?? 0)}`
+              : levelLabel(o.unlockLevel);
         return (
           <Pressable
             key={o.id}
