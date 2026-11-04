@@ -145,7 +145,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   // The shop's top card has the ad button instead of [모으기]; the web build cannot show ads, so it is disabled.
   await expect(collect).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "광고 보기 0/3", exact: true }),
+    page.getByRole("button", { name: "+10 🪙", exact: true }),
   ).toBeDisabled();
   await page.goBack();
   await openCoins(page);

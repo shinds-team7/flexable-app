@@ -28,7 +28,7 @@ export function AdRewardCard({
       : ad && left <= 0
         ? "오늘 광고 보상을 모두 받았어요"
         : ad
-          ? `광고를 보면 ${ad.reward}코인 · 오늘 ${left}번 남았어요`
+          ? `오늘 ${left}번 남았어요`
           : "");
   return (
     <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -46,7 +46,7 @@ export function AdRewardCard({
       </View>
       {ad && (
         <Button
-          label={`광고 보기 ${ad.rewardedToday}/${ad.dailyLimit}`}
+          label={`+${ad.reward} 🪙`}
           disabled={busy || left <= 0 || !adsSupported}
           onPress={onWatch}
           style={{ minHeight: 44, paddingVertical: 8, paddingHorizontal: 18 }}
