@@ -225,7 +225,7 @@ test("FAQ toggles and collect dot clears after collection", async ({
   await expect(page.getByText(/^표시된 금액은 입력한 잔액/)).toBeVisible();
   await question.click();
   await expect(page.getByText(/^표시된 금액은 입력한 잔액/)).toHaveCount(0);
-  await page.goto("/customize");
+  await page.goto("/coins/history");
   await expect(
     page.getByLabel("모을 코인 있음", { exact: true }),
   ).toBeVisible();

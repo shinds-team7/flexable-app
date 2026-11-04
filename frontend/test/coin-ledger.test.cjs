@@ -32,6 +32,7 @@ test("puts the signed amount before the reason", () => {
     "-200 코스튬 구매",
   );
   assert.equal(ledgerTitle({ reason: "PASSIVE", amount: 3 }), "+3 코인 모으기");
+  assert.equal(ledgerTitle({ reason: "AD_REWARD", amount: 10 }), "+10 광고 시청");
   assert.equal(
     ledgerTitle({ reason: "REFUND", amount: 1200 }),
     "+1,200 코스튬 구매 코인 돌려받음",

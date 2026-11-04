@@ -807,6 +807,22 @@ paths:
         '502': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
 
+  /ads/reward-callback:
+    get:
+      tags: [coin]
+      summary: AdMob 보상형 광고 서버 검증(SSV) 콜백. 앱이 부르지 않고 구글 서버가 부른다
+      description: 서명이 맞으면 user_id에게 10코인(하루 3회, transaction_id당 한 번)을 준다. 이미 줬거나 한도를 넘어도 200
+      security: []
+      parameters:
+        - { name: transaction_id, in: query, required: true, schema: { type: string } }
+        - { name: user_id, in: query, required: true, schema: { type: string } }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+        - { name: key_id, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 처리함(지급했거나 이미 줬거나 한도 초과) }
+        '400': { description: user_id·transaction_id 형식 오류 }
+        '403': { description: 서명이 맞지 않음 }
+
   /health:
     get:
       tags: [health]
@@ -1306,10 +1322,19 @@ components:
 
     Wallet:
       type: object
-      required: [balance, passive, equippedOutfitId]
+      required: [balance, passive, ad, equippedOutfitId]
       additionalProperties: false
       properties:
         balance: { type: integer, format: int64 }
+        ad:
+          type: object
+          description: '보상형 광고(상점 [광고 보기]). 보상은 AdMob 서버 검증 콜백이 지급하므로 앱은 광고를 본 뒤 이 값을 다시 읽는다'
+          required: [rewardedToday, dailyLimit, reward]
+          additionalProperties: false
+          properties:
+            rewardedToday: { type: integer, description: '오늘 받은 횟수(KST)' }
+            dailyLimit: { type: integer, description: '하루 한도(3)' }
+            reward: { type: integer, description: '1회 코인(10)' }
         passive:
           type: object
           required: [collectable, collectedToday, dailyLimit, nextAt]
@@ -1326,7 +1351,7 @@ components:
       additionalProperties: false
       properties:
         id: { type: integer, format: int64 }
-        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND, ATTENDANCE] }
+        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND, ATTENDANCE, AD_REWARD] }
         amount: { type: integer }
         refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
         createdAt: { type: string, format: date-time }
@@ -1336,7 +1361,7 @@ components:
       additionalProperties: false
       properties:
         id: { type: integer, format: int64 }
-        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND, ATTENDANCE] }
+        reason: { type: string, enum: [SIGNUP_GIFT, BUDGET_BONUS, PASSIVE, REFERRAL_INVITEE, REFERRAL_INVITER, PURCHASE, REFUND, ATTENDANCE, AD_REWARD] }
         amount: { type: integer, description: '적립은 양수, 사용(PURCHASE)은 음수' }
         refDate: { type: string, format: date, nullable: true, description: 'BUDGET_BONUS의 지킨 날짜' }
         outfitId: { type: string, nullable: true, description: 'PURCHASE의 코스튬 id' }

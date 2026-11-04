@@ -48,7 +48,7 @@ export function HomeScreen() {
   const checking = useRef(false);
   // 자동 출석 모달은 하루(서버 날짜)에 한 번만 연다. 실패하거나 닫아도 같은 날 또 띄우지 않는다.
   const autoDay = useRef<string | null>(null);
-  // Opening or returning to the home runs check-in; the header shop button reads the wallet it returns.
+  // Opening or returning to the home runs check-in; the coin chip reads the wallet it returns.
   const runCheckIn = useCallback(() => {
     if (checking.current) return;
     checking.current = true;
@@ -150,11 +150,18 @@ export function HomeScreen() {
             <CharacterStage
               level={status.level}
               character={
-                <OutfitView
-                  outfitId={wallet?.equippedOutfitId ?? null}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${levelName(status.level)} 단계 캐릭터, 상점 열기`}
+                  onPress={() => router.push("/customize")}
                   style={{ flex: 1 }}
-                  accessibilityLabel={`${levelName(status.level)} 단계 캐릭터`}
-                />
+                >
+                  <OutfitView
+                    outfitId={wallet?.equippedOutfitId ?? null}
+                    style={{ flex: 1 }}
+                    accessibilityLabel={`${levelName(status.level)} 단계 캐릭터`}
+                  />
+                </Pressable>
               }
               coin={<CoinChip balance={wallet?.balance ?? 0} />}
               attendance={
@@ -376,7 +383,7 @@ function statusOf(s: Today): PaceStatus {
         : "오늘 예산을 넘었어요";
   return pointsStatus(points, yesterday ? `${yesterday} · ${today}` : today);
 }
-/** Coin balance floating over the character video; it opens the coin history, where the shop button sits. */
+/** Coin balance floating over the character video; it opens the coin history, where [모으기] is. */
 function CoinChip({ balance }: { balance: number }) {
   return (
     <Pressable

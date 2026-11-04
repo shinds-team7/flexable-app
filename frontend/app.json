@@ -40,7 +40,12 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      ["expo-navigation-bar", { "hidden": true }],
+      [
+        "expo-navigation-bar",
+        {
+          "hidden": true
+        }
+      ],
       [
         "expo-secure-store",
         {
@@ -93,6 +98,13 @@
         {
           "supportsBackgroundPlayback": false,
           "supportsPictureInPicture": false
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ]
     ],
