@@ -10,8 +10,10 @@ import mobileAds, {
 export const adsSupported = true;
 export type AdResult = "earned" | "closed" | "failed";
 
-// 실제 광고 단위 ID는 빌드 때 EXPO_PUBLIC_ADMOB_REWARDED_ID로 넣는다. 없으면 구글 테스트 광고다.
-const UNIT = process.env.EXPO_PUBLIC_ADMOB_REWARDED_ID || TestIds.REWARDED;
+// 개발 중(__DEV__)에는 구글 테스트 광고만 쓴다. 실제 광고를 개발 중에 반복해서 보면 AdMob이 무효 트래픽으로 제재할 수 있다.
+// 배포 빌드는 "광고 시청 코인 획득" 광고 단위(AdMob 콘솔). 광고 단위 ID는 앱에 그대로 들어가는 공개 값이다.
+const REWARDED_UNIT = "ca-app-pub-3401841469269585/7434171761";
+const UNIT = __DEV__ ? TestIds.REWARDED : REWARDED_UNIT;
 
 let started: Promise<unknown> | null = null;
 
