@@ -260,7 +260,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "선비냥이", exact: true }),
-  ).toHaveText("🪙 200");
+  ).toHaveText("적용 중");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
