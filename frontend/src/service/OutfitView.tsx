@@ -53,7 +53,7 @@ export function OutfitView({
   };
   if (video === null)
     return (
-      <View style={style} {...a11y}>
+      <View style={style} pointerEvents="none" {...a11y}>
         <Image
           source={poster}
           style={StyleSheet.absoluteFill}
@@ -98,7 +98,7 @@ function LoopVideo({
   // 화면 이탈·코스튬 변경 시 useVideoPlayer가 플레이어를 해제한다.
   // 별도 cleanup에서 pause하면 이미 해제된 네이티브 객체를 호출할 수 있다.
   return (
-    <View style={style} {...a11y}>
+    <View style={style} pointerEvents="none" {...a11y}>
       <VideoView
         player={player}
         style={styles.fill}
