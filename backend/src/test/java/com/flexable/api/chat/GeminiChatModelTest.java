@@ -69,6 +69,26 @@ class GeminiChatModelTest {
 	}
 
 	@Test
+	void declaresScheduleToolAndReadsItsCall() {
+		server.expect(requestTo(URL))
+			.andExpect(jsonPath("$.tools[0].functionDeclarations[0].name").value("propose_schedule"))
+			.andExpect(jsonPath("$.tools[0].functionDeclarations[0].parameters.properties.category.enum",
+					Matchers.contains("식비", "교통")))
+			.andExpect(jsonPath("$.tools[0].functionDeclarations[0].parameters.required",
+					Matchers.contains("title", "date", "category")))
+			.andRespond(withSuccess("""
+				{"candidates":[{"content":{"role":"model","parts":[
+				  {"functionCall":{"name":"propose_schedule","args":{"title":"술약속","date":"2026-11-06",
+				  "category":"식비","slot":"EVENING","amount":50000.0}}}]}}]}
+				""", MediaType.APPLICATION_JSON));
+		ChatModel.Reply r = model.generate("규칙", List.of(new Message(Role.USER, "금요일 저녁에 술약속")), List.of(),
+				List.of("식비", "교통"));
+		assertThat(r.text()).isEmpty();
+		assertThat(r.schedule()).isEqualTo(new ChatModel.ScheduleCall("술약속", "2026-11-06", "식비", "EVENING", 50000L));
+		server.verify();
+	}
+
+	@Test
 	void noToolsWithoutPresetsAndFailuresAreWrapped() {
 		server.expect(requestTo(URL))
 			.andExpect(jsonPath("$.tools").doesNotExist())

@@ -91,3 +91,73 @@ test("AI 메이트: 답변 실패는 다시 시도할 수 있다", async ({ page
   await page.getByRole("button", { name: "다시 시도" }).click();
   await expect(page.getByText("다시 답했어요")).toBeVisible();
 });
+
+test("AI 메이트: 일정은 [등록]을 누른 뒤에만 예정 지출로 저장하고 서버 하루 예산을 보여 준다", async ({
+  page,
+}) => {
+  await session(page);
+  const chats: { accepts?: string[]; pending?: { amount?: number } }[] = [];
+  const saved: unknown[] = [];
+  const schedule = (amount: number) => ({
+    title: "술약속",
+    date: "2026-11-06",
+    categoryId: 3,
+    category: "식비",
+    amount,
+    basis: { samples: 5, scope: "SLOT", days: 90 },
+    preview: { dayBudget: 75935, dailyBudgetBefore: 50000, dailyBudgetAfter: 48635 },
+  });
+  await page.route("**/api/v1/chat/messages", async (route) => {
+    const body = route.request().postDataJSON();
+    chats.push(body);
+    await route.fulfill({
+      json: body.pending
+        ? {
+            reply: "**50,000원**으로 바꿔서 등록할까요?",
+            action: { type: "SCHEDULE", schedule: schedule(50000) },
+          }
+        : {
+            reply: "금요일(11/6) 술약속에는 **27,300원** 정도 쓸 것 같아요. 등록할까요?",
+            action: { type: "SCHEDULE", schedule: schedule(27300) },
+          },
+    });
+  });
+  await page.route("**/api/v1/scheduled-expenses", async (route) => {
+    saved.push(route.request().postDataJSON());
+    await route.fulfill({ status: 201, json: {} });
+  });
+  await page.goto("/chatbot");
+  await page.getByRole("button", { name: "선택하고 시작하기" }).click();
+  const input = page.getByLabel("AI 메이트에게 질문", { exact: true });
+  await input.fill("금요일 저녁에 술약속");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(page.getByText(/27,300원/)).toBeVisible();
+  expect(chats[0].accepts).toEqual(["SCHEDULE"]);
+  expect(saved).toHaveLength(0);
+
+  // 피드백: 제안 내용을 서버에 함께 보내 다시 제안받는다. 아직 저장하지 않는다.
+  await page.getByRole("button", { name: "금액·날짜 바꾸기" }).click();
+  await input.fill("5만원으로 해줘");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(page.getByText(/50,000원/).first()).toBeVisible();
+  expect(chats[1].pending?.amount).toBe(27300);
+  expect(saved).toHaveLength(0);
+
+  // 서버가 계산한 날짜별 하루 예산을 등록 뒤에 그대로 보여 준다
+  await page.route("**/api/v1/budget/today", async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({
+      json: {
+        ...(await res.json()),
+        dailyBudget: 48635,
+        dayPlans: [{ date: "2026-11-06", planned: 50000, budget: 98635 }],
+      },
+    });
+  });
+  await page.getByRole("button", { name: "등록", exact: true }).last().click();
+  await expect(page.getByText(/예정 지출로 등록했어요/)).toBeVisible();
+  await expect(page.getByText(/98,635원/).first()).toBeVisible();
+  expect(saved).toEqual([
+    { amount: 50000, categoryId: 3, title: "술약속", date: "2026-11-06" },
+  ]);
+});

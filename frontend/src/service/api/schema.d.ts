@@ -2050,6 +2050,8 @@ export interface components {
          *         45230,
          *         45230
          *       ],
+         *       "reservedPlanned": 0,
+         *       "dayPlans": [],
          *       "characterPoints": 130,
          *       "characterDelta": 15
          *     }
@@ -2095,6 +2097,20 @@ export interface components {
             dayPreset: components["schemas"]["DayPreset"];
             /** @description 월~일 요일별 하루 예산(남은 생활비를 남은 날의 요일 비중 합으로 나눔, §5). dailyBudget = 오늘 요일 값 */
             dayBudgets: number[];
+            /**
+             * Format: int64
+             * @description 내일~수입일 전날 예정 지출 합(남은 생활비에서 이미 뺐다, §2 예정 지출 반영)
+             */
+            reservedPlanned: number;
+            /** @description 수입일 전날까지 예정 지출이 있는 날짜별 하루 예산(날짜 오름차순, 없으면 빈 배열). budget = 그 날짜 몫 + planned */
+            dayPlans: {
+                /** Format: date */
+                date: string;
+                /** Format: int64 */
+                planned: number;
+                /** Format: int64 */
+                budget: number;
+            }[];
             characterPoints: number;
             characterDelta: number;
         };
@@ -2397,6 +2413,18 @@ export interface components {
              * @enum {string}
              */
             mate?: "ANALYST" | "FRIEND" | "COACH";
+            /** @description 앱이 처리할 수 있는 제안 종류. SCHEDULE이 없으면 서버는 일정 제안(action.type SCHEDULE)을 하지 않는다(옛 앱 보호) */
+            accepts?: "SCHEDULE"[];
+            /** @description 직전에 제안한 일정. 사용자가 수정 의견을 줄 때 함께 보내면 서버가 이것을 바탕으로 다시 제안한다 */
+            pending?: {
+                title: string;
+                /** Format: date */
+                date: string;
+                /** Format: int64 */
+                categoryId: number;
+                /** Format: int64 */
+                amount?: number | null;
+            } | null;
         };
         /**
          * @example {
@@ -2411,17 +2439,66 @@ export interface components {
         ChatResponse: {
             /** @description 화면에 보여 줄 답변. **굵게** 표시가 들어갈 수 있다 */
             reply: string;
-            /** @description 확인이 필요한 변경 제안. 없으면 null. 확인 버튼을 누르면 앱이 PUT /budget/day-weights {preset}으로 저장한다 */
+            /**
+             * @description 확인이 필요한 변경 제안. 없으면 null. 서버는 저장하지 않는다.
+             *     DAY_PRESET: 확인하면 앱이 PUT /budget/day-weights {preset}으로 저장한다.
+             *     SCHEDULE: 확인하면 앱이 POST /scheduled-expenses {amount, categoryId, title, date}로 등록한 뒤 GET /budget/today를 다시 받는다.
+             */
             action: {
                 /** @enum {string} */
-                type: "DAY_PRESET";
+                type: "DAY_PRESET" | "SCHEDULE";
                 /**
-                 * @description CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만
+                 * @description DAY_PRESET일 때만. CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만
                  * @enum {string}
                  */
-                preset: "EVEN" | "RECORD" | "WEEKEND" | "WEEKDAY";
-                /** @description 프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히) */
-                label: string;
+                preset?: "EVEN" | "RECORD" | "WEEKEND" | "WEEKDAY";
+                /** @description DAY_PRESET일 때만. 프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히) */
+                label?: string;
+                /** @description SCHEDULE일 때만 */
+                schedule?: {
+                    title: string;
+                    /**
+                     * Format: date
+                     * @description 내일 ~ 90일 뒤
+                     */
+                    date: string;
+                    /** Format: int64 */
+                    categoryId: number;
+                    category: string;
+                    /**
+                     * Format: int64
+                     * @description 서버가 거래 기록으로 예측한 금액(100원 단위 내림). 기록이 적어 예측하지 못하면 null이고 reply가 금액을 되묻는다. 사용자가 말한 금액이면 그 값
+                     */
+                    amount: number | null;
+                    /** @description 예측 근거. 금액을 사용자가 말했거나 예측하지 못했으면 null */
+                    basis: {
+                        samples: number;
+                        /**
+                         * @description SLOT 같은 시간대 기록, CATEGORY 카테고리 전체 기록
+                         * @enum {string}
+                         */
+                        scope: "SLOT" | "CATEGORY";
+                        days: number;
+                    } | null;
+                    /** @description 이 금액으로 등록했을 때 서버가 가정 계산한 예산. amount가 null이거나 날짜가 다음 수입일 이후라 이번 예산에 들어가지 않으면 null. 이미 같은 날짜 예정이 있으면 합산 */
+                    preview: {
+                        /**
+                         * Format: int64
+                         * @description 등록 후 그 날짜의 하루 예산
+                         */
+                        dayBudget: number;
+                        /**
+                         * Format: int64
+                         * @description 지금 오늘 하루 예산
+                         */
+                        dailyBudgetBefore: number;
+                        /**
+                         * Format: int64
+                         * @description 등록 후 오늘 하루 예산
+                         */
+                        dailyBudgetAfter: number;
+                    } | null;
+                };
             } | null;
         };
         Wallet: {

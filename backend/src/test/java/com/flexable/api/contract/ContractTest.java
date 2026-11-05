@@ -337,6 +337,27 @@ class ContractTest {
 	}
 
 	@Test
+	void AI_메이트_일정_제안과_예정_지출_예산_반영() throws Exception {
+		String token = signup();
+		clock.seoulNoon("2026-10-30");
+		app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+		when(chatModel.generate(any(), any(), any(), any()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-11-02", "식비", "EVENING", 50000L)));
+		when(chatModel.generate(any(), any(), any())).thenReturn(new ChatModel.Reply("**50,000원**으로 등록할까요?", null));
+		String ask = "{\"messages\":[{\"role\":\"USER\",\"text\":\"월요일 저녁 술약속\"}],\"accepts\":[\"SCHEDULE\"],"
+				+ "\"pending\":{\"title\":\"술약속\",\"date\":\"2026-11-02\",\"categoryId\":1,\"amount\":30000}}";
+		MvcResult proposed = app(auth(json(post("/api/v1/chat/messages"), ask), token), 200);
+		assertThat(read(proposed, "$.action.type")).isEqualTo("SCHEDULE");
+		String categoryId = read(proposed, "$.action.schedule.categoryId");
+
+		app(auth(json(post("/api/v1/scheduled-expenses"), "{\"amount\":50000,\"categoryId\":" + categoryId
+				+ ",\"title\":\"술약속\",\"date\":\"2026-11-02\"}"), token), 201);
+		MvcResult today = app(auth(get("/api/v1/budget/today"), token), 200);
+		assertThat(read(today, "$.reservedPlanned")).isEqualTo("50000");
+		assertThat(read(today, "$.dayPlans[0].date")).isEqualTo("2026-11-02");
+	}
+
+	@Test
 	void 예정_지출과_카테고리_순서() throws Exception {
 		String token=signup();
 		clock.seoulNoon("2026-10-30");
