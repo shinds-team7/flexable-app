@@ -1,10 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
-import { levelLabel } from "@/components/LevelIcon";
+import { levelLabel, levelName } from "@/components/LevelIcon";
 import { colors, radius } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import {
@@ -23,8 +23,10 @@ import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
 
-// 레벨 코스튬은 모두 3개가 될 예정이라, 아직 열리지 않은(서버에 없는) 칸은 자물쇠로 채운다.
-const LEVEL_SLOTS = 3;
+// 레벨 코스튬은 6단계(광부·마구간지기·상인·기사·귀족·왕족)다. 디자인 중이라 서버가 아직 내려 주지 않는 칸은
+// cat-unlock 실루엣과 자물쇠로 채운다.
+const LEVEL_SLOTS = 6;
+const UNLOCK_CAT = require("../../assets/outfits/cat-unlock.png");
 
 export function CustomizeScreen() {
   const [list, setList] = useState<OutfitList>();
@@ -188,6 +190,7 @@ export function CustomizeScreen() {
               selected={selected}
               onSelect={setSelected}
               empty={Math.max(0, LEVEL_SLOTS - levels.length)}
+              emptyFrom={levels.length + 1}
             />
             <T size={14} weight="700" color={colors.textSub}>
               코인 코스튬
@@ -268,11 +271,14 @@ function Grid({
   selected,
   onSelect,
   empty = 0,
+  emptyFrom = 1,
 }: {
   items: Outfit[];
   selected: string;
   onSelect: (id: string) => void;
   empty?: number;
+  /** 첫 준비 중 칸의 레벨(이름을 붙인다) */
+  emptyFrom?: number;
 }) {
   return (
     <View style={grid.wrap}>
@@ -312,15 +318,22 @@ function Grid({
         <View
           key={`empty-${i}`}
           accessible
-          accessibilityLabel="준비 중인 코스튬"
+          accessibilityLabel={`${levelName(emptyFrom + i)} 코스튬, 준비 중`}
           style={grid.cell}
         >
           <View style={[grid.thumb, grid.center]}>
-            <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+            <Image
+              source={UNLOCK_CAT}
+              resizeMode="contain"
+              tintColor={colors.textFaint}
+              style={grid.unlockCat}
+            />
+            <View style={[StyleSheet.absoluteFill, grid.center]}>
+              <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+            </View>
           </View>
-          {/* 이름 칸 높이를 맞춰 옆 칸과 줄이 어긋나지 않게 한다 */}
-          <T size={12} aria-hidden>
-            {"\u00A0"}
+          <T size={12} color={colors.textMuted}>
+            {levelLabel(emptyFrom + i)}
           </T>
         </View>
       ))}
@@ -360,4 +373,5 @@ const grid = StyleSheet.create({
     backgroundColor: "rgba(16, 24, 40, 0.32)",
   },
   center: { alignItems: "center", justifyContent: "center" },
+  unlockCat: { width: "100%", height: "86%", opacity: 0.55 },
 });

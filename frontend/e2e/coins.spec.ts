@@ -139,9 +139,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await balance(page, 205);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
   // Local mode also lists inactive reserve costumes, so no empty slot is needed.
-  await expect(
-    page.getByLabel("준비 중인 코스튬", { exact: true }),
-  ).toHaveCount(0);
+  await expect(page.getByLabel(/ 코스튬, 준비 중$/)).toHaveCount(0);
   // The shop's top card has the ad button instead of [모으기]; the web build cannot show ads, so it is disabled.
   await expect(collect).toHaveCount(0);
   await expect(
@@ -189,15 +187,16 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "왕", exact: true }).click();
+  // Level costumes stay locked (still being designed): the inactive 귀족 slot shows in local mode only.
+  await page.getByRole("button", { name: "귀족", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Lv.5 달성 시 열림", exact: true }),
+    page.getByRole("button", { name: "🎩 귀족 달성 시 열림", exact: true }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
   const salary = page.getByRole("button", { name: "직장냥이", exact: true });
-  // Converted costumes are unlocked by level and cannot be bought.
-  await expect(salary).toContainText("묘목");
+  // The salary cat and jackpot became 200-coin costumes (11-05), so they show a price, not a level.
+  await expect(salary).toContainText("200");
   await expect(page.getByText("잭팟", { exact: true })).toHaveCount(0);
   await salary.click();
   await expect(
@@ -205,8 +204,8 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   ).toBeVisible();
   await expect(page.getByText("직장냥이", { exact: true })).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "🌿 묘목 달성 시 열림", exact: true }),
-  ).toBeDisabled();
+    page.getByRole("button", { name: "200코인으로 구매", exact: true }),
+  ).toBeEnabled();
   // A real salary-cat video loads and plays, rather than the default fallback poster.
   await expect
     .poll(() =>
@@ -318,7 +317,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   expect(errors).toEqual([]);
 });
 
-test("level three caps the home gauge and a costume refund is acknowledged once", async ({
+test("the top level caps the home gauge and a costume refund is acknowledged once", async ({
   page,
 }) => {
   await signup(page, email("refund"));
@@ -328,7 +327,7 @@ test("level three caps the home gauge and a costume refund is acknowledged once"
   const wallet = await api(page, "GET", "/coins");
   await page.route("**/api/v1/budget/today", (route) =>
     route.fulfill({
-      json: { ...today, characterPoints: 200, characterDelta: 0 },
+      json: { ...today, characterPoints: 500, characterDelta: 0 },
     }),
   );
   let pending = true;
@@ -362,7 +361,7 @@ test("level three caps the home gauge and a costume refund is acknowledged once"
   const gauge = page.getByRole("progressbar");
   await expect(gauge).toHaveAccessibleName(/최고 단계/);
   await expect(gauge).toContainText("최고 단계");
-  await expect(gauge).toContainText("🌳");
+  await expect(gauge).toContainText("👑");
   await expect(gauge).not.toContainText("%");
   await expect(
     page.getByText("광부에서 시작! 예산을 지키면 조금씩 올라가요", {
@@ -400,7 +399,7 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
       },
     }),
   );
-  // Production lists only the miner among level costumes; two locked slots fill the row of three.
+  // Production lists only the miner among level costumes; five locked slots (마구간지기~왕족) fill the six.
   await page.route("**/api/v1/outfits", (route) =>
     route.fulfill({
       json: {
@@ -450,9 +449,10 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   });
   await Promise.all([checkedIn(page), page.reload()]);
   await openShop(page);
+  await expect(page.getByLabel(/ 코스튬, 준비 중$/)).toHaveCount(5);
   await expect(
-    page.getByLabel("준비 중인 코스튬", { exact: true }),
-  ).toHaveCount(2);
+    page.getByLabel("마구간지기 코스튬, 준비 중", { exact: true }),
+  ).toBeVisible();
   await page.goBack();
   await openCoins(page);
   await balance(page, 200);

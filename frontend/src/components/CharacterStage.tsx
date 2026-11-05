@@ -1,5 +1,5 @@
 /**
- * 캐릭터 홈 상단 UI — 예산을 잘 지키고 출석할수록 높은 단계(새싹→묘목→나무, 지금은 3단계까지), 못 지킬수록 새싹.
+ * 캐릭터 홈 상단 UI — 예산을 잘 지키고 출석할수록 높은 단계(광부→마구간지기→상인→기사→귀족→왕족, 6단계), 못 지킬수록 광부.
  * 단계·게이지 값은 부르는 쪽(서비스 홈, 서버 점수 pointsStatus)이 계산해서 넘긴다.
  */
 import { useEffect, type ReactNode } from 'react';
@@ -9,17 +9,17 @@ import { colors } from '@/theme';
 import { LevelIcon, levelName } from './LevelIcon';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
-export type Level = 1 | 2 | 3;
+export type Level = 1 | 2 | 3 | 4 | 5 | 6;
 
-/** 지금 있는 최고 단계. 서버 CharacterScore.MAX(200)와 맞춘다 */
-export const TOP_LEVEL: Level = 3;
+/** 지금 있는 최고 단계. 서버 CharacterScore.MAX(500)와 맞춘다 */
+export const TOP_LEVEL: Level = 6;
 
 /** 레벨별 게이지 강조색 */
-const ACCENTS: Record<Level, string> = { 1: '#667085', 2: '#8A6A3B', 3: '#1D3A8A' };
+const ACCENTS: Record<Level, string> = { 1: '#667085', 2: '#8A6A3B', 3: '#B7791F', 4: '#475467', 5: '#6941C6', 6: '#1D3A8A' };
 
 export type PaceStatus = { level: Level; progress: number; label: string };
 
-/** 서버 캐릭터 점수(0~200, 100점이 한 단계) → 단계와 게이지. 실서비스용 */
+/** 서버 캐릭터 점수(0~500, 100점이 한 단계) → 단계와 게이지. 실서비스용 */
 export function pointsStatus(points: number, label: string): PaceStatus {
   const p = Math.max(0, points);
   const level = Math.min(TOP_LEVEL, Math.floor(p / 100) + 1) as Level;
