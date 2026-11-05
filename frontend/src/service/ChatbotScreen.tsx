@@ -35,6 +35,7 @@ import Svg, {
   Rect,
   Stop,
 } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Donut } from "@/components/Donut";
 import { goBack } from "@/components/SubHeader";
@@ -779,10 +780,7 @@ function Menu({
 }) {
   const m = mates.find((x) => x.id === mate)!;
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "web" ? undefined : "padding"}
-    >
+    <KeyboardFrame>
       <RoomHeader onBack={onBack} onSettings={onSettings} />
       <EnterView>
         <ScrollView
@@ -843,6 +841,44 @@ function Menu({
         </ScrollView>
       </EnterView>
       <Composer initial={initial} onSend={onSend} />
+    </KeyboardFrame>
+  );
+}
+
+/**
+ * 키보드가 입력창을 가리지 않게 한다.
+ * Android는 edge-to-edge라 창이 줄어들지 않고 KeyboardAvoidingView 계산도 어긋나
+ * 입력창이 반쯤 가려졌다. 키보드 높이를 직접 읽어 화면 아래 안전영역을 뺀 만큼 올린다.
+ */
+function KeyboardFrame({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const show = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKb(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKb(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  if (Platform.OS === "android") {
+    return (
+      <View
+        style={[styles.root, { paddingBottom: Math.max(0, kb - insets.bottom) }]}
+      >
+        {children}
+      </View>
+    );
+  }
+  return (
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "web" ? undefined : "padding"}
+    >
+      {children}
     </KeyboardAvoidingView>
   );
 }
@@ -876,10 +912,7 @@ function Chat({
     return () => sub.remove();
   }, []);
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "web" ? undefined : "padding"}
-    >
+    <KeyboardFrame>
       <RoomHeader onBack={onBack} onSettings={onSettings} />
       <EnterView style={{ backgroundColor: "#F6F8FC" }}>
         <ScrollView
@@ -926,7 +959,7 @@ function Chat({
         </ScrollView>
       </EnterView>
       <Composer busy={busy} onSend={onSend} />
-    </KeyboardAvoidingView>
+    </KeyboardFrame>
   );
 }
 
