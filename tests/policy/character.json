@@ -99,19 +99,35 @@
       }
     },
     {
-      "name": "최대 200점(Lv.3)",
+      "name": "100점마다 한 단계(120점은 Lv.2)",
       "budgets": {
         "2026-10-01": 30000
       },
       "spent": {},
       "attended": [],
-      "today": "2026-11-10",
+      "today": "2026-10-07",
       "expected": {
-        "points": 200,
+        "points": 120,
+        "delta": 20,
+        "peak": 120,
+        "level": 2,
+        "peakLevel": 2
+      }
+    },
+    {
+      "name": "최대 500점(Lv.6)",
+      "budgets": {
+        "2026-10-01": 30000
+      },
+      "spent": {},
+      "attended": [],
+      "today": "2026-11-30",
+      "expected": {
+        "points": 500,
         "delta": 0,
-        "peak": 200,
-        "level": 3,
-        "peakLevel": 3
+        "peak": 500,
+        "level": 6,
+        "peakLevel": 6
       }
     },
     {

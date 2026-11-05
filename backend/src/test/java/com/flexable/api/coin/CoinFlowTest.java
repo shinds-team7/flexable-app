@@ -490,30 +490,25 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.code").value("COINS_NOT_ENOUGH"));
 	}
 
+	/** 11-05: 직장냥이·잭팟은 레벨 코스튬이 아니라 200코인 상품이다. 레벨 2~6은 꺼 둔 자리(디자인 중). */
 	@Test
-	void salaryCatAndJackpotAreLevelTwoAndThreeCostumes() throws Exception {
-		assertThat(outfits.findById("outfit-02").orElseThrow().isActive()).isTrue();
-		assertThat(outfits.findById("outfit-01").orElseThrow().isActive()).isTrue();
+	void salaryCatAndJackpotAreCoinCostumesAndLevelSlotsStayLocked() throws Exception {
 		String token = signup();
 		checkIn(token);
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
-			.andExpect(jsonPath("$.items[1].id").value("outfit-02"))
-			.andExpect(jsonPath("$.items[1].name").value("직장냥이"))
-			.andExpect(jsonPath("$.items[1].unlockLevel").value(2))
-			.andExpect(jsonPath("$.items[1].price").value(nullValue()))
-			.andExpect(jsonPath("$.items[1].owned").value(false))
-			.andExpect(jsonPath("$.items[2].id").value("outfit-01"))
-			.andExpect(jsonPath("$.items[2].unlockLevel").value(3))
-			.andExpect(jsonPath("$.items[2].price").value(nullValue()));
-		for (String id : List.of("outfit-01", "outfit-02")) {
-			mvc.perform(auth(post("/api/v1/outfits/" + id + "/purchase"), token, null))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("OUTFIT_NOT_FOR_SALE"));
-			mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"" + id + "\"}"))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("OUTFIT_LOCKED"));
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].name").value(contains("직장냥이")))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].unlockLevel").value(contains(nullValue())))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].price").value(contains(200)))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].unlockLevel").value(contains(nullValue())))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].price").value(contains(200)))
+			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].name").value(contains("마구간지기")))
+			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv6')].name").value(contains("왕족")))
+			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv6')].unlockLevel").value(contains(6)));
+		for (String id : List.of("costume-lv2", "costume-lv3", "costume-lv4", "costume-lv5", "costume-lv6")) {
+			assertThat(outfits.findById(id).orElseThrow().isActive()).isFalse();
 		}
-		wallet(token).andExpect(jsonPath("$.balance").value(200));
+		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null)).andExpect(status().isOk());
+		wallet(token).andExpect(jsonPath("$.balance").value(0));
 	}
 
 	/** V10 전에 잭팟을 산 사람: 레벨이 낮아도 계속 보유하고, 낸 코인을 한 번 돌려받아 모달로 안내받는다. */
@@ -568,16 +563,16 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.balance").value(200))
 			.andExpect(jsonPath("$.equippedOutfitId").value(nullValue()))
 			.andExpect(jsonPath("$.peakLevel").value(1))
-			.andExpect(jsonPath("$.items", hasSize(15)))
+			.andExpect(jsonPath("$.items", hasSize(16)))
 			.andExpect(jsonPath("$.items[0].id").value("costume-lv1"))
 			.andExpect(jsonPath("$.items[0].price").value(nullValue()))
 			.andExpect(jsonPath("$.items[0].owned").value(true))
 			.andExpect(jsonPath("$.items[0].equipped").value(true))
 			.andExpect(jsonPath("$.items[1].owned").value(false))
-			.andExpect(jsonPath("$.items[7].id").value("outfit-03"))
-			.andExpect(jsonPath("$.items[7].price").value(200));
+			.andExpect(jsonPath("$.items[8].id").value("outfit-03"))
+			.andExpect(jsonPath("$.items[8].price").value(200));
 
-		for (String id : List.of("costume-lv1", "costume-lv2", "costume-lv5", "outfit-01", "no-such-outfit")) {
+		for (String id : List.of("costume-lv1", "costume-lv2", "costume-lv6", "no-such-outfit")) {
 			mvc.perform(auth(post("/api/v1/outfits/" + id + "/purchase"), token, null))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("OUTFIT_NOT_FOR_SALE"));
@@ -616,9 +611,14 @@ class CoinFlowTest {
 		clock.seoul("2026-10-08T12:00");
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(jsonPath("$.peakLevel").value(2))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(true))
+			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(false))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv3')].owned").value(false));
-		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
+		// 꺼 둔 레벨 코스튬은 레벨이 되어도 열리지 않는다(디자인 중)
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"costume-lv2\"}"))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("OUTFIT_LOCKED"));
+		jdbc.update("update outfits set active = true where id = 'costume-lv2'");
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"costume-lv2\"}"))
 			.andExpect(status().isOk());
 
 		// 10/8·10/9 넘김 → 40점(Lv.1)으로 내려가도 Lv.2 코스튬은 그대로
@@ -629,10 +629,10 @@ class CoinFlowTest {
 		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(jsonPath("$.characterPoints").value(40));
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
 			.andExpect(jsonPath("$.peakLevel").value(2))
-			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-02"))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(true))
-			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].equipped").value(true));
-		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-02\"}"))
+			.andExpect(jsonPath("$.equippedOutfitId").value("costume-lv2"))
+			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].owned").value(true))
+			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].equipped").value(true));
+		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"costume-lv2\"}"))
 			.andExpect(status().isOk());
 	}
 

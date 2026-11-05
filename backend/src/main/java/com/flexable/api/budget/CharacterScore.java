@@ -6,7 +6,7 @@ import java.util.NavigableMap;
 import java.util.Set;
 
 /**
- * 캐릭터 단계 점수. 100점이 한 단계: 0~99 Lv.1(새싹), 100~199 Lv.2(묘목), 200 Lv.3(나무, 최대). 규칙과 예시는 docs/policies.md §4(tests/policy/character.json).
+ * 캐릭터 단계 점수. 100점이 한 단계, 6단계: 0~99 Lv.1(광부), 100~199 Lv.2(마구간지기), 200~299 Lv.3(상인), 300~399 Lv.4(기사), 400~499 Lv.5(귀족), 500 Lv.6(왕족, 최대). 규칙과 예시는 docs/policies.md §4(tests/policy/character.json).
  * 점수는 저장하지 않고 기록에서 매번 다시 계산하므로, 단계를 늘릴 때 MAX만 올리면 그동안의 기록대로 점수가 돌아온다.
  * 하루 예산을 처음 기록한 날 0점(Lv.1 0%)에서 시작해 어제까지 하루씩 반영한다. 오늘은 내일 반영한다.
  */
@@ -21,8 +21,8 @@ public final class CharacterScore {
 	/** 예산을 넘긴 날 내려가는 점수. 출석한 날이면 출석 점수를 더한 뒤라 순변화는 -40 */
 	public static final int DOWN = 50;
 
-	/** 지금은 3단계까지(10-22). 예전에는 400(5단계) */
-	public static final int MAX = 200;
+	/** 6단계까지(11-05). 3단계(200)로 줄였던 것(10-22)을 다시 늘렸다 */
+	public static final int MAX = 500;
 
 	/** 한 단계에 필요한 점수 */
 	public static final int PER_LEVEL = 100;
@@ -34,7 +34,7 @@ public final class CharacterScore {
 	public record Result(int points, int delta, int peak) {
 	}
 
-	/** 점수의 캐릭터 단계(1~3) */
+	/** 점수의 캐릭터 단계(1~6) */
 	public static int level(int points) {
 		return Math.min(points, MAX) / PER_LEVEL + 1;
 	}
