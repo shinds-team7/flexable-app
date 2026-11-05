@@ -360,11 +360,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.9)",
   },
 });
-// Mirrors the server rule in docs/policies.md §4: attending adds 10, a kept day adds 20, an overspent day takes 50, within 0-200.
+// Mirrors the server rule in docs/policies.md §4: attending adds 10, a kept day adds 20, an overspent day takes 50, within 0-500.
 // The home screen shows after the attendance modal, so the hint counts today's attendance: kept 10+20, overspent 10-50.
 const UP = 30;
 const DOWN = 40;
-const MAX = 200;
+const MAX = 500;
 function statusOf(s: Today): PaceStatus {
   const points = Math.min(MAX, Math.max(0, s.characterPoints ?? 0));
   const delta = s.characterDelta ?? 0;

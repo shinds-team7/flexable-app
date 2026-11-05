@@ -36,25 +36,28 @@ export function LevelGuide() {
 
       <View style={{ gap: 8 }}>
         <T weight="700">단계는 이렇게 올라가요</T>
-        <View style={styles.levels}>
-          {[1, 2, 3].map((n, i) => (
-            <View key={n} style={styles.levelWrap}>
-              {i > 0 && <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />}
-              <View style={styles.level}>
-                <LevelIcon level={n} size={32} />
-                <T weight="700">{LEVELS[n].name}</T>
-                <T size={12} color={colors.textMuted}>
-                  {LEVELS[n].range}
-                </T>
+        {/* 6단계는 한 줄에 안 들어가서 3개씩 두 줄로 보여 준다 */}
+        {[[1, 2, 3], [4, 5, 6]].map((row) => (
+          <View key={row[0]} style={styles.levels}>
+            {row.map((n, i) => (
+              <View key={n} style={styles.levelWrap}>
+                {i > 0 && <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />}
+                <View style={styles.level}>
+                  <LevelIcon level={n} size={32} />
+                  <T weight="700">{LEVELS[n].name}</T>
+                  <T size={12} color={colors.textMuted}>
+                    {LEVELS[n].range}
+                  </T>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        ))}
       </View>
 
       <View style={{ gap: 6 }}>
         <T size={13} color={colors.textSub}>
-          · 점수는 0~200점이에요
+          · 점수는 0~500점이에요
         </T>
         <T size={13} color={colors.textSub}>
           · 고정지출 자동 기록은 판정에서 제외해요

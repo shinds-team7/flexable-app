@@ -1035,7 +1035,7 @@ components:
           minItems: 7
           maxItems: 7
           items: { type: integer, format: int64, minimum: 0 }
-        characterPoints: { type: integer, minimum: 0, maximum: 200 }
+        characterPoints: { type: integer, minimum: 0, maximum: 500 }
         characterDelta: { type: integer }
       example:
         # docs/policies.md §2 예시 ①(목 서버 응답)
@@ -1383,7 +1383,7 @@ components:
       properties:
         balance: { type: integer, format: int64 }
         equippedOutfitId: { type: string, nullable: true }
-        peakLevel: { type: integer, minimum: 1, maximum: 3 }
+        peakLevel: { type: integer, minimum: 1, maximum: 6 }
         items:
           type: array
           items:

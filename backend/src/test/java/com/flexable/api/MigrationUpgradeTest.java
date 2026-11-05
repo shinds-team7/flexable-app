@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("20");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("22");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -64,15 +64,27 @@ class MigrationUpgradeTest {
 			+ "values(1,1,'EXPENSE',12000,'점심',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
 		jdbc.update("insert into user_outfits(user_id,outfit_id,acquired_at) values(1,'outfit-05',CURRENT_TIMESTAMP)");
 		jdbc.update("insert into coin_wallets(user_id,balance,created_at) values(1,50,CURRENT_TIMESTAMP)");
+		// V21: 오래전부터 예산을 지킨 사용자 1은 직장냥이·잭팟을 레벨로 열어 둔 상태, 막 시작한 사용자 2는 아무것도 못 연 상태
+		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(1,DATE '2026-01-01',30000)");
+		jdbc.update("insert into users(id,email,password_hash,agreed_at,created_at) "
+			+ "values(2,'new@example.com','unused',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(7);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
 		assertThat(jdbc.queryForObject("select sort_order from categories where id=1", Long.class)).isEqualTo(1L);
 		assertThat(jdbc.queryForObject("select amount from transactions where category_id=1", Long.class)).isEqualTo(12000L);
-		assertThat(jdbc.queryForObject("select outfit_id from user_outfits where user_id=1", String.class)).isEqualTo("outfit-05");
+		assertThat(jdbc.queryForList("select outfit_id from user_outfits where user_id=1 order by outfit_id", String.class))
+			.containsExactly("outfit-01", "outfit-02", "outfit-05");
+		assertThat(jdbc.queryForObject("select count(*) from user_outfits where user_id=2", Integer.class)).isZero();
+		// V22: 직장냥이·잭팟은 200코인 상품, 새 5단계는 꺼 둔 자리
+		assertThat(jdbc.queryForObject("select price from outfits where id='outfit-02'", Integer.class)).isEqualTo(200);
+		assertThat(jdbc.queryForObject("select unlock_level from outfits where id='outfit-01'", Integer.class)).isNull();
+		assertThat(jdbc.queryForObject("select name from outfits where id='costume-lv6'", String.class)).isEqualTo("왕족");
+		assertThat(jdbc.queryForObject("select count(*) from outfits where unlock_level >= 2 and active", Integer.class)).isZero();
 		assertExtensionsAndWitchCat(jdbc);
 		// V19 업데이트 기념 200코인: 지갑이 있던 사용자에게 한 번, 모달로 안내할 내역(notified_at 비움)과 함께
 		assertThat(jdbc.queryForObject("select balance from coin_wallets where user_id=1", Long.class)).isEqualTo(250L);

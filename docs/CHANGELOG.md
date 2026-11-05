@@ -4,6 +4,10 @@
 
 형식: `- [#223] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
+## 2026-11-05
+
+- [Issue 없음] 캐릭터를 6단계(광부·마구간지기·상인·기사·귀족·왕족, 점수 상한 200→500)로 늘리고 직장냥이·잭팟을 200코인 상품으로 바꿈(기존 레벨 해금자는 계속 보유, 새 5단계는 디자인 중이라 잠금). `policies.md` §4, `coin-plan.md`, `app-api.yaml`(`characterPoints` 500·`peakLevel` 6), `character.json`, 결정 기록 [2026-11-05-six-level-costumes](decisions/2026-11-05-six-level-costumes.md) — 영향: 앱 화면·앱 서버
+
 ## 2026-11-04
 
 - [광고 개인정보 반영] 보상형 광고(Google AdMob) 도입에 맞춰 개인정보처리방침(`docs/play-store/privacy-policy.md`, 웹 `legal.ts`)에 광고 SDK 수집 항목·회원 번호 전송·국외 이전·광고 거부 방법을 추가하고 11장의 "광고 식별자·맞춤형 광고 안 씀" 문구를 고침(공고·시행 11-04, 정식 출시 전이라 즉시 시행), Play 문서(`play-store/README.md`)의 광고 "없음"을 "있음"으로, 데이터 보안·광고 ID 선언 행을 추가 — 영향: 전체(앱 화면·웹 정책 페이지)
