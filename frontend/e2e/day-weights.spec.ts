@@ -37,6 +37,17 @@ async function signupAndOnboard(page: Page) {
     page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
+  await skipGuide(page);
+}
+// 새로 가입해 설정을 마친 첫 홈은 가입 선물·출석 모달 뒤에 첫 홈 가이드를 한 번 띄운다.
+async function skipGuide(page: Page) {
+  const guide = page.getByRole("heading", {
+    name: "+ 버튼으로 거래를 기록해요",
+    exact: true,
+  });
+  await expect(guide).toBeVisible();
+  await page.getByRole("button", { name: "건너뛰기", exact: true }).click();
+  await expect(guide).toHaveCount(0);
 }
 async function today(page: Page) {
   const auth = await page.evaluate(() =>

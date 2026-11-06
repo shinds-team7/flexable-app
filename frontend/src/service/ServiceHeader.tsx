@@ -69,7 +69,7 @@ function ChatbotButton() {
   );
 }
 /** AI 메이트 버튼의 로봇 아이콘(테두리는 글자색, 얼굴 화면은 브랜드색) */
-function RobotIcon({ size }: { size: number }) {
+export function RobotIcon({ size }: { size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Circle cx={12} cy={2.8} r={1.2} stroke={colors.text} strokeWidth={1.5} />

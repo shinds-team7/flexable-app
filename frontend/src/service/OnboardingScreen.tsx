@@ -11,6 +11,7 @@ import {
   protectedValid,
 } from "./BudgetFields";
 import { useBudgetDraft } from "./BudgetDraft";
+import { markHomeGuidePending } from "./HomeGuide";
 import { api } from "./api/client";
 import { useSession } from "./Session";
 import {
@@ -124,6 +125,9 @@ function Content({ step }: { step: Step }) {
           await api("/budget/settings", { method: "PUT", body: v });
           saved.current = v;
         }
+        // 처음 가입해 설정을 마쳤을 때만 첫 홈 가이드를 남긴다(다시 설정할 때는 아님)
+        const user = session.user;
+        if (user && !user.onboarded) await markHomeGuidePending(user.id);
         await session.refreshUser();
         session.invalidate();
         await state.reset();
