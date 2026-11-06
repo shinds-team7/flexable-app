@@ -239,6 +239,27 @@ class SeedMoneyFlowTest {
 	}
 
 	@Test
+	void movableExcludesScheduledExpenses() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":0}")).andExpect(status().isOk());
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(status().isOk());
+		long before = Long.parseLong(read(mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null)), "$.movable"));
+		String categoryId = read(mvc.perform(auth(get("/api/v1/categories?type=EXPENSE"), token, null)), "$[0].id");
+
+		// 예정 지출(내일·오늘)에 묶인 돈은 시드머니로 보낼 수 없다(policies §3 movable).
+		mvc.perform(auth(post("/api/v1/scheduled-expenses"), token,
+				"{\"amount\":30000,\"categoryId\":" + categoryId + ",\"title\":\"약속\",\"date\":\"2026-10-02\"}"))
+			.andExpect(status().isCreated());
+		clock.seoulNoon("2026-10-02");
+		mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null))
+			.andExpect(jsonPath("$.movable").value(before - 30000));
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token,
+				"{\"amount\":" + (before - 30000 + 1) + "}"))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
 	void unansweredCycleIsSkippedAtNextCycleEnd() throws Exception {
 		clock.seoulNoon("2026-10-01");
 		String token = signup();

@@ -102,6 +102,85 @@
         "weekSpent": 20000, "weekDaysLeft": 6, "weekAvailable": 193590,
         "dayBudgets": [29126, 29126, 29126, 29126, 33980, 46116, 46116]
       }
+    },
+    {
+      "name": "예정 지출(내일): 남은 생활비에서 먼저 빼고 그날 예산에 더한다",
+      "input": {
+        "today": "2026-11-05", "balance": 1000000, "balanceAt": "2026-11-05T09:00", "payday": 25, "cardUnpaid": 0,
+        "fixed": [], "protectedTotal": 0, "savedSinceBalance": 0, "transactions": [],
+        "plans": [{ "date": "2026-11-06", "amount": 27300 }]
+      },
+      "expected": {
+        "nextPayday": "2026-11-25", "daysLeft": 20, "cycleStart": "2026-10-26",
+        "estimatedBalance": 1000000, "reservedFixed": 0, "reservedPlanned": 27300, "remaining": 972700,
+        "todaySpent": 0, "dailyBudget": 48635, "todayAvailable": 48635, "shortage": 0,
+        "weekSpent": 0, "weekDaysLeft": 4, "weekAvailable": 221840,
+        "dayBudgets": [48635, 48635, 48635, 48635, 48635, 48635, 48635],
+        "dayPlans": [{ "date": "2026-11-06", "planned": 27300, "budget": 75935 }]
+      }
+    },
+    {
+      "name": "예정 지출(오늘): 오늘 몫으로 따로 떼어 두고 쓴 뒤에도 이중 차감하지 않는다",
+      "input": {
+        "today": "2026-11-05", "balance": 1000000, "balanceAt": "2026-11-05T09:00", "payday": 25, "cardUnpaid": 0,
+        "fixed": [], "protectedTotal": 0, "savedSinceBalance": 0,
+        "transactions": [{ "type": "EXPENSE", "amount": 30000, "at": "2026-11-05T12:00" }],
+        "plans": [{ "date": "2026-11-05", "amount": 30000 }]
+      },
+      "expected": {
+        "nextPayday": "2026-11-25", "daysLeft": 20, "cycleStart": "2026-10-26",
+        "estimatedBalance": 970000, "reservedFixed": 0, "reservedPlanned": 0, "remaining": 970000,
+        "todaySpent": 30000, "dailyBudget": 78500, "todayAvailable": 48500, "shortage": 0,
+        "weekSpent": 30000, "weekDaysLeft": 4, "weekAvailable": 194000,
+        "dayBudgets": [48500, 48500, 48500, 48500, 48500, 48500, 48500],
+        "dayPlans": [{ "date": "2026-11-05", "planned": 30000, "budget": 78500 }]
+      }
+    },
+    {
+      "name": "예정 지출: 다음 수입일 이후 날짜는 이번 계산에 넣지 않는다",
+      "input": {
+        "today": "2026-11-05", "balance": 1000000, "balanceAt": "2026-11-05T09:00", "payday": 25, "cardUnpaid": 0,
+        "fixed": [], "protectedTotal": 0, "savedSinceBalance": 0, "transactions": [],
+        "plans": [{ "date": "2026-11-25", "amount": 50000 }, { "date": "2026-11-28", "amount": 50000 }]
+      },
+      "expected": {
+        "nextPayday": "2026-11-25", "daysLeft": 20, "cycleStart": "2026-10-26",
+        "estimatedBalance": 1000000, "reservedFixed": 0, "reservedPlanned": 0, "remaining": 1000000,
+        "todaySpent": 0, "dailyBudget": 50000, "todayAvailable": 50000, "shortage": 0,
+        "weekSpent": 0, "weekDaysLeft": 4, "weekAvailable": 200000,
+        "dayPlans": []
+      }
+    },
+    {
+      "name": "예정 지출이 남은 생활비보다 크면 나눌 돈 0, 그날 예산은 예정 금액, 모자란 돈 표시",
+      "input": {
+        "today": "2026-11-05", "balance": 100000, "balanceAt": "2026-11-05T09:00", "payday": 25, "cardUnpaid": 0,
+        "fixed": [], "protectedTotal": 0, "savedSinceBalance": 0, "transactions": [],
+        "plans": [{ "date": "2026-11-06", "amount": 150000 }]
+      },
+      "expected": {
+        "nextPayday": "2026-11-25", "daysLeft": 20, "cycleStart": "2026-10-26",
+        "estimatedBalance": 100000, "reservedFixed": 0, "reservedPlanned": 150000, "remaining": -50000,
+        "todaySpent": 0, "dailyBudget": 0, "todayAvailable": 0, "shortage": 50000,
+        "weekSpent": 0, "weekDaysLeft": 4, "weekAvailable": 150000,
+        "dayPlans": [{ "date": "2026-11-06", "planned": 150000, "budget": 150000 }]
+      }
+    },
+    {
+      "name": "오늘 예정 지출이 남은 생활비보다 크면 그날 예산은 예정 금액, 넘는 만큼 모자란 돈 표시",
+      "input": {
+        "today": "2026-11-05", "balance": 100000, "balanceAt": "2026-11-05T09:00", "payday": 25, "cardUnpaid": 0,
+        "fixed": [], "protectedTotal": 0, "savedSinceBalance": 0, "transactions": [],
+        "plans": [{ "date": "2026-11-05", "amount": 150000 }]
+      },
+      "expected": {
+        "nextPayday": "2026-11-25", "daysLeft": 20, "cycleStart": "2026-10-26",
+        "estimatedBalance": 100000, "reservedFixed": 0, "reservedPlanned": 0, "remaining": 100000,
+        "todaySpent": 0, "dailyBudget": 150000, "todayAvailable": 150000, "shortage": 50000,
+        "weekSpent": 0, "weekDaysLeft": 4, "weekAvailable": 150000,
+        "dayBudgets": [0, 0, 0, 0, 0, 0, 0],
+        "dayPlans": [{ "date": "2026-11-05", "planned": 150000, "budget": 150000 }]
+      }
     }
   ]
 }

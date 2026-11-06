@@ -25,6 +25,7 @@ public class GeminiChatModel implements ChatModel {
 
 	static final String URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
 	static final String PROPOSE = "propose_day_preset";
+	static final String SCHEDULE = "propose_schedule";
 	private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() { };
 
 	private final RestClient http;
@@ -37,18 +38,42 @@ public class GeminiChatModel implements ChatModel {
 
 	@Override
 	public Reply generate(String system, List<Message> messages, List<String> presets) {
+		return generate(system, messages, presets, List.of());
+	}
+
+	@Override
+	public Reply generate(String system, List<Message> messages, List<String> presets, List<String> categories) {
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("systemInstruction", Map.of("parts", List.of(Map.of("text", system))));
 		body.put("contents", contents(messages));
+		List<Map<String, Object>> declarations = new ArrayList<>();
 		if (!presets.isEmpty()) {
-			body.put("tools", List.of(Map.of("functionDeclarations", List.of(Map.of(
+			declarations.add(Map.of(
 					"name", PROPOSE,
 					"description", "사용자가 요일별 하루 예산 배분을 바꾸고 싶어 할 때 바꿀 배분 방법을 제안한다. "
 							+ "바로 저장되지 않고 사용자가 확인 버튼을 눌러야 바뀐다.",
 					"parameters", Map.of("type", "object",
 							"properties", Map.of("preset", Map.of("type", "string", "enum", presets,
 									"description", "EVEN 기본 배분, RECORD 내 기록 기준, WEEKEND 주말 넉넉히, WEEKDAY 평일 넉넉히")),
-							"required", List.of("preset")))))));
+							"required", List.of("preset"))));
+		}
+		if (!categories.isEmpty()) {
+			Map<String, Object> props = new LinkedHashMap<>();
+			props.put("title", Map.of("type", "string", "description", "일정 제목. 짧게(예: 술약속, 친구 생일 식사)"));
+			props.put("date", Map.of("type", "string", "description", "일정 날짜 yyyy-MM-dd. 오늘이 아닌 가장 가까운 미래"));
+			props.put("category", Map.of("type", "string", "enum", categories, "description", "쓸 돈이 속하는 지출 카테고리"));
+			props.put("slot", Map.of("type", "string", "enum", List.of("MORNING", "DAYTIME", "EVENING"),
+					"description", "일정 시간대. MORNING 아침, DAYTIME 낮, EVENING 저녁·밤"));
+			props.put("amount", Map.of("type", "integer", "description", "사용자가 직접 말한 금액(원). 말하지 않았으면 넣지 않는다"));
+			declarations.add(Map.of(
+					"name", SCHEDULE,
+					"description", "사용자가 앞으로의 약속·모임 같은 일정을 말했을 때 예정 지출 등록을 제안한다. 금액은 서버가 기록으로 "
+							+ "예측하므로 사용자가 말하지 않았다면 amount를 넣지 않는다. 바로 저장되지 않고 사용자가 확인해야 등록된다.",
+					"parameters", Map.of("type", "object", "properties", props,
+							"required", List.of("title", "date", "category"))));
+		}
+		if (!declarations.isEmpty()) {
+			body.put("tools", List.of(Map.of("functionDeclarations", declarations)));
 		}
 		// 생각 단계를 줄여 응답을 빠르게 한다(Gemini 3 계열 thinkingLevel).
 		body.put("generationConfig", Map.of("temperature", 0.6, "thinkingConfig", Map.of("thinkingLevel", "low")));
@@ -111,6 +136,7 @@ public class GeminiChatModel implements ChatModel {
 		}
 		StringBuilder text = new StringBuilder();
 		String preset = null;
+		ScheduleCall schedule = null;
 		for (Object p : parts) {
 			if (!(p instanceof Map<?, ?> part) || Boolean.TRUE.equals(part.get("thought"))) {
 				continue;
@@ -122,10 +148,35 @@ public class GeminiChatModel implements ChatModel {
 					&& call.get("args") instanceof Map<?, ?> args && args.get("preset") instanceof String s) {
 				preset = s;
 			}
+			if (part.get("functionCall") instanceof Map<?, ?> call && SCHEDULE.equals(call.get("name"))
+					&& call.get("args") instanceof Map<?, ?> args) {
+				schedule = new ScheduleCall(str(args.get("title")), str(args.get("date")), str(args.get("category")),
+						str(args.get("slot")), num(args.get("amount")));
+			}
 		}
-		if (text.isEmpty() && preset == null) {
+		if (text.isEmpty() && preset == null && schedule == null) {
 			throw new Failure("Gemini 응답에 답변이 없음");
 		}
-		return new Reply(text.toString().trim(), preset);
+		return new Reply(text.toString().trim(), preset, schedule);
+	}
+
+	private static String str(Object o) {
+		return o instanceof String s ? s : null;
+	}
+
+	/** 모델이 정수를 실수(27300.0)나 문자열로 줄 때도 받는다. */
+	private static Long num(Object o) {
+		if (o instanceof Number n) {
+			return n.longValue();
+		}
+		if (o instanceof String s) {
+			try {
+				return Long.parseLong(s.replace(",", "").trim());
+			}
+			catch (NumberFormatException e) {
+				return null;
+			}
+		}
+		return null;
 	}
 }

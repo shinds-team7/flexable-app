@@ -14,8 +14,30 @@ public interface ChatModel {
 	 */
 	Reply generate(String system, List<Message> messages, List<String> presets);
 
-	/** text는 비어 있을 수 있다. proposedPreset은 모델이 변경 제안 도구를 불렀을 때만 있다. */
-	record Reply(String text, String proposedPreset) {
+	/**
+	 * 일정 제안 도구까지 주는 호출. 기본 구현은 도구 없이 위 메서드를 부른다(일정을 모르는 모델/테스트용).
+	 *
+	 * @param categories 일정에 쓸 수 있는 지출 카테고리 이름
+	 */
+	default Reply generate(String system, List<Message> messages, List<String> presets, List<String> categories) {
+		return generate(system, messages, presets);
+	}
+
+	/**
+	 * 일정 제안 도구 호출. 금액은 포함하지 않는다(서버가 예측). amount는 사용자가 직접 말했을 때만 있다.
+	 *
+	 * @param date yyyy-MM-dd(모델이 쓴 그대로, 서버가 검증)
+	 * @param slot MORNING·DAYTIME·EVENING 또는 null
+	 */
+	record ScheduleCall(String title, String date, String category, String slot, Long amount) {
+	}
+
+	/** text는 비어 있을 수 있다. proposedPreset·schedule은 모델이 해당 제안 도구를 불렀을 때만 있다. */
+	record Reply(String text, String proposedPreset, ScheduleCall schedule) {
+
+		public Reply(String text, String proposedPreset) {
+			this(text, proposedPreset, null);
+		}
 	}
 
 	/** 모델 응답을 받지 못했거나 형식이 맞지 않을 때 */
