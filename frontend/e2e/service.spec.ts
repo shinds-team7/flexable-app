@@ -38,6 +38,16 @@ async function snapshot(page: Page, path: string) {
   expect(response.ok()).toBeTruthy();
   return response.json();
 }
+// 새로 가입해 설정을 마친 첫 홈은 가입 선물·출석 모달 뒤에 첫 홈 가이드를 한 번 띄운다.
+async function skipGuide(page: Page) {
+  const guide = page.getByRole("heading", {
+    name: "+ 버튼으로 거래를 기록해요",
+    exact: true,
+  });
+  await expect(guide).toBeVisible();
+  await page.getByRole("button", { name: "건너뛰기", exact: true }).click();
+  await expect(guide).toHaveCount(0);
+}
 // A new account's first home visit shows the coin gift modal once (docs/coin-plan.md); close it before using the home.
 async function closeGift(page: Page) {
   await expect(
@@ -49,6 +59,7 @@ async function closeGift(page: Page) {
     page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
+  await skipGuide(page);
 }
 async function login(page: Page, address: string) {
   await page
@@ -378,6 +389,50 @@ test("changing input after a failed post-save step re-saves before finishing", a
   expect(bodies.map((b) => b.protectedItems[0].amount)).toEqual([1000, 9000]);
   const settings = await snapshot(page, "/budget/settings");
   expect(settings.protectedItems[0].amount).toBe(9000);
+});
+
+test("a new account sees the home guide once after the gift and attendance modals", async ({
+  page,
+}) => {
+  await signup(page, email());
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
+  for (let i = 0; i < 5; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await page.getByRole("button", { name: "홈으로", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  // 가이드는 가입 선물·출석 모달이 닫힌 뒤에 뜬다
+  const first = page.getByRole("heading", {
+    name: "+ 버튼으로 거래를 기록해요",
+    exact: true,
+  });
+  await expect(
+    page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
+  ).toBeVisible();
+  await expect(first).toHaveCount(0);
+  await page.getByRole("button", { name: "확인", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
+  ).toBeVisible();
+  await expect(first).toHaveCount(0);
+  await page.getByRole("button", { name: "확인", exact: true }).click();
+  await expect(first).toBeVisible();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "AI 메이트에게 물어보세요", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "캐릭터를 누르면 상점이에요", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await expect(first).toHaveCount(0);
+  // 다시 홈에 와도 반복하지 않는다
+  await page.reload();
+  await expect(page.getByRole("button", { name: "거래 추가" })).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(first).toHaveCount(0);
 });
 
 test("re-entering the balance in settings does not subtract earlier spending again", async ({

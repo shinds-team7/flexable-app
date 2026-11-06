@@ -69,6 +69,16 @@ async function api(page: Page, method: "GET" | "POST", path: string) {
   expect(response.ok()).toBeTruthy();
   return response.json();
 }
+// 새로 가입해 설정을 마친 첫 홈은 가입 선물·출석 모달 뒤에 첫 홈 가이드를 한 번 띄운다.
+async function skipGuide(page: Page) {
+  const guide = page.getByRole("heading", {
+    name: "+ 버튼으로 거래를 기록해요",
+    exact: true,
+  });
+  await expect(guide).toBeVisible();
+  await page.getByRole("button", { name: "건너뛰기", exact: true }).click();
+  await expect(guide).toHaveCount(0);
+}
 // A new account's first home visit also opens the attendance modal, which pays today by itself; `attendance` closes it too.
 async function closeReward(
   page: Page,
@@ -89,6 +99,7 @@ async function closeReward(
     await expect(
       page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
     ).toHaveCount(0);
+    await skipGuide(page);
   }
 }
 const balance = (page: Page, n: number) =>
@@ -489,6 +500,7 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
   await expect(page.getByLabel("1일차, 출석", { exact: true })).toBeVisible();
   // The coin chip, now on the character's left, follows the new balance without a reward modal.
   await page.getByRole("button", { name: "확인", exact: true }).last().click();
+  await skipGuide(page);
   await expect(
     page.getByRole("button", {
       name: "보유 코인 205개, 코인 내역 보기",
