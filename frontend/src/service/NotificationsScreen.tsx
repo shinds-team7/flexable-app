@@ -71,7 +71,13 @@ export function NotificationsScreen() {
                             markInboxItemsRead(id, unread).catch(() => {});
                         }}
                       >
-                        <T size={12} color="#A9B0BF" style={styles.readAll}>
+                        <T
+                          size={12}
+                          color={
+                            unread.length === 0 ? "#A9B0BF" : colors.textSub
+                          }
+                          style={styles.readAll}
+                        >
                           전체 확인
                         </T>
                       </Pressable>

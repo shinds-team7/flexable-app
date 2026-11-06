@@ -127,7 +127,12 @@ function Form({
       categoryId,
       // The server needs a title; an empty one falls back to the category name.
       title:
-        (type === "EXPENSE" ? title.trim() : (existing?.title ?? "")) ||
+        // 수입은 제목 칸이 없다. 원래 수입이던 거래만 기존 제목을 두고, 나머지는 카테고리 이름
+        (type === "EXPENSE"
+          ? title.trim()
+          : existing?.type === "INCOME"
+            ? existing.title
+            : "") ||
         list.find((c) => c.id === categoryId)?.name ||
         (type === "INCOME" ? "수입" : "지출"),
       memo,
@@ -263,7 +268,13 @@ function Form({
             maxLength={40}
           />
         )}
-        <DateField label="날짜" value={date} onChange={setDate} />
+        {/* 새 거래는 오늘까지만(미래는 예정 지출). 고칠 때는 기존 날짜를 그대로 둘 수 있게 제한하지 않는다 */}
+        <DateField
+          label="날짜"
+          value={date}
+          onChange={setDate}
+          max={existing ? undefined : seoulDate()}
+        />
       </View>
       {uncertain && (
         <T>저장 여부를 확인하지 못했어요. 같은 내용으로 다시 확인할게요</T>
