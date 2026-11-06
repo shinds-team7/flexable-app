@@ -30,7 +30,9 @@ async function onboard(page: Page) {
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByLabel("매달 수입일 (1~31)", { exact: true }).fill("25");
+  await page.getByRole("button", { name: /^수입일 선택, / }).click();
+  await page.getByRole("button", { name: "25일", exact: true }).click();
+  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -474,9 +476,9 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
   await onboard(page);
   await closeReward(page, "업데이트 기념 200코인 선물", 200, false);
 
-  // No button press: after midnight the first visit opens the modal and attends. Day 3 shows +50, day 7 the costume.
+  // No button press: after midnight the first visit opens the modal and attends. Day 3 shows the +20 bonus, day 7 the costume.
   await expect(
-    page.getByLabel("3일차, 50코인 보상", { exact: true }),
+    page.getByLabel("3일차, 20코인 보상", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByLabel("7일차, 코스튬 보상", { exact: true }),

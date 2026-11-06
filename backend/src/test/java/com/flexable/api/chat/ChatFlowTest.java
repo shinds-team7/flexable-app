@@ -240,4 +240,153 @@ class ChatFlowTest {
 			.andExpect(status().isBadRequest());
 		verify(model, never()).generate(any(), any(), any());
 	}
+
+	// ---- 일정 등록(policies §8, 2026-11-05) ----
+
+	private static final String ASK_SCHEDULE = "{\"messages\":[{\"role\":\"USER\",\"text\":\"금요일 저녁에 술약속\"}],"
+			+ "\"accepts\":[\"SCHEDULE\"]}";
+
+	private void eveningFood(String token, long category, int day, long amount) throws Exception {
+		mvc.perform(auth(post("/api/v1/transactions"), token, "{\"type\":\"EXPENSE\",\"amount\":" + amount
+				+ ",\"categoryId\":" + category + ",\"title\":\"저녁\",\"occurredAt\":\"2026-10-"
+				+ String.format("%02d", day) + "T19:00:00+09:00\"}"))
+			.andExpect(status().isCreated());
+	}
+
+	private String budgetWithEveningHistory() throws Exception {
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+		long food = foodCategory(token);
+		long[] amounts = { 20000, 27342, 35000, 48000, 27000 };
+		for (int i = 0; i < amounts.length; i++) {
+			eveningFood(token, food, 20 + i, amounts[i]);
+		}
+		return token;
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void proposesScheduleWithServerEstimateAndSavesNothing() throws Exception {
+		String token = budgetWithEveningHistory();
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+		when(model.generate(anyString(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("금요일 술약속에는 **27,300원** 정도 쓸 것 같아요. 등록할까요?", null));
+
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reply", is("금요일 술약속에는 **27,300원** 정도 쓸 것 같아요. 등록할까요?")))
+			.andExpect(jsonPath("$.action.type", is("SCHEDULE")))
+			.andExpect(jsonPath("$.action.preset").doesNotExist())
+			.andExpect(jsonPath("$.action.schedule.title", is("술약속")))
+			.andExpect(jsonPath("$.action.schedule.date", is("2026-10-30")))
+			.andExpect(jsonPath("$.action.schedule.category", is("식비")))
+			.andExpect(jsonPath("$.action.schedule.amount", is(27300)))
+			.andExpect(jsonPath("$.action.schedule.basis.samples", is(5)))
+			.andExpect(jsonPath("$.action.schedule.basis.scope", is("SLOT")))
+			.andExpect(jsonPath("$.action.schedule.preview.dayBudget").isNumber());
+
+		// 금액은 서버 값이 두 번째 호출(문장 작성)에 그대로 간다
+		ArgumentCaptor<String> narrate = ArgumentCaptor.forClass(String.class);
+		verify(model).generate(narrate.capture(), anyList(), anyList());
+		assertThat(narrate.getValue()).contains("예상 금액: 27,300원").contains("2026-10-30(금)").contains("최근 90일 비슷한 저녁 지출 5번");
+
+		// 제안만 했으므로 예정 지출은 없다
+		mvc.perform(auth(get("/api/v1/scheduled-expenses?from=2026-10-28&to=2026-11-30"), token, null))
+			.andExpect(jsonPath("$.items.length()", is(0)));
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(jsonPath("$.reservedPlanned", is(0)));
+	}
+
+	@Test
+	void registeredScheduleChangesTodayBudgetAsPreviewed() throws Exception {
+		String token = budgetWithEveningHistory();
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("27,300원이에요.", null));
+		String res = mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+		long dayBudget = ((Number) JsonPath.read(res, "$.action.schedule.preview.dayBudget")).longValue();
+		long before = ((Number) JsonPath.read(res, "$.action.schedule.preview.dailyBudgetBefore")).longValue();
+		long after = ((Number) JsonPath.read(res, "$.action.schedule.preview.dailyBudgetAfter")).longValue();
+		long categoryId = ((Number) JsonPath.read(res, "$.action.schedule.categoryId")).longValue();
+
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null)).andExpect(jsonPath("$.dailyBudget", is((int) before)));
+		mvc.perform(auth(post("/api/v1/scheduled-expenses"), token, "{\"amount\":27300,\"categoryId\":" + categoryId
+				+ ",\"title\":\"술약속\",\"date\":\"2026-10-30\"}")).andExpect(status().isCreated());
+
+		// 미리보기와 등록 뒤 서버 값이 같다
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.reservedPlanned", is(27300)))
+			.andExpect(jsonPath("$.dailyBudget", is((int) after)))
+			.andExpect(jsonPath("$.dayPlans[0].date", is("2026-10-30")))
+			.andExpect(jsonPath("$.dayPlans[0].planned", is(27300)))
+			.andExpect(jsonPath("$.dayPlans[0].budget", is((int) dayBudget)));
+		assertThat(after).isLessThan(before);
+	}
+
+	@Test
+	void replacesNarrationThatChangedTheAmount() throws Exception {
+		String token = budgetWithEveningHistory();
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("3만원 정도 쓸 것 같아요.", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reply", org.hamcrest.Matchers.containsString("**27,300원**")))
+			.andExpect(jsonPath("$.action.schedule.amount", is(27300)));
+
+		when(model.generate(anyString(), anyList(), anyList())).thenThrow(new ChatModel.Failure("test"));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reply", org.hamcrest.Matchers.containsString("**27,300원**")));
+	}
+
+	@Test
+	void asksForAmountWhenRecordsAreTooFew() throws Exception {
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+		eveningFood(token, foodCategory(token), 20, 20000);
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("얼마나 쓸 것 같으세요?", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reply", is("얼마나 쓸 것 같으세요?")))
+			.andExpect(jsonPath("$.action.type", is("SCHEDULE")))
+			.andExpect(jsonPath("$.action.schedule.amount", is(nullValue())))
+			.andExpect(jsonPath("$.action.schedule.basis", is(nullValue())))
+			.andExpect(jsonPath("$.action.schedule.preview", is(nullValue())));
+	}
+
+	@Test
+	void usesAmountTheUserSaidAndSkipsEstimate() throws Exception {
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-31", "식비", null, 50000L)));
+		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("**50,000원**으로 할까요?", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(jsonPath("$.action.schedule.amount", is(50000)))
+			.andExpect(jsonPath("$.action.schedule.basis", is(nullValue())))
+			.andExpect(jsonPath("$.action.schedule.preview.dayBudget").isNumber());
+	}
+
+	@Test
+	void doesNotProposeScheduleForPastDateOrUnknownCategoryOrOldApps() throws Exception {
+		String token = budgetWithEveningHistory();
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-27", "식비", "EVENING", null)));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.action", is(nullValue())));
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "없는카테고리", null, null)));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(jsonPath("$.action", is(nullValue())));
+
+		// 앱이 SCHEDULE을 알리지 않으면 일정 도구를 주지 않는다(옛 앱 보호)
+		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("네.", null));
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK)).andExpect(status().isOk());
+		verify(model, org.mockito.Mockito.times(2)).generate(anyString(), anyList(), anyList(), anyList());
+	}
 }
