@@ -61,4 +61,9 @@ test("attendance marks the milestone bonus day", () => {
     ledgerDetail({ reason: "ATTENDANCE", amount: 55 }),
     "누적 출석 보너스",
   );
+  // 2026-11-06부터 3일차 보너스는 +20(합계 25). 예전 55 기록도 그대로 보너스로 보인다
+  assert.equal(
+    ledgerDetail({ reason: "ATTENDANCE", amount: 25 }),
+    "누적 출석 보너스",
+  );
 });
