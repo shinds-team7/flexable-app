@@ -155,6 +155,15 @@ URL: https://project2-flex-sh.vercel.app/privacy — 원문은 [`privacy-policy.
 
 위 표의 '필수/선택'은 Play 양식에서 사람이 정한다(TODO, 광고 SDK는 앱을 쓰는 동안 시작되므로 '선택'으로 신고할 수 있는지 확인). 앱이 광고를 맞춤형에 쓰지 않도록 요청하지만(코드 `requestNonPersonalizedAdsOnly`), Google이 광고 ID를 수집하므로 신고한다. **Play Console '광고 ID' 선언도 '예'**(목적: 광고 또는 마케팅)로 제출한다. 앱 번들에 `com.google.android.gms.permission.AD_ID` 권한이 들어간다(`react-native-google-mobile-ads` 플러그인).
 
+**AI 메이트·음성 입력 항목 — 2026-11-06 추가.** 개인정보처리방침 추가 개정(2)과 맞춘다. **Play Console 양식 반영은 사람이 한다(미반영).**
+
+| 데이터 유형 | 수집 | 공유 | 일시적 처리 | 필수/선택 | 목적 |
+|---|---|---|---|---|---|
+| 앱 활동 → 기타 사용자 제작 콘텐츠 (AI 메이트 메시지) | 예 | 아니요(Google Gemini는 우리를 대신해 처리하는 서비스 제공업체) | 예(서버에 저장하지 않음) | 선택 | 앱 기능 |
+| 금융 정보 → 기타 금융 정보 (AI 메이트에 싣는 예산 요약) | 위 표에 이미 있음 | 아니요(같은 이유) | 예 | 선택 | 앱 기능 |
+
+음성은 앱이 녹음하거나 우리 서버·SDK로 보내지 않고, Android 시스템 음성 인식 서비스(보통 Google 앱)가 처리한다. 그래서 '오디오 → 음성 또는 소리 녹음'을 앱이 수집하는 데이터로 신고하지 않는 쪽을 권한다(TODO: 사람이 Play 안내를 다시 확인해 정함). 앱 번들에는 `android.permission.RECORD_AUDIO`가 들어간다(3.8).
+
 수집하지 않음: 이름, 전화번호, 주소, 정확한 위치, 연락처, 사진, 앱 활동 분석(이용 행태 추적), 결제 정보(카드번호·계좌번호). 광고 ID와 대략적인 위치는 위 광고 항목에서만 Google이 수집한다.
 "공유"에 해당하지 않음(광고 SDK 제외): AWS(서버·DB)와 Expo(EAS Update)는 우리를 대신해 처리하는 서비스 제공업체라 공유로 신고하지 않는다. 웹사이트 연동은 같은 운영자의 웹사이트로, 사용자가 코드를 직접 입력해 요청한 전송이라 공유로 신고하지 않는다. Vercel·Gmail은 앱 밖(웹페이지·이메일)에서만 처리돼 이 양식 대상이 아니지만 개인정보처리방침에는 적었다.
 2026-10-21 개인정보처리방침 개정(10-28 시행)에 맞춰 사용자 ID·기타 사용자 제작 콘텐츠·기타 작업 행과 OAuth 계정 생성을 추가했다. **Play Console 양식 반영은 사람이 한다(미반영).**
@@ -168,6 +177,7 @@ expo-updates를 빼면 위 두 항목(기기 ID, 비정상 종료 로그)과 개
 - 권한(1.4.0 코드 기준):
   - **알림 표시 권한을 요청한다.** 1.3.0부터 `expo-notifications`로 수입일 전날 20시 시드머니 알림을 기기에서 예약하며, 홈 첫 진입 때 권한을 묻는다(`src/service/seedReminder.ts`, 거부해도 홈의 반영 창은 뜬다). 24시간 동안 거래 기록이 없을 때의 기록 알림(`src/service/entryReminder.ts`, #143)도 같은 권한으로 기기에서 예약한다. 둘 다 서버 푸시가 아니라 서버로 보내는 정보가 없다. Android 13 이상에서는 실행 중 허용을 받는 권한이다
   - 광고 SDK가 `com.google.android.gms.permission.AD_ID`(광고 ID) 권한을 추가한다(2026-11-04). Play '광고 ID' 선언을 함께 제출한다
+  - **마이크(`RECORD_AUDIO`) 권한을 요청한다(2026-11-06, 음성 입력).** AI 메이트 마이크 버튼을 처음 누를 때만 묻고, 거부해도 글자로 질문할 수 있다. 예전에는 `expo-image-picker`의 `microphonePermission: false`가 이 권한을 매니페스트에서 지웠는데, 음성 입력을 위해 그 설정을 뺐다(카메라는 계속 막는다)
   - **다른 앱의 알림을 읽는 알림 접근 권한은 요청하지 않는다.** SMS·위치·연락처도 요청하지 않는다(알림·문자 자동 기록 기능 없음)
   - 1.4.0 AAB의 최종 선언 권한 목록은 아직 App Bundle 탐색기로 확인한 기록이 없다. 아래 목록은 1.3.0 이전 기록이다(TODO: 1.4.0 목록으로 갱신)
   - versionCode 6부터 선언 권한: `INTERNET`, `ACCESS_NETWORK_STATE`, `com.android.vending.CHECK_LICENSE`, `com.flexable.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`(AndroidX 내부용). Expo 기본값·라이브러리가 넣던 저장소 읽기·쓰기, `SYSTEM_ALERT_WINDOW`, `USE_BIOMETRIC`·`USE_FINGERPRINT`, `VIBRATE`는 `app.json`의 `android.blockedPermissions`로 뺐다(이슈 #35). versionCode 5에는 남아 있다
