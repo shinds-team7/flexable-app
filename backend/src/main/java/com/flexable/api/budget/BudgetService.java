@@ -33,6 +33,7 @@ import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
 import com.flexable.api.common.TxType;
 import com.flexable.api.config.AppProperties;
+import com.flexable.api.scheduled.ScheduledExpenseRepository;
 import com.flexable.api.transaction.TransactionRepository;
 import com.flexable.api.user.UserRepository;
 
@@ -49,6 +50,7 @@ public class BudgetService {
 	private final SeedMoneyEntryRepository seedEntries;
 	private final SeedMoneyAdditionRepository seedAdditions;
 	private final CoinLedgerRepository coinLedger;
+	private final ScheduledExpenseRepository scheduled;
 	private final Clock clock;
 	private final ZoneId zone;
 
@@ -56,7 +58,7 @@ public class BudgetService {
 			ProtectedItemRepository protectedItems, TransactionRepository transactions, UserRepository users,
 			FixedExpensePoster fixedPoster, DailyBudgetRepository dailyBudgets, SeedMoneyEntryRepository seedEntries,
 			SeedMoneyAdditionRepository seedAdditions, CoinLedgerRepository coinLedger,
-			Clock clock, AppProperties props) {
+			ScheduledExpenseRepository scheduled, Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
 		this.protectedItems = protectedItems;
@@ -67,6 +69,7 @@ public class BudgetService {
 		this.seedEntries = seedEntries;
 		this.seedAdditions = seedAdditions;
 		this.coinLedger = coinLedger;
+		this.scheduled = scheduled;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -121,6 +124,22 @@ public class BudgetService {
 	public TodayResponse today(long userId) {
 		LocalDate today = LocalDate.now(clock.withZone(zone));
 		fixedPoster.postInTransaction(userId, today);
+		TodayResponse r = compute(userId, today, List.of());
+		dailyBudgets.upsert(userId, today, r.dailyBudget());
+		return r.withCharacter(characterScore(userId, today));
+	}
+
+	/**
+	 * 예정 지출 하나를 더 등록했다고 가정한 계산(AI 메이트 제안 미리보기). 저장하지 않고 고정지출 자동 기록도 하지
+	 * 않는다 — 바로 앞의 {@link #today}가 today 날짜로 이미 했다. 모델을 부르는 사이 자정이 지나도 같은 날짜로 계산하도록
+	 * 호출한 쪽의 today를 받는다.
+	 */
+	@Transactional(readOnly = true)
+	public TodayResponse preview(long userId, LocalDate today, LocalDate date, long amount) {
+		return compute(userId, today, List.of(new BudgetCalculator.Plan(date, amount)));
+	}
+
+	private TodayResponse compute(long userId, LocalDate today, List<BudgetCalculator.Plan> extra) {
 		BudgetSettings s = require(userId);
 		List<FixedExpense> fixedList = fixed.findOrdered(userId);
 		long protectedTotal = protectedItems.findOrdered(userId).stream().mapToLong(ProtectedItem::getAmount).sum();
@@ -133,15 +152,17 @@ public class BudgetService {
 			.map(t -> new BudgetCalculator.Tx(t.getType(), t.getAmount(), t.getOccurredAt(), t.isFromFixed()))
 			.toList();
 
+		// 예정 지출은 수입일 전날까지만 쓰므로 넉넉히 한 주기(최대 약 한 달)보다 길게 읽는다.
+		List<BudgetCalculator.Plan> plans = new ArrayList<>(extra);
+		scheduled.findByUserIdAndDateBetweenOrderByDateAscIdAsc(userId, today, today.plusDays(62))
+			.forEach(e -> plans.add(new BudgetCalculator.Plan(e.getDate(), e.getAmount())));
 		BudgetCalculator.Input input = new BudgetCalculator.Input(s.getBalance(), s.getBalanceAt(), s.getPayday(),
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
 				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
 				!txs.isEmpty() || transactions.existsByUserId(userId),
 				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()) + seedAdditions.sumCreatedAfter(userId, s.getBalanceAt()),
-				s.getDays());
-		TodayResponse r = BudgetCalculator.compute(input, today, zone);
-		dailyBudgets.upsert(userId, today, r.dailyBudget());
-		return r.withCharacter(characterScore(userId, today));
+				s.getDays(), plans);
+		return BudgetCalculator.compute(input, today, zone);
 	}
 
 	/** 저장된 요일별 비중과 고를 수 있는 프리셋(§5). 내 기록 기준은 부를 때마다 어제까지 기록으로 다시 낸다. */

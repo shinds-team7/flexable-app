@@ -68,6 +68,8 @@ export async function session(page: Page, today = date) {
         characterDelta: 20,
         dayPreset: "EVEN",
         dayBudgets: [10000, 10000, 10000, 10000, 10000, 10000, 10000],
+        reservedPlanned: 0,
+        dayPlans: [],
       });
     if (path === "/budget/seed-money")
       return json({

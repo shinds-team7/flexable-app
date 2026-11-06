@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 import com.flexable.api.budget.BudgetDtos.TodayResponse;
 import com.flexable.api.common.TxType;
@@ -31,10 +32,24 @@ public final class BudgetCalculator {
 		}
 	}
 
-	/** savedSinceBalance: 잔액 기준 시각 뒤에 시드머니로 옮긴 돈(통장에서 빠진 돈). days: 요일별 비중(§5). */
+	/** 예정 지출(§6) 한 건. 날짜가 같은 것은 계산에서 합친다. */
+	public record Plan(LocalDate date, long amount) {
+	}
+
+	/**
+	 * savedSinceBalance: 잔액 기준 시각 뒤에 시드머니로 옮긴 돈(통장에서 빠진 돈). days: 요일별 비중(§5). plans: 예정
+	 * 지출(§2 "예정 지출 반영", 오늘 이상·수입일 전날 이하만 쓴다).
+	 */
 	public record Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
 			List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions,
-			long savedSinceBalance, DayWeights.Setting days) {
+			long savedSinceBalance, DayWeights.Setting days, List<Plan> plans) {
+
+		public Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
+				List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions,
+				long savedSinceBalance, DayWeights.Setting days) {
+			this(balance, balanceAt, payday, cardUnpaid, fixedDays, fixedAmounts, protectedTotal, transactions,
+					hasTransactions, savedSinceBalance, days, List.of());
+		}
 
 		public Input(long balance, Instant balanceAt, int payday, long cardUnpaid, List<Integer> fixedDays,
 				List<Long> fixedAmounts, long protectedTotal, List<Tx> transactions, boolean hasTransactions,
@@ -82,26 +97,44 @@ public final class BudgetCalculator {
 					* occurrences(in.fixedDays().get(i), today.plusDays(1), nextPayday);
 		}
 
-		long remaining = estimated - reservedFixed - in.cardUnpaid() - in.protectedTotal();
+		// 예정 지출: 오늘 ~ 수입일 전날 날짜만. 내일부터는 남은 생활비에서 먼저 빼고, 오늘 것은 오늘 몫으로 따로 뗀다.
+		TreeMap<LocalDate, Long> planned = new TreeMap<>();
+		for (Plan p : in.plans()) {
+			if (!p.date().isBefore(today) && p.date().isBefore(nextPayday)) {
+				planned.merge(p.date(), p.amount(), Long::sum);
+			}
+		}
+		long todayPlanned = planned.getOrDefault(today, 0L);
+		long reservedPlanned = planned.tailMap(today, false).values().stream().mapToLong(Long::longValue).sum();
+
+		long remaining = estimated - reservedFixed - reservedPlanned - in.cardUnpaid() - in.protectedTotal();
 		// 남은 생활비(오늘 쓴 돈 포함)를 남은 날의 요일 비중대로 나눈다. 비중이 모두 같으면 ÷ 남은 날과 같다.
-		long[] dayBudgets = DayWeights.split(Math.max(0, remaining + todaySpent), in.days().weights(), today,
-				nextPayday);
-		long dailyBudget = dayBudgets[DayWeights.index(today)];
+		long[] dayBudgets = DayWeights.split(Math.max(0, remaining + todaySpent - todayPlanned), in.days().weights(),
+				today, nextPayday);
+		long dailyBudget = dayBudgets[DayWeights.index(today)] + todayPlanned;
 		// 오늘 예산을 넘으면 넘은 만큼 음수로 둔다(홈에서 마이너스로 보여 준다).
 		long todayAvailable = dailyBudget - todaySpent;
-		long shortage = remaining < 0 ? -remaining : Math.max(0, todaySpent - dailyBudget);
+		// 오늘 예정이 오늘 쓸 수 있는 생활비(남은 생활비 + 오늘 쓴 돈)보다 크면 그 차이도 모자란 돈이다.
+		long shortage = remaining < 0 ? -remaining
+				: Math.max(0, Math.max(todaySpent - dailyBudget, todayPlanned - todaySpent - remaining));
 		LocalDate weekLast = weekEnd.isBefore(nextPayday) ? weekEnd : nextPayday.minusDays(1);
 		int weekDaysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, weekLast) + 1);
 		long weekBudget = 0;
 		for (LocalDate d = today; !d.isAfter(weekLast); d = d.plusDays(1)) {
-			weekBudget += dayBudgets[DayWeights.index(d)];
+			weekBudget += dayBudgets[DayWeights.index(d)] + planned.getOrDefault(d, 0L);
 		}
 		long weekAvailable = Math.max(0, weekBudget - todaySpent);
 
 		return new TodayResponse(today, nextPayday, daysLeft, estimated, reservedFixed, in.cardUnpaid(),
 				in.protectedTotal(), remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent,
 				weekDaysLeft, weekAvailable, cycleStart, in.hasTransactions(), in.days().preset(),
-				Arrays.stream(dayBudgets).boxed().toList(), 0, 0);
+				Arrays.stream(dayBudgets).boxed().toList(), reservedPlanned,
+				planned.entrySet()
+					.stream()
+					.map(e -> new BudgetDtos.DayPlan(e.getKey(), e.getValue(),
+							dayBudgets[DayWeights.index(e.getKey())] + e.getValue()))
+					.toList(),
+				0, 0);
 	}
 
 	/** 그 달의 수입일(31 등 없는 날은 말일로). */

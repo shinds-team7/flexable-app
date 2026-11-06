@@ -109,16 +109,21 @@ public final class BudgetDtos {
 			List<DayPresetItem> presets, DayRecordInfo record) {
 	}
 
+	/** 예정 지출이 있는 날짜의 하루 예산(몫 + 예정 금액). */
+	public record DayPlan(LocalDate date, long planned, long budget) {
+	}
+
 	public record TodayResponse(LocalDate date, LocalDate nextPayday, int daysLeft, long estimatedBalance,
 			long reservedFixed, long cardUnpaid, long protectedTotal, long remaining, long todaySpent,
 			long dailyBudget, long todayAvailable, long shortage, long weekSpent, int weekDaysLeft, long weekAvailable,
 			LocalDate cycleStart, boolean hasTransactions, DayWeights.Preset dayPreset, List<Long> dayBudgets,
-			int characterPoints, int characterDelta) {
+			long reservedPlanned, List<DayPlan> dayPlans, int characterPoints, int characterDelta) {
 
 		TodayResponse withCharacter(CharacterScore.Result c) {
 			return new TodayResponse(date, nextPayday, daysLeft, estimatedBalance, reservedFixed, cardUnpaid,
 					protectedTotal, remaining, todaySpent, dailyBudget, todayAvailable, shortage, weekSpent, weekDaysLeft,
-					weekAvailable, cycleStart, hasTransactions, dayPreset, dayBudgets, c.points(), c.delta());
+					weekAvailable, cycleStart, hasTransactions, dayPreset, dayBudgets, reservedPlanned, dayPlans, c.points(),
+					c.delta());
 		}
 	}
 }

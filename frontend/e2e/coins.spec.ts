@@ -476,9 +476,9 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
   await onboard(page);
   await closeReward(page, "업데이트 기념 200코인 선물", 200, false);
 
-  // No button press: after midnight the first visit opens the modal and attends. Day 3 shows +50, day 7 the costume.
+  // No button press: after midnight the first visit opens the modal and attends. Day 3 shows the +20 bonus, day 7 the costume.
   await expect(
-    page.getByLabel("3일차, 50코인 보상", { exact: true }),
+    page.getByLabel("3일차, 20코인 보상", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByLabel("7일차, 코스튬 보상", { exact: true }),
