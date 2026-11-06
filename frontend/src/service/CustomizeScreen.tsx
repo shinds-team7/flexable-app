@@ -191,6 +191,7 @@ export function CustomizeScreen() {
               onSelect={setSelected}
               empty={Math.max(0, LEVEL_SLOTS - levels.length)}
               emptyFrom={levels.length + 1}
+              captions={false}
             />
             <T size={14} weight="700" color={colors.textSub}>
               코인 코스튬
@@ -265,13 +266,17 @@ function Action({
   );
 }
 
-/** 가지지 않은 코스튬(잠긴 레벨·안 산 상품)은 그림을 어둡게 덮고 자물쇠를 띄운다. empty 는 뒤에 붙일 준비 중 칸 수 */
+/**
+ * 가지지 않은 코스튬(잠긴 레벨·안 산 상품)은 그림을 어둡게 덮고 자물쇠를 띄운다. empty 는 뒤에 붙일 준비 중 칸 수.
+ * captions=false 면 칸 아래 글자(단계 아이콘·이름, 보유 중 등)를 비운다(레벨 코스튬). 이름은 화면 읽기 라벨로만 남는다.
+ */
 function Grid({
   items,
   selected,
   onSelect,
   empty = 0,
   emptyFrom = 1,
+  captions = true,
 }: {
   items: Outfit[];
   selected: string;
@@ -279,6 +284,7 @@ function Grid({
   empty?: number;
   /** 첫 준비 중 칸의 레벨(이름을 붙인다) */
   emptyFrom?: number;
+  captions?: boolean;
 }) {
   return (
     <View style={grid.wrap}>
@@ -308,9 +314,11 @@ function Grid({
                 </View>
               )}
             </View>
-            <T size={12} color={colors.textMuted}>
-              {caption}
-            </T>
+            {captions && (
+              <T size={12} color={colors.textMuted}>
+                {caption}
+              </T>
+            )}
           </Pressable>
         );
       })}
@@ -332,9 +340,11 @@ function Grid({
               <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
             </View>
           </View>
-          <T size={12} color={colors.textMuted}>
-            {levelLabel(emptyFrom + i)}
-          </T>
+          {captions && (
+            <T size={12} color={colors.textMuted}>
+              {levelLabel(emptyFrom + i)}
+            </T>
+          )}
         </View>
       ))}
     </View>
