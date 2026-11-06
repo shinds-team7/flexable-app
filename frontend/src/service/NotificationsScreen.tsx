@@ -54,7 +54,7 @@ export function NotificationsScreen() {
                 </T>
               )}
               {[...groups].map(([date, list], i) => (
-                <View key={date} style={i > 0 && { marginTop: 6 }}>
+                <View key={date}>
                   <View style={styles.dateRow}>
                     <T size={13} weight="700" color={colors.brand}>
                       {date === seoulDate() ? "오늘" : date}
@@ -163,7 +163,7 @@ function Row({
 }
 
 const styles = StyleSheet.create({
-  // 날짜 줄은 카드 양 끝까지 닿는 옅은 블루 띠로 날짜를 구분한다(구분선 대신).
+  // 날짜 줄은 카드 양 끝까지 닿는 하늘색 띠로 날짜를 구분한다(구분선 대신). 안 읽은 알림 바탕(brandSoft)보다 한 단계 진하다.
   dateRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -20,
     paddingHorizontal: 20,
     paddingVertical: 8,
-    backgroundColor: colors.brandSoft,
+    backgroundColor: "#D6E4FF",
   },
   readAll: { textDecorationLine: "underline" },
   // The unread background and the swipe area span the card edge to edge (card padding 20) without moving the text.

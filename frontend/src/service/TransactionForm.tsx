@@ -127,7 +127,7 @@ function Form({
       categoryId,
       // The server needs a title; an empty one falls back to the category name.
       title:
-        title.trim() ||
+        (type === "EXPENSE" ? title.trim() : (existing?.title ?? "")) ||
         list.find((c) => c.id === categoryId)?.name ||
         (type === "INCOME" ? "수입" : "지출"),
       memo,
@@ -251,15 +251,18 @@ function Form({
             />
           }
         />
-        <Field
-          editable={!busy && !uncertain}
-          label={expense ? "어디에 썼나요?" : "어디서 받았나요?"}
-          placeholder={expense ? "예: 점심 김밥" : "예: 10월 급여"}
-          help="비워 두면 카테고리 이름으로 기록해요"
-          value={title}
-          onChangeText={setTitle}
-          maxLength={40}
-        />
+        {/* 수입은 제목 칸 없이 카테고리 이름으로 기록한다(고칠 때는 기존 제목 유지) */}
+        {expense && (
+          <Field
+            editable={!busy && !uncertain}
+            label="어디에 썼나요?"
+            placeholder="예: 점심 김밥"
+            help="비워 두면 카테고리 이름으로 기록해요"
+            value={title}
+            onChangeText={setTitle}
+            maxLength={40}
+          />
+        )}
         <DateField label="날짜" value={date} onChange={setDate} />
       </View>
       {uncertain && (
