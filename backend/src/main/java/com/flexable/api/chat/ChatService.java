@@ -167,8 +167,8 @@ public class ChatService {
 		if (date == null || !date.isAfter(today) || date.isAfter(today.plusDays(MAX_SCHEDULE_DAYS)) || title.isEmpty()
 				|| category == null) {
 			log.warn("AI 메이트 일정 제안이 맞지 않아 되물음");
-			return new ChatResponse(r.text().isEmpty()
-					? "일정 날짜를 정확히 모르겠어요. 내일부터 석 달 안의 날짜나 요일로 다시 알려 주세요." : r.text(), null);
+			// 저장 제안이 없으므로 모델 문장("등록했어요" 등) 대신 되묻는 문장만 쓴다.
+			return new ChatResponse("일정 날짜를 정확히 모르겠어요. 내일부터 석 달 안의 날짜나 요일로 다시 알려 주세요.", null);
 		}
 
 		ScheduleEstimator.Slot slot = slot(call.slot());
@@ -182,7 +182,7 @@ public class ChatService {
 		Preview preview = null;
 		boolean afterPayday = false;
 		if (amount != null) {
-			TodayResponse after = budget.preview(userId, date, amount);
+			TodayResponse after = budget.preview(userId, today, date, amount);
 			final LocalDate day = date;
 			Long dayBudget = after.dayPlans()
 				.stream()

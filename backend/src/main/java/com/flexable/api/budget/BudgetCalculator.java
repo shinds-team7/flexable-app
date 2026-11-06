@@ -114,7 +114,9 @@ public final class BudgetCalculator {
 		long dailyBudget = dayBudgets[DayWeights.index(today)] + todayPlanned;
 		// 오늘 예산을 넘으면 넘은 만큼 음수로 둔다(홈에서 마이너스로 보여 준다).
 		long todayAvailable = dailyBudget - todaySpent;
-		long shortage = remaining < 0 ? -remaining : Math.max(0, todaySpent - dailyBudget);
+		// 오늘 예정이 오늘 쓸 수 있는 생활비(남은 생활비 + 오늘 쓴 돈)보다 크면 그 차이도 모자란 돈이다.
+		long shortage = remaining < 0 ? -remaining
+				: Math.max(0, Math.max(todaySpent - dailyBudget, todayPlanned - todaySpent - remaining));
 		LocalDate weekLast = weekEnd.isBefore(nextPayday) ? weekEnd : nextPayday.minusDays(1);
 		int weekDaysLeft = (int) Math.max(1, ChronoUnit.DAYS.between(today, weekLast) + 1);
 		long weekBudget = 0;

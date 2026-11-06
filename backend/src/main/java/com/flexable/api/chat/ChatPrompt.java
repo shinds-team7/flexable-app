@@ -163,6 +163,15 @@ final class ChatPrompt {
 				sb.append(')');
 			}
 			sb.append('\n');
+			if (t.dayPlans() != null && !t.dayPlans().isEmpty()) {
+				// 예정 지출이 있는 날은 요일 몫에 예정 금액을 더한 값이 그날 예산이다(§2 "예정 지출 반영").
+				sb.append("- 예정 지출이 있는 날의 하루 예산(이 날짜는 요일별 하루 예산보다 이 값을 쓴다): ")
+					.append(t.dayPlans()
+						.stream()
+						.map(d -> day(d.date()) + " " + won(d.budget()) + "(예정 " + won(d.planned()) + " 포함)")
+						.collect(Collectors.joining(", ")))
+					.append('\n');
+			}
 			if (c.proposable().isEmpty()) {
 				sb.append("- 지금 제안할 수 있는 다른 배분이 없다\n");
 			}

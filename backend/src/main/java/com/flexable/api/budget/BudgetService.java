@@ -131,11 +131,11 @@ public class BudgetService {
 
 	/**
 	 * 예정 지출 하나를 더 등록했다고 가정한 계산(AI 메이트 제안 미리보기). 저장하지 않고 고정지출 자동 기록도 하지
-	 * 않는다 — 바로 앞의 {@link #today}가 이미 했다.
+	 * 않는다 — 바로 앞의 {@link #today}가 today 날짜로 이미 했다. 모델을 부르는 사이 자정이 지나도 같은 날짜로 계산하도록
+	 * 호출한 쪽의 today를 받는다.
 	 */
 	@Transactional(readOnly = true)
-	public TodayResponse preview(long userId, LocalDate date, long amount) {
-		LocalDate today = LocalDate.now(clock.withZone(zone));
+	public TodayResponse preview(long userId, LocalDate today, LocalDate date, long amount) {
 		return compute(userId, today, List.of(new BudgetCalculator.Plan(date, amount)));
 	}
 
