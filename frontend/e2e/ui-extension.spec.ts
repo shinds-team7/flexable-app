@@ -41,6 +41,13 @@ test("future expense creation, editing, reload and deletion use the scheduled AP
   });
   await page.goto("/transactions");
   await page.getByRole("button", { name: "10월 30일", exact: true }).click();
+  // 카테고리는 거래 등록과 같은 아이콘 칸(첫 칸 기본 선택)이고, 여기서 카테고리를 추가하지 않는다
+  await expect(
+    page.getByRole("radio", { name: "식비", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    page.getByRole("button", { name: /카테고리 추가|^\+ 추가$/ }),
+  ).toHaveCount(0);
   await page.getByLabel("예정 금액 (원)", { exact: true }).fill("25000");
   await page.getByLabel("예정 지출 내용", { exact: true }).fill("생일 선물");
   await page

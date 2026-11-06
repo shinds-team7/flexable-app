@@ -15,12 +15,14 @@ import com.flexable.api.budget.BudgetDtos.SeedMoneyEntryItem;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyPending;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyResponse;
+import com.flexable.api.budget.BudgetDtos.TodayResponse;
 import com.flexable.api.budget.BudgetDtos.WebSeedMoney;
 import com.flexable.api.budget.BudgetDtos.WebSeedMoneyEntry;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
 import com.flexable.api.config.AppProperties;
+import com.flexable.api.scheduled.ScheduledExpenseRepository;
 import com.flexable.api.transaction.TransactionRepository;
 
 /**
@@ -41,13 +43,15 @@ public class SeedMoneyService {
 	private final SeedMoneyEntryRepository entries;
 	private final SeedMoneyAdditionRepository additions;
 	private final FixedExpensePoster fixedPoster;
+	private final ScheduledExpenseRepository scheduled;
 	private final Clock clock;
 	private final ZoneId zone;
 
 	public SeedMoneyService(SettingsRepository settings, FixedExpenseRepository fixed,
 			ProtectedItemRepository protectedItems, TransactionRepository transactions,
 			DailyBudgetRepository dailyBudgets, SeedMoneyEntryRepository entries,
-			SeedMoneyAdditionRepository additions, FixedExpensePoster fixedPoster, Clock clock, AppProperties props) {
+			SeedMoneyAdditionRepository additions, FixedExpensePoster fixedPoster, ScheduledExpenseRepository scheduled,
+			Clock clock, AppProperties props) {
 		this.settings = settings;
 		this.fixed = fixed;
 		this.protectedItems = protectedItems;
@@ -56,6 +60,7 @@ public class SeedMoneyService {
 		this.entries = entries;
 		this.additions = additions;
 		this.fixedPoster = fixedPoster;
+		this.scheduled = scheduled;
 		this.clock = clock;
 		this.zone = props.zoneId();
 	}
@@ -184,9 +189,24 @@ public class SeedMoneyService {
 		return entries.sumCreatedAfter(userId, since) + additions.sumCreatedAfter(userId, since);
 	}
 
-	/** 지금 시드머니로 보낼 수 있는 돈 = 오늘까지 기록 기준 남은 생활비(0 미만이면 0). 매달 저축할 돈은 따로 두고 계산한다. */
+	/**
+	 * 지금 시드머니로 보낼 수 있는 돈 = 오늘까지 기록 기준 남은 생활비 − 오늘 예정 지출(0 미만이면 0). 매달 저축할 돈은 따로
+	 * 두고 계산한다. 예정 지출(§2 "예정 지출 반영")에 묶인 돈은 보낼 수 없다: 내일부터의 예정은 남은 생활비에서 이미 빠져
+	 * 있고, 오늘 예정은 오늘 몫으로 떼어 둔 돈이라 여기서 뺀다.
+	 */
 	private long movable(long userId, BudgetSettings s, LocalDate today) {
-		return Math.max(0, remaining(userId, s, today, protectedTotal(userId)));
+		List<BudgetCalculator.Plan> plans = scheduled
+			.findByUserIdAndDateBetweenOrderByDateAscIdAsc(userId, today, today.plusDays(62))
+			.stream()
+			.map(e -> new BudgetCalculator.Plan(e.getDate(), e.getAmount()))
+			.toList();
+		TodayResponse r = compute(userId, s, today, protectedTotal(userId), plans);
+		long todayPlanned = r.dayPlans()
+			.stream()
+			.filter(d -> d.date().equals(today))
+			.mapToLong(BudgetDtos.DayPlan::planned)
+			.sum();
+		return Math.max(0, r.remaining() - todayPlanned);
 	}
 
 	/**
@@ -213,8 +233,13 @@ public class SeedMoneyService {
 		return Math.max(0, remaining(userId, s, end, goal) + goal);
 	}
 
-	/** end 날짜 끝까지의 기록으로 BudgetCalculator가 계산한 남은 생활비. */
+	/** end 날짜 끝까지의 기록으로 BudgetCalculator가 계산한 남은 생활비(예정 지출 없이, 수입일 반영용). */
 	private long remaining(long userId, BudgetSettings s, LocalDate end, long goal) {
+		return compute(userId, s, end, goal, List.of()).remaining();
+	}
+
+	private TodayResponse compute(long userId, BudgetSettings s, LocalDate end, long goal,
+			List<BudgetCalculator.Plan> plans) {
 		Instant endExclusive = end.plusDays(1).atStartOfDay(zone).toInstant();
 		List<BudgetCalculator.Tx> txs = transactions.findSince(userId, s.getBalanceAt())
 			.stream()
@@ -225,8 +250,8 @@ public class SeedMoneyService {
 		BudgetCalculator.Input input = new BudgetCalculator.Input(s.getBalance(), s.getBalanceAt(), s.getPayday(),
 				s.getCardUnpaid(), fixedList.stream().map(FixedExpense::getDay).toList(),
 				fixedList.stream().map(FixedExpense::getAmount).toList(), goal, txs, !txs.isEmpty(),
-				movedAfter(userId, s.getBalanceAt()));
-		return BudgetCalculator.compute(input, end, zone).remaining();
+				movedAfter(userId, s.getBalanceAt()), s.getDays(), plans);
+		return BudgetCalculator.compute(input, end, zone);
 	}
 
 	private long protectedTotal(long userId) {

@@ -268,6 +268,7 @@ export function HomeScreen() {
             <DayBudgets
               date={s.date}
               dayBudgets={s.dayBudgets}
+              dayPlans={s.dayPlans}
               preset={s.dayPreset}
               onEdit={() => router.push("/budget/day-weights")}
             />
