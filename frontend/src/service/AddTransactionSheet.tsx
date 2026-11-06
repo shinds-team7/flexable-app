@@ -22,7 +22,6 @@ export function AddTransactionSheet({
         visible={visible}
         onClose={onClose}
         title="거래 추가"
-        subtitle="이미지는 기기에서만 읽고 서버에 올리지 않아요"
       >
         <View style={{ gap: 10 }}>
           <Button
