@@ -185,7 +185,7 @@ function CalendarDialog({ value, min, max, onCancel, onConfirm }: Props) {
             <View style={styles.actions}>
               <Button
                 label="취소"
-                variant="soft"
+                variant="neutral"
                 onPress={onCancel}
                 style={{ flex: 1 }}
               />
@@ -245,3 +245,117 @@ const styles = StyleSheet.create({
   on: { backgroundColor: colors.brand },
   actions: { flexDirection: "row", gap: 10, paddingTop: 10 },
 });
+
+/**
+ * 매달 며칠(1~31)을 고르는 달력 창. 수입일·고정지출 날짜처럼 "매달 N일"에 쓴다. 31은 말일이다.
+ * 칸 이름은 "N일", 확인은 "N일로 정하기".
+ */
+export function DayOfMonthPicker({
+  visible,
+  ...props
+}: {
+  visible: boolean;
+  title: string;
+  value: number;
+  onCancel: () => void;
+  onConfirm: (day: number) => void;
+}) {
+  return visible ? <DayOfMonthDialog {...props} /> : null;
+}
+
+function DayOfMonthDialog({
+  title,
+  value,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  value: number;
+  onCancel: () => void;
+  onConfirm: (day: number) => void;
+}) {
+  const [day, setDay] = useState(value >= 1 && value <= 31 ? value : 1);
+  const days = Array.from({ length: 35 }, (_, i) => (i < 31 ? i + 1 : null));
+  const weeks = Array.from({ length: 5 }, (_, i) =>
+    days.slice(i * 7, i * 7 + 7),
+  );
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onCancel}
+    >
+      <Pressable
+        style={styles.backdrop}
+        onPress={onCancel}
+        accessibilityLabel={`${title} 선택 닫기`}
+      >
+        <Pressable style={styles.dialog} onPress={() => {}} accessible={false}>
+          <View style={styles.head}>
+            <T size={14} weight="700" color={colors.onBrandSub}>
+              {title}
+            </T>
+            <T
+              size={26}
+              weight="800"
+              color={colors.onBrand}
+              num
+              accessibilityRole="header"
+            >
+              {day === 31 ? "매달 말일" : `매달 ${day}일`}
+            </T>
+          </View>
+          <View style={styles.body}>
+            {weeks.map((week, w) => (
+              <View key={w} style={styles.row}>
+                {week.map((d, i) => {
+                  if (d === null) return <View key={i} style={styles.cell} />;
+                  const on = d === day;
+                  return (
+                    <Pressable
+                      key={i}
+                      style={styles.cell}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${d}일`}
+                      accessibilityState={{ selected: on }}
+                      onPress={() => setDay(d)}
+                    >
+                      <View style={[styles.day, on && styles.on]}>
+                        <T
+                          size={15}
+                          weight={on ? "800" : "500"}
+                          num
+                          color={on ? colors.onBrand : colors.text}
+                        >
+                          {d}
+                        </T>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+            <T size={12} color={colors.textMuted} style={{ paddingTop: 4 }}>
+              31일은 매달 말일이에요. 없는 날짜는 그달 말일로 계산해요
+            </T>
+            <View style={styles.actions}>
+              <Button
+                label="취소"
+                variant="neutral"
+                onPress={onCancel}
+                style={{ flex: 1 }}
+              />
+              <Button
+                label={`${day}일로 정하기`}
+                onPress={() => onConfirm(day)}
+                style={{ flex: 2 }}
+              />
+            </View>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
