@@ -80,7 +80,9 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   ).toHaveValue("1,000,000");
   expect(budgetWrites).toBe(0);
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByLabel("매달 수입일 (1~31)", { exact: true }).fill("25");
+  await page.getByRole("button", { name: /^수입일 선택, / }).click();
+  await page.getByRole("button", { name: "25일", exact: true }).click();
+  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -345,7 +347,9 @@ test("changing input after a failed post-save step re-saves before finishing", a
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByLabel("매달 수입일 (1~31)", { exact: true }).fill("25");
+  await page.getByRole("button", { name: /^수입일 선택, / }).click();
+  await page.getByRole("button", { name: "25일", exact: true }).click();
+  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -411,20 +415,111 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   await page
     .getByRole("button", { name: "예산 설정 바꾸기", exact: true })
     .click();
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
-  // The first onboarding screen stays mounted (hidden) in the web stack; roles skip hidden nodes.
+  await expect(page).toHaveURL(/\/budget\/settings$/);
   const balance = page.getByRole("textbox", {
     name: "생활비 잔액 (원)",
     exact: true,
   });
   await expect(balance).toHaveValue("1,000,000");
   await balance.fill("900000");
-  // 잔액 다음 단계: 수입 → 고정지출 → 카드 → 모아둔 돈 → 매달 저축할 돈
-  for (let i = 0; i < 5; i++)
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await expect(page).toHaveURL(/\/my$/);
+  expect((await snapshot(page, "/budget/today")).estimatedBalance).toBe(900000);
+});
+
+test("budget settings edit every saved value on one screen, with the payday wheel and quick fixed-expense names", async ({
+  page,
+}) => {
+  await signup(page, email());
+  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  // 처음 수입일 단계: 왼쪽 [매달 말일], 오른쪽 날짜 버튼은 기본 1일
+  await expect(
+    page.getByRole("button", { name: "수입일 선택, 1일", exact: true }),
+  ).toBeVisible();
+  for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding\/done$/);
-  expect((await snapshot(page, "/budget/today")).estimatedBalance).toBe(900000);
+  await page.getByRole("button", { name: "홈으로", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await closeGift(page);
+
+  await page.getByRole("tab", { name: "마이", exact: true }).click();
+  await page
+    .getByRole("button", { name: "예산 설정 바꾸기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/budget\/settings$/);
+  // 저장된 값이 모두 한 화면에 순서대로 보인다
+  for (const name of [
+    "생활비 잔액",
+    "수입",
+    "고정지출",
+    "카드 미결제액",
+    "모아둔 돈",
+    "매달 저축할 돈",
+  ])
+    await expect(
+      page.getByRole("heading", { name, exact: true }),
+    ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "수입일 선택, 1일", exact: true }),
+  ).toBeVisible();
+
+  // 휠에서 날짜를 고르고, 다시 [매달 말일]로 바꾼다
+  await page.getByRole("button", { name: "수입일 선택, 1일" }).click();
+  await page.getByRole("button", { name: "10일", exact: true }).click();
+  await page.getByRole("button", { name: "10일로 정하기", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "수입일 선택, 10일", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "매달 말일", exact: true }).click();
+  await expect(page.getByText("매달 말일에 맞춰 계산해요")).toBeVisible();
+
+  // 빠른 추가: 이름이 채워진 항목이 열린다. [취소]는 추가 중인 항목을 없앤다
+  await page.getByRole("button", { name: "관리비 추가", exact: true }).click();
+  await expect(page.getByLabel("이름", { exact: true })).toHaveValue("관리비");
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(page.getByLabel("이름", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "월세 추가", exact: true }).click();
+  await page.getByLabel("금액 (원)", { exact: true }).fill("700000");
+  await page
+    .getByLabel("매달 나가는 날 (31 = 말일)", { exact: true })
+    .fill("5");
+  await page.getByRole("button", { name: "확인", exact: true }).click();
+  await expect(
+    page.getByText("월세 · 700,000원 · 매달 5일", { exact: true }),
+  ).toBeVisible();
+  // 웹 스택에 가려진 온보딩 화면이 남아 있어 role로 보이는 칸만 찾는다
+  await page
+    .getByRole("textbox", { name: "카드 미결제액 (원)", exact: true })
+    .fill("50000");
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await expect(page).toHaveURL(/\/my$/);
+
+  const settings = await snapshot(page, "/budget/settings");
+  expect(settings.payday).toBe(31);
+  expect(settings.cardUnpaid).toBe(50000);
+  expect(
+    settings.fixedExpenses.map((x: { name: string; amount: number; day: number }) => [
+      x.name,
+      x.amount,
+      x.day,
+    ]),
+  ).toEqual([["월세", 700000, 5]]);
+  // 다시 들어오면 고친 값이 그대로다
+  await page
+    .getByRole("button", { name: "예산 설정 바꾸기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "수입일 선택, 31일", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("월세 · 700,000원 · 매달 5일", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "카드 미결제액 (원)", exact: true }),
+  ).toHaveValue("50,000");
 });
 
 test("onboarding saves the money already set aside, and the payday prompt moves savings into seed money (pending answer mocked)", async ({

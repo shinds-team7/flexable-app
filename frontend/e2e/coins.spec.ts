@@ -30,7 +30,9 @@ async function onboard(page: Page) {
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByLabel("매달 수입일 (1~31)", { exact: true }).fill("25");
+  await page.getByRole("button", { name: /^수입일 선택, / }).click();
+  await page.getByRole("button", { name: "25일", exact: true }).click();
+  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
