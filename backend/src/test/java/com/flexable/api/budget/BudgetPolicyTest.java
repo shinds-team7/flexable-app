@@ -60,7 +60,12 @@ class BudgetPolicyTest {
 					in.has("dayWeights")
 							? new DayWeights.Setting(DayWeights.Preset.CUSTOM,
 									in.get("dayWeights").valueStream().map(JsonNode::asInt).toList())
-							: DayWeights.Setting.DEFAULT);
+							: DayWeights.Setting.DEFAULT,
+					in.has("plans")
+							? in.get("plans").valueStream()
+								.map(pl -> new BudgetCalculator.Plan(date(pl.get("date")), pl.get("amount").asLong()))
+								.toList()
+							: List.of());
 			TodayResponse r = BudgetCalculator.compute(input, date(in.get("today")), zone);
 			JsonNode ex = c.get("expected");
 			assertThat(r.nextPayday()).isEqualTo(date(ex.get("nextPayday")));
@@ -76,6 +81,16 @@ class BudgetPolicyTest {
 			assertThat(r.weekSpent()).isEqualTo(ex.get("weekSpent").asLong());
 			assertThat(r.weekDaysLeft()).isEqualTo(ex.get("weekDaysLeft").asInt());
 			assertThat(r.weekAvailable()).isEqualTo(ex.get("weekAvailable").asLong());
+			if (ex.has("reservedPlanned")) {
+				assertThat(r.reservedPlanned()).isEqualTo(ex.get("reservedPlanned").asLong());
+			}
+			if (ex.has("dayPlans")) {
+				assertThat(r.dayPlans()).isEqualTo(ex.get("dayPlans")
+					.valueStream()
+					.map(d -> new BudgetDtos.DayPlan(date(d.get("date")), d.get("planned").asLong(),
+							d.get("budget").asLong()))
+					.toList());
+			}
 			if (ex.has("dayBudgets")) {
 				assertThat(r.dayBudgets()).isEqualTo(ex.get("dayBudgets").valueStream().map(JsonNode::asLong).toList());
 			}

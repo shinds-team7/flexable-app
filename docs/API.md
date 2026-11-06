@@ -224,6 +224,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 계산은 서버가 최종값이다(원 단위 정수, 나눗셈은 내림). 각 값의 규칙과 입력→기대값 예시는 [policies.md](policies.md)가 정본이다.
 
 - `nextPayday`·`cycleStart`·`daysLeft`: [§1 수입일·정산 주기](policies.md#1-수입일정산-주기budgetbudgetcalculator)
+- `reservedPlanned`·`dayPlans`: 예정 지출 반영([policies §2 "예정 지출 반영"](policies.md#예정-지출-반영2026-11-05-결정)). `dayPlans`는 수입일 전날까지 예정이 있는 날짜의 `{date, planned, budget}`이고 없으면 `[]`, 그날 하루 예산은 `budget`을 쓴다(`dayBudgets`는 요일별 기본 몫만).
 - `estimatedBalance`·`reservedFixed`·`remaining`·`todaySpent`·`dailyBudget`·`todayAvailable`·`shortage`·`weekSpent`·`weekDaysLeft`·`weekAvailable`: [§2 오늘 쓸 수 있는 돈](policies.md#2-오늘-쓸-수-있는-돈get-budgettoday-budgetbudgetcalculator). `todayAvailable`은 오늘 예산을 넘으면 음수다(1.3.0 앱 홈은 마이너스로, 그 전 앱은 0원으로 보여 준다)
 - `dayPreset`·`dayBudgets`(월~일 요일별 하루 예산, `dailyBudget` = 오늘 요일 값): [§5 요일별 비중](policies.md#5-요일별-비중getput-budgetday-weights-budgetdayweights). 비중을 정하지 않았으면 `EVEN`이고 모든 요일이 같다
 - `characterPoints`·`characterDelta`: [§4 캐릭터 점수](policies.md#4-캐릭터-점수budgetcharacterscore). 이 요청마다 오늘의 `dailyBudget`을 날짜별로 저장한다(`daily_budgets`)
@@ -428,7 +429,8 @@ POST 본문:
 - 서버가 시스템 지시에 넣는 것: 오늘 날짜, `GET /budget/today`와 같은 계산의 오늘·이번 주 쓸 수 있는 돈·하루 예산·다음 수입일·남은 생활비·부족액·요일별 하루 예산, 지금 요일별 배분과 바꿀 수 있는 프리셋, 이번 주기(`cycleStart`~오늘)와 직전 같은 일수의 카테고리별 지출 합계·건수(많은 순 8개 + 그 외, 고정지출 자동 기록 포함). 거래 제목·메모·개별 거래는 넣지 않는다. 예산을 설정하지 않았으면 이번 달 1일부터 합계만 넣고 변경 제안은 하지 않는다.
 - 모델은 금액을 다시 계산하지 않고 받은 값만 쓰도록 지시한다(예산 최종값은 서버 `BudgetCalculator`).
 - `action`은 **제안만** 한다. 지금 배분과 같은 프리셋, 기록이 부족한 `RECORD`, `CUSTOM`은 제안하지 않는다. 앱은 확인 버튼을 보여 주고, 누르면 `PUT /budget/day-weights {"preset": action.preset}`을 부른다. 제안이 없으면 `null`.
-- 사용자별 1시간 30번(서버 메모리). 넘으면 429 `TOO_MANY_ATTEMPTS` + `retryAfterSeconds`.
+- **일정 제안**(2026-11-05): 요청에 `accepts: ["SCHEDULE"]`를 보내면 "금요일 저녁에 술약속" 같은 문장에서 `action.type: "SCHEDULE"`이 올 수 있다. `action.schedule`은 `{title, date, categoryId, category, amount(null 가능), basis{samples, scope, days}, preview{dayBudget, dailyBudgetBefore, dailyBudgetAfter}}`. `amount`가 null이면 기록이 적어 서버가 예측하지 못한 것이고 `reply`가 금액을 되묻는다(`basis`·`preview`도 null). 서버가 저장하지 않는다 — 앱이 확인 뒤 `POST /scheduled-expenses {amount, categoryId, title, date}`를 부르고 `GET /budget/today`를 다시 받는다. 수정 의견("5만원으로", "토요일로")은 다음 USER 메시지와 함께 `pending`(직전 제안 `{title, date, categoryId, amount}`)을 보내면 같은 방식으로 다시 제안한다. 규칙은 [policies §8](policies.md#8-ai-메이트).
+- 사용자별 1시간 30번(서버 메모리, 메시지 한 건 = 1번). 넘으면 429 `TOO_MANY_ATTEMPTS` + `retryAfterSeconds`.
 - 키는 서버 `.env`의 `GEMINI_API_KEY`, 모델은 `GEMINI_MODEL`(기본 `gemini-3.5-flash-lite`). 키는 요청 헤더(`x-goog-api-key`)로 보낸다.
 
 

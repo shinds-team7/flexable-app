@@ -2,6 +2,8 @@
  * AI 메이트(챗봇). 스타일 선택 → 메뉴 → 대화 3단계.
  * 답변은 POST /chat/messages(Gemini), 카드 숫자는 서버 계산값(/budget/today, /analysis/summary)만 보여 준다.
  * 요일별 배분은 답변의 action을 사용자가 [확인]으로 누른 뒤에만 PUT /budget/day-weights로 저장한다.
+ * 일정("금요일 저녁에 술약속")은 서버가 거래 기록으로 예측한 금액을 [등록]으로 확인한 뒤에만
+ * POST /scheduled-expenses로 저장하고, 하루 예산은 GET /budget/today의 서버 값을 그대로 보여 준다.
  */
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -61,10 +63,18 @@ import { CategoryIcon, Loading, Page, seoulDate, useResource } from "./ui";
 const mateImg = require("../../assets/chatbot/mate.png");
 const MATE_KEY = "chatbot.mate";
 const COMPOSER_HINT = "궁금한 내용을 입력해보세요...";
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** "2026-11-06" → "11/6(금)" */
+function whenText(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return `${m}/${d}(${WEEKDAYS[new Date(y, m - 1, d).getDay()]})`;
+}
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type MateId = NonNullable<ChatRequest["mate"]>;
 type Proposal = NonNullable<ChatResponse["action"]>;
+type Schedule = NonNullable<Proposal["schedule"]>;
 type CardKind = "budget" | "top" | "compare";
 type Choice = { label: string; run: () => void };
 /** ui: 화면 안내용 말풍선(인사·메뉴 안내·오류). 모델에 보내는 대화에서 뺀다. */
@@ -209,6 +219,8 @@ function ChatbotRoom() {
   const list = useRef<Msg[]>([]);
   const lock = useRef(false);
   const pending = useRef<AbortController | null>(null);
+  // 직전에 제안받은 일정. 사용자가 금액·날짜를 고치자고 하면 서버에 함께 보낸다.
+  const proposal = useRef<Schedule | null>(null);
   // 화면을 떠나거나 메뉴로 돌아가면 올라가서, 늦게 온 답을 버린다.
   const focus = useRef(0);
 
@@ -272,6 +284,15 @@ function ChatbotRoom() {
       started !== focus.current || generation !== sessionGeneration();
     const body: ChatRequest = {
       mate,
+      accepts: ["SCHEDULE"],
+      pending: proposal.current
+        ? {
+            title: proposal.current.title,
+            date: proposal.current.date,
+            categoryId: proposal.current.categoryId,
+            amount: proposal.current.amount,
+          }
+        : undefined,
       messages: list.current
         .filter((m) => !m.ui)
         .slice(-20)
@@ -288,6 +309,12 @@ function ChatbotRoom() {
         signal: controller.signal,
       });
       if (stale()) return;
+      if (result.action) {
+        proposal.current =
+          result.action.type === "SCHEDULE" && result.action.schedule
+            ? result.action.schedule
+            : null;
+      }
       push({
         from: "bot",
         text: result.reply,
@@ -317,7 +344,94 @@ function ChatbotRoom() {
     void request(card);
   };
 
-  const confirmChoices = (action: Proposal): Choice[] => [
+  const scheduleChoices = (s: Schedule): Choice[] => {
+    const cancelChoice: Choice = {
+      label: "취소",
+      run: () => {
+        proposal.current = null;
+        push(
+          { from: "me", text: "취소" },
+          { from: "bot", text: "알겠어요. 일정은 등록하지 않을게요." },
+        );
+      },
+    };
+    if (s.amount == null) return [cancelChoice];
+    return [
+      { label: "등록", run: () => void register(s) },
+      {
+        label: "금액·날짜 바꾸기",
+        run: () =>
+          push(
+            { from: "me", text: "금액·날짜 바꾸기" },
+            {
+              from: "bot",
+              ui: true,
+              text: "원하는 금액이나 날짜를 말해 주세요.\n예: 5만원으로 해줘, 토요일로 바꿔줘",
+            },
+          ),
+      },
+      cancelChoice,
+    ];
+  };
+
+  /** 사용자가 [등록]을 누른 뒤에만 예정 지출로 저장한다. 하루 예산은 서버가 다시 계산한 값을 보여 준다. */
+  const register = async (s: Schedule) => {
+    if (lock.current || s.amount == null) return;
+    lock.current = true;
+    setBusy(true);
+    push({ from: "me", text: "등록" });
+    const started = focus.current;
+    const generation = sessionGeneration();
+    const stale = () =>
+      started !== focus.current || generation !== sessionGeneration();
+    try {
+      await api("/scheduled-expenses", {
+        method: "POST",
+        body: {
+          amount: s.amount,
+          categoryId: s.categoryId,
+          title: s.title,
+          date: s.date,
+        },
+      });
+      if (stale()) return;
+      proposal.current = null;
+      session.invalidate();
+      const head = `${whenText(s.date)} **${s.title}** ${won(s.amount)}원을 예정 지출로 등록했어요.`;
+      let text = head;
+      try {
+        const t = await api<Today>("/budget/today");
+        const plan = t.dayPlans.find((p) => p.date === s.date);
+        text = plan
+          ? `${head}\n그날 하루 예산은 **${won(plan.budget)}원**, 오늘 하루 예산은 ${won(t.dailyBudget)}원이에요.`
+          : `${head}\n다음 수입일 이후 날짜라 지금 예산에는 아직 반영되지 않아요.`;
+      } catch {
+        // 등록은 끝났으니 예산 숫자만 생략한다
+      }
+      if (stale()) return;
+      push({ from: "bot", text, card: "budget" });
+    } catch (e) {
+      if (stale()) return;
+      push({
+        from: "bot",
+        ui: true,
+        text: errorText(e),
+        choices: [{ label: "다시 시도", run: () => void register(s) }],
+      });
+    } finally {
+      if (!stale()) {
+        lock.current = false;
+        setBusy(false);
+      }
+    }
+  };
+
+  const confirmChoices = (action: Proposal): Choice[] =>
+    action.type === "SCHEDULE"
+      ? action.schedule
+        ? scheduleChoices(action.schedule)
+        : []
+      : [
     { label: "확인", run: () => void apply(action) },
     {
       label: "그대로 둘게",
@@ -348,7 +462,8 @@ function ChatbotRoom() {
       session.invalidate();
       push({
         from: "bot",
-        text: `요일별 배분을 **${action.label}**${ro(action.label)} 바꿨어요.\n오늘 하루 예산부터 반영돼요.`,
+        text: `요일별 배분을 **${action.label ?? ""}**${ro(action.label ?? "")} 바꿨어요.
+오늘 하루 예산부터 반영돼요.`,
         card: "budget",
       });
     } catch (e) {
@@ -373,6 +488,7 @@ function ChatbotRoom() {
       return;
     }
     cancel();
+    proposal.current = null;
     update(() => []);
     push(
       {

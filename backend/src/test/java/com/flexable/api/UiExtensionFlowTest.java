@@ -38,7 +38,7 @@ class UiExtensionFlowTest {
     <T>T read(MvcResult result,String path)throws Exception{return JsonPath.read(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8),path);}
     List<Integer> ids(String token,String type)throws Exception{return read(mvc.perform(auth(get("/api/v1/categories?type="+type),token,null)).andReturn(),"$[*].id");}
     String planned(int category,String date){return "{\"amount\":25000,\"categoryId\":"+category+",\"title\":\"생일 선물\",\"date\":\""+date+"\"}";}
-    @Test void plannedCrudIsOwnedAndDoesNotCreateTransactionsOrChangeBudget()throws Exception{
+    @Test void plannedCrudIsOwnedAndDoesNotCreateTransactionsButReservesBudget()throws Exception{
         String token=signup(),other=signup();int category=ids(token,"EXPENSE").get(0);
         mvc.perform(auth(put("/api/v1/budget/settings"),token,"{\"balance\":1000000,\"payday\":25,\"incomeAmount\":2000000,\"cardUnpaid\":0,\"fixedExpenses\":[],\"protectedItems\":[]}")).andExpect(status().isOk());
         Number before=read(mvc.perform(auth(get("/api/v1/budget/today"),token,null)).andReturn(),"$.todayAvailable");
@@ -50,8 +50,11 @@ class UiExtensionFlowTest {
         mvc.perform(auth(put("/api/v1/scheduled-expenses/"+id),token,planned(category,"2026-11-01"))).andExpect(status().isOk()).andExpect(jsonPath("$.date",is("2026-11-01")));
         mvc.perform(auth(get("/api/v1/transactions?from=2026-10-30&to=2026-11-01"),token,null)).andExpect(jsonPath("$.items",hasSize(0)));
         Number after=read(mvc.perform(auth(get("/api/v1/budget/today"),token,null)).andReturn(),"$.todayAvailable");
-        assertThat(after.longValue()).isEqualTo(before.longValue());
+        // 2026-11-05 정책: 예정 지출은 거래를 만들지 않지만 남은 생활비에서 미리 빼고 그날 예산에 더한다
+        assertThat(after.longValue()).isLessThan(before.longValue());
+        mvc.perform(auth(get("/api/v1/budget/today"),token,null)).andExpect(jsonPath("$.reservedPlanned",is(25000))).andExpect(jsonPath("$.dayPlans[0].date",is("2026-11-01")));
         mvc.perform(auth(delete("/api/v1/scheduled-expenses/"+id),token,null)).andExpect(status().isNoContent());
+        Number restored=read(mvc.perform(auth(get("/api/v1/budget/today"),token,null)).andReturn(),"$.todayAvailable");assertThat(restored.longValue()).isEqualTo(before.longValue());
         mvc.perform(auth(delete("/api/v1/scheduled-expenses/"+id),token,null)).andExpect(status().isNotFound());
     }
     @Test void plannedRejectsPastWrongOwnerWrongTypeAndInvalidAmounts()throws Exception{
