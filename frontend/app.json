@@ -57,8 +57,7 @@
         "expo-image-picker",
         {
           "photosPermission": "거래내역 스크린샷을 고르려고 사진에 접근해요. 고른 사진은 기기에서만 읽어요",
-          "cameraPermission": false,
-          "microphonePermission": false
+          "cameraPermission": false
         }
       ],
       [
@@ -105,6 +104,13 @@
         {
           "androidAppId": "ca-app-pub-3401841469269585~5466483972",
           "iosAppId": "ca-app-pub-3401841469269585~5466483972"
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "AI 메이트에게 말로 질문하려고 마이크를 써요. 녹음은 저장하지 않아요",
+          "speechRecognitionPermission": "말한 내용을 글자로 바꿔 AI 메이트 입력창에 적으려고 음성 인식을 써요"
         }
       ]
     ],

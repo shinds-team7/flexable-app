@@ -161,3 +161,99 @@ test("AI 메이트: 일정은 [등록]을 누른 뒤에만 예정 지출로 저�
     { amount: 50000, categoryId: 3, title: "술약속", date: "2026-11-06" },
   ]);
 });
+
+test("AI 메이트: 음성 입력은 들은 문장을 입력창에 넣고, 권한 거부·인식 실패는 안내만 한다", async ({
+  page,
+}) => {
+  // 브라우저 음성 인식(webkitSpeechRecognition)을 가짜로 바꾼다. window.__voice로 결과를 고른다.
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    w.__voice = "ok";
+    class FakeRecognition extends EventTarget {
+      lang = "";
+      interimResults = false;
+      continuous = false;
+      maxAlternatives = 1;
+      private fire(type: string, extra: Record<string, unknown> = {}) {
+        this.dispatchEvent(Object.assign(new Event(type), extra));
+      }
+      private result(text: string, isFinal: boolean) {
+        const list = Object.assign([{ transcript: text, confidence: 0.9 }], {
+          isFinal,
+        });
+        this.fire("result", { resultIndex: 0, results: [list] });
+      }
+      start() {
+        const mode = w.__voice;
+        setTimeout(() => {
+          if (mode === "deny") {
+            this.fire("error", { error: "not-allowed", message: "" });
+            this.fire("end");
+            return;
+          }
+          this.fire("start");
+          setTimeout(() => {
+            if (mode === "silence")
+              this.fire("error", { error: "no-speech", message: "" });
+            else {
+              this.result("이번 주", false);
+              this.result("이번 주 식비 얼마야", true);
+            }
+            this.fire("end");
+          }, 400);
+        }, 50);
+      }
+      stop() {
+        this.fire("end");
+      }
+      abort() {
+        this.fire("end");
+      }
+    }
+    w.webkitSpeechRecognition = FakeRecognition;
+  });
+  await session(page);
+  const chats: { messages: { role: string; text: string }[] }[] = [];
+  await page.route("**/api/v1/chat/messages", async (route) => {
+    chats.push(route.request().postDataJSON());
+    await route.fulfill({ json: { reply: "식비는 20,000원이에요.", action: null } });
+  });
+  await page.goto("/chatbot");
+  await page.getByRole("radio", { name: "다정한 친구", exact: true }).click();
+  await page.getByRole("button", { name: "선택하고 시작하기" }).click();
+
+  const input = page.getByLabel("AI 메이트에게 질문", { exact: true });
+  const mic = page.getByRole("button", { name: "음성으로 질문하기", exact: true });
+  await mic.click();
+  await expect(page.getByText(/^듣고 있어요/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "음성 입력 멈추기", exact: true }),
+  ).toBeVisible();
+  // 들은 문장은 입력창에만 들어가고, [보내기]를 눌러야 보낸다
+  await expect(input).toHaveValue("이번 주 식비 얼마야");
+  await expect(mic).toBeVisible();
+  expect(chats).toHaveLength(0);
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await expect(page.getByText("식비는 20,000원이에요.")).toBeVisible();
+  expect(chats[0].messages.at(-1)).toEqual({
+    role: "USER",
+    text: "이번 주 식비 얼마야",
+  });
+
+  // 권한 거부: 안내하고 글자 입력은 그대로 쓸 수 있다
+  await page.evaluate(() => {
+    (window as unknown as Record<string, unknown>).__voice = "deny";
+  });
+  await mic.click();
+  await expect(page.getByText(/^마이크 권한이 없어 음성 입력을 쓸 수 없어요/)).toBeVisible();
+  await input.fill("글자로 물어볼게");
+  await expect(page.getByText(/^마이크 권한이 없어/)).toHaveCount(0);
+
+  // 인식 실패: 다시 누르라는 안내, 입력창 글은 지우지 않는다
+  await page.evaluate(() => {
+    (window as unknown as Record<string, unknown>).__voice = "silence";
+  });
+  await mic.click();
+  await expect(page.getByText(/^말소리를 알아듣지 못했어요/)).toBeVisible();
+  await expect(input).toHaveValue("글자로 물어볼게");
+});

@@ -57,6 +57,7 @@ import { api, ApiError, sessionGeneration } from "./api/client";
 import { useServerExtensions } from "./serverExtensions";
 import { useSession } from "./Session";
 import { readStorage, writeStorage } from "./storage";
+import { useVoiceInput } from "./voiceInput";
 import type { Analysis, ChatRequest, ChatResponse, Today } from "./types";
 import { CategoryIcon, Loading, Page, seoulDate, useResource } from "./ui";
 
@@ -1100,38 +1101,102 @@ function Composer({
   onSend: (text: string) => void;
 }) {
   const [draft, setDraft] = useState(initial ?? "");
+  // 음성 입력을 시작할 때 입력창에 있던 글. 들은 문장은 그 뒤에 붙인다
+  const base = useRef("");
+  const onVoice = useCallback(
+    (text: string) =>
+      setDraft(base.current ? `${base.current} ${text}` : text),
+    [],
+  );
+  const voice = useVoiceInput(onVoice);
+  const listening = voice.status !== "idle";
   const ready = !!draft.trim() && !busy;
   const send = () => {
     if (!ready) return;
+    if (listening) voice.stop();
     onSend(draft.trim());
     setDraft("");
   };
   return (
-    <View style={styles.composer}>
-      <TextInput
-        accessibilityLabel="AI 메이트에게 질문"
-        value={draft}
-        onChangeText={setDraft}
-        onSubmitEditing={send}
-        placeholder={COMPOSER_HINT}
-        placeholderTextColor={colors.placeholder}
-        maxLength={1000}
-        style={[styles.input, noOutline]}
-        returnKeyType="send"
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="보내기"
-        accessibilityState={{ disabled: !ready }}
-        onPress={send}
-        disabled={!ready}
-        style={[
-          styles.send,
-          { backgroundColor: ready ? colors.brand : "#A9C3FF" },
-        ]}
-      >
-        <Ionicons name="arrow-up" size={20} color={colors.onBrand} />
-      </Pressable>
+    <View>
+      {(listening || voice.notice) && (
+        <View style={styles.voiceStatus}>
+          {listening ? (
+            <T size={13} weight="700" color={colors.brandDark}>
+              {voice.status === "starting"
+                ? "마이크를 켜는 중이에요…"
+                : "듣고 있어요. 말을 마치면 입력창에 적어 둘게요"}
+            </T>
+          ) : (
+            <T
+              size={13}
+              color={colors.danger}
+              accessibilityRole="alert"
+              style={{ flex: 1 }}
+            >
+              {voice.notice}
+            </T>
+          )}
+        </View>
+      )}
+      <View style={styles.composer}>
+        <TextInput
+          accessibilityLabel="AI 메이트에게 질문"
+          value={draft}
+          onChangeText={(t) => {
+            setDraft(t);
+            voice.clearNotice();
+          }}
+          onSubmitEditing={send}
+          placeholder={COMPOSER_HINT}
+          placeholderTextColor={colors.placeholder}
+          maxLength={1000}
+          style={[styles.input, noOutline]}
+          returnKeyType="send"
+        />
+        {voice.available && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              listening ? "음성 입력 멈추기" : "음성으로 질문하기"
+            }
+            accessibilityState={{ busy: listening }}
+            onPress={
+              listening
+                ? voice.stop
+                : () => {
+                    base.current = draft.trim();
+                    void voice.start();
+                  }
+            }
+            style={[
+              styles.send,
+              {
+                backgroundColor: listening ? colors.danger : "#EEF3FF",
+              },
+            ]}
+          >
+            <Ionicons
+              name={listening ? "stop" : "mic"}
+              size={20}
+              color={listening ? colors.onBrand : colors.brandDark}
+            />
+          </Pressable>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="보내기"
+          accessibilityState={{ disabled: !ready }}
+          onPress={send}
+          disabled={!ready}
+          style={[
+            styles.send,
+            { backgroundColor: ready ? colors.brand : "#A9C3FF" },
+          ]}
+        >
+          <Ionicons name="arrow-up" size={20} color={colors.onBrand} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -1597,6 +1662,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
     backgroundColor: "#EEF3FF",
+  },
+  voiceStatus: {
+    flexDirection: "row",
+    paddingHorizontal: space[4],
+    paddingVertical: space[2],
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.card,
   },
   composer: {
     flexDirection: "row",

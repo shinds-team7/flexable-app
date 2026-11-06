@@ -1,0 +1,130 @@
+import { requireOptionalNativeModule } from "expo";
+import { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
+import type { ExpoSpeechRecognitionModule as SpeechModule } from "expo-speech-recognition";
+
+type Speech = typeof SpeechModule;
+
+/**
+ * 음성 인식 모듈. Android 앱은 기기 음성 인식 서비스(보통 Google), 웹은 브라우저 음성 인식(Chrome 등)을 쓴다.
+ * 네이티브 부분은 이 기능이 들어간 새 빌드에만 있다. 옛 빌드에서 패키지 JS를 불러오면 바로 오류가 나므로
+ * 네이티브 모듈을 먼저 확인하고 늦게 불러온다(oauth.ts의 expo-web-browser와 같은 방식). 없으면 마이크 버튼을 숨긴다.
+ */
+function loadSpeech(): Speech | null {
+  try {
+    if (
+      Platform.OS !== "web" &&
+      !requireOptionalNativeModule("ExpoSpeechRecognition")
+    )
+      return null;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("expo-speech-recognition") as {
+      ExpoSpeechRecognitionModule: Speech;
+    };
+    return mod.ExpoSpeechRecognitionModule.isRecognitionAvailable()
+      ? mod.ExpoSpeechRecognitionModule
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+let cached: Speech | null | undefined;
+function speech() {
+  if (cached === undefined) cached = loadSpeech();
+  return cached;
+}
+
+export type VoiceStatus = "idle" | "starting" | "listening";
+
+/** 인식 실패를 사용자 문구로. aborted(사용자가 멈춤)는 안내하지 않는다 */
+export function voiceErrorMessage(code: string): string | null {
+  switch (code) {
+    case "aborted":
+      return null;
+    case "not-allowed":
+      return "마이크 권한이 없어 음성 입력을 쓸 수 없어요. 기기 설정에서 허용하거나 글자로 입력해 주세요";
+    case "no-speech":
+    case "speech-timeout":
+    case "nomatch":
+      return "말소리를 알아듣지 못했어요. 마이크를 다시 눌러 말해 주세요";
+    case "network":
+      return "음성 인식에 연결하지 못했어요. 인터넷 연결을 확인하거나 글자로 입력해 주세요";
+    case "language-not-supported":
+    case "service-not-allowed":
+      return "이 기기에서는 한국어 음성 인식을 쓸 수 없어요. 글자로 입력해 주세요";
+    case "busy":
+      return "음성 인식이 다른 곳에서 쓰이고 있어요. 잠시 뒤 다시 눌러 주세요";
+    default:
+      return "음성 인식에 실패했어요. 다시 누르거나 글자로 입력해 주세요";
+  }
+}
+
+/**
+ * 마이크로 말한 내용을 글자로 받는다. onText는 인식 중(final=false)과 끝(final=true)에 지금까지 들은 문장을 준다.
+ * 녹음은 저장하지 않고, 인식한 글자는 입력창에만 넣는다(보내기는 사용자가 누른다).
+ */
+export function useVoiceInput(onText: (text: string, final: boolean) => void) {
+  const mod = speech();
+  const [status, setStatus] = useState<VoiceStatus>("idle");
+  const [notice, setNotice] = useState<string | null>(null);
+  const handler = useRef(onText);
+  useEffect(() => {
+    handler.current = onText;
+  }, [onText]);
+  useEffect(() => {
+    if (!mod) return;
+    const subs = [
+      mod.addListener("start", () => setStatus("listening")),
+      mod.addListener("end", () => setStatus("idle")),
+      mod.addListener("result", (e) => {
+        const text = e.results[0]?.transcript ?? "";
+        if (text) handler.current(text, e.isFinal);
+      }),
+      mod.addListener("nomatch", () => setNotice(voiceErrorMessage("nomatch"))),
+      mod.addListener("error", (e) => {
+        setStatus("idle");
+        setNotice(voiceErrorMessage(e.error));
+      }),
+    ];
+    return () => {
+      subs.forEach((s) => s.remove());
+      // 화면을 떠나면 듣기를 끝낸다
+      try {
+        mod.abort();
+      } catch {}
+    };
+  }, [mod]);
+  const start = async () => {
+    if (!mod || status !== "idle") return;
+    setNotice(null);
+    setStatus("starting");
+    try {
+      const permission = await mod.requestPermissionsAsync();
+      if (!permission.granted) {
+        setStatus("idle");
+        setNotice(voiceErrorMessage("not-allowed"));
+        return;
+      }
+      mod.start({ lang: "ko-KR", interimResults: true, continuous: false });
+    } catch {
+      setStatus("idle");
+      setNotice(voiceErrorMessage("unknown"));
+    }
+  };
+  const stop = () => {
+    try {
+      mod?.stop();
+    } catch {
+      setStatus("idle");
+    }
+  };
+  return {
+    available: !!mod,
+    status,
+    notice,
+    clearNotice: () => setNotice(null),
+    start,
+    stop,
+  };
+}
