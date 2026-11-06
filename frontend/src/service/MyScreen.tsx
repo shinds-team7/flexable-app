@@ -261,7 +261,7 @@ export function MyScreen() {
       <Card style={styles.group}>
         {(
           [
-            ["예산 설정 바꾸기", "/onboarding"],
+            ["예산 설정 바꾸기", "/budget/settings"],
             ["카테고리 관리", "/categories"],
             ["웹사이트 연동", "/web-links"],
             ["고객지원", "/support"],
