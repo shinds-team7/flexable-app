@@ -4,6 +4,10 @@
 
 형식: `- [#223] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
+## 2026-11-06
+
+- [Issue #256] 출석 보상 변경: 누적 3일째 +5에 보너스 +20(합계 25, 기존 55), 8일째부터는 7일 주기의 3번째 날만 25이고 7번째 날은 +5(기존 3·7번째 날 55). 7일째 코스튬 `outfit-07` 1회는 그대로. `coin-plan.md` §1 "출석", `app-api.yaml` `Attendance.todayReward` 설명 — 영향: 앱 서버(배포, 마이그레이션 없음)·앱 화면(원격 업데이트)
+
 ## 2026-11-05
 
 - [Issue 없음] AI 메이트 일정 등록과 예정 지출 예산 반영: 일정을 말하면 서버가 거래 기록으로 금액을 예측해 예정 지출로 등록(확인 후)하고, 예정 지출이 수입일 전날까지 남은 생활비에서 빠지고 그날 하루 예산에 더해짐(`policies.md` §2 "예정 지출 반영"·§6·§8 변경, §6의 "예산에서 차감하지 않는다"가 바뀜). `app-api.yaml`: `Today.reservedPlanned`·`dayPlans`, `ChatRequest.accepts`·`pending`, `ChatResponse.action` `SCHEDULE`. 시드머니 `movable`에서 예정에 묶인 돈 제외·오늘 예정 초과분을 `shortage`에 포함(§3·§2), 캐릭터 예산 지킴은 화면의 하루 예산(예정 포함) 기준(§6). `tests/policy/budget.json` 예정 지출 5건, 결정 기록 [2026-11-05-ai-schedule-budget](decisions/2026-11-05-ai-schedule-budget.md) — 영향: 앱 서버(배포 먼저, 마이그레이션 없음)·앱 화면
