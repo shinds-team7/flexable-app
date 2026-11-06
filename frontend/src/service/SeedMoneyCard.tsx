@@ -318,7 +318,7 @@ function AmountModal({
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Button
                 label="취소"
-                variant="soft"
+                variant="neutral"
                 disabled={busy}
                 style={{ flex: 1 }}
                 onPress={onClose}

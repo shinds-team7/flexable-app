@@ -119,14 +119,16 @@ export function Screen({ children }: { children: ReactNode }) {
 
 type BtnProps = PressableProps & {
   label: string;
-  variant?: 'primary' | 'soft' | 'ghost';
+  /** soft는 11-06부터 primary와 같은 파랑 바탕·흰 글자. neutral은 취소용 옅은 회색 바탕 */
+  variant?: 'primary' | 'soft' | 'neutral' | 'ghost';
   icon?: ComponentProps<typeof Ionicons>['name'];
   style?: StyleProp<ViewStyle>;
 };
 
 export function Button({ label, variant = 'primary', icon, style, disabled, ...rest }: BtnProps) {
-  const bg = variant === 'primary' ? colors.brand : variant === 'soft' ? colors.brandSoft : 'transparent';
-  const fg = variant === 'primary' ? '#fff' : colors.brandDark;
+  const blue = variant === 'primary' || variant === 'soft';
+  const bg = blue ? colors.brand : variant === 'neutral' ? colors.sunken : 'transparent';
+  const fg = blue ? '#fff' : variant === 'neutral' ? colors.text : colors.brandDark;
   return (
     <Pressable
       accessibilityRole="button"
@@ -139,7 +141,7 @@ export function Button({ label, variant = 'primary', icon, style, disabled, ...r
         styles.btn,
         pressTransition,
         { backgroundColor: disabled ? colors.sunken : bg },
-        pressed && (variant === 'primary' ? styles.btnPrimaryPressed : styles.pressed),
+        pressed && (blue ? styles.btnPrimaryPressed : styles.pressed),
         style,
       ]}
     >
@@ -372,7 +374,7 @@ export function ConfirmModal({
             )}
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 22 }}>
-            <Button label={cancelLabel} variant="soft" style={{ flex: 1, height: 48 }} onPress={onCancel} />
+            <Button label={cancelLabel} variant="neutral" style={{ flex: 1, height: 48 }} onPress={onCancel} />
             <Button label={confirmLabel} style={{ flex: 1, height: 48 }} onPress={onConfirm} />
           </View>
         </View>

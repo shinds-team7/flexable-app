@@ -544,15 +544,18 @@ test("budget settings edit every saved value on one screen, with the payday whee
   await expect(page.getByText("매달 말일에 맞춰 계산해요")).toBeVisible();
 
   // 빠른 추가: 이름이 채워진 항목이 열린다. [취소]는 추가 중인 항목을 없앤다
-  await page.getByRole("button", { name: "관리비 추가", exact: true }).click();
-  await expect(page.getByLabel("이름", { exact: true })).toHaveValue("관리비");
+  await page.getByRole("button", { name: "전기세 추가", exact: true }).click();
+  await expect(page.getByLabel("이름", { exact: true })).toHaveValue("전기세");
   await page.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page.getByLabel("이름", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "월세 추가", exact: true }).click();
   await page.getByLabel("금액 (원)", { exact: true }).fill("700000");
+  // 매달 나가는 날은 1~31 달력 창에서 고른다
   await page
-    .getByLabel("매달 나가는 날 (31 = 말일)", { exact: true })
-    .fill("5");
+    .getByRole("button", { name: "매달 나가는 날, 고르기", exact: true })
+    .click();
+  await page.getByRole("button", { name: "5일", exact: true }).click();
+  await page.getByRole("button", { name: "5일로 정하기", exact: true }).click();
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(
     page.getByText("월세 · 700,000원 · 매달 5일", { exact: true }),
