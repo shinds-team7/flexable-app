@@ -1,18 +1,18 @@
 import { randomUUID } from "expo-crypto";
 import { useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Button, ConfirmModal, Segment, T } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { goBack } from "@/components/SubHeader";
-import { colors, radius } from "@/theme";
+import { colors } from "@/theme";
 import { api } from "./api/client";
+import { CategoryPicker } from "./CategoryPicker";
 import { CategorySheet } from "./CategorySheet";
 import { DateField } from "./DateField";
 import { occurredAtFor, validDate } from "./occurredAt";
 import { useSession } from "./Session";
 import {
-  CategoryIcon,
   digits,
   ErrorNotice,
   Field,
@@ -237,41 +237,20 @@ function Form({
         </T>
         {categories.loading && <Loading />}
         <ErrorNotice error={categories.error} retry={categories.retry} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {list.map((c) => (
-            <Pressable
-              key={c.id}
-              disabled={busy || uncertain}
-              accessibilityRole="radio"
-              accessibilityLabel={c.name}
-              accessibilityState={{ checked: categoryId === c.id }}
-              aria-checked={categoryId === c.id}
-              onPress={() => setCategoryId(c.id)}
-              style={{
-                width: "30%",
-                padding: 12,
-                gap: 6,
-                alignItems: "center",
-                borderRadius: radius.soft,
-                backgroundColor:
-                  categoryId === c.id ? colors.brandSoft : "#fff",
-                borderWidth: 1,
-                borderColor: categoryId === c.id ? colors.brand : colors.line,
-              }}
-            >
-              <CategoryIcon icon={c.icon} color={c.color} />
-              <T size={13} style={{ textAlign: "center" }}>
-                {c.name}
-              </T>
-            </Pressable>
-          ))}
-          <Button
-            label="+ 추가"
-            variant="soft"
-            style={{ width: "30%" }}
-            onPress={() => setSheet(true)}
-          />
-        </View>
+        <CategoryPicker
+          list={list}
+          selected={categoryId}
+          onSelect={setCategoryId}
+          disabled={busy || uncertain}
+          trailing={
+            <Button
+              label="+ 추가"
+              variant="soft"
+              style={{ width: "30%" }}
+              onPress={() => setSheet(true)}
+            />
+          }
+        />
         <Field
           editable={!busy && !uncertain}
           label={expense ? "어디에 썼나요?" : "어디서 받았나요?"}
