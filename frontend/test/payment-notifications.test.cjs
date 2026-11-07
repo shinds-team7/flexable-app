@@ -26,7 +26,16 @@ function load(file) {
   return exports;
 }
 const { parseShinhanNotice } = load("paymentNotifications/parse.ts");
-const { importPaymentNotices } = load("paymentNotifications/process.ts");
+const { importPaymentNotices, paymentIdempotencyKey } = load(
+  "paymentNotifications/process.ts",
+);
+
+test("the idempotency key for a native SHA-256 id fits the server limit of 64 characters", () => {
+  const id = "a".repeat(64);
+  const key = paymentIdempotencyKey(id);
+  assert.ok(key.length <= 64, `key is ${key.length} characters`);
+  assert.equal(key, id);
+});
 const notice = (
   body = "가*나님\n1,200원 일시불\n10/29 10:00\n가상커피\n누적 50,000원",
 ) => ({
