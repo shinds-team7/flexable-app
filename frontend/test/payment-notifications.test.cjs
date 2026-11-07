@@ -26,7 +26,7 @@ function load(file) {
   return exports;
 }
 const { parseShinhanNotice } = load("paymentNotifications/parse.ts");
-const { importPaymentNotices, paymentIdempotencyKey } = load(
+const { importPaymentNotices, paymentIdempotencyKey, rejectionReason } = load(
   "paymentNotifications/process.ts",
 );
 
@@ -133,6 +133,7 @@ function environment() {
   let fail = false;
   let existing = [];
   const prepared = new Map();
+  const rejected = new Map();
   const deps = {
     current: () => active,
     category: async () => 7,
@@ -144,9 +145,11 @@ function environment() {
     },
     save: async (id, body) => {
       calls.push(["save", id, plain(body)]);
+      if (typeof fail === "function") return fail(id);
       if (fail) throw Error("response lost");
     },
     acknowledge: async (id) => calls.push(["ack", id]),
+    rejected,
   };
   return {
     calls,
@@ -476,5 +479,59 @@ test("web or an older Android build without the native collector never offers co
     assert.equal(labels.includes("동의하고 자동 기록 켜기"), false);
     assert.equal(labels.includes("Android 알림 접근 설정 열기"), false);
     assert.equal(screen.calls.length, 0);
+  }
+});
+
+const apiError = (code, message) => Object.assign(Error(message), { code });
+
+test("a notice the server rejects becomes a review item without blocking later notices or being resent this session", async () => {
+  const e = environment();
+  const first = { ...notice(), id: "b".repeat(64) };
+  const second = notice();
+  e.fail = (id) => {
+    if (id === first.id)
+      throw apiError("VALIDATION_FAILED", "카테고리를 다시 골라 주세요");
+  };
+  const result = await importPaymentNotices([first, second], e.deps);
+  assert.equal(result.saved, 1);
+  assert.deepEqual(plain(result.problems), [
+    {
+      id: first.id,
+      postedAt: first.postedAt,
+      reason: "자동 기록하지 못했어요(카테고리를 다시 골라 주세요)",
+    },
+  ]);
+  assert.deepEqual(
+    e.calls.filter((c) => c[0] === "ack").map((c) => c[1]),
+    [second.id],
+  );
+  const saves = () => e.calls.filter((c) => c[0] === "save").length;
+  const before = saves();
+  const again = await importPaymentNotices(
+    [{ ...first, prepared: JSON.stringify(e.prepared.get(first.id)) }],
+    e.deps,
+  );
+  assert.equal(saves(), before);
+  assert.equal(again.problems.length, 1);
+});
+
+test("network, server, rate-limit and session failures still stop the run and keep the notice for retry", async () => {
+  for (const error of [
+    Error("Network request failed"),
+    apiError("INTERNAL_ERROR", "일시적인 오류"),
+    apiError("TOO_MANY_ATTEMPTS", "잠시 후"),
+    apiError("UNAUTHORIZED", "다시 로그인해 주세요"),
+  ]) {
+    assert.equal(rejectionReason(error), undefined, error.message);
+    const e = environment();
+    e.fail = () => {
+      throw error;
+    };
+    await assert.rejects(importPaymentNotices([notice()], e.deps));
+    assert.equal(e.deps.rejected.size, 0);
+    assert.equal(
+      e.calls.some((c) => c[0] === "ack"),
+      false,
+    );
   }
 });

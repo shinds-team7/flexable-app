@@ -1004,6 +1004,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
+                    /** @description 재전송 중복 방지 키. 64자 이하(넘으면 400 VALIDATION_FAILED) */
                     "Idempotency-Key"?: string;
                 };
                 path?: never;

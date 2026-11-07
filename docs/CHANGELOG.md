@@ -4,6 +4,10 @@
 
 형식: `- [#223] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
+## 2026-11-07
+
+- [Issue 없음] 신한카드 알림 자동 기록: 서버가 거절(400·404)한 알림은 확인 대상으로 남기고 뒤 알림을 계속 기록(이전에는 하나가 거절되면 뒤 알림 전체가 멈춤), `app-api.yaml` `POST /transactions`의 `Idempotency-Key`에 `maxLength: 64` 명시(서버 동작은 그대로). 결정 기록 [2026-10-29-shinhan-notification-import](decisions/2026-10-29-shinhan-notification-import.md) 5번에 추가 — 영향: 앱 화면(원격 업데이트)
+
 ## 2026-11-06
 
 - [Issue #256] AI 메이트 음성 입력 추가(기기·브라우저 음성 인식, 입력창에만 넣고 녹음 저장 안 함, `RECORD_AUDIO` 권한)와 개인정보처리방침 추가 개정(2): 음성 입력, AI 메이트(Google Gemini)로 보내는 메시지·예산 요약과 Google 처리 위탁·국외 이전을 1·2·3·5·6·11·14장에 추가(11-06 공고·시행). `play-store/README.md` 데이터 보안·권한, 결정 기록 [2026-11-06-voice-input](decisions/2026-11-06-voice-input.md) — 영향: 앱 화면(새 네이티브 빌드)·공개 방침(웹)
