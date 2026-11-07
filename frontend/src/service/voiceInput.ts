@@ -35,6 +35,11 @@ function speech() {
   return cached;
 }
 
+/** 이 기기·브라우저에서 음성 입력을 쓸 수 있는지(마이크 버튼을 보일지) */
+export function voiceInputAvailable() {
+  return !!speech();
+}
+
 export type VoiceStatus = "idle" | "starting" | "listening";
 
 /** 인식 실패를 사용자 문구로. aborted(사용자가 멈춤)는 안내하지 않는다 */
