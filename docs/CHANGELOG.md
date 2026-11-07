@@ -6,6 +6,8 @@
 
 ## 2026-11-07
 
+- [Issue 없음] 개인정보처리방침 추가 개정(4)(앱·서버 오류 기록) 시행일을 11-14에서 11-07(공고일)로: 같은 날 1.9.0 프로덕션 빌드를 진행해서(사용자 결정). 결정 기록 [2026-11-07-error-events](decisions/2026-11-07-error-events.md) 7번 — 영향: 공개 방침(웹)
+- [Issue 없음, 11-07 신한 400 후속] 오류 기록: 운영 DB `error_events`(V23)와 `POST /client-errors`(앱 API 실패·화면 오류·JS 오류, 서버 500), 같은 날 같은 오류 한 줄·숫자·이메일 가림·30일 보관. 계약, 개인정보처리방침 추가 개정(4)(11-07 공고·11-14 시행, 2·3·14장), Play 데이터 보안 진단, 결정 기록 [2026-11-07-error-events](decisions/2026-11-07-error-events.md) — 영향: 앱 서버·앱 화면·공개 방침(웹)
 - [Issue 없음] 신한카드 알림 자동 기록: 서버가 거절(400·404)한 알림은 확인 대상으로 남기고 뒤 알림을 계속 기록(이전에는 하나가 거절되면 뒤 알림 전체가 멈춤), `app-api.yaml` `POST /transactions`의 `Idempotency-Key`에 `maxLength: 64` 명시(서버 동작은 그대로). 결정 기록 [2026-10-29-shinhan-notification-import](decisions/2026-10-29-shinhan-notification-import.md) 5번에 추가 — 영향: 앱 화면(원격 업데이트)
 - [Issue 없음] 개인정보처리방침 추가 개정(3) 시행일을 11-14에서 11-07(공고일)로 앞당김: 같은 날 원격 업데이트로 기능이 나가서(사용자 결정). 결정 기록 [2026-11-07-voice-schedule](decisions/2026-11-07-voice-schedule.md) 6번, HANDOFF에 11-07 원격 업데이트 기록 — 영향: 공개 방침(웹)
 - [Issue #278] 광고 보상을 시청 시간별 10·15·20코인으로: `POST /coins/ad-bonus`(앱이 잰 시간, 광고 1번에 1번, 콜백 전 409 `AD_NOT_REWARDED`), 내역 사유 `AD_BONUS`. 계약·`coin-plan.md`·API·FEATURES, 결정 기록 [2026-11-07-ad-reward-time](decisions/2026-11-07-ad-reward-time.md) — 영향: 앱 서버·앱 화면

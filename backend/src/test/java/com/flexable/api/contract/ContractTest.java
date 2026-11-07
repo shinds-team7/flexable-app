@@ -186,6 +186,10 @@ class ContractTest {
 	@Test
 	void 공개_엔드포인트() throws Exception {
 		app(get("/api/v1/health"), 200);
+		app(json(post("/api/v1/client-errors"),
+				"{\"kind\":\"API\",\"message\":\"계약 확인\",\"method\":\"POST\",\"path\":\"/api/v1/transactions\",\"status\":400}"),
+				204);
+		app(json(post("/api/v1/client-errors"), "{\"kind\":\"SERVER\",\"message\":\"x\"}"), 400);
 		app(get("/api/v1/auth/oauth/providers"), 200);
 		app(get("/api/v1/auth/oauth/naver/start").param("redirectUri", "flexable://oauth/callback"), 404);
 		app(get("/api/v1/auth/oauth/kakao/start"), 400);

@@ -1914,6 +1914,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/client-errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 앱이 겪은 오류 보고(오류 기록, 30일 보관)
+         * @description 로그인 없이도 보낼 수 있고 토큰이 맞으면 회원 번호를 함께 남긴다. 같은 날 같은 오류는 한 줄로 묶는다. 숫자(3자리 이상)·이메일은 서버가 가려 저장하고, 보낸 사람마다 10분에 30건까지만 저장한다(넘어도 204). 앱은 결과를 기다리지 않는다. 거래 제목·메모·요청 본문은 보내지 않는다
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description API 요청 실패, CRASH 화면 오류, JS 그 밖의 앱 오류
+                         * @enum {string}
+                         */
+                        kind: "API" | "CRASH" | "JS";
+                        message: string;
+                        stack?: string;
+                        /** @description 오류가 난 화면 경로 */
+                        screen?: string;
+                        /** @enum {string} */
+                        method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+                        /** @description API 경로. 쿼리는 서버가 버리고 숫자 id는 {id}로 묶는다 */
+                        path?: string;
+                        status?: number;
+                        /** @description 서버 오류 code */
+                        code?: string;
+                        appVersion?: string;
+                        /** @description 원격 업데이트 id */
+                        updateId?: string;
+                        /** @enum {string} */
+                        platform?: "android" | "ios" | "web";
+                    };
+                };
+            };
+            responses: {
+                /** @description 받음(한도를 넘어 버린 것 포함) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;

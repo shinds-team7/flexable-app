@@ -642,6 +642,7 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 
 ## 기타
 
+- `POST /api/v1/client-errors` (공개, 토큰이 맞으면 회원 번호 기록) → 204. 앱 오류 기록. 요청 `{kind: API|CRASH|JS, message, stack?, screen?, method?, path?, status?, code?, appVersion?, updateId?, platform?: android|ios|web}`. 서버는 숫자(3자리 이상)·이메일을 가리고, 경로의 쿼리를 버리고 숫자 id를 `{id}`로 묶어 `error_events`에 저장한다. 같은 날 같은 오류는 한 줄(횟수만 증가), 보낸 사람마다 10분 30건, 하루 새 줄 500개, 30일 보관·탈퇴 때 삭제. 처리 못 한 서버 500도 같은 테이블에 남는다([결정](decisions/2026-11-07-error-events.md))
 - `GET /api/v1/health` (공개) → `{ "status": "UP" }`. 앱이 떠 있는지만 본다(Docker 헬스체크용)
 - `GET /actuator/health` (공개, 운영 감시용) → 앱·DB·디스크(남은 공간 300MB 미만이면 DOWN)를 함께 보고, 하나라도 DOWN이면 503. `components`에 항목별 상태만 있고 세부값은 없다
 - 개인정보처리방침·고객지원·웹 계정 삭제는 프론트 정적 페이지(`/privacy`, `/support`, `/delete-account`)다. 서버 API는 위의 인증·`DELETE /me`를 쓴다.
