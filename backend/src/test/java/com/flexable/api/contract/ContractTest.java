@@ -342,7 +342,7 @@ class ContractTest {
 		clock.seoulNoon("2026-10-30");
 		app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
 		when(chatModel.generate(any(), any(), any(), any()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-11-02", "식비", "EVENING", 50000L)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-11-02", "식비", 50000L)));
 		when(chatModel.generate(any(), any(), any())).thenReturn(new ChatModel.Reply("**50,000원**으로 등록할까요?", null));
 		String ask = "{\"messages\":[{\"role\":\"USER\",\"text\":\"월요일 저녁 술약속\"}],\"accepts\":[\"SCHEDULE\"],"
 				+ "\"pending\":{\"title\":\"술약속\",\"date\":\"2026-11-02\",\"categoryId\":1,\"amount\":30000}}";
