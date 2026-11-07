@@ -27,9 +27,8 @@ public interface ChatModel {
 	 * 일정 제안 도구 호출. 금액은 포함하지 않는다(서버가 예측). amount는 사용자가 직접 말했을 때만 있다.
 	 *
 	 * @param date yyyy-MM-dd(모델이 쓴 그대로, 서버가 검증)
-	 * @param slot MORNING·DAYTIME·EVENING 또는 null
 	 */
-	record ScheduleCall(String title, String date, String category, String slot, Long amount) {
+	record ScheduleCall(String title, String date, String category, Long amount) {
 	}
 
 	/** text는 비어 있을 수 있다. proposedPreset·schedule은 모델이 해당 제안 도구를 불렀을 때만 있다. */

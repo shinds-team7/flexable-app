@@ -2474,7 +2474,7 @@ export interface components {
                     basis: {
                         samples: number;
                         /**
-                         * @description SLOT 같은 시간대 기록, CATEGORY 카테고리 전체 기록
+                         * @description CATEGORY 카테고리 하루 합계 기준(samples는 기록 있는 날 수). SLOT은 11-06까지의 시간대 기준으로 지금은 오지 않는다
                          * @enum {string}
                          */
                         scope: "SLOT" | "CATEGORY";

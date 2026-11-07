@@ -68,11 +68,12 @@ public final class ChatDtos {
 		DAY_PRESET, SCHEDULE
 	}
 
+	/** SLOT은 11-06까지 쓰던 시간대 기준으로 지금은 내보내지 않는다(옛 앱 호환으로 값만 남김). */
 	public enum Scope {
 		SLOT, CATEGORY
 	}
 
-	/** 금액 예측 근거: 표본(같은 날 같은 시간대 지출 묶음) 수, 범위, 기간(일). */
+	/** 금액 예측 근거: 표본(해당 카테고리 지출이 있던 날) 수, 범위, 기간(일). */
 	public record Basis(int samples, Scope scope, int days) {
 	}
 
