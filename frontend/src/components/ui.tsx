@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react';
 import {
   AccessibilityInfo,
   Animated,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -262,6 +263,38 @@ export function Row({
   );
 }
 
+/**
+ * 시트 안 입력칸을 누르면 키패드가 시트를 가리지 않게 시트를 키패드 위로 올린다.
+ * Android는 edge-to-edge라 모달 창이 줄어들지 않아(줄어드는 기기도 있다) 키패드 높이를 그대로 쓰지 않고,
+ * 시트 아래끝이 키패드 윗줄보다 얼마나 내려가 있는지 재서 그만큼만 올린다. 웹은 브라우저가 맡는다.
+ */
+function useKeyboardLift(active: boolean, ref: RefObject<View | null>) {
+  const [value, setValue] = useState(0);
+  const current = useRef(0);
+  useEffect(() => {
+    if (!active || Platform.OS === 'web') return;
+    const set = (v: number) => {
+      current.current = v;
+      setValue(v);
+    };
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      const top = e.endCoordinates.screenY;
+      ref.current?.measureInWindow((_x, y, _w, h) => {
+        // 지금 올린 만큼을 빼고 원래 아래끝을 구한 뒤, 키패드 윗줄과 겹치는 만큼(+여유 8)만 올린다
+        const bottom = y + h + current.current;
+        set(Math.max(0, Math.round(bottom - top + 8)));
+      });
+    });
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => set(0));
+    return () => {
+      show.remove();
+      hide.remove();
+      set(0);
+    };
+  }, [active, ref]);
+  return value;
+}
+
 /** 하단 시트 모달 — 바닥에서 ease-out으로 올라오고, 닫힐 땐 더 빠르게 내려간다 */
 export function Sheet({
   visible,
@@ -307,12 +340,14 @@ export function Sheet({
   }, [visible]);
 
   const translateY = p.interpolate({ inputRange: [0, 1], outputRange: [420, 0] });
+  const sheetRef = useRef<View>(null);
+  const lift = useKeyboardLift(mounted, sheetRef);
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.dimBg, { opacity: p }]} />
-      <View style={styles.dim}>
+      <View style={[styles.dim, { paddingBottom: lift }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="닫기" accessibilityRole="button" />
-        <Animated.View style={[styles.sheet, floating, { transform: [{ translateY }] }]}>
+        <Animated.View ref={sheetRef} style={[styles.sheet, floating, { transform: [{ translateY }] }]}>
           {/* 가로 화면처럼 낮은 창에서는 본문이 줄어들어, 안쪽 ScrollView가 스크롤된다 */}
           <View style={{ flexShrink: 1 }}>
             <View style={styles.grabber} />

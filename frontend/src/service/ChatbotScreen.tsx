@@ -140,9 +140,8 @@ const topics: {
   {
     id: "plan",
     title: "약속 설정",
-    desc: "지출·저축 관련\n일정을 관리해요",
+    desc: "약속을 말하면\n예정 지출로 등록해요",
     icon: "calendar",
-    soon: true,
   },
   {
     id: "budget",
@@ -166,9 +165,17 @@ const topics: {
 
 /** 메뉴를 고르면 화면이 먼저 하는 말과 바로 누를 수 있는 질문. 질문은 그대로 AI 메이트에게 보낸다. */
 const topicIntro: Record<
-  Exclude<TopicId, "plan">,
+  TopicId,
   { text: string; quick: { label: string; card?: CardKind }[] }
 > = {
+  plan: {
+    text: "앞으로 있을 약속을 날짜와 함께 말해 주세요. 입력한 기록으로 쓸 돈을 예상해 드리고, [반영]을 누르면 예정 지출로 등록해요. 마이크 버튼으로 말해도 돼요.",
+    quick: [
+      { label: "이번 주 금요일에 친구랑 저녁" },
+      { label: "토요일에 영화 보기" },
+      { label: "다음 주 월요일 회식" },
+    ],
+  },
   spend: {
     text: "입력한 기록으로 어떤 걸 볼까요?",
     quick: [
@@ -489,7 +496,7 @@ function ChatbotRoom() {
     setThanks(false);
     setStep("chat");
     if ("text" in first) return ask(first.text);
-    const topic = first.topic as Exclude<TopicId, "plan">;
+    const topic = first.topic;
     const intro = topicIntro[topic];
     push(
       { from: "me", ui: true, text: topics.find((t) => t.id === topic)!.title },

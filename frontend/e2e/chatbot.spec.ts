@@ -4,7 +4,7 @@ test.use({ reducedMotion: "reduce" });
 
 import { session } from "./ui-ux-fixtures";
 
-test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장·약속 설정은 업데이트 예정", async ({
+test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장·약속 설정은 일정 안내부터", async ({
   page,
 }) => {
   await session(page);
@@ -38,11 +38,15 @@ test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장
   await page.getByRole("radio", { name: "다정한 친구", exact: true }).click();
   await page.getByRole("button", { name: "선택하고 시작하기" }).click();
 
-  // 서버 기능이 없는 메뉴는 대화를 시작하지 않고 안내만 띄운다
+  // 약속 설정은 일정을 말해 달라는 안내와 예시 질문부터 보여 주고, 누르기 전에는 보내지 않는다
   await page.getByRole("button", { name: "약속 설정", exact: true }).click();
-  await expect(page.getByText("기능 업데이트 예정이에요")).toBeVisible();
-  await page.getByRole("button", { name: "확인", exact: true }).click();
+  await expect(page.getByText(/앞으로 있을 약속을 날짜와 함께 말해 주세요/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "이번 주 금요일에 친구랑 저녁", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("기능 업데이트 예정이에요")).toHaveCount(0);
   expect(chats).toHaveLength(0);
+  await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
 
   // 메뉴 질문 → 서버 답변 + /analysis/summary 값으로 그린 카드
   await page.getByRole("button", { name: "지출 흐름", exact: true }).click();
