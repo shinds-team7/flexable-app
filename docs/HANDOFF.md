@@ -33,7 +33,6 @@
 
 ### 출시·Play Console
 - [ ] 데이터 보안 양식 반영(`play-store/README.md` §3.6), 금융 기능 선언 실제 선택지 기록(§3.7 TODO), 스토어 설명 끝 "문의:" 줄을 `ucmnuniverse@gmail.com`으로, 알림 권한 반영 여부(§3.8)
-- [ ] 1.7.0 앱에서 1.8.0으로 넘어오지 않은 사용자는 원격 업데이트를 못 받는다. 1.8.0 출시 뒤 2번 4행 `minVersion`으로 정리
 
 ### 서버·인프라
 - [ ] **EC2 로컬 DB로 복귀 11-14~16 → 아카데미 VM 데이터 삭제 11-17**(계획 [`server-migration.md`](server-migration.md) §8). 복귀 뒤에는 이 PC에서 `backend/deploy/deploy.sh`로 배포할 수 있다. 개인정보처리방침 백업 문구 손보기(§9)
