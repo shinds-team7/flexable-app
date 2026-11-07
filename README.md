@@ -69,3 +69,4 @@ npm run web
 |---|---|
 | [`docs/play-store/`](docs/play-store/README.md) | Google Play 제출 자료, 개인정보처리방침·이용약관 원문 |
 | [`docs/bug-transaction-edit-blank-screen.md`](docs/bug-transaction-edit-blank-screen.md) | Android 저장 후 빈 화면 버그 분석과 재발 방지 규칙 |
+| [`flexable-guide`](https://github.com/shinds-team7/flexable-guide) (팀 비공개 저장소) | 앱·웹 코드 학습 가이드. 2026-11-07에 `docs/learning-guide`에서 옮김 |
