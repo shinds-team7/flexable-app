@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { randomUUID } from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
@@ -6,8 +7,9 @@ import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { levelLabel, levelName } from "@/components/LevelIcon";
 import { colors, radius } from "@/theme";
-import { sessionGeneration } from "./api/client";
+import { ApiError, sessionGeneration } from "./api/client";
 import {
+  claimAdBonus,
   equipOutfit,
   getOutfits,
   getWallet,
@@ -19,6 +21,7 @@ import { useSession } from "./Session";
 import { DEFAULT_OUTFIT_ID } from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
+import { RewardModal } from "./RewardModal";
 import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
@@ -38,6 +41,8 @@ export function CustomizeScreen() {
   const wallet = useWallet();
   const { user } = useSession();
   const [adMessage, setAdMessage] = useState("");
+  // 광고를 다 보고 받은 코인 안내("+15 코인을 받았어요")
+  const [adEarned, setAdEarned] = useState<{ total: number; bonus: number } | null>(null);
   const lock = useRef(false);
   const focus = useRef(0);
 
@@ -103,14 +108,16 @@ export function CustomizeScreen() {
         publishWallet({ ...wallet, balance: next.balance }, generation);
       setBought(outfit);
     });
-  // 보상은 구글 검증 콜백이 서버에서 지급하므로, 광고를 본 뒤 지갑을 다시 읽어 늘었는지 확인한다(몇 초 걸릴 수 있다).
+  // 기본 10코인은 구글 검증 콜백이 서버에서 지급하고, 앱은 광고가 열려 있던 시간을 보내 보너스(+5·+10)를 받는다.
+  // 콜백이 몇 초 늦을 수 있어 보너스 요청이 409 AD_NOT_REWARDED면 잠시 뒤 다시 보낸다. 받으면 자동 적립 안내를 띄운다.
   const watchAd = () =>
     run(async () => {
       if (!user) return;
       setAdMessage("");
       const generation = sessionGeneration();
       const before = wallet?.ad.rewardedToday ?? 0;
-      const result = await showRewardedAd(user.id);
+      const requestId = randomUUID();
+      const { result, seconds } = await showRewardedAd(user.id);
       if (result === "failed") {
         setAdMessage("광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요");
         return;
@@ -120,11 +127,25 @@ export function CustomizeScreen() {
         return;
       }
       for (let i = 0; i < 8; i++) {
-        const w = await getWallet();
-        publishWallet(w, generation);
-        if (w.ad.rewardedToday > before) {
-          setList((l) => l && { ...l, balance: w.balance });
+        try {
+          const got = await claimAdBonus(requestId, seconds);
+          publishWallet(got.wallet, generation);
+          setList((l) => l && { ...l, balance: got.wallet.balance });
+          if (generation === sessionGeneration())
+            setAdEarned({ total: got.total, bonus: got.bonus });
           return;
+        } catch (e) {
+          if (!(e instanceof ApiError) || e.code !== "AD_NOT_REWARDED") {
+            // 보너스 요청만 실패했으면 기본 보상이 들어왔는지 지갑으로 확인한다
+            const w = await getWallet();
+            publishWallet(w, generation);
+            setList((l) => l && { ...l, balance: w.balance });
+            if (w.ad.rewardedToday > before) {
+              if (generation === sessionGeneration())
+                setAdEarned({ total: w.ad.reward, bonus: 0 });
+              return;
+            }
+          }
         }
         await new Promise((r) => setTimeout(r, 1500));
       }
@@ -215,6 +236,24 @@ export function CustomizeScreen() {
         busy={busy}
         onApply={() => bought && apply(bought.id)}
         onClose={() => setBought(null)}
+      />
+      <RewardModal
+        reward={
+          adEarned && {
+            id: 0,
+            reason: "AD_REWARD",
+            amount: adEarned.total,
+            refDate: null,
+            createdAt: new Date().toISOString(),
+          }
+        }
+        title={adEarned ? `+${adEarned.total} 코인을 받았어요` : undefined}
+        body={
+          adEarned && adEarned.bonus > 0
+            ? `광고 10코인에 오래 본 보너스 ${adEarned.bonus}코인을 더했어요`
+            : "광고를 끝까지 봐 줘서 고마워요"
+        }
+        onClose={() => setAdEarned(null)}
       />
     </View>
   );

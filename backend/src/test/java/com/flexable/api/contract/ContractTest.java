@@ -39,6 +39,7 @@ import com.atlassian.oai.validator.model.SimpleResponse;
 import com.atlassian.oai.validator.report.LevelResolver;
 import com.atlassian.oai.validator.report.ValidationReport;
 import com.flexable.api.chat.ChatModel;
+import com.flexable.api.coin.AdSignatureVerifier;
 import com.jayway.jsonpath.JsonPath;
 
 /**
@@ -96,6 +97,9 @@ class ContractTest {
 
 	@MockitoBean
 	ChatModel chatModel;
+
+	@MockitoBean
+	AdSignatureVerifier adVerifier;
 
 	private static OpenApiInteractionValidator validator(String file) {
 		try {
@@ -386,6 +390,14 @@ class ContractTest {
 		app(auth(json(post("/api/v1/coins/rewards/ack"), "{\"ids\":[" + rewardId + "]}"), token), 204);
 		app(auth(get("/api/v1/coins"), token), 200);
 		app(auth(post("/api/v1/coins/collect"), token), 200);
+		String bonus = "{\"requestId\":\"contract-0001\",\"watchedSeconds\":20}";
+		app(auth(json(post("/api/v1/coins/ad-bonus"), bonus), token), 409);
+		app(auth(json(post("/api/v1/coins/ad-bonus"), "{\"requestId\":\"x\",\"watchedSeconds\":20}"), token), 400);
+		when(adVerifier.verify(any())).thenReturn(true);
+		String userId = String.valueOf((Object) JsonPath.read(
+				app(auth(get("/api/v1/me"), token), 200).getResponse().getContentAsString(StandardCharsets.UTF_8), "$.id"));
+		app(get("/api/v1/ads/reward-callback?transaction_id=contract-tx&user_id=" + userId + "&signature=s&key_id=1"), 200);
+		app(auth(json(post("/api/v1/coins/ad-bonus"), bonus), token), 200);
 		app(auth(get("/api/v1/coins/attendance"), token), 200);
 		app(auth(post("/api/v1/coins/attendance"), token), 200);
 

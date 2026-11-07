@@ -13,12 +13,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.flexable.api.auth.CurrentUser;
 import com.flexable.api.coin.CoinDtos.AckRequest;
+import com.flexable.api.coin.CoinDtos.AdBonusRequest;
+import com.flexable.api.coin.CoinDtos.AdBonusResponse;
 import com.flexable.api.coin.CoinDtos.AttendResponse;
 import com.flexable.api.coin.CoinDtos.Attendance;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
 import com.flexable.api.coin.CoinDtos.CollectResponse;
 import com.flexable.api.coin.CoinDtos.LedgerPage;
 import com.flexable.api.coin.CoinDtos.Wallet;
+
+import jakarta.validation.Valid;
 
 /** 코인 지갑·check-in·모으기·출석. 규칙은 docs/coin-plan.md. */
 @RestController
@@ -60,6 +64,12 @@ public class CoinController {
 	@PostMapping("/attendance")
 	AttendResponse attend(@AuthenticationPrincipal Jwt jwt) {
 		return service.attend(CurrentUser.id(jwt));
+	}
+
+	/** 광고를 다 본 뒤 시청 시간 보너스(docs/coin-plan.md "광고 보상"). */
+	@PostMapping("/ad-bonus")
+	AdBonusResponse adBonus(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AdBonusRequest req) {
+		return service.adBonus(CurrentUser.id(jwt), req.requestId(), req.watchedSeconds());
 	}
 
 	@GetMapping("/ledger")
