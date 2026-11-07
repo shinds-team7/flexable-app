@@ -1386,6 +1386,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/coins/ad-bonus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 광고를 다 본 뒤 시청 시간 보너스(15~30초 +5, 30초 이상 +10)
+         * @description 시간은 앱이 잰 값을 믿는다. 오늘 받은 광고 보상(SSV 콜백) 수보다 보너스를 더 받을 수 없어서, 콜백이 아직 안 왔으면 409 AD_NOT_REWARDED이고 앱이 잠시 뒤 다시 부른다. 같은 requestId는 한 번만 지급하고 다시 불러도 같은 결과를 준다. 15초 미만은 보너스 0(기록하지 않음)
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description 앱이 광고마다 새로 만든 값 */
+                        requestId: string;
+                        /** @description 광고가 열린 뒤 닫힐 때까지 초(앱이 잼) */
+                        watchedSeconds: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 이번 광고로 받은 코인과 지갑 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description 광고 기본 코인(10, SSV 콜백이 지급) */
+                            reward: number;
+                            /** @description 시청 시간 보너스 0·5·10 */
+                            bonus: number;
+                            /** @description reward + bonus(10·15·20) */
+                            total: number;
+                            wallet: components["schemas"]["Wallet"];
+                        };
+                    };
+                };
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/coins/ledger": {
         parameters: {
             query?: never;
@@ -1899,7 +1958,7 @@ export interface components {
     schemas: {
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "INTERNAL_ERROR";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "AD_NOT_REWARDED" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "INTERNAL_ERROR";
             message: string;
             /** @description VALIDATION_FAILED에서 필드별 문장 */
             fields?: {
@@ -2510,7 +2569,7 @@ export interface components {
                 rewardedToday: number;
                 /** @description 하루 한도(3) */
                 dailyLimit: number;
-                /** @description 1회 코인(10) */
+                /** @description 1회 기본 코인(10). 시청 시간 보너스는 POST /coins/ad-bonus */
                 reward: number;
             };
             passive: {
@@ -2527,7 +2586,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             /** @enum {string} */
-            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND" | "ATTENDANCE" | "AD_REWARD";
+            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND" | "ATTENDANCE" | "AD_REWARD" | "AD_BONUS";
             amount: number;
             /**
              * Format: date
@@ -2541,7 +2600,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             /** @enum {string} */
-            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND" | "ATTENDANCE" | "AD_REWARD";
+            reason: "SIGNUP_GIFT" | "BUDGET_BONUS" | "PASSIVE" | "REFERRAL_INVITEE" | "REFERRAL_INVITER" | "PURCHASE" | "REFUND" | "ATTENDANCE" | "AD_REWARD" | "AD_BONUS";
             /** @description 적립은 양수, 사용(PURCHASE)은 음수 */
             amount: number;
             /**
