@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("22");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("23");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -71,7 +71,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(10);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);

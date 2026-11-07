@@ -61,6 +61,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/v1/auth/oauth/providers",
 						"/api/v1/auth/oauth/*/start", "/api/v1/auth/oauth/*/callback").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/ads/reward-callback").permitAll()
+				// 오류 보고는 로그인 전·토큰 만료 뒤에도 받는다(토큰이 맞으면 회원 번호를 남긴다)
+				.requestMatchers(HttpMethod.POST, "/api/v1/client-errors").permitAll()
 				.requestMatchers("/api/v1/health", "/actuator/health/**", "/error").permitAll()
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(rs -> rs

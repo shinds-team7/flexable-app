@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { NavigationBar } from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +16,7 @@ import {
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 import { useAppFonts } from "@/service/AppFonts";
+import { installErrorReporting, setErrorScreen } from "@/service/errorReport";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
@@ -23,6 +24,16 @@ export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 const SPLASH_MIN_MS = 1000;
 const startedAt = Date.now();
 SplashScreen.preventAutoHideAsync().catch(() => {});
+installErrorReporting();
+
+/** 오류 기록에 남길 지금 화면 경로를 알린다 */
+function ErrorScreenTracker() {
+  const pathname = usePathname();
+  useEffect(() => {
+    setErrorScreen(pathname);
+  }, [pathname]);
+  return null;
+}
 
 function SplashGate({ fontsReady }: { fontsReady: boolean }) {
   const { ready } = useSession();
@@ -61,6 +72,7 @@ export default function RootLayout() {
           <ToastProvider>
             <SessionProvider>
               <SplashGate fontsReady={fontsReady} />
+              <ErrorScreenTracker />
               <BudgetDraftProvider>
                 {Platform.OS === "android" && <ForceUpdate />}
                 <Stack

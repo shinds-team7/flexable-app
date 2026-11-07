@@ -25,6 +25,22 @@ export function setApiSession(
 export function sessionGeneration() {
   return generation;
 }
+/** 오류 기록(errorReport.ts)이 회원 번호를 남기려고 쓴다 */
+export function currentToken() {
+  return token;
+}
+export type ApiFailure = {
+  path: string;
+  method: string;
+  status: number;
+  code?: string;
+  message: string;
+};
+let failureListener: ((f: ApiFailure) => void) | undefined;
+/** 서버가 오류로 답한 요청을 알린다(오류 기록용). 본문은 넘기지 않는다. */
+export function setApiErrorListener(listener: (f: ApiFailure) => void) {
+  failureListener = listener;
+}
 /** Full URL of an API path, e.g. for opening the social login start page in a browser. */
 export function apiUrl(path: string) {
   const base = process.env.EXPO_PUBLIC_API_URL;
@@ -68,6 +84,15 @@ export async function api<T>(
     if (res.status === 204) return undefined as T;
     const data = await res.json();
     if (!res.ok) {
+      try {
+        failureListener?.({
+          path,
+          method: options.method ?? "GET",
+          status: res.status,
+          code: data.code,
+          message: data.message ?? "",
+        });
+      } catch {}
       if (
         data.code === "UNAUTHORIZED" &&
         options.token === undefined &&
