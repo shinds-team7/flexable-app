@@ -31,7 +31,6 @@ import com.flexable.api.chat.ChatDtos.Basis;
 import com.flexable.api.chat.ChatDtos.ChatAction;
 import com.flexable.api.chat.ChatDtos.Preview;
 import com.flexable.api.chat.ChatDtos.ScheduleProposal;
-import com.flexable.api.chat.ChatDtos.Scope;
 import com.flexable.api.chat.ChatDtos.ChatRequest;
 import com.flexable.api.chat.ChatDtos.ChatResponse;
 import com.flexable.api.chat.ChatDtos.Role;
@@ -171,11 +170,10 @@ public class ChatService {
 			return new ChatResponse("일정 날짜를 정확히 모르겠어요. 내일부터 석 달 안의 날짜나 요일로 다시 알려 주세요.", null);
 		}
 
-		ScheduleEstimator.Slot slot = slot(call.slot());
 		Long amount = call.amount() != null && call.amount() >= 1 && call.amount() <= MAX_AMOUNT ? call.amount() : null;
 		Basis basis = null;
 		if (amount == null) {
-			ScheduleEstimator.Estimate est = estimator.estimate(userId, category.getId(), slot, today, zone);
+			ScheduleEstimator.Estimate est = estimator.estimate(userId, category.getId(), today, zone);
 			amount = est.amount();
 			basis = est.basis();
 		}
@@ -199,7 +197,7 @@ public class ChatService {
 		}
 
 		String reply = narrate(req, new ChatPrompt.ScheduleResult(title, date, category.getName(), amount,
-				basisText(basis, slot), preview == null ? null : preview.dayBudget(),
+				basisText(basis), preview == null ? null : preview.dayBudget(),
 				preview == null ? null : preview.dailyBudgetBefore(),
 				preview == null ? null : preview.dailyBudgetAfter(), afterPayday));
 		return new ChatResponse(reply, new ChatAction(ActionType.SCHEDULE, null, null,
@@ -227,22 +225,11 @@ public class ChatService {
 				+ "** 정도 쓸 것 같아요.\n이 금액으로 예정 지출에 등록할까요?";
 	}
 
-	private static String basisText(Basis basis, ScheduleEstimator.Slot slot) {
+	private static String basisText(Basis basis) {
 		if (basis == null) {
 			return null;
 		}
-		return basis.scope() == Scope.SLOT && slot != null
-				? "최근 " + basis.days() + "일 비슷한 " + slot.label() + " 지출 " + basis.samples() + "번의 가운데 값"
-				: "최근 " + basis.days() + "일 이 카테고리 지출 " + basis.samples() + "번의 가운데 값(시간대 구분 없음)";
-	}
-
-	private static ScheduleEstimator.Slot slot(String s) {
-		try {
-			return s == null ? null : ScheduleEstimator.Slot.valueOf(s.trim().toUpperCase(Locale.ROOT));
-		}
-		catch (IllegalArgumentException e) {
-			return null;
-		}
+		return "최근 " + basis.days() + "일 이 카테고리 지출이 있던 " + basis.samples() + "일의 하루 합계 가운데 값";
 	}
 
 	private static LocalDate parseDate(String s) {

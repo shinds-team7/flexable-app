@@ -133,6 +133,9 @@ test("the failure sheet shares only masked diagnostics and only after an explici
   const modules = {
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "expo-router": { router: { push() {} } },
+    react: { useState: (initial) => [initial, () => {}] },
+    "./voiceInput": { voiceInputAvailable: () => false },
+    "./VoiceScheduleModal": { VoiceScheduleModal: "VoiceScheduleModal" },
     "react-native": {
       View: "View",
       Share: {

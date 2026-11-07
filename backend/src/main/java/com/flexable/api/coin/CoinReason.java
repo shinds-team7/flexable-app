@@ -19,5 +19,7 @@ public enum CoinReason {
 	/** 홈 출석 달력에서 출석함(그 날짜). 연속 7일째마다 금액이 커진다 */
 	ATTENDANCE,
 	/** 보상형 광고를 끝까지 봄(AdMob 서버 검증의 transaction_id). 하루 3회, 1회 10코인 */
-	AD_REWARD
+	AD_REWARD,
+	/** 광고 시청 시간 보너스(앱이 광고마다 만든 요청 id). 15~30초 +5, 30초 이상 +10. 광고 보상 1번에 1번까지 */
+	AD_BONUS
 }

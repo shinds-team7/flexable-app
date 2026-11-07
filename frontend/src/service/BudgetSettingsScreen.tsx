@@ -150,6 +150,7 @@ function Form({ initial }: { initial: Saved }) {
         >
           <MoneyField
             label="모아둔 돈 (원)"
+            hideLabel
             placeholder="없으면 비워 두세요"
             value={v.seedBase ?? 0}
             onChange={(seedBase) => setV({ ...v, seedBase })}

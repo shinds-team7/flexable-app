@@ -211,16 +211,6 @@ export function MyScreen() {
         </View>
       </Card>
       <ReferralCard />
-      {Platform.OS === "android" && (
-        <Card style={styles.group}>
-          <Row
-            first
-            label="신한카드 자동 기록"
-            caption="결제 알림을 읽어 지출로 기록해요"
-            onPress={() => router.push("/payment-notifications")}
-          />
-        </Card>
-      )}
       {Platform.OS !== "web" && (
         <Card style={styles.group}>
           <Row
@@ -256,6 +246,14 @@ export function MyScreen() {
               }}
             />
           )}
+          {/* 신한카드 자동 기록은 알림 설정과 같은 카드, 기록 알림 시간 아래 */}
+          {Platform.OS === "android" && (
+            <Row
+              label="신한카드 자동 기록"
+              caption="결제 알림을 읽어 지출로 기록해요"
+              onPress={() => router.push("/payment-notifications")}
+            />
+          )}
         </Card>
       )}
       <Card style={styles.group}>
@@ -288,7 +286,6 @@ export function MyScreen() {
       <ErrorNotice error={error} />
       <Button
         label="로그아웃"
-        variant="soft"
         disabled={busy}
         onPress={() => setConfirm(true)}
       />
@@ -329,7 +326,7 @@ const styles = StyleSheet.create({
   },
   group: { padding: 0, overflow: "hidden" },
   referral: { gap: 8, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 },
-  // 로그아웃 버튼과 같은 크기의 짙은 회색 박스
+  // 로그아웃 버튼(파랑 박스·흰 글자)과 같은 크기의 짙은 회색 박스
   deleteAccount: { backgroundColor: "#4B5563" },
   groupHead: {
     flexDirection: "row",

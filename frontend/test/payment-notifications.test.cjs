@@ -383,6 +383,8 @@ function settingsScreen(platform = "android", present = true) {
       T: "T",
     },
     "@/components/SubHeader": { SubHeader: "SubHeader" },
+    "@expo/vector-icons/Ionicons": { default: "Ionicons" },
+    "@/theme": { colors: { brand: "#0046FF", textSub: "#555" } },
     "./Session": { useSession: () => ({ user: { id: 42 } }) },
     "./ui": { ErrorNotice: "ErrorNotice" },
     "./api/client": { sessionGeneration: () => 1 },

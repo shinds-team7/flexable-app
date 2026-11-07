@@ -93,7 +93,9 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: /^수입일 선택, / }).click();
   await page.getByRole("button", { name: "25일", exact: true }).click();
-  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "25일로 정하기", exact: true })
+    .click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -228,16 +230,16 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page.getByRole("tab", { name: "수입", exact: true }).click();
   await page.getByLabel("금액", { exact: true }).fill("50000");
   await page.getByRole("radio", { name: "급여", exact: true }).click();
-  await page
-    .getByLabel("어디서 받았나요?", { exact: true })
-    .fill("테스트 수입");
+  // 수입에는 제목 칸이 없고 카테고리 이름으로 기록한다
+  await expect(
+    page.getByLabel("어디서 받았나요?", { exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: SAVE }).click();
   await expect(page).toHaveURL(/\/home$/);
   await page.getByRole("tab", { name: "내역", exact: true }).click();
-  await expect(page.getByText("테스트 수입", { exact: true })).toBeVisible();
   await expect(
     page
-      .getByRole("button", { name: /테스트 수입, 50,000원, 상세 보기/ })
+      .getByRole("button", { name: /급여, 50,000원, 상세 보기/ })
       .getByText("+50,000원", { exact: true }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "분석", exact: true }).click();
@@ -360,7 +362,9 @@ test("changing input after a failed post-save step re-saves before finishing", a
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: /^수입일 선택, / }).click();
   await page.getByRole("button", { name: "25일", exact: true }).click();
-  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "25일로 정하기", exact: true })
+    .click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -420,11 +424,17 @@ test("a new account sees the home guide once after the gift and attendance modal
   await expect(first).toBeVisible();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "AI 메이트에게 물어보세요", exact: true }),
+    page.getByRole("heading", {
+      name: "AI 메이트에게 물어보세요",
+      exact: true,
+    }),
   ).toBeVisible();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "캐릭터를 누르면 상점이에요", exact: true }),
+    page.getByRole("heading", {
+      name: "캐릭터를 누르면 상점이에요",
+      exact: true,
+    }),
   ).toBeVisible();
   await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await expect(first).toHaveCount(0);
@@ -524,7 +534,9 @@ test("budget settings edit every saved value on one screen, with the payday whee
   // 휠에서 날짜를 고르고, 다시 [매달 말일]로 바꾼다
   await page.getByRole("button", { name: "수입일 선택, 1일" }).click();
   await page.getByRole("button", { name: "10일", exact: true }).click();
-  await page.getByRole("button", { name: "10일로 정하기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "10일로 정하기", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "수입일 선택, 10일", exact: true }),
   ).toBeVisible();
@@ -532,15 +544,18 @@ test("budget settings edit every saved value on one screen, with the payday whee
   await expect(page.getByText("매달 말일에 맞춰 계산해요")).toBeVisible();
 
   // 빠른 추가: 이름이 채워진 항목이 열린다. [취소]는 추가 중인 항목을 없앤다
-  await page.getByRole("button", { name: "관리비 추가", exact: true }).click();
-  await expect(page.getByLabel("이름", { exact: true })).toHaveValue("관리비");
+  await page.getByRole("button", { name: "전기세 추가", exact: true }).click();
+  await expect(page.getByLabel("이름", { exact: true })).toHaveValue("전기세");
   await page.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page.getByLabel("이름", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "월세 추가", exact: true }).click();
   await page.getByLabel("금액 (원)", { exact: true }).fill("700000");
+  // 매달 나가는 날은 1~31 달력 창에서 고른다
   await page
-    .getByLabel("매달 나가는 날 (31 = 말일)", { exact: true })
-    .fill("5");
+    .getByRole("button", { name: "매달 나가는 날, 고르기", exact: true })
+    .click();
+  await page.getByRole("button", { name: "5일", exact: true }).click();
+  await page.getByRole("button", { name: "5일로 정하기", exact: true }).click();
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(
     page.getByText("월세 · 700,000원 · 매달 5일", { exact: true }),
@@ -556,11 +571,13 @@ test("budget settings edit every saved value on one screen, with the payday whee
   expect(settings.payday).toBe(31);
   expect(settings.cardUnpaid).toBe(50000);
   expect(
-    settings.fixedExpenses.map((x: { name: string; amount: number; day: number }) => [
-      x.name,
-      x.amount,
-      x.day,
-    ]),
+    settings.fixedExpenses.map(
+      (x: { name: string; amount: number; day: number }) => [
+        x.name,
+        x.amount,
+        x.day,
+      ],
+    ),
   ).toEqual([["월세", 700000, 5]]);
   // 다시 들어오면 고친 값이 그대로다
   await page

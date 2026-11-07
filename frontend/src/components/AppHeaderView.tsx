@@ -33,14 +33,6 @@ export function AppHeaderView({
           <T size={18} weight="800">
             텅장관리
           </T>
-          <T
-            size={12}
-            weight="700"
-            color={colors.brand}
-            style={{ marginTop: 2 }}
-          >
-            flex-able
-          </T>
         </Pressable>
         {right}
       </View>

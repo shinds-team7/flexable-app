@@ -127,7 +127,12 @@ function Form({
       categoryId,
       // The server needs a title; an empty one falls back to the category name.
       title:
-        title.trim() ||
+        // 수입은 제목 칸이 없다. 원래 수입이던 거래만 기존 제목을 두고, 나머지는 카테고리 이름
+        (type === "EXPENSE"
+          ? title.trim()
+          : existing?.type === "INCOME"
+            ? existing.title
+            : "") ||
         list.find((c) => c.id === categoryId)?.name ||
         (type === "INCOME" ? "수입" : "지출"),
       memo,
@@ -251,16 +256,25 @@ function Form({
             />
           }
         />
-        <Field
-          editable={!busy && !uncertain}
-          label={expense ? "어디에 썼나요?" : "어디서 받았나요?"}
-          placeholder={expense ? "예: 점심 김밥" : "예: 10월 급여"}
-          help="비워 두면 카테고리 이름으로 기록해요"
-          value={title}
-          onChangeText={setTitle}
-          maxLength={40}
+        {/* 수입은 제목 칸 없이 카테고리 이름으로 기록한다(고칠 때는 기존 제목 유지) */}
+        {expense && (
+          <Field
+            editable={!busy && !uncertain}
+            label="어디에 썼나요?"
+            placeholder="예: 점심 김밥"
+            help="비워 두면 카테고리 이름으로 기록해요"
+            value={title}
+            onChangeText={setTitle}
+            maxLength={40}
+          />
+        )}
+        {/* 새 거래는 오늘까지만(미래는 예정 지출). 고칠 때는 기존 날짜를 그대로 둘 수 있게 제한하지 않는다 */}
+        <DateField
+          label="날짜"
+          value={date}
+          onChange={setDate}
+          max={existing ? undefined : seoulDate()}
         />
-        <DateField label="날짜" value={date} onChange={setDate} />
       </View>
       {uncertain && (
         <T>저장 여부를 확인하지 못했어요. 같은 내용으로 다시 확인할게요</T>

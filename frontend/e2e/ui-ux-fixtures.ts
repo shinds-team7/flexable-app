@@ -32,6 +32,8 @@ export async function session(page: Page, today = date) {
   await page.addInitScript(() => {
     localStorage.setItem("flexable.service.token", "ui-ux-test");
     localStorage.setItem("flexable.service.homeStyle", "classic");
+    // AI 음성 답변 선택 모달은 그 테스트에서만 띄운다
+    localStorage.setItem("chatbot.voiceReply", "off");
   });
   await page.route("**/api/v1/**", (route) => {
     const url = new URL(route.request().url());
