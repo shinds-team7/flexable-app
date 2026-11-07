@@ -281,3 +281,71 @@ test("image import prevents double taps, avoids state changes after navigation a
   await cancelled;
   assert.equal(render().busy, false);
 });
+
+test("image import asks to retry while Play services is still downloading the OCR model", async () => {
+  const slots = [];
+  let cursor = 0;
+  const diagnostics = [];
+  let failure;
+  const modules = {
+    react: {
+      useState(initial) {
+        const index = cursor++;
+        if (!(index in slots)) slots[index] = initial;
+        return [slots[index], (value) => (slots[index] = value)];
+      },
+      useRef(initial) {
+        const index = cursor++;
+        return (slots[index] ??= { current: initial });
+      },
+      useCallback: (fn) => fn,
+    },
+    "expo-router": { router: { push() {} }, useFocusEffect() {} },
+    "../ui": { seoulDate: () => "2026-10-27" },
+    "expo-updates": {},
+    "./diagnostics": {
+      createImportDiagnostic: (...args) => (diagnostics.push(args), "diag"),
+    },
+    "./ocr": {
+      imageImportSupported: true,
+      getLastRecognitionStats: () => null,
+      pickAndRecognize: async () => {
+        throw failure;
+      },
+    },
+    "./parse": { parseReceipt: () => ({ items: [] }) },
+    "./store": { setPending() {} },
+  };
+  const exports = {};
+  vm.runInNewContext(
+    ts.transpileModule(
+      fs.readFileSync(
+        require.resolve("../src/service/receiptImport/useImageImport.ts"),
+        "utf8",
+      ),
+      { compilerOptions: { module: ts.ModuleKind.CommonJS } },
+    ).outputText,
+    { exports, require: (name) => modules[name] },
+  );
+  const render = () => {
+    cursor = 0;
+    return exports.useImageImport();
+  };
+  failure = Object.assign(new Error("preparing"), {
+    code: "ERR_OCR_MODEL_DOWNLOADING",
+  });
+  await render().start();
+  assert.equal(
+    render().error,
+    "글자 인식을 준비하고 있어요. 잠시 후 다시 시도해 주세요",
+  );
+  assert.equal(render().busy, false);
+  assert.equal(diagnostics.length, 0);
+  failure = new Error("broken");
+  await render().start();
+  assert.equal(
+    render().error,
+    "이 기기에서는 이미지를 읽지 못했어요. 직접 입력해 주세요",
+  );
+  assert.equal(diagnostics.length, 1);
+});

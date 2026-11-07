@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   android-module:
-    name: Android 알림 모듈 컴파일
+    name: Android 로컬 모듈 컴파일
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -45,9 +45,9 @@ jobs:
         run: |
           npm ci
           npx expo prebuild --platform android --no-install
-      - name: 로컬 알림 모듈·Manifest 검사
+      - name: 로컬 모듈(알림·OCR)·Manifest 검사
         working-directory: frontend/android
-        run: ./gradlew :payment-notifications:testDebugUnitTest :payment-notifications:processDebugManifest --console=plain
+        run: ./gradlew :payment-notifications:testDebugUnitTest :payment-notifications:processDebugManifest :receipt-ocr:compileDebugKotlin :receipt-ocr:processDebugManifest --console=plain
 
   backend:
     name: 백엔드 테스트

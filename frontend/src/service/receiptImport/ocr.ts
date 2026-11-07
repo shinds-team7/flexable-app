@@ -1,11 +1,17 @@
-import TextRecognition, {
-  TextRecognitionScript,
-} from "@react-native-ml-kit/text-recognition";
+import { requireOptionalNativeModule } from "expo-modules-core";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import type { OcrLine } from "./parse";
 import type { RecognitionStats } from "./diagnostics";
-export const imageImportSupported = true;
+type OcrFrame = { left: number; top: number; width: number; height: number };
+type OcrResult = {
+  blocks: { lines: { text: string; frame?: OcrFrame | null }[] }[];
+};
+/** Local module `modules/receipt-ocr`: Korean OCR through Google Play services (the model is not bundled in the app). */
+const ReceiptOcr = requireOptionalNativeModule<{
+  recognize(uri: string): Promise<OcrResult>;
+}>("ReceiptOcr");
+export const imageImportSupported = !!ReceiptOcr;
 let lastRecognitionStats: RecognitionStats | null = null;
 export const getLastRecognitionStats = () => lastRecognitionStats;
 /**
@@ -23,10 +29,7 @@ export async function pickAndRecognize(): Promise<OcrLine[] | null> {
   if (picked.canceled || !picked.assets[0]) return null;
   const uri = picked.assets[0].uri;
   try {
-    const result = await TextRecognition.recognize(
-      uri,
-      TextRecognitionScript.KOREAN,
-    );
+    const result = await ReceiptOcr!.recognize(uri);
     const rawLines = result.blocks.flatMap((b) => b.lines);
     const lines = rawLines
       .filter((l) => l.frame)
