@@ -2,8 +2,9 @@
  * AI 메이트(챗봇). 스타일 선택 → 메뉴 → 대화 3단계.
  * 답변은 POST /chat/messages(Gemini), 카드 숫자는 서버 계산값(/budget/today, /analysis/summary)만 보여 준다.
  * 요일별 배분은 답변의 action을 사용자가 [확인]으로 누른 뒤에만 PUT /budget/day-weights로 저장한다.
- * 일정("금요일 저녁에 술약속")은 서버가 거래 기록으로 예측한 금액을 [등록]으로 확인한 뒤에만
- * POST /scheduled-expenses로 저장하고, 하루 예산은 GET /budget/today의 서버 값을 그대로 보여 준다.
+ * 일정("금요일에 친구랑 저녁")은 서버가 거래 기록으로 예측한 금액을 한 줄 카드(날짜 · 금액 · 카테고리)로 보여 주고
+ * [반영]·[수정]을 누른 뒤에만 POST /scheduled-expenses로 저장한다. 하루 예산은 GET /budget/today의 서버 값을 그대로 보여 준다.
+ * AI 음성 답변을 켜 두면 예정 지출 확인 질문 한 줄만 기기 음성 합성으로 읽는다.
  */
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -41,7 +42,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Donut } from "@/components/Donut";
 import { goBack } from "@/components/SubHeader";
-import { Button, T } from "@/components/ui";
+import { Button, ConfirmModal, T } from "@/components/ui";
 import {
   colors,
   elevation1,
@@ -57,7 +58,10 @@ import { api, ApiError, sessionGeneration } from "./api/client";
 import { useServerExtensions } from "./serverExtensions";
 import { useSession } from "./Session";
 import { readStorage, writeStorage } from "./storage";
+import { ScheduleCard, type ScheduleSubmit } from "./ScheduleCard";
+import { confirmSpeech } from "./scheduleDraft";
 import { useVoiceInput } from "./voiceInput";
+import { speak, stopSpeaking, useVoiceReply } from "./voiceReply";
 import type { Analysis, ChatRequest, ChatResponse, Today } from "./types";
 import { CategoryIcon, Loading, Page, seoulDate, useResource } from "./ui";
 
@@ -85,6 +89,8 @@ type Msg = {
   text: string;
   card?: CardKind;
   choices?: Choice[];
+  /** 예정 지출 제안. 한 줄 카드와 [반영 | 수정]을 붙인다 */
+  schedule?: Schedule;
   used?: boolean;
   ui?: boolean;
 };
@@ -134,9 +140,8 @@ const topics: {
   {
     id: "plan",
     title: "약속 설정",
-    desc: "지출·저축 관련\n일정을 관리해요",
+    desc: "약속을 말하면\n예정 지출로 등록해요",
     icon: "calendar",
-    soon: true,
   },
   {
     id: "budget",
@@ -160,9 +165,17 @@ const topics: {
 
 /** 메뉴를 고르면 화면이 먼저 하는 말과 바로 누를 수 있는 질문. 질문은 그대로 AI 메이트에게 보낸다. */
 const topicIntro: Record<
-  Exclude<TopicId, "plan">,
+  TopicId,
   { text: string; quick: { label: string; card?: CardKind }[] }
 > = {
+  plan: {
+    text: "앞으로 있을 약속을 날짜와 함께 말해 주세요. 입력한 기록으로 쓸 돈을 예상해 드리고, [반영]을 누르면 예정 지출로 등록해요. 마이크 버튼으로 말해도 돼요.",
+    quick: [
+      { label: "이번 주 금요일에 친구랑 저녁" },
+      { label: "토요일에 영화 보기" },
+      { label: "다음 주 월요일 회식" },
+    ],
+  },
   spend: {
     text: "입력한 기록으로 어떤 걸 볼까요?",
     quick: [
@@ -216,6 +229,11 @@ function ChatbotRoom() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
   const [soon, setSoon] = useState(false);
+  const voiceReply = useVoiceReply();
+  const speakOn = useRef(false);
+  useEffect(() => {
+    speakOn.current = voiceReply.on;
+  }, [voiceReply.on]);
   const nextId = useRef(1);
   const list = useRef<Msg[]>([]);
   const lock = useRef(false);
@@ -310,18 +328,18 @@ function ChatbotRoom() {
         signal: controller.signal,
       });
       if (stale()) return;
-      if (result.action) {
-        proposal.current =
-          result.action.type === "SCHEDULE" && result.action.schedule
-            ? result.action.schedule
-            : null;
-      }
+      const schedule =
+        result.action?.type === "SCHEDULE" ? result.action.schedule : undefined;
+      if (result.action) proposal.current = schedule ?? null;
       push({
         from: "bot",
         text: result.reply,
         card,
-        choices: result.action ? confirmChoices(result.action) : undefined,
+        schedule,
+        choices:
+          result.action && !schedule ? confirmChoices(result.action) : undefined,
       });
+      if (schedule && speakOn.current) speak(confirmSpeech(schedule));
     } catch (e) {
       if (stale()) return;
       push({
@@ -345,42 +363,14 @@ function ChatbotRoom() {
     void request(card);
   };
 
-  const scheduleChoices = (s: Schedule): Choice[] => {
-    const cancelChoice: Choice = {
-      label: "취소",
-      run: () => {
-        proposal.current = null;
-        push(
-          { from: "me", text: "취소" },
-          { from: "bot", text: "알겠어요. 일정은 등록하지 않을게요." },
-        );
-      },
-    };
-    if (s.amount == null) return [cancelChoice];
-    return [
-      { label: "등록", run: () => void register(s) },
-      {
-        label: "금액·날짜 바꾸기",
-        run: () =>
-          push(
-            { from: "me", text: "금액·날짜 바꾸기" },
-            {
-              from: "bot",
-              ui: true,
-              text: "원하는 금액이나 날짜를 말해 주세요.\n예: 5만원으로 해줘, 토요일로 바꿔줘",
-            },
-          ),
-      },
-      cancelChoice,
-    ];
-  };
-
-  /** 사용자가 [등록]을 누른 뒤에만 예정 지출로 저장한다. 하루 예산은 서버가 다시 계산한 값을 보여 준다. */
-  const register = async (s: Schedule) => {
-    if (lock.current || s.amount == null) return;
+  /** 사용자가 카드의 [반영]·[수정]을 누른 뒤에만 예정 지출로 저장한다. 하루 예산은 서버가 다시 계산한 값을 보여 준다. */
+  const register = async (msgId: number, title: string, s: ScheduleSubmit) => {
+    if (lock.current) return;
     lock.current = true;
     setBusy(true);
-    push({ from: "me", text: "등록" });
+    stopSpeaking();
+    update((m) => m.map((x) => (x.id === msgId ? { ...x, used: true } : x)));
+    push({ from: "me", text: s.edited ? "수정" : "반영" });
     const started = focus.current;
     const generation = sessionGeneration();
     const stale = () =>
@@ -391,14 +381,14 @@ function ChatbotRoom() {
         body: {
           amount: s.amount,
           categoryId: s.categoryId,
-          title: s.title,
+          title,
           date: s.date,
         },
       });
       if (stale()) return;
       proposal.current = null;
       session.invalidate();
-      const head = `${whenText(s.date)} **${s.title}** ${won(s.amount)}원을 예정 지출로 등록했어요.`;
+      const head = `${whenText(s.date)} **${title}** ${won(s.amount)}원을 예정 지출로 등록했어요.`;
       let text = head;
       try {
         const t = await api<Today>("/budget/today");
@@ -417,7 +407,7 @@ function ChatbotRoom() {
         from: "bot",
         ui: true,
         text: errorText(e),
-        choices: [{ label: "다시 시도", run: () => void register(s) }],
+        choices: [{ label: "다시 시도", run: () => void register(msgId, title, s) }],
       });
     } finally {
       if (!stale()) {
@@ -429,9 +419,7 @@ function ChatbotRoom() {
 
   const confirmChoices = (action: Proposal): Choice[] =>
     action.type === "SCHEDULE"
-      ? action.schedule
-        ? scheduleChoices(action.schedule)
-        : []
+      ? []
       : [
     { label: "확인", run: () => void apply(action) },
     {
@@ -508,7 +496,7 @@ function ChatbotRoom() {
     setThanks(false);
     setStep("chat");
     if ("text" in first) return ask(first.text);
-    const topic = first.topic as Exclude<TopicId, "plan">;
+    const topic = first.topic;
     const intro = topicIntro[topic];
     push(
       { from: "me", ui: true, text: topics.find((t) => t.id === topic)!.title },
@@ -550,7 +538,24 @@ function ChatbotRoom() {
     }
   };
 
-  const soonModal = <SoonModal visible={soon} onClose={() => setSoon(false)} />;
+  const soonModal = (
+    <>
+      <SoonModal visible={soon} onClose={() => setSoon(false)} />
+      {/* 처음 들어오면 한 번 묻는다(스타일 선택을 마친 뒤). 나중엔 대화 화면 스피커 버튼으로 바꾼다 */}
+      <ConfirmModal
+        visible={voiceReply.needsChoice && step !== "select" && !soon}
+        title="AI 음성 답변을 쓸까요?"
+        message={
+          "예정 지출을 등록할지 물을 때 휴대폰 음성으로 읽어 드려요. " +
+          "읽는 글자는 기기 안에서 소리로 바꾸고 서버로 보내지 않아요. 대화 화면 위 스피커 버튼으로 언제든 바꿀 수 있어요."
+        }
+        confirmLabel="쓸게요"
+        cancelLabel="안 쓸게요"
+        onConfirm={() => voiceReply.set(true)}
+        onCancel={() => voiceReply.set(false)}
+      />
+    </>
+  );
 
   if (step === "loading") return <View style={styles.root} />;
   if (step === "select")
@@ -598,7 +603,13 @@ function ChatbotRoom() {
           setStep("select");
         }}
         onAction={act}
+        onSchedule={(msgId, title, value) => void register(msgId, title, value)}
         onSend={(text) => ask(text)}
+        speaker={
+          voiceReply.available
+            ? { on: voiceReply.on, toggle: () => voiceReply.set(!voiceReply.on) }
+            : undefined
+        }
       />
       {soonModal}
     </>
@@ -707,20 +718,44 @@ function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
+type Speaker = { on: boolean; toggle: () => void };
+
 /** 선택·메뉴·대화 공통 헤더. 세 화면이 같은 헤더를 써서 가운데만 바뀌는 한 대화방처럼 보인다. 설정 버튼이 없으면 자리만 둬 제목을 가운데에 맞춘다. */
 function RoomHeader({
   onBack,
   onSettings,
+  speaker,
 }: {
   onBack: () => void;
   onSettings?: () => void;
+  /** AI 음성 답변 켜기/끄기(대화 화면) */
+  speaker?: Speaker;
 }) {
   return (
     <View style={styles.roomHeader}>
       <BackButton onPress={onBack} />
+      {/* 오른쪽 버튼이 둘이면 왼쪽에도 자리를 둬 제목을 가운데에 맞춘다 */}
+      {speaker && <View style={styles.backBtn} />}
       <T size={17} weight="800" style={[styles.center, { flex: 1 }]}>
         AI 메이트
       </T>
+      {speaker && (
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityLabel="AI 음성 답변"
+          accessibilityState={{ checked: speaker.on }}
+          aria-checked={speaker.on}
+          onPress={speaker.toggle}
+          hitSlop={10}
+          style={styles.backBtn}
+        >
+          <Ionicons
+            name={speaker.on ? "volume-high" : "volume-mute-outline"}
+            size={24}
+            color={speaker.on ? colors.brand : colors.textMuted}
+          />
+        </Pressable>
+      )}
       {onSettings ? (
         <SettingsButton onPress={onSettings} />
       ) : (
@@ -1008,7 +1043,9 @@ function Chat({
   onBack,
   onSettings,
   onAction,
+  onSchedule,
   onSend,
+  speaker,
 }: {
   mate: MateId;
   msgs: Msg[];
@@ -1016,9 +1053,13 @@ function Chat({
   onBack: () => void;
   onSettings: () => void;
   onAction: (msgId: number, c: Choice) => void;
+  onSchedule: (msgId: number, title: string, value: ScheduleSubmit) => void;
   onSend: (text: string) => void;
+  speaker?: Speaker;
 }) {
   const scroll = useRef<ScrollView>(null);
+  // 음성 입력으로 듣는 동안 사용자 쪽에 "…" 말풍선을 띄운다
+  const [listening, setListening] = useState(false);
   const m = mates.find((x) => x.id === mate)!;
   // 키보드가 올라오면 가장 최근 대화가 키보드 바로 위에 보이게 맨 아래로 내린다.
   useEffect(() => {
@@ -1030,7 +1071,7 @@ function Chat({
   }, []);
   return (
     <KeyboardFrame>
-      <RoomHeader onBack={onBack} onSettings={onSettings} />
+      <RoomHeader onBack={onBack} onSettings={onSettings} speaker={speaker} />
       <EnterView style={{ backgroundColor: "#F6F8FC" }}>
         <ScrollView
           ref={scroll}
@@ -1064,9 +1105,11 @@ function Chat({
                 items={g.items}
                 disabled={busy}
                 onAction={onAction}
+                onSchedule={onSchedule}
               />
             ),
           )}
+          {listening && <ListeningBubble />}
           {busy && (
             <View style={styles.botRow}>
               <View style={styles.avatarSlot} />
@@ -1075,7 +1118,7 @@ function Chat({
           )}
         </ScrollView>
       </EnterView>
-      <Composer busy={busy} onSend={onSend} />
+      <Composer busy={busy} onSend={onSend} onListening={setListening} />
     </KeyboardFrame>
   );
 }
@@ -1095,10 +1138,13 @@ function Composer({
   initial,
   busy,
   onSend,
+  onListening,
 }: {
   initial?: string;
   busy?: boolean;
   onSend: (text: string) => void;
+  /** 듣는 중인지 알린다(대화 화면이 "…" 말풍선을 띄운다) */
+  onListening?: (listening: boolean) => void;
 }) {
   const [draft, setDraft] = useState(initial ?? "");
   // 음성 입력을 시작할 때 입력창에 있던 글. 들은 문장은 그 뒤에 붙인다
@@ -1110,6 +1156,9 @@ function Composer({
   );
   const voice = useVoiceInput(onVoice);
   const listening = voice.status !== "idle";
+  useEffect(() => {
+    onListening?.(listening);
+  }, [listening, onListening]);
   const ready = !!draft.trim() && !busy;
   const send = () => {
     if (!ready) return;
@@ -1119,24 +1168,17 @@ function Composer({
   };
   return (
     <View>
-      {(listening || voice.notice) && (
+      {/* 듣는 중에는 안내 줄 없이 마이크 버튼만 빨간 멈춤으로 바뀐다. 실패 안내만 보여 준다 */}
+      {!listening && voice.notice && (
         <View style={styles.voiceStatus}>
-          {listening ? (
-            <T size={13} weight="700" color={colors.brandDark}>
-              {voice.status === "starting"
-                ? "마이크를 켜는 중이에요…"
-                : "듣고 있어요. 말을 마치면 입력창에 적어 둘게요"}
-            </T>
-          ) : (
-            <T
-              size={13}
-              color={colors.danger}
-              accessibilityRole="alert"
-              style={{ flex: 1 }}
-            >
-              {voice.notice}
-            </T>
-          )}
+          <T
+            size={13}
+            color={colors.danger}
+            accessibilityRole="alert"
+            style={{ flex: 1 }}
+          >
+            {voice.notice}
+          </T>
         </View>
       )}
       <View style={styles.composer}>
@@ -1166,6 +1208,7 @@ function Composer({
                 ? voice.stop
                 : () => {
                     base.current = draft.trim();
+                    stopSpeaking();
                     void voice.start();
                   }
             }
@@ -1197,6 +1240,38 @@ function Composer({
           <Ionicons name="arrow-up" size={20} color={colors.onBrand} />
         </Pressable>
       </View>
+    </View>
+  );
+}
+
+/** 음성 입력으로 듣는 동안 사용자 쪽에 뜨는 "…" 말풍선. 점 세 개가 차례로 깜빡인다 */
+function ListeningBubble() {
+  const [dots] = useState(() => [0, 1, 2].map(() => new Animated.Value(0.35)));
+  useEffect(() => {
+    const native = Platform.OS !== "web";
+    const loop = Animated.loop(
+      Animated.stagger(
+        180,
+        dots.map((d) =>
+          Animated.sequence([
+            Animated.timing(d, { toValue: 1, duration: 300, useNativeDriver: native }),
+            Animated.timing(d, { toValue: 0.35, duration: 300, useNativeDriver: native }),
+          ]),
+        ),
+      ),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [dots]);
+  return (
+    <View
+      style={[styles.bubble, styles.mine, styles.listening]}
+      accessibilityLabel="음성을 듣고 있어요"
+      accessibilityLiveRegion="polite"
+    >
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={[styles.listeningDot, { opacity: d }]} />
+      ))}
     </View>
   );
 }
@@ -1262,10 +1337,12 @@ function BotGroup({
   items,
   disabled,
   onAction,
+  onSchedule,
 }: {
   items: Msg[];
   disabled: boolean;
   onAction: (msgId: number, c: Choice) => void;
+  onSchedule: (msgId: number, title: string, value: ScheduleSubmit) => void;
 }) {
   return (
     <View style={styles.botRow}>
@@ -1281,6 +1358,20 @@ function BotGroup({
             {msg.card === "budget" && <BudgetCard />}
             {msg.card === "top" && <TopCard />}
             {msg.card === "compare" && <CompareCard />}
+            {msg.schedule && (
+              <ScheduleCard
+                title={msg.schedule.title}
+                categoryName={msg.schedule.category}
+                initial={{
+                  date: msg.schedule.date,
+                  amount: msg.schedule.amount ?? null,
+                  categoryId: msg.schedule.categoryId,
+                }}
+                disabled={disabled}
+                done={msg.used}
+                onSubmit={(v) => onSchedule(msg.id, msg.schedule!.title, v)}
+              />
+            )}
             {msg.choices && !msg.used && (
               <View style={styles.actions}>
                 {msg.choices.map((c, i) => (
@@ -1581,6 +1672,18 @@ function SoonModal({
 }
 
 const styles = StyleSheet.create({
+  listening: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    minHeight: 40,
+  },
+  listeningDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.onBrand,
+  },
   root: { flex: 1, backgroundColor: colors.card },
   center: { textAlign: "center" },
   roomHeader: {

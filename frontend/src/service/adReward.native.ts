@@ -1,5 +1,6 @@
-// 보상형 광고(Android·iOS 앱). 보상은 광고를 끝까지 보면 구글이 서버로 보내는 검증 콜백(SSV)이 지급한다.
-// 앱은 user_id만 실어 보내고, 다 본 뒤에는 지갑을 다시 읽어 지급 결과를 확인한다(docs/coin-plan.md "광고 보상").
+// 보상형 광고(Android·iOS 앱). 기본 10코인은 광고를 끝까지 보면 구글이 서버로 보내는 검증 콜백(SSV)이 지급한다.
+// 앱은 user_id만 실어 보내고, 다 본 뒤 광고가 열려 있던 시간(초)을 재서 POST /coins/ad-bonus로 보너스를 받는다
+// (15~30초 +5, 30초 이상 +10, docs/coin-plan.md "광고 보상").
 import mobileAds, {
   AdEventType,
   RewardedAd,
@@ -9,6 +10,8 @@ import mobileAds, {
 
 export const adsSupported = true;
 export type AdResult = "earned" | "closed" | "failed";
+/** seconds: 광고가 열린 뒤 닫힐 때까지 초(열리지 않았으면 0) */
+export type AdOutcome = { result: AdResult; seconds: number };
 
 // 개발 중(__DEV__)에는 구글 테스트 광고만 쓴다. 실제 광고를 개발 중에 반복해서 보면 AdMob이 무효 트래픽으로 제재할 수 있다.
 // 배포 빌드는 "광고 시청 코인 획득" 광고 단위(AdMob 콘솔). 광고 단위 ID는 앱에 그대로 들어가는 공개 값이다.
@@ -17,28 +20,33 @@ const UNIT = __DEV__ ? TestIds.REWARDED : REWARDED_UNIT;
 
 let started: Promise<unknown> | null = null;
 
-export async function showRewardedAd(userId: number): Promise<AdResult> {
+export async function showRewardedAd(userId: number): Promise<AdOutcome> {
   started ??= mobileAds().initialize();
   try {
     await started;
   } catch {
-    return "failed";
+    return { result: "failed", seconds: 0 };
   }
-  return new Promise<AdResult>((resolve) => {
+  return new Promise<AdOutcome>((resolve) => {
     const ad = RewardedAd.createForAdRequest(UNIT, {
       // 개인정보처리방침 11장: 맞춤형 광고에는 쓰지 않도록 요청한다
       requestNonPersonalizedAdsOnly: true,
       serverSideVerificationOptions: { userId: String(userId) },
     });
     let earned = false;
+    let openedAt = 0;
     const off: (() => void)[] = [];
     const done = (r: AdResult) => {
       off.forEach((f) => f());
-      resolve(r);
+      const seconds = openedAt ? Math.round((Date.now() - openedAt) / 1000) : 0;
+      resolve({ result: r, seconds: Math.min(3600, Math.max(0, seconds)) });
     };
     off.push(
       ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
         ad.show().catch(() => done("failed"));
+      }),
+      ad.addAdEventListener(AdEventType.OPENED, () => {
+        openedAt = Date.now();
       }),
       ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
         earned = true;

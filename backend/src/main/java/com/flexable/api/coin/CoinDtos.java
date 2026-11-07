@@ -4,6 +4,12 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+
 public final class CoinDtos {
 
 	private CoinDtos() {
@@ -13,8 +19,20 @@ public final class CoinDtos {
 	public record Passive(int collectable, int collectedToday, int dailyLimit, OffsetDateTime nextAt) {
 	}
 
-	/** 광고 보상. rewardedToday: 오늘 받은 횟수, dailyLimit: 하루 한도, reward: 1회 코인 */
+	/** 광고 보상. rewardedToday: 오늘 받은 횟수, dailyLimit: 하루 한도, reward: 1회 기본 코인 */
 	public record AdReward(int rewardedToday, int dailyLimit, int reward) {
+	}
+
+	/**
+	 * 광고를 다 본 뒤 앱이 보내는 시청 시간. requestId는 앱이 광고마다 새로 만든 값(같은 값은 한 번만 지급).
+	 */
+	public record AdBonusRequest(
+			@NotBlank(message = "요청 id를 확인해 주세요") @Pattern(regexp = "[A-Za-z0-9-]{8,40}", message = "요청 id를 확인해 주세요") String requestId,
+			@NotNull(message = "시청 시간을 확인해 주세요") @Min(value = 0, message = "시청 시간을 확인해 주세요") @Max(value = 3600, message = "시청 시간을 확인해 주세요") Integer watchedSeconds) {
+	}
+
+	/** reward: 광고 기본 코인(10), bonus: 시청 시간 보너스(0·5·10), total: 이번 광고로 받은 코인 합 */
+	public record AdBonusResponse(int reward, int bonus, int total, Wallet wallet) {
 	}
 
 	/** equippedOutfitId가 null이면 기본 캐릭터(costume-lv1) */

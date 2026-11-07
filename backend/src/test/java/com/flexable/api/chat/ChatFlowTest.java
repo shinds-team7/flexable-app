@@ -269,7 +269,7 @@ class ChatFlowTest {
 	void proposesScheduleWithServerEstimateAndSavesNothing() throws Exception {
 		String token = budgetWithEveningHistory();
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", null)));
 		when(model.generate(anyString(), anyList(), anyList()))
 			.thenReturn(new ChatModel.Reply("금요일 술약속에는 **27,300원** 정도 쓸 것 같아요. 등록할까요?", null));
 
@@ -283,13 +283,13 @@ class ChatFlowTest {
 			.andExpect(jsonPath("$.action.schedule.category", is("식비")))
 			.andExpect(jsonPath("$.action.schedule.amount", is(27300)))
 			.andExpect(jsonPath("$.action.schedule.basis.samples", is(5)))
-			.andExpect(jsonPath("$.action.schedule.basis.scope", is("SLOT")))
+			.andExpect(jsonPath("$.action.schedule.basis.scope", is("CATEGORY")))
 			.andExpect(jsonPath("$.action.schedule.preview.dayBudget").isNumber());
 
 		// 금액은 서버 값이 두 번째 호출(문장 작성)에 그대로 간다
 		ArgumentCaptor<String> narrate = ArgumentCaptor.forClass(String.class);
 		verify(model).generate(narrate.capture(), anyList(), anyList());
-		assertThat(narrate.getValue()).contains("예상 금액: 27,300원").contains("2026-10-30(금)").contains("최근 90일 비슷한 저녁 지출 5번");
+		assertThat(narrate.getValue()).contains("예상 금액: 27,300원").contains("2026-10-30(금)").contains("이 카테고리 지출이 있던 5일의 하루 합계");
 
 		// 제안만 했으므로 예정 지출은 없다
 		mvc.perform(auth(get("/api/v1/scheduled-expenses?from=2026-10-28&to=2026-11-30"), token, null))
@@ -301,7 +301,7 @@ class ChatFlowTest {
 	void registeredScheduleChangesTodayBudgetAsPreviewed() throws Exception {
 		String token = budgetWithEveningHistory();
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", null)));
 		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("27,300원이에요.", null));
 		String res = mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
 			.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
@@ -328,7 +328,7 @@ class ChatFlowTest {
 	void replacesNarrationThatChangedTheAmount() throws Exception {
 		String token = budgetWithEveningHistory();
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", null)));
 		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("3만원 정도 쓸 것 같아요.", null));
 		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
 			.andExpect(status().isOk())
@@ -347,7 +347,7 @@ class ChatFlowTest {
 		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
 		eveningFood(token, foodCategory(token), 20, 20000);
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", "EVENING", null)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "식비", null)));
 		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("얼마나 쓸 것 같으세요?", null));
 		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
 			.andExpect(status().isOk())
@@ -363,7 +363,7 @@ class ChatFlowTest {
 		String token = signup();
 		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-31", "식비", null, 50000L)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-31", "식비", 50000L)));
 		when(model.generate(anyString(), anyList(), anyList())).thenReturn(new ChatModel.Reply("**50,000원**으로 할까요?", null));
 		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
 			.andExpect(jsonPath("$.action.schedule.amount", is(50000)))
@@ -375,12 +375,12 @@ class ChatFlowTest {
 	void doesNotProposeScheduleForPastDateOrUnknownCategoryOrOldApps() throws Exception {
 		String token = budgetWithEveningHistory();
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-27", "식비", "EVENING", null)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-27", "식비", null)));
 		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.action", is(nullValue())));
 		when(model.generate(anyString(), anyList(), anyList(), anyList()))
-			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "없는카테고리", null, null)));
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("술약속", "2026-10-30", "없는카테고리", null)));
 		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
 			.andExpect(jsonPath("$.action", is(nullValue())));
 

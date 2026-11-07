@@ -62,8 +62,6 @@ public class GeminiChatModel implements ChatModel {
 			props.put("title", Map.of("type", "string", "description", "일정 제목. 짧게(예: 술약속, 친구 생일 식사)"));
 			props.put("date", Map.of("type", "string", "description", "일정 날짜 yyyy-MM-dd. 오늘이 아닌 가장 가까운 미래"));
 			props.put("category", Map.of("type", "string", "enum", categories, "description", "쓸 돈이 속하는 지출 카테고리"));
-			props.put("slot", Map.of("type", "string", "enum", List.of("MORNING", "DAYTIME", "EVENING"),
-					"description", "일정 시간대. MORNING 아침, DAYTIME 낮, EVENING 저녁·밤"));
 			props.put("amount", Map.of("type", "integer", "description", "사용자가 직접 말한 금액(원). 말하지 않았으면 넣지 않는다"));
 			declarations.add(Map.of(
 					"name", SCHEDULE,
@@ -151,7 +149,7 @@ public class GeminiChatModel implements ChatModel {
 			if (part.get("functionCall") instanceof Map<?, ?> call && SCHEDULE.equals(call.get("name"))
 					&& call.get("args") instanceof Map<?, ?> args) {
 				schedule = new ScheduleCall(str(args.get("title")), str(args.get("date")), str(args.get("category")),
-						str(args.get("slot")), num(args.get("amount")));
+						num(args.get("amount")));
 			}
 		}
 		if (text.isEmpty() && preset == null && schedule == null) {

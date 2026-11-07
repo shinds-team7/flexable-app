@@ -151,13 +151,8 @@ test("calendar branches into future planning and past records with the selected 
   );
   await page.goBack();
   await page.getByRole("button", { name: /^10월 28일,/ }).click();
-  await expect(page).toHaveURL(/\/transactions\/day\?date=2026-10-28$/);
-  await expect(
-    page.getByRole("button", { name: "점심, 12,000원, 상세 보기" }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "이 날짜에 지출 기록", exact: true })
-    .click();
+  // 지난 날짜는 날짜별 목록을 거치지 않고 바로 거래 직접 기록으로 간다
+  await expect(page).toHaveURL(/\/transactions\/new\?date=2026-10-28$/);
   await expect(page.getByLabel("날짜", { exact: true })).toHaveValue(
     "2026-10-28",
   );

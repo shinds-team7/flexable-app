@@ -18,10 +18,14 @@ export function DateField({
   label,
   value,
   onChange,
+  min,
+  max,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  min?: string;
+  max?: string;
 }) {
   return (
     <View style={{ gap: 8 }}>
@@ -32,6 +36,8 @@ export function DateField({
         type="date"
         aria-label={label}
         value={value}
+        min={min}
+        max={max}
         onChange={(e) => e.target.value && onChange(e.target.value)}
         style={style}
       />

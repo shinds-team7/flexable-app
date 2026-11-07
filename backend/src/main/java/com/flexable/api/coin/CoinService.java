@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.flexable.api.budget.BudgetService;
 import com.flexable.api.coin.CoinDtos.AttendResponse;
+import com.flexable.api.coin.CoinDtos.AdBonusResponse;
 import com.flexable.api.coin.CoinDtos.AdReward;
 import com.flexable.api.coin.CoinDtos.Attendance;
 import com.flexable.api.coin.CoinDtos.CheckInResponse;
@@ -24,6 +25,7 @@ import com.flexable.api.coin.CoinDtos.Passive;
 import com.flexable.api.coin.CoinDtos.Reward;
 import com.flexable.api.coin.CoinDtos.Wallet;
 import com.flexable.api.common.ApiException;
+import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
 import com.flexable.api.config.AppProperties;
 import com.flexable.api.outfit.UserOutfit;
@@ -42,6 +44,11 @@ public class CoinService {
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
 	public static final int AD_REWARD = 10;
 	public static final int AD_DAILY_LIMIT = 3;
+	/** 시청 시간 보너스: 15초 미만 0, 15~30초 5, 30초 이상 10(합계 10·15·20, 11-06 결정) */
+	public static final int AD_BONUS_MID_SECONDS = 15;
+	public static final int AD_BONUS_LONG_SECONDS = 30;
+	public static final int AD_BONUS_MID = 5;
+	public static final int AD_BONUS_LONG = 10;
 	public static final int ATTENDANCE_REWARD = 5;
 	/** 누적 출석 보너스: 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날. 그날 기본 5에 더해서 준다 */
 	public static final int ATTENDANCE_MILESTONE_REWARD = 20;
@@ -125,6 +132,37 @@ public class CoinService {
 			return false;
 		}
 		return post(w, CoinReason.AD_REWARD, transactionId, AD_REWARD, true);
+	}
+
+	/** 앱이 잰 시청 시간에 따른 보너스. 시간은 앱 값을 믿는다(코인은 앱 안에서만 쓴다, coin-plan.md). */
+	static int adBonusFor(int watchedSeconds) {
+		if (watchedSeconds >= AD_BONUS_LONG_SECONDS) {
+			return AD_BONUS_LONG;
+		}
+		return watchedSeconds >= AD_BONUS_MID_SECONDS ? AD_BONUS_MID : 0;
+	}
+
+	/**
+	 * 광고를 다 본 뒤 시청 시간 보너스. 오늘 받은 광고 보상(SSV 콜백) 수보다 보너스를 더 받을 수 없어서,
+	 * 콜백이 아직 안 왔으면 AD_NOT_REWARDED(409)로 답하고 앱이 잠시 뒤 다시 부른다. 같은 requestId는 한 번만 준다.
+	 * 보너스가 0인 시청(15초 미만)은 기록하지 않는다.
+	 */
+	@Transactional
+	public AdBonusResponse adBonus(long userId, String requestId, int watchedSeconds) {
+		CoinWallet w = lockWallet(userId);
+		int bonus = adBonusFor(watchedSeconds);
+		boolean already = ledger.existsByUserIdAndReasonAndRefKey(userId, CoinReason.AD_BONUS, requestId);
+		if (!already) {
+			int rewarded = adsToday(userId);
+			int claimed = ledger.countSince(userId, CoinReason.AD_BONUS, today().atStartOfDay(zone).toInstant());
+			if (rewarded == 0 || claimed >= rewarded) {
+				throw new ApiException(ErrorCode.AD_NOT_REWARDED);
+			}
+			if (bonus > 0) {
+				post(w, CoinReason.AD_BONUS, requestId, bonus, true);
+			}
+		}
+		return new AdBonusResponse(AD_REWARD, bonus, AD_REWARD + bonus, view(w));
 	}
 
 	private int adsToday(long userId) {

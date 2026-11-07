@@ -448,7 +448,7 @@ POST 본문:
 }
 ```
 
-- `ad` = 보상형 광고(`rewardedToday` 오늘 받은 횟수, `dailyLimit` 3, `reward` 10). 보상은 AdMob 서버 검증 콜백 `GET /ads/reward-callback`(로그인 없이 구글이 부름, 서명 불일치 403·형식 오류 400, 이미 줬거나 한도 초과도 200)이 지급하므로 앱은 광고를 본 뒤 `GET /coins`를 다시 읽어 확인한다
+- `ad` = 보상형 광고(`rewardedToday` 오늘 받은 횟수, `dailyLimit` 3, `reward` 10). 보상은 AdMob 서버 검증 콜백 `GET /ads/reward-callback`(로그인 없이 구글이 부름, 서명 불일치 403·형식 오류 400, 이미 줬거나 한도 초과도 200)이 지급한다. 앱은 광고를 본 뒤 `POST /coins/ad-bonus`로 시청 시간 보너스를 받는다(아래)
 - `passive.collectable` = 지금 [모으기]로 받을 수 있는 개수. `nextAt` = 다음 1개가 쌓이는 시각(오늘 10개가 다 쌓였거나, 오늘 check-in 전이거나, 다음 적립 시각이 오늘 자정 이후면 `null`)
 - `equippedOutfitId` = 적용 중인 코스튬. `null`이면 기본 캐릭터(`costume-lv1`)
 
@@ -482,6 +482,10 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 내 내역이 아닌 id는 무시한다.
 
 ### `GET /coins` → 200 `CoinWallet`
+
+### `POST /coins/ad-bonus` → 200
+
+광고를 다 본 뒤 앱이 보낸다. 요청 `{requestId, watchedSeconds}`: `requestId`는 앱이 광고마다 새로 만든 값(영문·숫자·`-` 8~40자, 같은 값은 한 번만 지급), `watchedSeconds`는 광고가 열린 뒤 닫힐 때까지 초(0~3600, 앱이 잰 값을 믿는다). 응답 `{reward: 10, bonus: 0|5|10, total, wallet}`. 보너스는 15초 미만 0(기록 안 함), 15~30초 5, 30초 이상 10. 오늘 받은 광고 보상(SSV 콜백) 수보다 보너스를 더 받을 수 없어 콜백이 아직 안 왔으면 409 `AD_NOT_REWARDED`이고 앱이 1.5초 간격으로 다시 보낸다. 내역 사유는 `AD_BONUS`.
 
 ### `POST /coins/collect` → 200
 
@@ -528,7 +532,7 @@ V10은 잭팟·직장냥이 구매 내역마다 낸 코인(현재 각 200)을 `R
 
 - `before` 없음 = 가장 최근부터. 다음 쪽은 앞 응답의 `nextBefore`를 `before`로 넣는다. `nextBefore`가 `null`이면 더 없다.
 - `limit` 1~100, 기본 30. 범위 밖은 400 `VALIDATION_FAILED`(field `limit`).
-- `amount`는 적립 양수, 사용(`PURCHASE`) 음수. `reason`은 check-in `rewards`와 같은 값에 `PASSIVE`(모으기)·`REFERRAL_INVITEE`(추천 코드 등록)·`PURCHASE`(코스튬 구매)·`ATTENDANCE`(출석)·`AD_REWARD`(광고 시청)가 더해진다. `outfitId`는 `PURCHASE`일 때만, `refDate`는 `BUDGET_BONUS`일 때만 있다.
+- `amount`는 적립 양수, 사용(`PURCHASE`) 음수. `reason`은 check-in `rewards`와 같은 값에 `PASSIVE`(모으기)·`REFERRAL_INVITEE`(추천 코드 등록)·`PURCHASE`(코스튬 구매)·`ATTENDANCE`(출석)·`AD_REWARD`(광고 시청)·`AD_BONUS`(광고 시청 시간 보너스)가 더해진다. `outfitId`는 `PURCHASE`일 때만, `refDate`는 `BUDGET_BONUS`일 때만 있다.
 - 모달로 아직 보여 주지 않은 보상도 이미 지급된 내역이라 포함한다.
 
 ### `GET /outfits` → 200 `OutfitList`
