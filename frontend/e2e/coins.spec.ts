@@ -153,10 +153,10 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
   // Local mode also lists inactive reserve costumes, so no empty slot is needed.
   await expect(page.getByLabel(/ 코스튬, 준비 중$/)).toHaveCount(0);
-  // The shop's top card has the ad button instead of [모으기]; the web build cannot show ads, so it is disabled.
+  // The shop's top card has the [광고 🪙] button instead of [모으기]; the web build cannot show ads, so it is disabled.
   await expect(collect).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "+10 🪙", exact: true }),
+    page.getByRole("button", { name: "광고 보고 코인 받기", exact: true }),
   ).toBeDisabled();
   await page.goBack();
   await openCoins(page);
