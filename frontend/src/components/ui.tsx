@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -271,28 +271,41 @@ export function Row({
 function useKeyboardLift(active: boolean, ref: RefObject<View | null>) {
   const [value, setValue] = useState(0);
   const current = useRef(0);
+  // 떠 있는 키패드의 윗줄(화면 y). 닫혀 있으면 null
+  const keyboardTop = useRef<number | null>(null);
+  const set = useCallback((v: number) => {
+    current.current = v;
+    setValue(v);
+  }, []);
+  /** 시트 아래끝을 재서 키패드 윗줄과 겹치는 만큼(+여유 8)만 올린다. 키패드가 닫혀 있으면 아무것도 안 한다 */
+  const measure = useCallback(() => {
+    const top = keyboardTop.current;
+    if (top === null) return;
+    ref.current?.measureInWindow((_x, y, _w, h) => {
+      // 지금 올린 만큼을 빼고 원래 아래끝을 구한다
+      const bottom = y + h + current.current;
+      set(Math.max(0, Math.round(bottom - top + 8)));
+    });
+  }, [ref, set]);
   useEffect(() => {
     if (!active || Platform.OS === 'web') return;
-    const set = (v: number) => {
-      current.current = v;
-      setValue(v);
-    };
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
-      const top = e.endCoordinates.screenY;
-      ref.current?.measureInWindow((_x, y, _w, h) => {
-        // 지금 올린 만큼을 빼고 원래 아래끝을 구한 뒤, 키패드 윗줄과 겹치는 만큼(+여유 8)만 올린다
-        const bottom = y + h + current.current;
-        set(Math.max(0, Math.round(bottom - top + 8)));
-      });
+      keyboardTop.current = e.endCoordinates.screenY;
+      measure();
     });
-    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => set(0));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
+      keyboardTop.current = null;
+      set(0);
+    });
     return () => {
       show.remove();
       hide.remove();
+      keyboardTop.current = null;
       set(0);
     };
-  }, [active, ref]);
-  return value;
+  }, [active, measure, set]);
+  // 시트가 올라오는 도중에 키패드가 뜨면(자동 포커스) 움직이는 위치로 재게 되므로, 다 올라온 뒤 다시 잰다
+  return [value, measure] as const;
 }
 
 /** 하단 시트 모달 — 바닥에서 ease-out으로 올라오고, 닫힐 땐 더 빠르게 내려간다 */
@@ -314,6 +327,8 @@ export function Sheet({
 }) {
   const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
+  const sheetRef = useRef<View>(null);
+  const [lift, remeasure] = useKeyboardLift(mounted, sheetRef);
   // 열릴 때는 렌더 중에 바로 마운트하고, 닫힐 때는 애니메이션이 끝난 뒤 언마운트한다
   if (visible && !mounted) setMounted(true);
   const p = useAnimValue(0);
@@ -327,7 +342,7 @@ export function Sheet({
         duration: reduced ? 0 : motion.enter,
         easing: motion.easeOut,
         useNativeDriver: native,
-      }).start();
+      }).start(() => remeasure());
     } else if (mounted) {
       Animated.timing(p, {
         toValue: 0,
@@ -340,8 +355,6 @@ export function Sheet({
   }, [visible]);
 
   const translateY = p.interpolate({ inputRange: [0, 1], outputRange: [420, 0] });
-  const sheetRef = useRef<View>(null);
-  const lift = useKeyboardLift(mounted, sheetRef);
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.dimBg, { opacity: p }]} />
