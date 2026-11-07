@@ -11,6 +11,7 @@ import com.flexable.api.budget.SettingsRepository;
 import com.flexable.api.category.CategoryRepository;
 import com.flexable.api.coin.CoinLedgerRepository;
 import com.flexable.api.coin.CoinWalletRepository;
+import com.flexable.api.errorlog.ErrorEventRepository;
 import com.flexable.api.outfit.UserOutfitRepository;
 import com.flexable.api.referral.ReferralRepository;
 import com.flexable.api.transaction.TransactionRepository;
@@ -36,12 +37,14 @@ public class AccountDeletionService {
 	private final ReferralRepository referrals;
 	private final UserRepository users;
 	private final ScheduledExpenseRepository scheduled;
+	private final ErrorEventRepository errorEvents;
 
 	public AccountDeletionService(TransactionRepository transactions, CategoryRepository categories,
 			FixedExpenseRepository fixed, FixedExpensePostingRepository fixedPostings,
 			ProtectedItemRepository protectedItems, SettingsRepository settings, DailyBudgetRepository dailyBudgets,
 			CoinLedgerRepository coinLedger, CoinWalletRepository coinWallets, UserOutfitRepository userOutfits,
-			ReferralRepository referrals, UserRepository users, ScheduledExpenseRepository scheduled) {
+			ReferralRepository referrals, UserRepository users, ScheduledExpenseRepository scheduled,
+			ErrorEventRepository errorEvents) {
 		this.transactions = transactions;
 		this.categories = categories;
 		this.fixed = fixed;
@@ -55,6 +58,7 @@ public class AccountDeletionService {
 		this.referrals = referrals;
 		this.users = users;
 		this.scheduled = scheduled;
+		this.errorEvents = errorEvents;
 	}
 
 	@Transactional
@@ -74,6 +78,7 @@ public class AccountDeletionService {
 		coinWallets.deleteByUserId(userId);
 		referrals.deleteByInviteeId(userId);
 		referrals.clearInviter(userId);
+		errorEvents.deleteByUserId(userId);
 		users.deleteById(userId);
 	}
 }

@@ -1,10 +1,16 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, type ErrorBoundaryProps } from "expo-router";
+import { useEffect } from "react";
 import { View } from "react-native";
 import { Button, T } from "@/components/ui";
 import { colors } from "@/theme";
+import { reportCrash } from "./errorReport";
 // Render errors used to close the release app. Show the message instead so testers can report it.
 export function CrashScreen({ error, retry }: ErrorBoundaryProps) {
+  // 오류 기록에 남긴다(같은 오류는 한 번만 보낸다)
+  useEffect(() => {
+    reportCrash(error);
+  }, [error]);
   return (
     <View
       style={{
