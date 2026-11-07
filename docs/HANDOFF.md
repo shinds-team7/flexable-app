@@ -62,6 +62,7 @@
 - [ ] 신한카드 알림 중 서버가 거절(400·404)한 건은 확인 목록으로 빼고 뒤 알림을 계속 기록(#285, #284 다음): 계약 `Idempotency-Key` `maxLength: 64` 명시(서버 동작 그대로). 앱 JS만이라 #284와 같은 **원격 업데이트(runtime 1.8.0)**로 함께 내보내면 된다. 서버 변경 없음
 - [ ] AI 메이트 화면 코드 분리(#287): `ChatbotScreen.tsx`(1,918줄)를 `ChatbotScreen.tsx`와 `chatbot/`(model·parts·Composer·bubbles·cards·styles)으로 나눔. 코드 줄은 그대로 옮기고 import·export만 바꿈(동작 변화 없음). 앱 JS만이라 **원격 업데이트(runtime 1.8.0)**, 서버 변경 없음 **2026-11-07 preview 원격 업데이트 게시**(runtime 1.8.0, group `0a1a228f-59b4-4c3b-bec5-51274ca50092`, 소스 `769fd1f`, #284·#285·#287 포함). production 승격은 사람이 `npm run update:promote -- 0a1a228f-59b4-4c3b-bec5-51274ca50092`로 한다
 - [ ] 앱 용량 줄이기, 앱 1.9.0(이 PR): ① 영수증·스크린샷 OCR을 앱에 넣던 ML Kit(엔진 10.5MB + 5개 언어 모델 약 5MB, arm64 기준)에서 Google Play 서비스 한국어 인식(로컬 모듈 `modules/receipt-ocr`)으로 바꿈. 모델은 설치 때 Play 서비스가 내려받고, 받는 중이면 "잠시 후 다시 시도" 안내 ② Pretendard 5종을 KS X 1001 한글 2,350자 + 영문·기호로 줄임(7.5MB→3.2MB, 그 밖의 드문 한글은 시스템 글꼴로 보임). 네이티브 변경이라 `app.json` 버전을 **1.9.0으로 올렸고 새 EAS 빌드와 Play 업로드가 필요**하다. 원격 업데이트로는 못 보낸다(이 PR 이후 main의 원격 업데이트는 runtime 1.9.0이라 1.8.0 앱에 가지 않는다). **실기기 확인**: 새로 설치한 직후 스크린샷 가져오기(모델 다운로드 전후), 토스·카카오뱅크·카카오페이 인식 결과가 1.8.0과 같은지, 화면 글꼴·굵기
+- [ ] AdMob 앱 인증용 `app-ads.txt` 추가(이 PR): `frontend/public/app-ads.txt`에 게시자 줄 한 개. 그동안 모든 경로가 `index.html`로 넘어가서 AdMob이 "app-ads.txt 파일이 없음"으로 인증하지 못했다. 반영: **머지하면 Vercel이 자동 배포**, 앱·서버 변경 없음. 배포 뒤 AdMob 앱 설정에서 [업데이트 확인]을 누른다(크롤링은 수 분~하루)
 
 ## 5. 참고(자주 바뀌지 않는 정보)
 
