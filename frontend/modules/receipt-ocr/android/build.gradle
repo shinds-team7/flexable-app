@@ -1,0 +1,22 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.receiptocr'
+version = '1.0.0'
+
+android {
+  namespace 'expo.modules.receiptocr'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Korean OCR through Google Play services: the model is downloaded by Play services, not bundled in the APK
+  // (the bundled ML Kit library added ~15MB of native code and five script models to every install).
+  implementation 'com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1'
+  implementation 'com.google.android.gms:play-services-base:18.5.0'
+}

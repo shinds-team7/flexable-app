@@ -52,7 +52,14 @@ export function useImageImport() {
       setPending(items);
       router.push("/transactions/import");
       leaving = true;
-    } catch {
+    } catch (e) {
+      // Play services downloads the OCR model after install. Until it lands, ask to retry instead of "this device can't".
+      if (
+        (e as { code?: unknown } | null)?.code === "ERR_OCR_MODEL_DOWNLOADING"
+      ) {
+        setError("글자 인식을 준비하고 있어요. 잠시 후 다시 시도해 주세요");
+        return;
+      }
       setDiagnostic(
         createImportDiagnostic(
           [],

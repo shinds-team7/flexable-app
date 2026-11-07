@@ -1,5 +1,5 @@
 import type { OcrLine } from "./parse";
-// 기기 안 글자 읽기(ML Kit)는 앱에서만 쓸 수 있다.
+// 기기 안 글자 읽기(ML Kit, modules/receipt-ocr)는 Android 앱에서만 쓸 수 있다.
 export const imageImportSupported = false;
 export const getLastRecognitionStats = () => null;
 export async function pickAndRecognize(): Promise<OcrLine[] | null> {
