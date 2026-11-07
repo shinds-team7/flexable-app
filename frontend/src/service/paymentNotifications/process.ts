@@ -26,6 +26,9 @@ export type ImportDependencies = {
 };
 export type PaymentProblem = { id: string; reason: string; postedAt: number };
 
+/** The native id is a 64-char SHA-256 hex digest, exactly the server's Idempotency-Key limit (64). Send it as is, never prefixed. */
+export const paymentIdempotencyKey = (id: string) => id;
+
 /** Persist the exact request BEFORE sending it. Retried requests keep the same body and idempotency key. */
 export async function importPaymentNotices(
   notices: PaymentNotice[],

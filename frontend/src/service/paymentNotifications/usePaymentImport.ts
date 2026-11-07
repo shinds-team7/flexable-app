@@ -10,6 +10,7 @@ import {
 } from "./native";
 import {
   importPaymentNotices,
+  paymentIdempotencyKey,
   type PaymentBody,
   type PaymentProblem,
 } from "./process";
@@ -119,7 +120,7 @@ export function useAutomaticPaymentImport() {
           save: async (id, body) => {
             await api("/transactions", {
               method: "POST",
-              key: `shinhan-${id}`,
+              key: paymentIdempotencyKey(id),
               body,
             });
             if (current()) session.invalidate();
