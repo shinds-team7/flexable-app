@@ -470,7 +470,7 @@ paths:
       tags: [transaction]
       summary: 거래 기록. 같은 Idempotency-Key를 다시 보내면 처음 만든 거래를 200으로
       parameters:
-        - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: false, description: "재전송 중복 방지 키. 64자 이하(넘으면 400 VALIDATION_FAILED)", schema: { type: string, maxLength: 64 } }
       requestBody:
         required: true
         content:
