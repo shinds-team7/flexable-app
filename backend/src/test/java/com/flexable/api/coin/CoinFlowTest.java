@@ -490,7 +490,7 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.code").value("COINS_NOT_ENOUGH"));
 	}
 
-	/** 11-05: 직장냥이·잭팟은 레벨 코스튬이 아니라 200코인 상품이다. 레벨 2~6은 꺼 둔 자리(디자인 중). */
+	/** 11-05: 직장냥이·잭팟은 레벨 코스튬이 아니라 200코인 상품이다. 레벨 3~6은 꺼 둔 자리(디자인 중), 레벨 2는 V24로 켰다. */
 	@Test
 	void salaryCatAndJackpotAreCoinCostumesAndLevelSlotsStayLocked() throws Exception {
 		String token = signup();
@@ -504,7 +504,8 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].name").value(contains("마구간지기")))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv6')].name").value(contains("왕족")))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv6')].unlockLevel").value(contains(6)));
-		for (String id : List.of("costume-lv2", "costume-lv3", "costume-lv4", "costume-lv5", "costume-lv6")) {
+		assertThat(outfits.findById("costume-lv2").orElseThrow().isActive()).isTrue();
+		for (String id : List.of("costume-lv3", "costume-lv4", "costume-lv5", "costume-lv6")) {
 			assertThat(outfits.findById(id).orElseThrow().isActive()).isFalse();
 		}
 		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null)).andExpect(status().isOk());
@@ -613,7 +614,8 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.peakLevel").value(2))
 			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].owned").value(false))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv3')].owned").value(false));
-		// 꺼 둔 레벨 코스튬은 레벨이 되어도 열리지 않는다(디자인 중)
+		// 꺼 둔 레벨 코스튬은 레벨이 되어도 열리지 않는다(디자인 중). Lv.2는 V24로 켜져 있어 Lv.2가 되면 열린다
+		jdbc.update("update outfits set active = false where id = 'costume-lv2'");
 		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"costume-lv2\"}"))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("OUTFIT_LOCKED"));

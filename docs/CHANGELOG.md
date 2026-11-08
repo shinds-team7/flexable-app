@@ -6,6 +6,7 @@
 
 ## 2026-11-08
 
+- [#303] Lv.2 코스튬(`costume-lv2`)에 `cat-farmer` 영상을 연결하고 V24로 켬(최고 단계 2 이상이면 열림, 코인 구매 불가). coin-plan·API·FEATURES·결정 기록(six-level-costumes) — 영향: 앱 화면·앱 서버
 - [Issue 없음] `docs/HANDOFF.md`만 고치는 변경(끝난 항목 삭제, 배포·실기기 확인 결과)은 PR 없이 `main`에 바로 커밋·push. 다른 파일이 섞이면 PR, 새 기능 줄은 기능 PR에서 그대로. `AGENTS.md` "작업 완료 시" — 영향: 작업 방식
 
 ## 2026-11-07
