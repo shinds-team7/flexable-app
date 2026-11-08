@@ -6,8 +6,8 @@ import { useEffect, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { colors, motion } from '@/theme';
-import { levelName } from './LevelIcon';
-import { T, useAnimValue, useReducedMotion } from './ui';
+import { LevelIcon, levelName } from './LevelIcon';
+import { useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -50,8 +50,9 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
 }
 
 /**
- * 지금 단계(왼쪽 원)에서 다음 단계(오른쪽 원)까지 어디쯤인지. 최고 단계는 오른쪽 원에 '최고'를 보인다. 퍼센트 숫자는 보여 주지 않는다(10-22).
- * 모양은 양 끝 원 두 개를 네이비 테두리 캡슐로 이은 형태(11-08 시안 level-gage). 채움은 단계와 관계없이 블루 하나이고 단계 구분은 원 안 아이콘이 맡는다.
+ * 다음 단계까지 어디쯤인지. 퍼센트 숫자는 보여 주지 않는다(10-22).
+ * 모양은 연회색 홈에 블루 알약이 차오르는 형태(11-08 시안 level-gage2). 채움은 단계와 관계없이 블루 하나이고,
+ * 채움 끝에 지금 단계 아이콘이 붙어 함께 움직인다(새 레벨 이미지 level-icon-1~6이 오면 그것으로 바꾼다).
  * 홈이 처음 그려질 때 0에서 지금 값까지 차오르고, 애니메이션 줄이기가 켜져 있으면 바로 채운다.
  */
 function Gauge({ status }: { status: PaceStatus }) {
@@ -69,6 +70,7 @@ function Gauge({ status }: { status: PaceStatus }) {
     return () => anim.stop();
   }, [progress, reduced, fill]);
   const pct = Math.round(progress * 100);
+  const at = fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   return (
     <View
       style={styles.gauge}
@@ -77,33 +79,26 @@ function Gauge({ status }: { status: PaceStatus }) {
       accessibilityLabel={top ? `최고 단계, ${label}` : `${levelName(level)} 단계, 승급 게이지 ${pct}%, ${label}`}
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
-      <View style={styles.capsule}>
-        <View style={styles.track}>
-          <Animated.View style={[styles.bar, { width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}>
-            <View style={styles.shine} />
-          </Animated.View>
-        </View>
+      <View style={styles.track}>
+        <Animated.View style={[styles.bar, { width: at }]}>
+          <View style={styles.shine} />
+        </Animated.View>
       </View>
-      {/* 양 끝 원 안의 단계 그림은 새 레벨 이미지(level-icon-1~6)가 들어올 자리라 지금은 비워 둔다 */}
-      <View style={styles.badge} />
-      <View style={styles.badge}>
-        {top && (
-          <T size={12} weight="800" color={colors.brand}>
-            최고
-          </T>
-        )}
+      {/* 채움 끝을 따라가는 단계 아이콘 */}
+      <View style={styles.markRail} pointerEvents="none">
+        <Animated.View style={[styles.mark, { left: at }]}>
+          <LevelIcon level={level} size={17} />
+        </Animated.View>
       </View>
     </View>
   );
 }
 
-/** 게이지 양 끝 원 지름 */
-const BADGE = 44;
-/** 원과 캡슐의 테두리 두께(같게 맞춘다) */
-const LINE = 3.5;
-/** 빈 칸(시안의 짙은 보라)과 채움 위 광택(시안의 하늘색). 게이지에서만 쓴다 */
-const GAUGE_EMPTY = '#3A1B5E';
-const GAUGE_SHINE = '#2FB8FF';
+/** 채움 끝 아이콘 지름 */
+const MARK = 30;
+/** 게이지 홈 높이와 안쪽 여백 */
+const TRACK = 18;
+const INSET = 2;
 
 const styles = StyleSheet.create({
   // Screen 의 좌우·상단 여백(16)을 상쇄해 화면 폭을 꽉 채우고, 아래 항목 바로 위에서 끊는다(gap 12 상쇄)
@@ -122,36 +117,41 @@ const styles = StyleSheet.create({
   coin: { position: 'absolute', top: 12, right: 16 },
   attendance: { position: 'absolute', top: 12, left: 16 },
   char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
-  help: { alignSelf: 'center', marginTop: 2, marginBottom: -13 },
-  // 양 끝 원(BADGE) 사이를 캡슐이 잇는다. 캡슐 끝은 원 뒤로 숨는다
-  gauge: { alignSelf: 'stretch', height: BADGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
-  capsule: {
-    position: 'absolute',
-    left: 8 + BADGE / 2,
-    right: 8 + BADGE / 2,
-    height: 24,
-    borderWidth: LINE,
-    borderColor: colors.text,
-    backgroundColor: colors.card,
-    justifyContent: 'center',
-    paddingVertical: 3,
-    // 채움은 왼쪽 원 중앙에서 시작해 오른쪽 원 중앙에서 끝난다(양 끝은 원 뒤로 숨는다)
-    paddingHorizontal: 0,
+  help: { alignSelf: 'center', marginTop: 2, marginBottom: -9 },
+  // 아이콘이 양 끝에서 잘리지 않게 좌우로 아이콘 반지름만큼 비운다
+  gauge: { alignSelf: 'stretch', height: MARK, justifyContent: 'center', paddingHorizontal: 8 + MARK / 2 },
+  // 연회색 홈: 위쪽 안 그림자로 파인 느낌, 아래 흰 선으로 떠오른 가장자리
+  track: {
+    height: TRACK,
+    padding: INSET,
+    borderRadius: TRACK / 2,
+    backgroundColor: '#E1E5EC',
+    boxShadow: 'inset 0 2px 3px rgba(16,26,51,0.14), 0 1px 0 rgba(255,255,255,0.9)',
   },
-  track: { flex: 1, borderRadius: 6, backgroundColor: GAUGE_EMPTY, overflow: 'hidden' },
-  bar: { height: '100%', borderRadius: 6, backgroundColor: colors.brand, overflow: 'hidden' },
-  // 채움 위쪽 절반의 밝은 띠(시안의 광택)
-  shine: { position: 'absolute', top: 0, left: 6, right: 0, height: '55%', borderBottomLeftRadius: 6, borderTopLeftRadius: 6, borderTopRightRadius: 6, backgroundColor: GAUGE_SHINE },
-  badge: {
-    width: BADGE,
-    height: BADGE,
-    borderRadius: BADGE / 2,
-    borderWidth: LINE,
-    borderColor: colors.text,
+  bar: {
+    height: '100%',
+    minWidth: TRACK - INSET * 2,
+    borderRadius: TRACK / 2,
+    backgroundColor: colors.brand,
+    overflow: 'hidden',
+    boxShadow: 'inset 0 -2px 0 rgba(0,20,90,0.22), 0 1px 2px rgba(0,52,194,0.3)',
+  },
+  // 채움 위쪽의 밝은 띠(시안의 광택)
+  shine: { position: 'absolute', top: 2, left: 5, right: 5, height: '38%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.28)' },
+  // 홈 안쪽(채움이 움직이는 폭)과 같은 폭의 레일 위에서 아이콘 중심을 채움 끝에 맞춘다
+  markRail: { position: 'absolute', left: 8 + MARK / 2 + INSET, right: 8 + MARK / 2 + INSET, top: 0, bottom: 0 },
+  mark: {
+    position: 'absolute',
+    top: 0,
+    width: MARK,
+    height: MARK,
+    marginLeft: -MARK / 2,
+    borderRadius: MARK / 2,
     backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    // 원을 캡슐보다 살짝 위로
-    transform: [{ translateY: -4 }],
+    boxShadow: '0 1px 3px rgba(16,26,51,0.2)',
   },
 });
