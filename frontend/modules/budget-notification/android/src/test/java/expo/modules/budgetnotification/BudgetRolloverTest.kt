@@ -42,4 +42,24 @@ class BudgetRolloverTest {
     val now = seoul(2026, 11, 9, 23, 0)
     assertEquals(60 * 60 * 1000L + 5_000, BudgetClock.untilNextMidnight(now))
   }
+
+  @Test fun paymentLowersRemainingToday() {
+    val now = seoul(2026, 11, 9)
+    val r = BudgetRollover.withPayment(saved("2026-11-09"), 12_000, now - 60_000, now)!!
+    assertEquals(17_000, r.spent)
+    assertEquals(23_000, r.remaining)
+    assertTrue(r.stale)
+  }
+
+  @Test fun paymentAfterRolloverStartsFromWeekdayBudget() {
+    val now = seoul(2026, 11, 10, 0, 30)
+    val r = BudgetRollover.withPayment(saved("2026-11-09"), 5_000, now - 60_000, now)!!
+    assertEquals(5_000, r.spent)
+    assertEquals(15_000, r.remaining)
+  }
+
+  @Test fun paymentFromAnotherDayIsIgnored() {
+    val now = seoul(2026, 11, 10, 0, 30)
+    assertNull(BudgetRollover.withPayment(saved("2026-11-10"), 5_000, seoul(2026, 11, 9, 23, 50), now))
+  }
 }

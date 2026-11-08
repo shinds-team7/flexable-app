@@ -55,4 +55,14 @@ object BudgetRollover {
     val budget = saved.dayBudgets.getOrNull(BudgetClock.weekdayIndex(now)) ?: return null
     return saved.copy(date = today, budget = budget, spent = 0, remaining = budget, updatedAt = now, stale = true)
   }
+
+  /**
+   * 앱을 열기 전에 결제 알림이 오면 오늘 지출에 금액을 더해 남은 금액을 줄인다(추정, 앱을 열면 서버 값으로 바로잡힘).
+   * 오늘 결제가 아니거나 오늘 값을 알 수 없으면 null.
+   */
+  fun withPayment(saved: BudgetSnapshot, amount: Long, postedAt: Long, now: Long): BudgetSnapshot? {
+    if (BudgetClock.today(postedAt) != BudgetClock.today(now)) return null
+    val today = forToday(saved, now) ?: return null
+    return today.copy(spent = today.spent + amount, remaining = today.remaining - amount, updatedAt = now, stale = true)
+  }
 }
