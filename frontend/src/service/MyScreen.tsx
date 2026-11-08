@@ -25,6 +25,7 @@ import {
   EntryReminderTimeSheet,
   reminderTimeText,
 } from "./EntryReminderTimeSheet";
+import { markHomeGuidePending } from "./HomeGuide";
 import { useSession } from "./Session";
 import { ErrorNotice, Field } from "./ui";
 import { PROVIDER_NAME } from "./oauth";
@@ -274,6 +275,17 @@ export function MyScreen() {
             onPress={() => router.push(href)}
           />
         ))}
+        {session.user && (
+          <Row
+            label="사용 가이드 다시 보기"
+            onPress={() => {
+              const id = session.user?.id;
+              if (id === undefined) return;
+              // 홈이 다시 보일 때 가이드를 연다(service/HomeGuide)
+              void markHomeGuidePending(id).then(() => router.navigate("/home"));
+            }}
+          />
+        )}
       </Card>
       <View style={{ gap: 4, paddingHorizontal: 4 }}>
         <T size={13} color={colors.textMuted}>

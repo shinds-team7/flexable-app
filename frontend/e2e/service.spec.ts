@@ -422,13 +422,8 @@ test("a new account sees the home guide once after the gift and attendance modal
   await expect(first).toHaveCount(0);
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(first).toBeVisible();
+  // 실제 버튼·카드를 차례로 비춘다: + 버튼 → 오늘 쓸 수 있는 돈 → 캐릭터 → … → 하단 탭(마이)
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await expect(
-    page.getByRole("heading", {
-      name: "AI 메이트에게 물어보세요",
-      exact: true,
-    }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
     page.getByRole("heading", {
@@ -436,12 +431,23 @@ test("a new account sees the home guide once after the gift and attendance modal
       exact: true,
     }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  const startButton = page.getByRole("button", { name: "시작하기", exact: true });
+  for (let i = 0; i < 15 && !(await startButton.isVisible()); i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "마이", exact: true })).toBeVisible();
+  await startButton.click();
   await expect(first).toHaveCount(0);
   // 다시 홈에 와도 반복하지 않는다
   await page.reload();
   await expect(page.getByRole("button", { name: "거래 추가" })).toBeVisible();
   await page.waitForTimeout(1500);
+  await expect(first).toHaveCount(0);
+  // 마이에서 다시 볼 수 있다
+  await page.getByRole("tab", { name: "마이", exact: true }).click();
+  await page.getByRole("button", { name: "사용 가이드 다시 보기", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(first).toBeVisible();
+  await page.getByRole("button", { name: "건너뛰기", exact: true }).click();
   await expect(first).toHaveCount(0);
 });
 

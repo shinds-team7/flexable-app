@@ -344,7 +344,6 @@ export function HomeScreen() {
         visible={
           guide.pending && checkedIn && !shownReward && !attendance && !!s
         }
-        ai={extensions.available}
         onDone={guide.finish}
       />
     </View>
