@@ -25,13 +25,12 @@
 |---|---|---|
 | 1 | **11-09 서버 배포**(아카데미 네트워크 PC) | 담는 것: 일정 금액 예측 시간대 제거(#279), 광고 시청 시간 보너스 `POST /coins/ad-bonus`(#281), 오류 기록 V23 `error_events`·`POST /client-errors`·서버 500 기록·매일 30일 삭제(#290). 순서: ① **DB 백업** ② `backend/deploy/academy/deploy.sh` ③ `/actuator/health` 전부 `UP`, Flyway 로그 "now at version v23" ④ 앱에서 광고를 30초 넘게 보고 "+20 코인을 받았어요" ⑤ AI 메이트에 일정을 말해 금액이 나오는지 ⑥ DB에서 `select event_day, source, kind, status, code, path, message, occurrences from error_events order by last_at desc limit 20`이 에러 없이 도는지. 끝나면 4번의 서버 줄 3개를 지운다 |
 | 2 | **#298 preview 실기기 확인 → production 승격** | preview 그룹 `327bf6d1-39f3-48b0-8015-dbb0020ff23f`(소스 `ea47857`): 스크린샷 등록 때 모든 항목이 기본 선택되는지(이미 기록된 것 같은 거래만 빠짐), 토스 스크린샷에 "금액의 원 표시를 정확히 읽지 못했어요"가 더는 안 뜨는지. 되면 `npm run update:promote -- 327bf6d1-39f3-48b0-8015-dbb0020ff23f --message "…"`, 끝나면 4번 #298 줄을 지운다 |
-| 3 | **Gemini API 등급 결정** | 지금 **무료 등급**(11-08 확인). 무료 등급은 Google이 입력·응답을 제품 개선에 쓰고 사람이 검토할 수 있어 개인정보를 넣지 말라고 한다. 유료 등급으로 바꾸거나(개선에 안 씀, 위반 감지용으로만 잠시 보관), GPT로 바꾸면 방침의 처리 위탁·국외 이전(업체·국가) 개정이 필요하다. 방침에는 지금 "Google의 Gemini API 정책에 따름"으로만 적었다([결정](decisions/2026-11-06-voice-input.md)) |
-| 4 | **flexable-web에 알림**(완료 기록 없음) | 웹 연동 시드머니 `entries[].choice`에 `EXTRA`(앱에서 바로 보낸 돈, #225)가 올 수 있다. 웹이 이 값을 처리하는지 확인([`web-link-api.yaml`](contracts/web-link-api.yaml)) |
+| 3 | **flexable-web에 알림**(완료 기록 없음) | 웹 연동 시드머니 `entries[].choice`에 `EXTRA`(앱에서 바로 보낸 돈, #225)가 올 수 있다. 웹이 이 값을 처리하는지 확인([`web-link-api.yaml`](contracts/web-link-api.yaml)) |
 
 ## 3. 그 다음 할 일
 
 ### 출시·Play Console
-- [ ] 금융 기능 선언 실제 선택지 기록(`play-store/README.md` §3.7 TODO), 스토어 설명 끝 "문의:" 줄을 `ucmnuniverse@gmail.com`으로, 알림 권한 반영 여부(§3.8). §3.8 본문의 "알림 접근 권한은 요청하지 않는다"는 1.6.0 신한카드 자동 기록 이후로 맞지 않아 고쳐야 한다
+- [ ] **스토어 자세한 설명의 AI 메이트 전송처를 "OpenAI" → "Google(Gemini API)"로 고치기**(Play Console, 문구는 `play-store/README.md` §2). 금융 기능 선언(§3.7)·문의 줄·알림 권한(§3.8)은 11-08 확인 완료
 
 ### 서버·인프라
 - [ ] **EC2 로컬 DB로 복귀 11-14~16 → 아카데미 VM 데이터 삭제 11-17**(계획 [`server-migration.md`](server-migration.md) §8). 복귀 뒤에는 이 PC에서 `backend/deploy/deploy.sh`로 배포할 수 있다. 개인정보처리방침 백업 문구 손보기(§9). 복귀 때 `error_events`(V23)도 함께 옮긴다(30일 보관이라 비워도 된다)
