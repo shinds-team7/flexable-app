@@ -504,7 +504,7 @@ const TOSS_ANDROID = lines([
   [2164, [206, "채우기"], [703, "보내기"]],
 ]);
 
-test("Android Toss: paired time and right balance column recover missing or unreadable won, with mandatory review", () => {
+test("Android Toss: paired time and right balance column recover missing or unreadable won, review only unconfirmed misreads", () => {
   const result = parseReceipt(TOSS_ANDROID, TODAY);
   assert.equal(result.source, "toss");
   assert.deepEqual(brief(result), [
@@ -518,7 +518,13 @@ test("Android Toss: paired time and right balance column recover missing or unre
     ["10-21", "가상매장", "EXPENSE", 6000],
     ["10-21", "가상커피", "EXPENSE", 7000],
   ]);
-  assert.ok(result.items.every((item) => item.review.length > 0));
+  // 원만 빠진 금액(-20,000)은 확인 없이, 원 자리가 글자로 읽힌 금액(-1,000x)은 잔액이 이어질 때만(-6,000x) 확인 없이 가져온다.
+  assert.deepEqual(
+    result.items.map((item) =>
+      item.review.includes("금액의 원 표시를 정확히 읽지 못했어요"),
+    ),
+    [false, false, true, true, false, true, false, false, false],
+  );
   assert.equal(result.items[3].balance, null);
   assert.equal(result.items[5].balance, null);
   // A misread digit after the comma is never removed or silently turned into the original amount.
@@ -600,7 +606,7 @@ const TOSS_CROPPED_ANDROID = [
   { x: 878, y: 1243, text: "120,000" },
 ];
 
-test("cropped Android Toss: infer the screen from dated transaction/time/balance pairs, require amount review", () => {
+test("cropped Android Toss: infer the screen from dated transaction/time/balance pairs, review only misread amounts", () => {
   const result = parseReceipt(TOSS_CROPPED_ANDROID, TODAY);
   assert.equal(result.source, "toss");
   assert.deepEqual(brief(result), [
@@ -611,11 +617,23 @@ test("cropped Android Toss: infer the screen from dated transaction/time/balance
     ["10-24", "가상상점", "EXPENSE", 100000],
     ["10-24", "가상매장", "EXPENSE", 10000],
   ]);
-  assert.ok(
-    result.items.every((i) =>
+  // 원 없이 숫자만 읽힌 금액은 확인 요청 없이, 원 자리가 글자로 읽힌 금액(-2,000x, -10,000x)은
+  // 잔액으로 맞는지 확인되지 않으면 확인을 요청한다.
+  assert.deepEqual(
+    result.items.map((i) =>
       i.review.includes("금액의 원 표시를 정확히 읽지 못했어요"),
     ),
+    [false, false, true, false, false, true],
   );
+  // 원이 다른 글자로 읽혀도 잔액이 이어지면 확인을 요청하지 않는다.
+  const misreadWon = parseReceipt(
+    TOSS_CROPPED_ANDROID.map((l) =>
+      l.text === "-1,000" ? { ...l, text: "-1,000윈" } : l,
+    ),
+    TODAY,
+  );
+  assert.equal(misreadWon.items[1].amount, 1000);
+  assert.deepEqual(misreadWon.items[1].review, []);
   const uncropped = [
     ...TOSS_CROPPED_ANDROID,
     ...lines([[1400, [200, "채우기"], [700, "보내기"]]]),
