@@ -26,7 +26,7 @@ import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
 
-// 레벨 코스튬은 6단계(광부·마구간지기·상인·기사·귀족·왕족)다. 디자인 중이라 서버가 아직 내려 주지 않는 칸은
+// 레벨 코스튬은 6단계(광부·농부·상인·기사·귀족·왕족)다. 디자인 중이라 서버가 아직 내려 주지 않는 칸은
 // cat-unlock 실루엣과 자물쇠로 채운다.
 const LEVEL_SLOTS = 6;
 const UNLOCK_CAT = require("../../assets/outfits/cat-unlock.png");

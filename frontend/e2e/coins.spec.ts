@@ -410,7 +410,7 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
       },
     }),
   );
-  // Production lists only the miner among level costumes; five locked slots (마구간지기~왕족) fill the six.
+  // Production lists only the miner among level costumes; five locked slots (농부~왕족) fill the six.
   await page.route("**/api/v1/outfits", (route) =>
     route.fulfill({
       json: {
@@ -462,7 +462,7 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   await openShop(page);
   await expect(page.getByLabel(/ 코스튬, 준비 중$/)).toHaveCount(5);
   await expect(
-    page.getByLabel("마구간지기 코스튬, 준비 중", { exact: true }),
+    page.getByLabel("농부 코스튬, 준비 중", { exact: true }),
   ).toBeVisible();
   await page.goBack();
   await openCoins(page);

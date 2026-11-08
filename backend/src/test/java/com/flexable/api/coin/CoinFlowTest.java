@@ -501,7 +501,7 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.items[?(@.id == 'outfit-02')].price").value(contains(200)))
 			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].unlockLevel").value(contains(nullValue())))
 			.andExpect(jsonPath("$.items[?(@.id == 'outfit-01')].price").value(contains(200)))
-			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].name").value(contains("마구간지기")))
+			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv2')].name").value(contains("농부")))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv6')].name").value(contains("왕족")))
 			.andExpect(jsonPath("$.items[?(@.id == 'costume-lv6')].unlockLevel").value(contains(6)));
 		assertThat(outfits.findById("costume-lv2").orElseThrow().isActive()).isTrue();
