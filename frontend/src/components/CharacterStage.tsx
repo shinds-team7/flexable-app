@@ -6,7 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { colors, motion } from '@/theme';
-import { LevelIcon, levelName } from './LevelIcon';
+import { levelName } from './LevelIcon';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5 | 6;
@@ -39,8 +39,9 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
         </View>
       </View>
 
+      {/* 레벨 안내(?)는 게이지 가운데 위 */}
+      {help && <View style={styles.help}>{help}</View>}
       <Gauge status={gauge} />
-      {help && <View style={{ alignSelf: 'flex-end' }}>{help}</View>}
 
       {/* 오늘 쓸 수 있는 돈 — 캐릭터와 게이지 아래 */}
       <View style={styles.heroSlot}>{children}</View>
@@ -49,8 +50,9 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
 }
 
 /**
- * 지금 단계(왼쪽 아이콘)에서 다음 단계(오른쪽 아이콘)까지 어디쯤인지. 최고 단계는 오른쪽이 비고 '최고 단계'를 보인다. 퍼센트 숫자는 보여 주지 않는다(10-22).
- * 바는 단계와 관계없이 브랜드 블루 하나이고 단계 구분은 아이콘이 맡는다. 홈이 처음 그려질 때 0에서 지금 값까지 차오르고, 애니메이션 줄이기가 켜져 있으면 바로 채운다.
+ * 지금 단계(왼쪽 원)에서 다음 단계(오른쪽 원)까지 어디쯤인지. 최고 단계는 오른쪽 원에 '최고'를 보인다. 퍼센트 숫자는 보여 주지 않는다(10-22).
+ * 모양은 양 끝 원 두 개를 네이비 테두리 캡슐로 이은 형태(11-08 시안 level-gage). 채움은 단계와 관계없이 블루 하나이고 단계 구분은 원 안 아이콘이 맡는다.
+ * 홈이 처음 그려질 때 0에서 지금 값까지 차오르고, 애니메이션 줄이기가 켜져 있으면 바로 채운다.
  */
 function Gauge({ status }: { status: PaceStatus }) {
   const { level, progress, label } = status;
@@ -75,26 +77,33 @@ function Gauge({ status }: { status: PaceStatus }) {
       accessibilityLabel={top ? `최고 단계, ${label}` : `${levelName(level)} 단계, 승급 게이지 ${pct}%, ${label}`}
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
-      <View style={styles.gaugeHead}>
-        <LevelIcon level={level} size={18} />
+      <View style={styles.capsule}>
+        <View style={styles.track}>
+          <Animated.View style={[styles.bar, { width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}>
+            <View style={styles.shine} />
+          </Animated.View>
+        </View>
+      </View>
+      {/* 양 끝 원 안의 단계 그림은 새 레벨 이미지(level-icon-1~6)가 들어올 자리라 지금은 비워 둔다 */}
+      <View style={styles.badge} />
+      <View style={styles.badge}>
         {top && (
-          <T size={13} weight="800" color={colors.brand}>
-            최고 단계
+          <T size={12} weight="800" color={colors.brand}>
+            최고
           </T>
         )}
-        {top ? <View style={{ width: 18 }} /> : <LevelIcon level={level + 1} size={18} />}
-      </View>
-      <View style={styles.track}>
-        <Animated.View
-          style={[
-            styles.bar,
-            { backgroundColor: colors.brand, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
-          ]}
-        />
       </View>
     </View>
   );
 }
+
+/** 게이지 양 끝 원 지름 */
+const BADGE = 44;
+/** 원과 캡슐의 테두리 두께(같게 맞춘다) */
+const LINE = 3.5;
+/** 빈 칸(시안의 짙은 보라)과 채움 위 광택(시안의 하늘색). 게이지에서만 쓴다 */
+const GAUGE_EMPTY = '#3A1B5E';
+const GAUGE_SHINE = '#2FB8FF';
 
 const styles = StyleSheet.create({
   // Screen 의 좌우·상단 여백(16)을 상쇄해 화면 폭을 꽉 채우고, 아래 항목 바로 위에서 끊는다(gap 12 상쇄)
@@ -113,8 +122,36 @@ const styles = StyleSheet.create({
   coin: { position: 'absolute', top: 12, right: 16 },
   attendance: { position: 'absolute', top: 12, left: 16 },
   char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
-  gauge: { alignSelf: 'stretch', gap: 6, marginTop: 4, paddingHorizontal: 8 },
-  gaugeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  track: { height: 10, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.08)', overflow: 'hidden' },
-  bar: { height: '100%', borderRadius: 5 },
+  help: { alignSelf: 'center', marginTop: 2, marginBottom: -13 },
+  // 양 끝 원(BADGE) 사이를 캡슐이 잇는다. 캡슐 끝은 원 뒤로 숨는다
+  gauge: { alignSelf: 'stretch', height: BADGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
+  capsule: {
+    position: 'absolute',
+    left: 8 + BADGE / 2,
+    right: 8 + BADGE / 2,
+    height: 24,
+    borderWidth: LINE,
+    borderColor: colors.text,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    paddingVertical: 3,
+    // 채움은 왼쪽 원 중앙에서 시작해 오른쪽 원 중앙에서 끝난다(양 끝은 원 뒤로 숨는다)
+    paddingHorizontal: 0,
+  },
+  track: { flex: 1, borderRadius: 6, backgroundColor: GAUGE_EMPTY, overflow: 'hidden' },
+  bar: { height: '100%', borderRadius: 6, backgroundColor: colors.brand, overflow: 'hidden' },
+  // 채움 위쪽 절반의 밝은 띠(시안의 광택)
+  shine: { position: 'absolute', top: 0, left: 6, right: 0, height: '55%', borderBottomLeftRadius: 6, borderTopLeftRadius: 6, borderTopRightRadius: 6, backgroundColor: GAUGE_SHINE },
+  badge: {
+    width: BADGE,
+    height: BADGE,
+    borderRadius: BADGE / 2,
+    borderWidth: LINE,
+    borderColor: colors.text,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // 원을 캡슐보다 살짝 위로
+    transform: [{ translateY: -4 }],
+  },
 });
