@@ -3,10 +3,10 @@
  * 단계·게이지 값은 부르는 쪽(서비스 홈, 서버 점수 pointsStatus)이 계산해서 넘긴다.
  */
 import { useEffect, type ReactNode } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, Image, StyleSheet, View } from 'react-native';
 
 import { colors, motion } from '@/theme';
-import { LevelIcon, levelName } from './LevelIcon';
+import { levelName } from './LevelIcon';
 import { useAnimValue, useReducedMotion } from './ui';
 
 export type Level = 1 | 2 | 3 | 4 | 5 | 6;
@@ -52,7 +52,8 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
 /**
  * 다음 단계까지 어디쯤인지. 퍼센트 숫자는 보여 주지 않는다(10-22).
  * 모양은 연회색 홈에 블루 알약이 차오르는 형태(11-08 시안 level-gage2). 채움은 단계와 관계없이 블루 하나이고,
- * 채움 끝에 지금 단계 아이콘이 붙어 함께 움직인다(새 레벨 이미지 level-icon-1~6이 오면 그것으로 바꾼다).
+ * 채움 끝에 걷는 고양이 그림이 붙어 함께 움직인다. 단계별 레벨 이미지(level-icon-1~6)는 레벨 안내 창에서 쓴다.
+ * 게이지 양 끝은 아래 '오늘 쓸 수 있는 돈' 카드 양 끝과 맞춘다.
  * 홈이 처음 그려질 때 0에서 지금 값까지 차오르고, 애니메이션 줄이기가 켜져 있으면 바로 채운다.
  */
 function Gauge({ status }: { status: PaceStatus }) {
@@ -87,15 +88,16 @@ function Gauge({ status }: { status: PaceStatus }) {
       {/* 채움 끝을 따라가는 단계 아이콘 */}
       <View style={styles.markRail} pointerEvents="none">
         <Animated.View style={[styles.mark, { left: at }]}>
-          <LevelIcon level={level} size={17} />
+          <Image source={WALKING_CAT} style={styles.cat} resizeMode="cover" accessible={false} />
         </Animated.View>
       </View>
     </View>
   );
 }
 
-/** 채움 끝 아이콘 지름 */
-const MARK = 30;
+/** 채움 끝 고양이 원 지름 */
+const MARK = 34;
+const WALKING_CAT = require('../../assets/levels/blue-cat-walking-loop.png');
 /** 게이지 홈 높이와 안쪽 여백 */
 const TRACK = 18;
 const INSET = 2;
@@ -117,9 +119,9 @@ const styles = StyleSheet.create({
   coin: { position: 'absolute', top: 12, right: 16 },
   attendance: { position: 'absolute', top: 12, left: 16 },
   char: { width: '100%', maxWidth: 640, aspectRatio: 16 / 9 },
-  help: { alignSelf: 'center', marginTop: 2, marginBottom: -9 },
-  // 아이콘이 양 끝에서 잘리지 않게 좌우로 아이콘 반지름만큼 비운다
-  gauge: { alignSelf: 'stretch', height: MARK, justifyContent: 'center', paddingHorizontal: 8 + MARK / 2 },
+  help: { alignSelf: 'center', marginTop: 2, marginBottom: -11 },
+  // 홈은 카드 양 끝까지. 끝에 선 고양이 원은 반쯤 바깥(wrap 좌우 여백 16 안)으로 나간다
+  gauge: { alignSelf: 'stretch', height: MARK, justifyContent: 'center' },
   // 연회색 홈: 위쪽 안 그림자로 파인 느낌, 아래 흰 선으로 떠오른 가장자리
   track: {
     height: TRACK,
@@ -139,7 +141,7 @@ const styles = StyleSheet.create({
   // 채움 위쪽의 밝은 띠(시안의 광택)
   shine: { position: 'absolute', top: 2, left: 5, right: 5, height: '38%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.28)' },
   // 홈 안쪽(채움이 움직이는 폭)과 같은 폭의 레일 위에서 아이콘 중심을 채움 끝에 맞춘다
-  markRail: { position: 'absolute', left: 8 + MARK / 2 + INSET, right: 8 + MARK / 2 + INSET, top: 0, bottom: 0 },
+  markRail: { position: 'absolute', left: INSET, right: INSET, top: 0, bottom: 0 },
   mark: {
     position: 'absolute',
     top: 0,
@@ -152,6 +154,9 @@ const styles = StyleSheet.create({
     borderColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     boxShadow: '0 1px 3px rgba(16,26,51,0.2)',
   },
+  // 그림 가장자리의 거친 흰 테두리가 원 밖으로 잘리도록 조금 크게
+  cat: { width: MARK * 1.1, height: MARK * 1.1 },
 });
