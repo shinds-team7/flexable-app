@@ -2,6 +2,7 @@ package expo.modules.paymentnotifications
 
 import android.app.Notification
 import android.content.ComponentName
+import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import java.security.MessageDigest
@@ -28,17 +29,32 @@ class PaymentNotificationListener : NotificationListenerService() {
     val item = notification.notification
     if (item.flags and Notification.FLAG_GROUP_SUMMARY != 0 || item.flags and Notification.FLAG_ONGOING_EVENT != 0) return
     try {
+      var amount: Long? = null
       val collected = PaymentStore.enqueue(this, notification.postTime) {
         val title = item.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty().take(300)
         val body = (item.extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: item.extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(2000)
         if (!Regex("승인|결제|이용|취소").containsMatchIn("$title\n$body")) return@enqueue null
+        amount = PaymentAmount.parse(title, body)
         val identity = "${notification.key}\n${item.`when`.takeIf { it > 0 } ?: notification.postTime}\n$title\n$body"
         val id = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         JSONObject().put("id", id).put("postedAt", notification.postTime).put("title", title).put("body", body)
       }
-      if (collected) PaymentEvents.changed()
+      if (collected) {
+        PaymentEvents.changed()
+        // 앱을 열기 전에도 알림창 남은 예산이 줄도록 금액과 시각만 같은 앱의 예산 알림에 넘긴다(원문은 넘기지 않는다).
+        amount?.let { notifyBudget(it, notification.postTime) }
+      }
     } catch (_: Exception) {
       // Fail closed. Never fall back to plaintext or log financial notification content.
+    }
+  }
+
+  private fun notifyBudget(amount: Long, postedAt: Long) {
+    runCatching {
+      sendBroadcast(
+        Intent().setClassName(packageName, "expo.modules.budgetnotification.BudgetPaymentReceiver")
+          .putExtra("amount", amount).putExtra("postedAt", postedAt),
+      )
     }
   }
 }

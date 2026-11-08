@@ -47,7 +47,7 @@ jobs:
           npx expo prebuild --platform android --no-install
       - name: 로컬 모듈(알림·OCR)·Manifest 검사
         working-directory: frontend/android
-        run: ./gradlew :payment-notifications:testDebugUnitTest :payment-notifications:processDebugManifest :receipt-ocr:compileDebugKotlin :receipt-ocr:processDebugManifest --console=plain
+        run: ./gradlew :payment-notifications:testDebugUnitTest :payment-notifications:processDebugManifest :budget-notification:testDebugUnitTest :budget-notification:processDebugManifest :receipt-ocr:compileDebugKotlin :receipt-ocr:processDebugManifest --console=plain
 
   backend:
     name: 백엔드 테스트
