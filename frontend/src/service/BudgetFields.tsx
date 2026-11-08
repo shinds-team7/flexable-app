@@ -28,18 +28,23 @@ export const FIXED_PRESETS = [
 export function PaydayPicker({
   value,
   onChange,
+  hideLabel,
 }: {
   value: number;
   onChange: (day: number) => void;
+  /** 위의 "매달 수입일" 글자를 숨긴다(부르는 쪽이 같은 제목을 따로 둘 때) */
+  hideLabel?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const shown = value >= 1 && value <= 31 ? value : 1;
   const last = shown === 31;
   return (
     <View style={{ gap: 8 }}>
-      <T size={14} weight="600" color={colors.textSub}>
-        매달 수입일
-      </T>
+      {!hideLabel && (
+        <T size={14} weight="600" color={colors.textSub}>
+          매달 수입일
+        </T>
+      )}
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Pressable
           accessibilityRole="button"

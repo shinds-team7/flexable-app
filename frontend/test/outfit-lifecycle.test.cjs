@@ -24,6 +24,10 @@ function loadOutfit() {
       View: "View",
       Platform: { OS: "android" },
       StyleSheet: { create: (styles) => styles, absoluteFill: {} },
+      AppState: {
+        currentState: "active",
+        addEventListener: () => ({ remove() {} }),
+      },
     },
     "expo-image": { Image: "Image" },
     "expo-router": {
@@ -44,6 +48,7 @@ function loadOutfit() {
           source,
           released: false,
           playing: false,
+          addListener: () => ({ remove() {} }),
           play() {
             assert.equal(
               this.released,
@@ -85,6 +90,8 @@ function loadOutfit() {
   }).outputText;
   const context = {
     exports: {},
+    setTimeout,
+    clearTimeout,
     require: (id) => {
       assert.ok(modules[id], `Unexpected import: ${id}`);
       return modules[id];

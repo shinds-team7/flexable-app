@@ -518,7 +518,8 @@ test("budget settings edit every saved value on one screen, with the payday whee
   // 저장된 값이 모두 한 화면에 순서대로 보인다
   for (const name of [
     "생활비 잔액",
-    "수입",
+    "매달 수입일",
+    "예정 수입액",
     "고정지출",
     "카드 미결제액",
     "모아둔 돈",

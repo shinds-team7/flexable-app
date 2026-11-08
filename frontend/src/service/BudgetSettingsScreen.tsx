@@ -99,15 +99,11 @@ function Form({ initial }: { initial: Saved }) {
         contentContainerStyle={ui.screen}
         showsVerticalScrollIndicator={false}
       >
-        <T size={13} color={colors.textMuted}>
-          입력한 잔액·기록 기준으로 오늘 쓸 수 있는 돈을 다시 계산해요
-        </T>
-        <Section
-          title="생활비 잔액"
-          note="생활비 통장의 지금 잔액이에요. 바꾸면 지금 시각 기준 잔액으로 계산해요"
-        >
+        {/* 제목은 칸마다 하나, 모두 같은 크기(Section). 칸 위 글자는 숨기고 화면 읽기 라벨로만 둔다(11-08) */}
+        <Section title="생활비 잔액">
           <MoneyField
             label="생활비 잔액 (원)"
+            hideLabel
             value={v.balance}
             onChange={(balance) =>
               // 새 잔액은 지금 기준이다. 예전 기준 시각을 두면 이미 반영된 거래를 또 빼게 된다
@@ -115,30 +111,32 @@ function Form({ initial }: { initial: Saved }) {
             }
           />
         </Section>
-        <Section title="수입">
+        <Section title="매달 수입일">
           <PaydayPicker
+            hideLabel
             value={v.payday}
             onChange={(payday) => setV({ ...v, payday })}
           />
+        </Section>
+        <Section title="예정 수입액">
           <MoneyField
             label="예정 수입액 (원)"
+            hideLabel
             value={v.incomeAmount}
             onChange={(incomeAmount) => setV({ ...v, incomeAmount })}
           />
         </Section>
-        <Section title="고정지출" note="매달 꼭 나가는 돈이에요">
+        <Section title="고정지출">
           <FixedExpensesEditor
             items={v.fixedExpenses}
             onChange={(fixedExpenses) => setV({ ...v, fixedExpenses })}
             onError={setError}
           />
         </Section>
-        <Section
-          title="카드 미결제액"
-          note="이미 썼지만 아직 결제되지 않은 금액이에요"
-        >
+        <Section title="카드 미결제액">
           <MoneyField
             label="카드 미결제액 (원)"
+            hideLabel
             placeholder="없으면 비워 두세요"
             value={v.cardUnpaid}
             onChange={(cardUnpaid) => setV({ ...v, cardUnpaid })}
@@ -146,7 +144,7 @@ function Form({ initial }: { initial: Saved }) {
         </Section>
         <Section
           title="모아둔 돈"
-          note="생활비와 따로 모아둔 돈이에요. 오늘 쓸 수 있는 돈에는 넣지 않아요"
+          note="생활비와 따로 모아둔 돈이에요"
         >
           <MoneyField
             label="모아둔 돈 (원)"

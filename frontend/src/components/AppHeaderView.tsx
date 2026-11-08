@@ -119,13 +119,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.line,
     paddingHorizontal: 8,
+    // 시스템 내비게이션 바를 숨겨 화면 맨 아래에 붙으므로 아래쪽에 손가락 여백을 둔다(11-08)
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   bottomTab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    minHeight: 60,
-    paddingVertical: 6,
+    gap: 4,
+    minHeight: 64,
+    paddingVertical: 8,
   },
 });
