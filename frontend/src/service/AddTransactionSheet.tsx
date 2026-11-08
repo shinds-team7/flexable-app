@@ -39,7 +39,7 @@ export function AddTransactionSheet({
             />
           )}
           <Button
-            label="이미지 업로드"
+            label="결제내역 스크린샷 등록"
             icon="image-outline"
             disabled={!imageImportSupported || imageImport.busy}
             onPress={() => {
@@ -48,7 +48,7 @@ export function AddTransactionSheet({
             }}
           />
           {!imageImportSupported && (
-            <T size={13}>이미지 업로드는 앱에서 쓸 수 있어요</T>
+            <T size={13}>결제내역 스크린샷 등록은 앱에서 쓸 수 있어요</T>
           )}
           <Button
             label="직접 입력"

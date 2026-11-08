@@ -157,7 +157,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await record.click();
   // The web build cannot read images, so only the manual form is offered.
   await expect(
-    page.getByRole("button", { name: "이미지 업로드", exact: true }),
+    page.getByRole("button", { name: "결제내역 스크린샷 등록", exact: true }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "직접 입력", exact: true }).click();
   await page.getByLabel("금액", { exact: true }).fill("1000000000000");
