@@ -25,7 +25,7 @@
 |---|---|---|
 | 1 | **11-09 서버 배포**(아카데미 네트워크 PC) | 담는 것: 일정 금액 예측 시간대 제거(#279), 광고 시청 시간 보너스 `POST /coins/ad-bonus`(#281), 오류 기록 V23 `error_events`·`POST /client-errors`·서버 500 기록·매일 30일 삭제(#290). 순서: ① **DB 백업** ② `backend/deploy/academy/deploy.sh` ③ `/actuator/health` 전부 `UP`, Flyway 로그 "now at version v23" ④ 앱에서 광고를 30초 넘게 보고 "+20 코인을 받았어요" ⑤ AI 메이트에 일정을 말해 금액이 나오는지 ⑥ DB에서 `select event_day, source, kind, status, code, path, message, occurrences from error_events order by last_at desc limit 20`이 에러 없이 도는지. 끝나면 4번의 서버 줄 3개를 지운다 |
 | 2 | **#298 preview 실기기 확인 → production 승격** | preview 그룹 `327bf6d1-39f3-48b0-8015-dbb0020ff23f`(소스 `ea47857`): 스크린샷 등록 때 모든 항목이 기본 선택되는지(이미 기록된 것 같은 거래만 빠짐), 토스 스크린샷에 "금액의 원 표시를 정확히 읽지 못했어요"가 더는 안 뜨는지. 되면 `npm run update:promote -- 327bf6d1-39f3-48b0-8015-dbb0020ff23f --message "…"`, 끝나면 4번 #298 줄을 지운다 |
-| 3 | **flexable-web에 알림**(완료 기록 없음) | 웹 연동 시드머니 `entries[].choice`에 `EXTRA`(앱에서 바로 보낸 돈, #225)가 올 수 있다. 웹이 이 값을 처리하는지 확인([`web-link-api.yaml`](contracts/web-link-api.yaml)) |
+| 3 | **웹 연동 시드머니 운영 응답 확인**(서비스 키 필요) | 웹은 `EXTRA` 처리를 끝냈다(11-08 웹 회신: 계약 enum·타입·"바로 보낸 돈" 라벨, 같은 날 여러 건·`startedOn` null 테스트). 남은 것: 가짜 테스트 계정으로 웹을 연동하고 서비스 키로 운영 `GET /internal/v1/web-links/{linkId}/seed-money`를 불러 `entries`·`startedOn`이 오는지, 키 없이 401인지 확인. 운영에서 그래프를 확인한 기록이 아직 없다([`web-seed-entries-handoff.md`](web-seed-entries-handoff.md)) |
 
 ## 3. 그 다음 할 일
 
@@ -40,7 +40,7 @@
 ### 제품·기능
 - [ ] 결정 대기: 홈 "Lv.1 새싹" 배지·말풍선을 넣을지(#123에서 뺌, 게이지는 기존 유지)
 - [ ] 홈 진행 바 리디자인(사용자가 진행 예정, 달리는 캐릭터 안은 취소)
-- [ ] 웹 시드머니 인수인계 남은 체크 2개([`web-seed-entries-handoff.md`](web-seed-entries-handoff.md)): 가짜 테스트 계정 연동 응답 확인(서비스 키 필요), 예시·계약을 웹 담당에게 전달
+- [ ] Gemini API 유료 등급 전환(Google AI Studio에서 결제 연결, 나중에). 새 키를 만들면 서버 `.env`의 `GEMINI_API_KEY`를 바꾸고 `docker compose up -d`
 - [ ] 2028 공휴일은 천문연구원 자료로 넣었다(#299). 2027년 6월쯤 2028 월력요항이 나오면 대조하고 임시공휴일을 더한다
 - [ ] 앱 안 코인 결제는 붙이지 않는다. 붙이기로 하면 약관 제2조 4항, 통신판매업 신고, 사업자 정보 표시, 환불 규정을 함께 손본다
 
