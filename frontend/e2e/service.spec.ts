@@ -432,8 +432,13 @@ test("a new account sees the home guide once after the gift and attendance modal
     }),
   ).toBeVisible();
   const startButton = page.getByRole("button", { name: "시작하기", exact: true });
-  for (let i = 0; i < 15 && !(await startButton.isVisible()); i++)
-    await page.getByRole("button", { name: "다음", exact: true }).click();
+  // 단계를 넘기면 다음 자리를 재는 동안 설명 카드가 잠깐 빠지므로, 버튼이 다시 보일 때까지 기다린다
+  const stepButton = page.getByRole("button", { name: /^(다음|시작하기)$/ });
+  for (let i = 0; i < 15; i++) {
+    await expect(stepButton).toBeVisible();
+    if (await startButton.isVisible()) break;
+    await stepButton.click();
+  }
   await expect(page.getByRole("heading", { name: "마이", exact: true })).toBeVisible();
   await startButton.click();
   await expect(first).toHaveCount(0);
