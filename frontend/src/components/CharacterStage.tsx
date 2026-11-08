@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Animated, Image, StyleSheet, View } from 'react-native';
 
 import { colors, motion } from '@/theme';
+import { useGuideTarget } from './guideTargets';
 import { levelName } from './LevelIcon';
 import { useAnimValue, useReducedMotion } from './ui';
 
@@ -29,22 +30,40 @@ export function pointsStatus(points: number, label: string): PaceStatus {
  * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
  */
 export function CharacterStage({ level, character, coin, attendance, gauge, help, children }: { level: Level; character: ReactNode; coin?: ReactNode; attendance?: ReactNode; gauge: PaceStatus; help?: ReactNode; children: ReactNode }) {
+  // 사용 가이드가 가리키는 자리(service/HomeGuide)
+  const charRef = useGuideTarget('character');
+  const coinRef = useGuideTarget('coin');
+  const attendanceRef = useGuideTarget('attendance');
+  const gaugeRef = useGuideTarget('gauge');
+  const heroRef = useGuideTarget('hero');
   return (
     <View style={[styles.wrap, { backgroundColor: colors.stage }]}>
       <View style={styles.stage}>
-        <View style={styles.char}>
+        <View ref={charRef} collapsable={false} style={styles.char}>
           {character}
-          {coin && <View style={styles.coin}>{coin}</View>}
-          {attendance && <View style={styles.attendance}>{attendance}</View>}
+          {coin && (
+            <View ref={coinRef} collapsable={false} style={styles.coin}>
+              {coin}
+            </View>
+          )}
+          {attendance && (
+            <View ref={attendanceRef} collapsable={false} style={styles.attendance}>
+              {attendance}
+            </View>
+          )}
         </View>
       </View>
 
       {/* 레벨 안내(?)는 게이지 가운데 위 */}
       {help && <View style={styles.help}>{help}</View>}
-      <Gauge status={gauge} />
+      <View ref={gaugeRef} collapsable={false} style={{ alignSelf: 'stretch' }}>
+        <Gauge status={gauge} />
+      </View>
 
       {/* 오늘 쓸 수 있는 돈 — 캐릭터와 게이지 아래 */}
-      <View style={styles.heroSlot}>{children}</View>
+      <View ref={heroRef} collapsable={false} style={styles.heroSlot}>
+        {children}
+      </View>
     </View>
   );
 }

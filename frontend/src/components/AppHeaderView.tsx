@@ -3,6 +3,7 @@ import { router, type Href } from "expo-router";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
+import { useGuideTarget } from "./guideTargets";
 import { T } from "./ui";
 export function Logo({ size = 30 }: { size?: number }) {
   return (
@@ -62,29 +63,8 @@ export function BottomTabBar({
   return (
     <View style={styles.bottom} accessibilityRole="tablist">
       {tabs.map((t, i) => {
-        const on = t.match(pathname);
         const tab = (
-          <Pressable
-            key={t.label}
-            style={styles.bottomTab}
-            accessibilityRole="tab"
-            accessibilityLabel={t.label}
-            accessibilityState={{ selected: on }}
-            onPress={() => router.navigate(t.href)}
-          >
-            <Ionicons
-              name={on ? t.activeIcon : t.icon}
-              size={24}
-              color={on ? colors.brand : colors.textMuted}
-            />
-            <T
-              size={12}
-              weight={on ? "700" : "500"}
-              color={on ? colors.brand : colors.textMuted}
-            >
-              {t.label}
-            </T>
-          </Pressable>
+          <BottomTab key={t.label} tab={t} on={t.match(pathname)} />
         );
         return i === half - 1 && middle ? (
           <Fragment key={t.label}>
@@ -96,6 +76,40 @@ export function BottomTabBar({
         );
       })}
     </View>
+  );
+}
+
+/** 탭 하나. 사용 가이드가 "tab:내역"처럼 라벨로 가리킨다 */
+function BottomTab({
+  tab: t,
+  on,
+}: {
+  tab: { href: Href; label: string; icon: IconName; activeIcon: IconName };
+  on: boolean;
+}) {
+  const guide = useGuideTarget(`tab:${t.label}`);
+  return (
+    <Pressable
+      ref={guide}
+      style={styles.bottomTab}
+      accessibilityRole="tab"
+      accessibilityLabel={t.label}
+      accessibilityState={{ selected: on }}
+      onPress={() => router.navigate(t.href)}
+    >
+      <Ionicons
+        name={on ? t.activeIcon : t.icon}
+        size={24}
+        color={on ? colors.brand : colors.textMuted}
+      />
+      <T
+        size={12}
+        weight={on ? "700" : "500"}
+        color={on ? colors.brand : colors.textMuted}
+      >
+        {t.label}
+      </T>
+    </Pressable>
   );
 }
 
