@@ -18,6 +18,14 @@ const VIDEOS: Record<string, { video: number; poster: ImageSourcePropType }> = {
     video: require("../../assets/outfits/costume-lv2.mp4"),
     poster: require("../../assets/outfits/costume-lv2.jpg"),
   },
+  "costume-lv3": {
+    video: require("../../assets/outfits/costume-lv3.mp4"),
+    poster: require("../../assets/outfits/costume-lv3.jpg"),
+  },
+  "costume-lv4": {
+    video: require("../../assets/outfits/costume-lv4.mp4"),
+    poster: require("../../assets/outfits/costume-lv4.jpg"),
+  },
   "outfit-01": {
     video: require("../../assets/outfits/outfit-01.mp4"),
     poster: require("../../assets/outfits/outfit-01.jpg"),

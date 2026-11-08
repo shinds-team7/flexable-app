@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("24");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("25");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -71,7 +71,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(11);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(12);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -80,12 +80,13 @@ class MigrationUpgradeTest {
 		assertThat(jdbc.queryForList("select outfit_id from user_outfits where user_id=1 order by outfit_id", String.class))
 			.containsExactly("outfit-01", "outfit-02", "outfit-05");
 		assertThat(jdbc.queryForObject("select count(*) from user_outfits where user_id=2", Integer.class)).isZero();
-		// V22: 직장냥이·잭팟은 200코인 상품, 새 5단계는 꺼 둔 자리. V24: 그중 Lv.2만 켬
+		// V22: 직장냥이·잭팟은 200코인 상품, 새 5단계는 꺼 둔 자리. V24·V25: 그중 Lv.2~4만 켬
 		assertThat(jdbc.queryForObject("select price from outfits where id='outfit-02'", Integer.class)).isEqualTo(200);
 		assertThat(jdbc.queryForObject("select unlock_level from outfits where id='outfit-01'", Integer.class)).isNull();
 		assertThat(jdbc.queryForObject("select name from outfits where id='costume-lv6'", String.class)).isEqualTo("왕족");
-		assertThat(jdbc.queryForObject("select count(*) from outfits where unlock_level >= 3 and active", Integer.class)).isZero();
-		assertThat(jdbc.queryForObject("select active from outfits where id='costume-lv2'", Boolean.class)).isTrue();
+		assertThat(jdbc.queryForObject("select count(*) from outfits where unlock_level >= 5 and active", Integer.class)).isZero();
+		assertThat(jdbc.queryForList("select id from outfits where unlock_level between 2 and 4 and active order by id", String.class))
+			.containsExactly("costume-lv2", "costume-lv3", "costume-lv4");
 		assertExtensionsAndWitchCat(jdbc);
 		// V19 업데이트 기념 200코인: 지갑이 있던 사용자에게 한 번, 모달로 안내할 내역(notified_at 비움)과 함께
 		assertThat(jdbc.queryForObject("select balance from coin_wallets where user_id=1", Long.class)).isEqualTo(250L);

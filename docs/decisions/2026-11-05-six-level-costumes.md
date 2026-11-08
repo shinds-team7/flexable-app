@@ -20,7 +20,8 @@
 ## 남은 일
 
 - 11-08: Lv.2(`costume-lv2`)는 `cat-farmer.mp4`를 연결하고 V24로 켰다(#303). 같은 날 영상에 맞춰 단계 이름을 농부(🌾)로 바꿨다(#304, V24에 이름 변경 포함, 앱 `LevelIcon`).
-- 새 코스튬 영상·첫 장면이 들어오면 `frontend/assets/outfits/costume-lv2~lv6.*`와 `src/service/outfits.ts`를 연결하고, 서버 `active`를 켠다(앱 원격 업데이트 먼저, 서버는 나중).
+- 11-08: Lv.3 상인·Lv.4 기사(`costume-lv3`·`lv4`)도 영상(`cat-trader.mp4`·`cat-knight.mp4`)을 연결하고 V25로 켰다. 농부는 영상 속 캐릭터가 커서 `--scale 0.8`로 다시 만들었다.
+- 새 코스튬 영상·첫 장면이 들어오면 `frontend/assets/outfits/costume-lv5~lv6.*`와 `src/service/outfits.ts`를 연결하고, 서버 `active`를 켠다(앱 원격 업데이트 먼저, 서버는 나중).
 - 배포 순서: 앱 원격 업데이트(runtime 1.7.0)와 서버(V21·V22)는 순서 제약이 약하다. 옛 앱이 직장냥이·잭팟 상품을 코인 상품으로 보는 것은 목록 응답만으로 처리된다. 다만 서버를 먼저 배포하면 옛 앱의 "레벨 N 달성 시 열림" 문구가 없는 칸으로 바뀔 뿐 동작은 같다.
 - V21은 운영에 적용하기 전 대상 수(`select count(distinct user_id) from daily_budgets`)를 확인한다.
 
