@@ -64,6 +64,12 @@ class BudgetCalculatorTest {
 		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2027, 9, 1), 15)).isEqualTo(LocalDate.of(2027, 9, 17));
 		// Hangul Day 2027-10-09 (Sat) -> Sunday -> substitute holiday 10-11 (Mon)
 		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2027, 10, 1), 9)).isEqualTo(LocalDate.of(2027, 10, 12));
+		// Seollal 2028-01-26 (Wed) ~ 01-28 (Fri) -> weekend -> 01-31 (Mon)
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2028, 1, 10), 26)).isEqualTo(LocalDate.of(2028, 1, 31));
+		// National Assembly election 2028-04-12 (Wed)
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2028, 4, 1), 12)).isEqualTo(LocalDate.of(2028, 4, 13));
+		// Chuseok 2028-10-02 ~ 10-04 overlaps National Foundation Day -> substitute 10-05 (Thu) -> 10-06 (Fri)
+		assertThat(BudgetCalculator.nextPayday(LocalDate.of(2028, 9, 20), 2)).isEqualTo(LocalDate.of(2028, 10, 6));
 	}
 
 	@Test

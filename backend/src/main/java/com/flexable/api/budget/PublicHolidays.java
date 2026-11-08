@@ -29,7 +29,21 @@ final class PublicHolidays {
 			LocalDate.of(2027, 9, 14), LocalDate.of(2027, 9, 15), LocalDate.of(2027, 9, 16),
 			LocalDate.of(2027, 10, 3), LocalDate.of(2027, 10, 4),
 			LocalDate.of(2027, 10, 9), LocalDate.of(2027, 10, 11),
-			LocalDate.of(2027, 12, 25), LocalDate.of(2027, 12, 27));
+			LocalDate.of(2027, 12, 25), LocalDate.of(2027, 12, 27),
+			// 2028: 월력요항 발표 전, 한국천문연구원 역서 자료(2028)로 넣었다. 국회의원선거일 포함, 대체공휴일 1일(추석·개천절 겹침).
+			// 월력요항이 나오면(2027년 6월쯤) 대조하고 임시공휴일을 더한다.
+			LocalDate.of(2028, 1, 1),
+			LocalDate.of(2028, 1, 26), LocalDate.of(2028, 1, 27), LocalDate.of(2028, 1, 28),
+			LocalDate.of(2028, 3, 1),
+			LocalDate.of(2028, 4, 12),
+			LocalDate.of(2028, 5, 1), LocalDate.of(2028, 5, 2),
+			LocalDate.of(2028, 5, 5),
+			LocalDate.of(2028, 6, 6),
+			LocalDate.of(2028, 7, 17),
+			LocalDate.of(2028, 8, 15),
+			LocalDate.of(2028, 10, 2), LocalDate.of(2028, 10, 3), LocalDate.of(2028, 10, 4), LocalDate.of(2028, 10, 5),
+			LocalDate.of(2028, 10, 9),
+			LocalDate.of(2028, 12, 25));
 
 	static boolean contains(LocalDate d) {
 		return DATES.contains(d);
