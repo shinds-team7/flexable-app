@@ -7,6 +7,7 @@
 ## 2026-11-08
 
 - [#304] Lv.2 단계 이름을 마구간지기(🐴)에서 농부(🌾)로 바꿈(서버 V24, 앱 `LevelIcon`). 레벨 안내 시트의 단계 칸은 아이콘만 보임. policies §4·PRD·coin-plan·API·FEATURES·결정 기록 — 영향: 앱 화면·앱 서버
+- [#309] Lv.3 상인·Lv.4 기사 코스튬(`costume-lv3`·`lv4`)에 `cat-trader`·`cat-knight` 영상을 연결하고 V25로 켬. 농부 영상은 캐릭터가 커서 `--scale`로 줄여 다시 만듦. coin-plan·API·FEATURES·결정 기록(six-level-costumes) — 영향: 앱 화면·앱 서버
 - [#303] Lv.2 코스튬(`costume-lv2`)에 `cat-farmer` 영상을 연결하고 V24로 켬(최고 단계 2 이상이면 열림, 코인 구매 불가). coin-plan·API·FEATURES·결정 기록(six-level-costumes) — 영향: 앱 화면·앱 서버
 - [Issue 없음] `docs/HANDOFF.md`만 고치는 변경(끝난 항목 삭제, 배포·실기기 확인 결과)은 PR 없이 `main`에 바로 커밋·push. 다른 파일이 섞이면 PR, 새 기능 줄은 기능 PR에서 그대로. `AGENTS.md` "작업 완료 시" — 영향: 작업 방식
 
