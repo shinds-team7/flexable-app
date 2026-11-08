@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { useBudgetNotification } from "@/service/budgetNotification";
 import { useEntryReminder, useEntryReminderTap } from "@/service/entryReminder";
 import { useInboxOwner } from "@/service/inbox";
 import { useSeedReminderTap } from "@/service/seedReminder";
@@ -9,6 +10,7 @@ export default function Layout() {
   useAutomaticPaymentImport();
   useSeedReminderTap();
   useEntryReminder();
+  useBudgetNotification();
   useEntryReminderTap();
   return (
     <Guard>
