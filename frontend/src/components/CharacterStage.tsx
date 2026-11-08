@@ -5,7 +5,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
-import { colors } from '@/theme';
+import { colors, motion } from '@/theme';
 import { LevelIcon, levelName } from './LevelIcon';
 import { T, useAnimValue, useReducedMotion } from './ui';
 
@@ -13,9 +13,6 @@ export type Level = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** 지금 있는 최고 단계. 서버 CharacterScore.MAX(500)와 맞춘다 */
 export const TOP_LEVEL: Level = 6;
-
-/** 레벨별 게이지 강조색 */
-const ACCENTS: Record<Level, string> = { 1: '#667085', 2: '#8A6A3B', 3: '#B7791F', 4: '#475467', 5: '#6941C6', 6: '#1D3A8A' };
 
 export type PaceStatus = { level: Level; progress: number; label: string };
 
@@ -32,8 +29,6 @@ export function pointsStatus(points: number, label: string): PaceStatus {
  * character 는 16:9 칸에 화면 폭을 꽉 채워 그린다(영상 가장자리는 무대 색으로 녹아 있다).
  */
 export function CharacterStage({ level, character, coin, attendance, gauge, help, children }: { level: Level; character: ReactNode; coin?: ReactNode; attendance?: ReactNode; gauge: PaceStatus; help?: ReactNode; children: ReactNode }) {
-  const accent = ACCENTS[level];
-
   return (
     <View style={[styles.wrap, { backgroundColor: colors.stage }]}>
       <View style={styles.stage}>
@@ -44,7 +39,7 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
         </View>
       </View>
 
-      <Gauge status={gauge} accent={accent} />
+      <Gauge status={gauge} />
       {help && <View style={{ alignSelf: 'flex-end' }}>{help}</View>}
 
       {/* 오늘 쓸 수 있는 돈 — 캐릭터와 게이지 아래 */}
@@ -53,15 +48,23 @@ export function CharacterStage({ level, character, coin, attendance, gauge, help
   );
 }
 
-/** 지금 단계(왼쪽 아이콘)에서 다음 단계(오른쪽 아이콘)까지 어디쯤인지. 최고 단계는 오른쪽이 비고 '최고 단계'를 보인다. 퍼센트 숫자는 보여 주지 않는다(10-22) */
-function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
+/**
+ * 지금 단계(왼쪽 아이콘)에서 다음 단계(오른쪽 아이콘)까지 어디쯤인지. 최고 단계는 오른쪽이 비고 '최고 단계'를 보인다. 퍼센트 숫자는 보여 주지 않는다(10-22).
+ * 바는 단계와 관계없이 브랜드 블루 하나이고 단계 구분은 아이콘이 맡는다. 홈이 처음 그려질 때 0에서 지금 값까지 차오르고, 애니메이션 줄이기가 켜져 있으면 바로 채운다.
+ */
+function Gauge({ status }: { status: PaceStatus }) {
   const { level, progress, label } = status;
   const top = level === TOP_LEVEL;
-  const fill = useAnimValue(progress);
+  const fill = useAnimValue(0);
   const reduced = useReducedMotion();
   useEffect(() => {
-    if (reduced) fill.setValue(progress);
-    else Animated.timing(fill, { toValue: progress, duration: 600, useNativeDriver: false }).start();
+    if (reduced) {
+      fill.setValue(progress);
+      return;
+    }
+    const anim = Animated.timing(fill, { toValue: progress, duration: 700, easing: motion.easeOut, useNativeDriver: false });
+    anim.start();
+    return () => anim.stop();
   }, [progress, reduced, fill]);
   const pct = Math.round(progress * 100);
   return (
@@ -75,7 +78,7 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
       <View style={styles.gaugeHead}>
         <LevelIcon level={level} size={18} />
         {top && (
-          <T size={13} weight="800" color={accent}>
+          <T size={13} weight="800" color={colors.brand}>
             최고 단계
           </T>
         )}
@@ -85,7 +88,7 @@ function Gauge({ status, accent }: { status: PaceStatus; accent: string }) {
         <Animated.View
           style={[
             styles.bar,
-            { backgroundColor: accent, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+            { backgroundColor: colors.brand, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
           ]}
         />
       </View>
