@@ -7,6 +7,7 @@ import { useIsFocused } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useState } from "react";
 import {
+  AppState,
   Platform,
   StyleSheet,
   View,
@@ -94,6 +95,43 @@ function LoopVideo({
   // 웹은 VideoView가 연결되기 전의 play를 저장하지 않아, 마운트 후 시작한다.
   useEffect(() => {
     player.play();
+  }, [player]);
+  // 사진 고르기(다른 화면으로 나감)·음성 인식(오디오 포커스)을 중간에 닫고 돌아오면 Android 플레이어가 멈춘 채 남는다(11-08).
+  // 앱이 앞으로 돌아오거나, 앱이 켜져 있는데 재생이 멈추면 잠시 뒤 다시 튼다. 멈춘 동안은 2초마다 다시 시도한다.
+  useEffect(() => {
+    let alive = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const resume = () => {
+      if (!alive || AppState.currentState !== "active") return;
+      try {
+        if (!player.playing) player.play();
+      } catch {
+        // 화면을 떠나며 해제된 플레이어
+      }
+    };
+    const schedule = () => {
+      clearTimeout(retry);
+      retry = setTimeout(() => {
+        resume();
+        try {
+          if (alive && !player.playing) schedule();
+        } catch {
+          // 해제된 플레이어
+        }
+      }, 2000);
+    };
+    const app = AppState.addEventListener("change", (s) => {
+      if (s === "active") resume();
+    });
+    const playing = player.addListener("playingChange", ({ isPlaying }) => {
+      if (!isPlaying) schedule();
+    });
+    return () => {
+      alive = false;
+      clearTimeout(retry);
+      app.remove();
+      playing.remove();
+    };
   }, [player]);
   // 화면 이탈·코스튬 변경 시 useVideoPlayer가 플레이어를 해제한다.
   // 별도 cleanup에서 pause하면 이미 해제된 네이티브 객체를 호출할 수 있다.
