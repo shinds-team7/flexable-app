@@ -248,11 +248,8 @@ export function CustomizeScreen() {
           }
         }
         title={adEarned ? `+${adEarned.total} 코인을 받았어요` : undefined}
-        body={
-          adEarned && adEarned.bonus > 0
-            ? `광고 10코인에 오래 본 보너스 ${adEarned.bonus}코인을 더했어요`
-            : "광고를 끝까지 봐 줘서 고마워요"
-        }
+        // 제목에 받은 코인이 있어 본문·"+N" 줄은 두지 않는다(11-08)
+        plain
         onClose={() => setAdEarned(null)}
       />
     </View>
