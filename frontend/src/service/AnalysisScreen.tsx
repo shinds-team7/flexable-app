@@ -79,9 +79,18 @@ export function AnalysisScreen() {
         ? month.toISOString().slice(0, 10)
         : spanStart;
   const to = period === "week" ? sunday : period === "month" ? monthEnd : date;
-  const result = useResource<Analysis>(
-    from ? `/analysis/summary?from=${from}&to=${to}` : null,
-  );
+  const baseMonday = new Date(d.getTime() - day * 86400000).toISOString().slice(0, 10);
+  const baseSunday = new Date(d.getTime() + (6 - day) * 86400000).toISOString().slice(0, 10);
+  const baseMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+  const baseMonthEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+  // 세 기본 기간을 함께 읽어 두면 탭을 바꾸는 순간 이미 그릴 데이터가 있다.
+  const weekResult = useResource<Analysis>(`/analysis/summary?from=${baseMonday}&to=${baseSunday}`);
+  const monthResult = useResource<Analysis>(`/analysis/summary?from=${baseMonth.toISOString().slice(0, 10)}&to=${baseMonthEnd}`);
+  const allResult = useResource<Analysis>(`/analysis/summary?from=${spanStart}&to=${date}`);
+  const shiftedResult = useResource<Analysis>(offset !== 0 && period !== "all"
+    ? `/analysis/summary?from=${from}&to=${to}` : null);
+  const result = offset !== 0 && period !== "all" ? shiftedResult
+    : period === "week" ? weekResult : period === "month" ? monthResult : allResult;
   const s = result.data;
   const selected =
     selection?.from === from && selection.to === to
@@ -90,6 +99,7 @@ export function AnalysisScreen() {
   return (
     <Screen>
       <Segment
+        animated
         items={[
           { key: "week", label: "이번 주" },
           { key: "month", label: "이번 달" },
@@ -104,8 +114,8 @@ export function AnalysisScreen() {
       />
       <ErrorNotice error={today.error} retry={today.retry} />
       <ErrorNotice error={result.error} retry={result.retry} />
-      {result.loading && <Loading />}
-      {s && !result.loading && (
+      {result.loading && !s && <Loading />}
+      {s && (
         <>
           <Card style={{ alignItems: "center", gap: 12 }}>
             {period === "all" ? (

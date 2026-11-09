@@ -275,9 +275,6 @@ export function MyScreen() {
             ["예산 설정 바꾸기", "/budget/settings"],
             ["카테고리 관리", "/categories"],
             ["웹사이트 연동", "/web-links"],
-            ["고객지원", "/support"],
-            ["서비스 이용약관", "/terms"],
-            ["개인정보처리방침", "/privacy"],
           ] as const
         ).map(([label, href], i) => (
           <Row
@@ -298,6 +295,11 @@ export function MyScreen() {
             }}
           />
         )}
+      </Card>
+      <Card style={styles.group}>
+        {([ ["고객지원", "/support"], ["서비스 이용약관", "/terms"], ["개인정보처리방침", "/privacy"] ] as const).map(([label, href], i) => (
+          <Row key={href} first={i === 0} label={label} onPress={() => router.push(href)} />
+        ))}
       </Card>
       <View style={{ gap: 4, paddingHorizontal: 4 }}>
         <T size={13} color={colors.textMuted}>

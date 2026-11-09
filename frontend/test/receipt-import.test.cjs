@@ -653,16 +653,40 @@ test("cropped Android Toss: infer the screen from dated transaction/time/balance
   );
 });
 
-test("cropped bank rows: skip leading transactions with no visible date and an incomplete final row", () => {
+test("cropped bank rows: keep complete undated transactions for manual date choice", () => {
   const cropped = TOSS_CROPPED_ANDROID.filter((l) => l.y >= 273 && l.y <= 999);
   assert.deepEqual(brief(parseReceipt(cropped, TODAY)), [
+    ["", "가상24상점", "EXPENSE", 1000],
+    ["", "가상(내)계좌", "EXPENSE", 2000],
     ["10-24", "가상친구", "INCOME", 103900],
     ["10-24", "가상상점", "EXPENSE", 100000],
   ]);
+  assert.ok(parseReceipt(cropped, TODAY).items.slice(0, 2).every((item) =>
+    item.review.includes(api.REVIEW_DATE),
+  ));
   assert.deepEqual(
-    parseReceipt(cropped.filter((l) => l.y > 635), TODAY).items,
+    brief(parseReceipt(cropped.filter((l) => l.y > 635), TODAY)),
     [],
   );
+  const noHeaders = TOSS_CROPPED_ANDROID.map((l) =>
+    /^10\.\d{2}/.test(l.text)
+      ? { ...l, text: l.text.replace(/^10\.\d{2}\s*/, "") }
+      : l,
+  );
+  assert.equal(parseReceipt(noHeaders, TODAY).items.length, 6);
+  assert.ok(parseReceipt(noHeaders, TODAY).items.every((item) =>
+    item.date === "" && item.review.includes(api.REVIEW_DATE),
+  ));
+});
+
+test("dated bottom transaction with a clipped balance line stays in review", () => {
+  const result = parseReceipt(lines([
+    [100, [150, "채우기"]],
+    [150, [50, "10.24"]],
+    [200, [170, "마지막거래"], [800, "-9,000"]],
+  ]), TODAY);
+  assert.deepEqual(brief(result), [["10-24", "마지막거래", "EXPENSE", 9000]]);
+  assert.ok(result.items[0].review.includes("금액의 원 표시를 정확히 읽지 못했어요"));
 });
 
 test("cropped numeric content without a dated bank layout stays unsupported", () => {
@@ -670,9 +694,6 @@ test("cropped numeric content without a dated bank layout stays unsupported", ()
     TOSS_CROPPED_ANDROID.filter((l) => l.x < 500),
     TOSS_CROPPED_ANDROID.filter((l) => !/^\d{2}:\d{2}$/.test(l.text)),
     TOSS_CROPPED_ANDROID.map((l) => (l.x > 500 ? { ...l, x: 250 } : l)),
-    TOSS_CROPPED_ANDROID.map((l) =>
-      /^10\.\d{2}/.test(l.text) ? { ...l, text: "가상상점" } : l,
-    ),
   ]) {
     const result = parseReceipt(invalid, TODAY);
     assert.equal(result.source, null);

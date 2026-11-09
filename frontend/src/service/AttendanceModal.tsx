@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
-  Image,
   Modal,
   Platform,
   StyleSheet,
@@ -13,7 +12,6 @@ import { Button, T, useAnimValue, useReducedMotion } from "@/components/ui";
 import { colors, floating } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import { attend } from "./coinApi";
-import { ATTENDANCE_OUTFIT_ID, outfitSource } from "./outfits";
 import type { Attendance, CoinReward } from "./types";
 import { ErrorNotice, Loading, useResource } from "./ui";
 import { publishWallet } from "./wallet";
@@ -325,40 +323,37 @@ function DayCircle({
       >
         {day}일차
       </T>
-      <Animated.View
-        style={[
-          styles.circle,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            zIndex: pulse ? 1 : 0,
-            transform: [{ scale }, { rotate }],
-          },
-          on && styles.on,
-          next && styles.next,
-          gold && styles.gold,
-          costume && !on && styles.costume,
-        ]}
-      >
-        {on ? (
-          <Ionicons
-            name="checkmark"
-            size={Math.round(size * 0.5)}
-            color={colors.onBrand}
-          />
-        ) : costume ? (
-          <Image
-            source={outfitSource(ATTENDANCE_OUTFIT_ID)}
-            style={styles.costumeImg}
-            resizeMode="contain"
-          />
-        ) : (
-          <T size={11} weight="800" color={GOLD_TEXT} num>
-            +{reward}
-          </T>
+      <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+        <Animated.View
+          style={[
+            styles.circle,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              zIndex: pulse ? 1 : 0,
+              transform: [{ scale }, { rotate }],
+            },
+            on && styles.on,
+            next && styles.next,
+            gold && styles.gold,
+            costume && !on && styles.costume,
+          ]}
+        >
+          {on ? null : costume ? (
+            <Ionicons name="lock-closed" size={Math.round(size * 0.42)} color={GOLD_TEXT} />
+          ) : (
+            <T size={11} weight="800" color={GOLD_TEXT} num>
+              +{reward}
+            </T>
+          )}
+        </Animated.View>
+        {on && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.checkOverlay]}>
+            <Ionicons name="checkmark" size={Math.round(size * 0.5)} color={colors.onBrand} />
+          </View>
         )}
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -404,5 +399,5 @@ const styles = StyleSheet.create({
   next: { borderWidth: 2, borderColor: colors.brand },
   gold: { borderWidth: 2, borderColor: GOLD },
   costume: { backgroundColor: GOLD_SOFT },
-  costumeImg: { width: "100%", height: "100%" },
+  checkOverlay: { alignItems: "center", justifyContent: "center", zIndex: 2 },
 });

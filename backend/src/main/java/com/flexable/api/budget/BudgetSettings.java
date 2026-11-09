@@ -48,6 +48,10 @@ public class BudgetSettings {
 	@Column(name = "day_weights", nullable = false)
 	private String dayWeights = DayWeights.encode(DayWeights.EVEN);
 
+	/** 새로 RECORD를 고른 주에는 선택 시점 비중을 유지하고 다음 월요일부터 갱신한다. */
+	@Column(name = "day_weights_chosen_at")
+	private Instant dayWeightsChosenAt;
+
 	protected BudgetSettings() {
 	}
 
@@ -81,9 +85,14 @@ public class BudgetSettings {
 	}
 
 	/** 요일별 비중만 바꾼다. 웹 연동에 넘기는 값이 아니라 updatedAt은 그대로 둔다. */
-	public void applyDays(DayWeights.Setting days) {
+	public void applyDays(DayWeights.Setting days, Instant now) {
 		this.dayPreset = days.preset().name();
 		this.dayWeights = DayWeights.encode(days.weights());
+		this.dayWeightsChosenAt = now;
+	}
+
+	public Instant getDayWeightsChosenAt() {
+		return dayWeightsChosenAt;
 	}
 
 	public DayWeights.Setting getDays() {

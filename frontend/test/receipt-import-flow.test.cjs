@@ -29,6 +29,7 @@ function reviewScreen() {
     refund: false,
     review: [],
   };
+  const pending = [candidate];
   const categories = {
     loading: false,
     error: undefined,
@@ -69,11 +70,13 @@ function reviewScreen() {
     "@/components/ui": {
       Button: "Button",
       Card: "Card",
+      ConfirmModal: "ConfirmModal",
       Segment: "Segment",
       Sheet: "Sheet",
       T: "T",
     },
     "@/components/Toast": { useToast: () => () => {} },
+    "@/components/CalendarPicker": { CalendarPicker: "CalendarPicker" },
     "@/components/SubHeader": {
       goBack: () => {
         navigated = true;
@@ -88,7 +91,7 @@ function reviewScreen() {
     },
     "./DateField": { DateField: "DateField" },
     "./receiptImport/store": {
-      getPending: () => [candidate],
+      getPending: () => pending,
       clearPending() {},
     },
     "./Session": { useSession: () => ({ invalidate() {} }) },
@@ -99,6 +102,7 @@ function reviewScreen() {
       Loading: "Loading",
       Page: "Page",
       money: String,
+      seoulDate: () => "2026-10-26",
       digits: (s) => s.replace(/\D/g, ""),
       useResource: (path) =>
         path?.startsWith("/categories") ? categories : existing,
@@ -143,6 +147,7 @@ function reviewScreen() {
     existing,
     requests,
     candidate,
+    pending,
     render,
     get navigated() {
       return navigated;
@@ -151,6 +156,19 @@ function reviewScreen() {
       return rowUpdates;
     },
   };
+}
+
+function findNode(root, type, predicate = () => true) {
+  if (Array.isArray(root)) {
+    for (const child of root) {
+      const found = findNode(child, type, predicate);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!root || typeof root !== "object") return null;
+  if (root.type === type && predicate(root.props)) return root;
+  return findNode(root.props?.children, type, predicate);
 }
 
 test("review waits for duplicate lookup and blocks saving when the lookup fails", async () => {
@@ -204,6 +222,36 @@ test("a network retry sends the original body and idempotency key and stays lock
   assert.equal(screen.navigated, true);
   assert.equal(screen.rowUpdates, 1, "success must not redraw the leaving review screen");
   assert.equal(screen.render().props.footer.props.disabled, true);
+});
+
+test("missing dates require a picker and offer to apply the first choice to all undated rows", async () => {
+  const screen = reviewScreen();
+  screen.candidate.date = "";
+  screen.pending.push({ ...screen.candidate, title: "가상상점", amount: 3000 });
+  screen.existing.loading = false;
+  screen.existing.data = { items: [] };
+  const pick = findNode(screen.render(), "Button", (p) => p.label === "날짜 선택하기");
+  assert.ok(pick);
+  await screen.render().props.footer.props.onPress();
+  assert.equal(screen.requests.length, 0, "undated rows must never be saved");
+  pick.props.onPress();
+  const calendar = findNode(screen.render(), "CalendarPicker");
+  assert.equal(calendar.props.visible, true);
+  calendar.props.onConfirm("2026-10-25");
+  const confirm = findNode(screen.render(), "ConfirmModal");
+  assert.equal(confirm.props.visible, true);
+  confirm.props.onConfirm();
+  const updated = screen.render();
+  assert.equal(findNode(updated, "Button", (p) => p.label === "날짜 선택하기"), null);
+  const saving = updated.props.footer.props.onPress();
+  assert.equal(screen.requests.length, 1);
+  assert.equal(screen.requests[0].options.body.occurredAt, "2026-10-25T12:00:00+09:00");
+  screen.requests[0].resolve({});
+  await new Promise(setImmediate);
+  assert.equal(screen.requests.length, 2);
+  screen.requests[1].resolve({});
+  await saving;
+  assert.equal(screen.navigated, true);
 });
 
 test("image import prevents double taps, avoids state changes after navigation and unlocks on return", async () => {
