@@ -422,4 +422,91 @@ class ContractTest {
 		app(auth(json(post("/api/v1/referrals"), "{\"code\":\"" + code + "\"}"), other), 200);
 		app(auth(json(post("/api/v1/referrals"), "{\"code\":\"" + code + "\"}"), other), 409);
 	}
+
+    @Test
+    void incomeSettingsPreservesOtherValuesAndRejectsStaleProposals() throws Exception {
+        String token = signup();
+        clock.seoulNoon("2026-11-09");
+        String change = "{\"incomeAmount\":3000000,\"payday\":20,\"expectedIncomeAmount\":2000000,\"expectedPayday\":26}";
+        app(json(patch("/api/v1/budget/settings/income"), change), 401);
+        app(auth(json(patch("/api/v1/budget/settings/income"), change), token), 404);
+        MvcResult before = app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+        app(auth(json(put("/api/v1/budget/day-weights"), "{\"preset\":\"WEEKEND\"}"), token), 200);
+        MvcResult after = app(auth(json(patch("/api/v1/budget/settings/income"), change), token), 200);
+        for (String path : List.of("balance", "balanceAt", "cardUnpaid", "seedBase", "fixedExpenses", "protectedItems")) {
+            assertThat(read(after, "$." + path)).as(path).isEqualTo(read(before, "$." + path));
+        }
+        assertThat(read(after, "$.incomeAmount")).isEqualTo("3000000");
+        assertThat(read(after, "$.payday")).isEqualTo("20");
+        assertThat(read(app(auth(get("/api/v1/budget/day-weights"), token), 200), "$.preset")).isEqualTo("WEEKEND");
+        app(auth(json(patch("/api/v1/budget/settings/income"), change), token), 200);
+        MvcResult stale = app(auth(json(patch("/api/v1/budget/settings/income"), change.replace("3000000", "4000000")), token), 409);
+        assertThat(read(stale, "$.code")).isEqualTo("BUDGET_INCOME_CHANGED");
+        app(auth(json(patch("/api/v1/budget/settings/income"), change.replace("\"payday\":20", "\"payday\":32")), token), 400);
+        app(auth(json(patch("/api/v1/budget/settings/income"), "{}"), token), 400);
+    }
+
+    private MvcResult incomeAsk(String token, ChatModel.IncomeCall income) throws Exception {
+        when(chatModel.generate(any(), any(), any(), any(), org.mockito.ArgumentMatchers.eq(true)))
+                .thenReturn(new ChatModel.Reply("", null, null, income));
+        return app(auth(json(post("/api/v1/chat/messages"),
+                "{\"accepts\":[\"INCOME\"],\"messages\":[{\"role\":\"USER\",\"text\":\"수입 바꿔줘\"}]}"), token), 200);
+    }
+
+    @Test
+    void incomeProposalsNeverWriteAndUpdateOnlyRequestedFields() throws Exception {
+        String token = signup();
+        clock.seoulNoon("2026-11-09");
+        app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+        MvcResult created = incomeAsk(token, new ChatModel.IncomeCall("TRANSACTION", "CREATE", "용돈", "2026-11-09", null, 50000L, null, null, null, null));
+        assertThat(read(created, "$.action.type")).isEqualTo("INCOME_TRANSACTION");
+        String categoryId = read(created, "$.action.incomeTransaction.categoryId");
+        assertThat(read(app(auth(get("/api/v1/transactions?from=2026-11-09&to=2026-11-09"), token), 200), "$.items")).isEqualTo("[]");
+        String id = read(app(auth(json(post("/api/v1/transactions"), "{\"type\":\"INCOME\",\"title\":\"용돈\",\"amount\":50000,\"categoryId\":" + categoryId
+                + ",\"memo\":\"보존할 비밀 메모\",\"occurredAt\":\"2026-11-09T11:00:00+09:00\"}"), token), 201), "$.id");
+        var call = new ChatModel.IncomeCall("TRANSACTION", "UPDATE", null, null, null, 60000L, null, "2026-11-09", 50000L, "용돈");
+        MvcResult proposed = incomeAsk(token, call);
+        assertThat(read(proposed, "$.action.incomeTransaction.transactionId")).isEqualTo(id);
+        assertThat(read(proposed, "$.action.incomeTransaction.changes")).isEqualTo("[\"AMOUNT\"]");
+        assertThat(read(app(auth(get("/api/v1/transactions/" + id), token), 200), "$.amount")).isEqualTo("50000");
+        MvcResult saved = app(auth(json(patch("/api/v1/transactions/" + id), "{\"amount\":60000}"), token), 200);
+        assertThat(read(saved, "$.memo")).isEqualTo("보존할 비밀 메모");
+        assertThat(read(saved, "$.title")).isEqualTo("용돈");
+        assertThat(read(saved, "$.occurredAt")).contains("11:00:00");
+        String other = signup();
+        assertThat(read(incomeAsk(other, call), "$.action")).isEqualTo("null");
+        app(auth(json(post("/api/v1/transactions"), "{\"type\":\"INCOME\",\"title\":\"용돈\",\"amount\":60000,\"categoryId\":" + categoryId + "}"), token), 201);
+        var ambiguous = new ChatModel.IncomeCall("TRANSACTION", "UPDATE", null, null, null, 70000L, null, null, null, "용돈");
+        assertThat(read(incomeAsk(token, ambiguous), "$.action")).isEqualTo("null");
+    }
+
+    @Test
+    void incomeSettingsProposalUsesCurrentOtherFieldAndDoesNotLeakRecords() throws Exception {
+        String token = signup();
+        app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+        MvcResult proposed = incomeAsk(token, new ChatModel.IncomeCall("SETTINGS", "UPDATE", null, null, null, 4000000L, null, null, null, null));
+        assertThat(read(proposed, "$.action.type")).isEqualTo("INCOME_SETTINGS");
+        assertThat(read(proposed, "$.action.incomeSettings.payday")).isEqualTo("26");
+        assertThat(read(proposed, "$.action.incomeSettings.expectedIncomeAmount")).isEqualTo("2000000");
+        assertThat(read(app(auth(get("/api/v1/budget/settings"), token), 200), "$.incomeAmount")).isEqualTo("2000000");
+        var system = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(chatModel).generate(system.capture(), any(), any(), any(), org.mockito.ArgumentMatchers.eq(true));
+        assertThat(system.getValue()).contains("시드머니는").doesNotContain("2,000,000", "2000000");
+    }
+
+    @Test
+    void invalidIncomeAndOldClientsReceiveNoIncomeAction() throws Exception {
+        String token = signup();
+        for (var call : List.of(
+                new ChatModel.IncomeCall("TRANSACTION", "CREATE", "용돈", "2099-01-01", null, 100L, null, null, null, null),
+                new ChatModel.IncomeCall("TRANSACTION", "CREATE", "용돈", null, null, null, null, null, null, null),
+                new ChatModel.IncomeCall("TRANSACTION", "UPDATE", null, null, null, 100L, null, null, null, null),
+                new ChatModel.IncomeCall("SETTINGS", "UPDATE", null, null, null, -1L, null, null, null, null))) {
+            assertThat(read(incomeAsk(token, call), "$.action")).isEqualTo("null");
+        }
+        when(chatModel.generate(any(), any(), any())).thenReturn(new ChatModel.Reply("다시 알려 주세요", null, null,
+                new ChatModel.IncomeCall("SETTINGS", "UPDATE", null, null, null, 500L, null, null, null, null)));
+        MvcResult old = app(auth(json(post("/api/v1/chat/messages"), "{\"messages\":[{\"role\":\"USER\",\"text\":\"수입 수정\"}]}"), token), 200);
+        assertThat(read(old, "$.action")).isEqualTo("null");
+    }
 }

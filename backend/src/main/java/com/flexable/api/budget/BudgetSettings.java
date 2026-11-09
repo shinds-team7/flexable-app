@@ -64,6 +64,12 @@ public class BudgetSettings {
 		this.updatedAt = now;
 	}
 
+    public void changeIncome(long amount, int payday, Instant now) {
+        this.incomeAmount = amount;
+        this.payday = payday;
+        this.updatedAt = now;
+    }
+
 	public void applySeedBase(long seedBase) {
 		this.seedBase = seedBase;
 	}

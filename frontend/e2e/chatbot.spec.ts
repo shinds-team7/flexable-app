@@ -220,7 +220,7 @@ test("AI 메이트: 일정은 한 줄 카드의 [반영]·[수정]을 누른 뒤
   await expect(
     page.getByRole("button", { name: "수정", exact: true }),
   ).toBeDisabled();
-  expect(chats[0].accepts).toEqual(["SCHEDULE"]);
+  expect(chats[0].accepts).toEqual(["SCHEDULE", "INCOME"]);
   expect(saved).toHaveLength(0);
 
   // 말로 고쳐 달라고 하면 제안 내용을 서버에 함께 보내 새 카드를 받는다. 아직 저장하지 않는다.
@@ -559,7 +559,7 @@ test("+ 음성 입력: 바로 듣고, 들은 일정은 한 줄 카드 [반영]�
     page.getByRole("button", { name: "금액 32,000원, 바꾸기" }),
   ).toBeVisible();
   expect(chats).toHaveLength(1);
-  expect(chats[0].accepts).toEqual(["SCHEDULE"]);
+  expect(chats[0].accepts).toEqual(["SCHEDULE", "INCOME"]);
   expect(chats[0].messages).toEqual([
     { role: "USER", text: "금요일에 친구랑 저녁" },
   ]);

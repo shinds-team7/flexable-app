@@ -119,6 +119,20 @@ public class BudgetService {
 		return toResponse(s, userId);
 	}
 
+    @Transactional
+    public SettingsResponse changeIncome(long userId, BudgetDtos.IncomeSettingsRequest req) {
+        BudgetSettings s = settings.findForUpdate(userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.BUDGET_NOT_SET));
+        if (s.getIncomeAmount() == req.incomeAmount() && s.getPayday() == req.payday()) {
+            return toResponse(s, userId);
+        }
+        if (s.getIncomeAmount() != req.expectedIncomeAmount() || s.getPayday() != req.expectedPayday()) {
+            throw new ApiException(ErrorCode.BUDGET_INCOME_CHANGED);
+        }
+        s.changeIncome(req.incomeAmount(), req.payday(), clock.instant());
+        return toResponse(s, userId);
+    }
+
 	/** 날짜가 된 고정지출을 같은 트랜잭션에서 먼저 기록하고 계산한다(실패하면 고정지출이 빠진 금액 대신 오류). */
 	@Transactional
 	public TodayResponse today(long userId) {

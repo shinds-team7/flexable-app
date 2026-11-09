@@ -8,7 +8,7 @@
  */
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image, Keyboard, Platform, ScrollView, View } from "react-native";
+import { Keyboard, Platform, ScrollView, View } from "react-native";
 import { goBack } from "@/components/SubHeader";
 import { ConfirmModal, T } from "@/components/ui";
 import { colors } from "@/theme";
@@ -30,7 +30,6 @@ import {
   BotGroup,
 } from "./chatbot/bubbles";
 import {
-  mateImg,
   MATE_KEY,
   whenText,
   type MateId,
@@ -166,7 +165,7 @@ function ChatbotRoom() {
       started !== focus.current || generation !== sessionGeneration();
     const body: ChatRequest = {
       mate,
-      accepts: ["SCHEDULE"],
+      accepts: ["SCHEDULE", "INCOME"],
       pending: proposal.current
         ? {
             title: proposal.current.title,
@@ -193,14 +192,17 @@ function ChatbotRoom() {
       if (stale()) return;
       const schedule =
         result.action?.type === "SCHEDULE" ? result.action.schedule : undefined;
+      const income = result.action?.type === "INCOME_TRANSACTION" || result.action?.type === "INCOME_SETTINGS" ? result.action : undefined;
       if (result.action) proposal.current = schedule ?? null;
       push({
         from: "bot",
         text: result.reply,
         card,
         schedule,
+        income,
+        ui: !!income,
         choices:
-          result.action && !schedule
+          result.action && !schedule && !income
             ? confirmChoices(result.action)
             : undefined,
       });
@@ -538,11 +540,6 @@ function Chat({
         >
           {/* 메뉴의 캐릭터·스타일 이름을 작게 이어 받아 같은 대화방처럼 보이게 한다 */}
           <View style={styles.chatIntro}>
-            <Image
-              source={mateImg}
-              style={styles.chatIntroImg}
-              accessibilityLabel="AI 메이트 캐릭터"
-            />
             <View style={[styles.modeBadge, { alignSelf: "center" }]}>
               <T size={12} weight="700" color={colors.brand}>
                 {m.emoji} {m.name}
@@ -565,7 +562,6 @@ function Chat({
           {listening && <ListeningBubble />}
           {busy && (
             <View style={styles.botRow}>
-              <View style={styles.avatarSlot} />
               <TypingBubble />
             </View>
           )}

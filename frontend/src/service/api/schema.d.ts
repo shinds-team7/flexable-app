@@ -400,6 +400,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/budget/settings/income": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 월 수입액·수입일만 변경(다른 예산 설정과 잔액 기준 시각 보존)
+         * @description 기존 값이 expected와 다르면 409 BUDGET_INCOME_CHANGED. 이미 요청 값이면 재시도 성공으로 처리한다. 초기 예산이 없으면 404 BUDGET_NOT_SET.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IncomeSettingsRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["Settings"];
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+                409: components["responses"]["Error"];
+            };
+        };
+        trace?: never;
+    };
     "/budget/today": {
         parameters: {
             query?: never;
@@ -2023,7 +2062,7 @@ export interface components {
     schemas: {
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "AD_NOT_REWARDED" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "INTERNAL_ERROR";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "BUDGET_INCOME_CHANGED" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "AD_NOT_REWARDED" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "INTERNAL_ERROR";
             message: string;
             /** @description VALIDATION_FAILED에서 필드별 문장 */
             fields?: {
@@ -2521,6 +2560,30 @@ export interface components {
                 income: number;
             }[];
         };
+        IncomeSettingsRequest: {
+            /** Format: int64 */
+            incomeAmount: number;
+            payday: number;
+            /** Format: int64 */
+            expectedIncomeAmount: number;
+            expectedPayday: number;
+        };
+        IncomeSettingsProposal: components["schemas"]["IncomeSettingsRequest"];
+        IncomeTransactionProposal: {
+            /** @enum {string} */
+            operation: "CREATE" | "UPDATE";
+            /** Format: int64 */
+            transactionId: number | null;
+            title: string;
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            categoryId: number;
+            category: string;
+            /** Format: int64 */
+            amount: number;
+            changes: ("AMOUNT" | "DATE" | "TITLE" | "CATEGORY")[];
+        };
         ChatMessage: {
             /**
              * @description USER 사용자, MODEL 이전 AI 답변
@@ -2537,8 +2600,8 @@ export interface components {
              * @enum {string}
              */
             mate?: "ANALYST" | "FRIEND" | "COACH";
-            /** @description 앱이 처리할 수 있는 제안 종류. SCHEDULE이 없으면 서버는 일정 제안(action.type SCHEDULE)을 하지 않는다(옛 앱 보호) */
-            accepts?: "SCHEDULE"[];
+            /** @description 앱이 처리할 수 있는 제안 종류. SCHEDULE·INCOME을 각각 알린 앱에만 일정·수입 제안을 보낸다(옛 앱 보호) */
+            accepts?: ("SCHEDULE" | "INCOME")[];
             /** @description 직전에 제안한 일정. 사용자가 수정 의견을 줄 때 함께 보내면 서버가 이것을 바탕으로 다시 제안한다 */
             pending?: {
                 title: string;
@@ -2565,12 +2628,14 @@ export interface components {
             reply: string;
             /**
              * @description 확인이 필요한 변경 제안. 없으면 null. 서버는 저장하지 않는다.
+             *     INCOME_TRANSACTION: 확인하면 기존 POST /transactions 또는 PATCH /transactions/{id}로 저장한다. UPDATE는 changes에 있는 필드만 보낸다.
+             *     INCOME_SETTINGS: 확인하면 PATCH /budget/settings/income으로 저장한다.
              *     DAY_PRESET: 확인하면 앱이 PUT /budget/day-weights {preset}으로 저장한다.
              *     SCHEDULE: 확인하면 앱이 POST /scheduled-expenses {amount, categoryId, title, date}로 등록한 뒤 GET /budget/today를 다시 받는다.
              */
             action: {
                 /** @enum {string} */
-                type: "DAY_PRESET" | "SCHEDULE";
+                type: "DAY_PRESET" | "SCHEDULE" | "INCOME_TRANSACTION" | "INCOME_SETTINGS";
                 /**
                  * @description DAY_PRESET일 때만. CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만
                  * @enum {string}
@@ -2578,6 +2643,8 @@ export interface components {
                 preset?: "EVEN" | "RECORD" | "WEEKEND" | "WEEKDAY";
                 /** @description DAY_PRESET일 때만. 프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히) */
                 label?: string;
+                incomeTransaction?: components["schemas"]["IncomeTransactionProposal"];
+                incomeSettings?: components["schemas"]["IncomeSettingsProposal"];
                 /** @description SCHEDULE일 때만 */
                 schedule?: {
                     title: string;

@@ -104,4 +104,20 @@ class GeminiChatModelTest {
 			.isInstanceOf(ChatModel.Failure.class)
 			.hasMessage("Gemini 응답 500");
 	}
+
+    @Test
+    void incomeToolReadsExplicitFieldsAndRejectsFractionalAmounts() {
+        server.expect(requestTo(URL))
+                .andExpect(jsonPath("$.tools[0].functionDeclarations[0].name").value("propose_income"))
+                .andRespond(withSuccess("""
+                    {"candidates":[{"content":{"parts":[{"functionCall":{"name":"propose_income","args":{
+                    "target":"TRANSACTION","operation":"UPDATE","matchTitle":"용돈","amount":50000.5}}}]}}]}
+                    """, MediaType.APPLICATION_JSON));
+        var r = model.generate("규칙", List.of(new Message(Role.USER, "용돈 수정")), List.of(), List.of(), true);
+        assertThat(r.income().matchTitle()).isEqualTo("용돈");
+        assertThat(r.income().amount()).isEqualTo(Long.MIN_VALUE);
+        assertThat(r.income().title()).isNull();
+        assertThat(r.income().date()).isNull();
+        server.verify();
+    }
 }
