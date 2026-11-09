@@ -484,7 +484,7 @@ test("a new account sees the home guide once after the gift and attendance modal
   await expect
     .poll(() => homeContent.evaluate((node) => node.scrollTop))
     .toBe(0);
-  await page.screenshot({ path: test.info().outputPath("guide-replay.png") });
+  await page.screenshot({ path: test.info().outputPath("guide-replay.png"), animations: "disabled" });
   await page.getByRole("button", { name: "건너뛰기", exact: true }).click();
   await expect(first).toHaveCount(0);
 });
