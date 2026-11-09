@@ -162,6 +162,7 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
     setBusy(true);
     setError(undefined);
     let failed = 0;
+    const results: { id: string; update: Partial<Row> }[] = [];
     // 순서대로 보낸다. 응답을 못 받은 항목은 같은 본문·같은 키로만 다시 보낸다.
     for (const r of targets) {
       const body = r.body ?? {
@@ -174,16 +175,16 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
       };
       try {
         await api("/transactions", { method: "POST", body, key: r.key });
-        patch(r.id, { status: "saved", body, message: undefined });
+        results.push({ id: r.id, update: { status: "saved", body, message: undefined } });
       } catch (e) {
         failed++;
         const uncertain =
           e instanceof Error &&
           "code" in e &&
           (e.code === "NETWORK" || e.code === "INTERNAL_ERROR");
-        patch(
-          r.id,
-          uncertain
+        results.push({
+          id: r.id,
+          update: uncertain
             ? {
                 status: "uncertain",
                 picked: true,
@@ -196,7 +197,7 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
                 body: undefined,
                 message: e instanceof Error ? e.message : "저장하지 못했어요",
               },
-        );
+        });
       }
     }
     session.invalidate();
@@ -205,6 +206,10 @@ function Review({ initial }: { initial: ImportCandidate[] }) {
       toast(`${targets.length}건을 기록했어요`, undefined, "top");
       goBack("/transactions");
     } else {
+      setRows((current) => current.map((row) => {
+        const result = results.find((item) => item.id === row.id);
+        return result ? { ...row, ...result.update } : row;
+      }));
       lock.current = false;
       setBusy(false);
       setError(`${failed}건을 저장하지 못했어요. 표시된 항목을 확인해 주세요`);
