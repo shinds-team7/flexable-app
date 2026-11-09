@@ -10,6 +10,7 @@ function reviewScreen() {
   let cursor = 0;
   let nextId = 0;
   let navigated = false;
+  let rowUpdates = 0;
   const requests = [];
   const existing = {
     loading: true,
@@ -45,6 +46,7 @@ function reviewScreen() {
           slots[index],
           (value) => {
             assert.equal(navigated, false, "state changed after navigation");
+            if (index === 1) rowUpdates++;
             slots[index] =
               typeof value === "function" ? value(slots[index]) : value;
           },
@@ -145,6 +147,9 @@ function reviewScreen() {
     get navigated() {
       return navigated;
     },
+    get rowUpdates() {
+      return rowUpdates;
+    },
   };
 }
 
@@ -197,6 +202,7 @@ test("a network retry sends the original body and idempotency key and stays lock
   screen.requests[1].resolve({});
   await retry;
   assert.equal(screen.navigated, true);
+  assert.equal(screen.rowUpdates, 1, "success must not redraw the leaving review screen");
   assert.equal(screen.render().props.footer.props.disabled, true);
 });
 
