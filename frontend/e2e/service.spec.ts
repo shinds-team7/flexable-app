@@ -271,11 +271,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
   await page
     .getByRole("button", { name: "카테고리 관리", exact: true })
     .click();
-  const custom = page.getByText("수정 중 추가", { exact: true }).locator("..");
-  await custom
-    .locator("..")
-    .getByRole("button", { name: "삭제", exact: true })
-    .click();
+  await page.getByRole("button", { name: "수정 중 추가 삭제", exact: true }).click();
   await expect(
     page.getByText(
       "기록한 거래와 예정 지출은 같은 종류의 다른 카테고리로 옮겨져요. 옮길 곳이 없으면 '기타'를 새로 만들어요",

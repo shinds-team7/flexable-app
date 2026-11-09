@@ -2,7 +2,7 @@ import { Stack, usePathname } from "expo-router";
 import { NavigationBar } from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppState, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,7 +22,6 @@ export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
 /** 스플래시는 앱 시작 후 최소 1초, 세션 확인·새 원격 업데이트 확인(최대 3초)이 더 오래 걸리면 끝날 때까지 띄운다. */
 const SPLASH_MIN_MS = 1000;
-const startedAt = Date.now();
 SplashScreen.preventAutoHideAsync().catch(() => {});
 installErrorReporting();
 
@@ -36,6 +35,7 @@ function ErrorScreenTracker() {
 }
 
 function SplashGate({ fontsReady }: { fontsReady: boolean }) {
+  const [startedAt] = useState(() => Date.now());
   const { ready } = useSession();
   const updateSettled = useLaunchUpdateSettled();
   useEffect(() => {
@@ -45,7 +45,7 @@ function SplashGate({ fontsReady }: { fontsReady: boolean }) {
       Math.max(0, startedAt + SPLASH_MIN_MS - Date.now()),
     );
     return () => clearTimeout(t);
-  }, [ready, updateSettled, fontsReady]);
+  }, [ready, updateSettled, fontsReady, startedAt]);
   return null;
 }
 

@@ -49,9 +49,25 @@ export function SeedMoneyCard({
         accessibilityLabel="시드머니 모은 기록 보기"
         onPress={() => setHistory(true)}
       >
-        <T size={15} weight="700" color={colors.onBrand}>
-          시드머니
-        </T>
+        <View
+          style={[heroStyles.heroTop, { justifyContent: "flex-start", gap: 8 }]}
+        >
+          <T size={15} weight="700" color={colors.onBrand}>
+            시드머니
+          </T>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="시드머니가 무엇인지 보기"
+            hitSlop={8}
+            onPress={(event) => {
+              event.stopPropagation();
+              setHelp(true);
+            }}
+            style={styles.help}
+          >
+            <Ionicons name="help" size={16} color={colors.textSub} />
+          </Pressable>
+        </View>
         <View style={styles.amountRow}>
           {/* 자릿수가 늘면 글자를 줄여 줄바꿈 없이 한 줄에 둔다 */}
           <T
@@ -76,12 +92,18 @@ export function SeedMoneyCard({
             accessibilityRole="button"
             accessibilityLabel="시드머니로 돈 보내기"
             hitSlop={8}
-            onPress={() => setTransfer(true)}
+            onPress={(event) => {
+              event.stopPropagation();
+              setTransfer(true);
+            }}
           >
             <Ionicons name="add" size={36} color={colors.onBrand} />
           </Pressable>
         </View>
-        <View style={[heroStyles.heroFoot, styles.foot]}>
+        <View
+          accessibilityLabel="시드머니 구성"
+          style={[heroStyles.heroFoot, styles.foot]}
+        >
           {(
             [
               ["모아둔 돈", seed.base],
@@ -117,17 +139,6 @@ export function SeedMoneyCard({
         visible={history}
         onClose={() => setHistory(false)}
         title="시드머니 모은 기록"
-        titleAccessory={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="시드머니가 무엇인지 보기"
-            hitSlop={10}
-            onPress={() => setHelp(true)}
-            style={styles.help}
-          >
-            <Ionicons name="help" size={16} color={colors.textSub} />
-          </Pressable>
-        }
       >
         <ScrollView contentContainerStyle={{ gap: 16 }}>
           <T>
@@ -473,6 +484,8 @@ function ReflectModal({
 }
 const styles = StyleSheet.create({
   amountRow: {
+    flexShrink: 0,
+    marginBottom: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,

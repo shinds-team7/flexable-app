@@ -28,7 +28,10 @@ export function TodayHeroView({
   // Overspending shows as a negative amount, so the number itself says how much went over.
   const shown = useRollingNumber(s.todayAvailable);
   return (
-    <View style={[styles.hero, empty && styles.heroEmpty]}>
+    <View
+      accessibilityLabel="오늘 예산 카드"
+      style={[styles.hero, empty && styles.heroEmpty]}
+    >
       <View style={styles.heroTop}>
         <T size={15} weight="700" color={colors.onBrand}>
           오늘 쓸 수 있는 돈
