@@ -20,11 +20,10 @@ async function signupAndOnboard(page: Page) {
     .getByRole("checkbox", { name: "필수 개인정보 수집·이용 동의" })
     .click();
   await page.getByRole("button", { name: "가입하기", exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding$/);
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/balance$/);
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
-  // 잔액 다음 단계: 수입 → 고정지출 → 카드 → 모아둔 돈 → 매달 저축할 돈
-  for (let i = 0; i < 5; i++)
+  // 잔액 다음 단계: 수입 → 고정지출 → 매달 저축할 돈
+  for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await page.getByRole("button", { name: "홈으로", exact: true }).click();

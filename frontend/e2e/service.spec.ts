@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { createHash } from "node:crypto";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import appConfig from "../app.json";
 const apiBase = "http://localhost:8080/api/v1";
 const password = "Testpass1234";
@@ -25,7 +25,7 @@ async function signup(page: Page, address: string) {
     .getByRole("checkbox", { name: "필수 개인정보 수집·이용 동의" })
     .click();
   await page.getByRole("button", { name: "가입하기", exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page).toHaveURL(/\/onboarding\/balance$/);
 }
 async function token(page: Page) {
   return page.evaluate(() => localStorage.getItem("flexable.service.token")!);
@@ -82,7 +82,6 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
       budgetWrites++;
   });
   await signup(page, address);
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   // A refresh must recover the in-progress draft, with no server write yet.
   await page.reload();
@@ -97,8 +96,6 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     .getByRole("button", { name: "25일로 정하기", exact: true })
     .click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
@@ -357,7 +354,6 @@ test("changing input after a failed post-save step re-saves before finishing", a
       bodies.push(r.postDataJSON());
   });
   await signup(page, email());
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: /^수입일 선택, / }).click();
@@ -366,8 +362,6 @@ test("changing input after a failed post-save step re-saves before finishing", a
     .getByRole("button", { name: "25일로 정하기", exact: true })
     .click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
@@ -399,9 +393,8 @@ test("a new account sees the home guide once after the gift and attendance modal
   page,
 }) => {
   await signup(page, email());
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
-  for (let i = 0; i < 5; i++)
+  for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
@@ -493,10 +486,9 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   page,
 }) => {
   await signup(page, email());
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
-  // 잔액 다음 단계: 수입 → 고정지출 → 카드 → 모아둔 돈 → 매달 저축할 돈
-  for (let i = 0; i < 5; i++)
+  // 잔액 다음 단계: 수입 → 고정지출 → 매달 저축할 돈
+  for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
@@ -536,18 +528,70 @@ test("re-entering the balance in settings does not subtract earlier spending aga
   expect((await snapshot(page, "/budget/today")).estimatedBalance).toBe(900000);
 });
 
+test("onboarding has five steps: balance with savings, income with card bills, and quick fixed-expense chips", async ({
+  page,
+}) => {
+  const blue = "rgb(0, 70, 255)";
+  const grey = "rgb(237, 240, 245)";
+  const background = (locator: Locator) =>
+    locator.evaluate((node) => getComputedStyle(node).backgroundColor);
+  await signup(page, email());
+  await expect(page.getByText("예산 설정하기", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("통장의 지금 잔액과 모아둔 돈을 적어주세요", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("1/5", { exact: true })).toBeVisible();
+  await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
+  await page.getByLabel("모아둔 돈 (원)", { exact: true }).fill("500000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "수입일 선택, 31일", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/지금 잔액에 더하지 않아요/)).toHaveCount(0);
+  await page.getByLabel("카드 미결제액 (원)", { exact: true }).fill("30000");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  const chip = page.getByRole("button", { name: "월세 추가", exact: true });
+  await expect(page.getByText("3/5", { exact: true })).toBeVisible();
+  expect(await background(chip)).toBe(grey);
+  expect(
+    await background(
+      page.getByRole("button", { name: "거래내역서 PDF 등록", exact: true }),
+    ),
+  ).toBe(grey);
+  await chip.click();
+  expect(await background(chip)).toBe(blue);
+  expect(await background(page.getByRole("button", { name: "확인", exact: true }))).toBe(blue);
+  await expect(
+    page.getByRole("button", { name: "+ 고정지출 추가", exact: true }),
+  ).toHaveCSS("opacity", "0.4");
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  expect(await background(chip)).toBe(grey);
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(
+    page.getByText("매달 얼마씩 저축할까요?", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/done$/);
+  const settings = await snapshot(page, "/budget/settings");
+  expect(settings).toMatchObject({
+    balance: 1000000,
+    seedBase: 500000,
+    cardUnpaid: 30000,
+    payday: 31,
+  });
+});
+
 test("budget settings edit every saved value on one screen, with the payday wheel and quick fixed-expense names", async ({
   page,
 }) => {
   await signup(page, email());
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  // 처음 수입일 단계: 왼쪽 [매달 말일], 오른쪽 날짜 버튼은 기본 1일
+  // 처음 수입일 단계: 왼쪽 [매달 말일], 오른쪽 날짜 버튼은 기본 31일(말일)
   await expect(
-    page.getByRole("button", { name: "수입일 선택, 1일", exact: true }),
+    page.getByRole("button", { name: "수입일 선택, 31일", exact: true }),
   ).toBeVisible();
-  for (let i = 0; i < 4; i++)
+  for (let i = 0; i < 2; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
@@ -573,11 +617,11 @@ test("budget settings edit every saved value on one screen, with the payday whee
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "수입일 선택, 1일", exact: true }),
+    page.getByRole("button", { name: "수입일 선택, 31일", exact: true }),
   ).toBeVisible();
 
   // 휠에서 날짜를 고르고, 다시 [매달 말일]로 바꾼다
-  await page.getByRole("button", { name: "수입일 선택, 1일" }).click();
+  await page.getByRole("button", { name: "수입일 선택, 31일" }).click();
   await page.getByRole("button", { name: "10일", exact: true }).click();
   await page
     .getByRole("button", { name: "10일로 정하기", exact: true })
@@ -586,7 +630,8 @@ test("budget settings edit every saved value on one screen, with the payday whee
     page.getByRole("button", { name: "수입일 선택, 10일", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "매달 말일", exact: true }).click();
-  await expect(page.getByText("매달 말일에 맞춰 계산해요")).toBeVisible();
+  // 마친 온보딩 화면이 스택 아래에 남아 있어 맨 위 화면(마지막)을 본다
+  await expect(page.getByText("매달 말일에 맞춰 계산해요").last()).toBeVisible();
 
   // 빠른 추가: 이름이 채워진 항목이 열린다. [취소]는 추가 중인 항목을 없앤다
   await page.getByRole("button", { name: "전기세 추가", exact: true }).click();
@@ -643,12 +688,10 @@ test("onboarding saves the money already set aside, and the payday prompt moves 
   page,
 }) => {
   await signup(page, email());
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
-  for (let i = 0; i < 4; i++)
-    await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByLabel("모아둔 돈 (원)", { exact: true }).fill("500000");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
     page.getByText("매달 얼마씩 저축할까요?", { exact: true }),
   ).toBeVisible();
@@ -736,12 +779,10 @@ test("seed money card: + sends money from the current budget, the card opens the
   page,
 }) => {
   await signup(page, email());
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
-  for (let i = 0; i < 4; i++)
-    await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByLabel("모아둔 돈 (원)", { exact: true }).fill("500000");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
     .getByRole("button", { name: "+ 저축할 돈 추가", exact: true })
     .click();
@@ -1097,7 +1138,7 @@ test("social login binds the code to this tab's verifier and signs in once (exch
     await route.fulfill({ response, status: 200, json: auth });
   });
   await page.goto("/oauth/callback?code=test-code");
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page).toHaveURL(/\/onboarding\/balance$/);
   expect(exchanged).toEqual([{ code: "test-code", codeVerifier: verifier }]);
   expect(await token(page)).toBe(auth.accessToken);
   expect(

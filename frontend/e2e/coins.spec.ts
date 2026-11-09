@@ -24,10 +24,9 @@ async function signup(page: Page, address: string) {
     .getByRole("checkbox", { name: "필수 개인정보 수집·이용 동의" })
     .click();
   await page.getByRole("button", { name: "가입하기", exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page).toHaveURL(/\/onboarding\/balance$/);
 }
 async function onboard(page: Page) {
-  await page.getByRole("button", { name: "시작하기", exact: true }).click();
   await page.getByLabel("생활비 잔액 (원)", { exact: true }).fill("1000000");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: /^수입일 선택, / }).click();
@@ -36,7 +35,7 @@ async function onboard(page: Page) {
     .getByRole("button", { name: "25일로 정하기", exact: true })
     .click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
-  for (let i = 0; i < 4; i++)
+  for (let i = 0; i < 2; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "완료", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/done$/);
