@@ -228,15 +228,6 @@ export function MyScreen() {
             onPress={() => setRemind(!remind)}
           />
           <Row
-            label="알림창에 오늘 남은 예산"
-            caption="알림창을 내리면 남은 예산을 볼 수 있어요"
-            accessibilityRole="switch"
-            accessibilityState={{ checked: showBudget }}
-            aria-checked={showBudget}
-            right={<SwitchMark on={showBudget} />}
-            onPress={() => setShowBudget(!showBudget)}
-          />
-          <Row
             label="기록 알림"
             caption="24시간 동안 기록이 없으면 알려 드려요"
             accessibilityRole="switch"
@@ -274,16 +265,33 @@ export function MyScreen() {
           [
             ["예산 설정 바꾸기", "/budget/settings"],
             ["카테고리 관리", "/categories"],
+            ["상시 알림", null],
             ["웹사이트 연동", "/web-links"],
           ] as const
-        ).map(([label, href], i) => (
-          <Row
-            key={href}
-            first={i === 0}
-            label={label}
-            onPress={() => router.push(href)}
-          />
-        ))}
+        ).map(([label, href], i) =>
+          href ? (
+            <Row
+              key={href}
+              first={i === 0}
+              label={label}
+              onPress={() => router.push(href)}
+            />
+          ) : (
+            // 알림창 상시 알림은 기본 켜짐. 앱(Android)에서만 보인다.
+            Platform.OS !== "web" && (
+              <Row
+                key="budget-notification"
+                label="알림창에 오늘 남은 예산"
+                caption="알림창을 내리면 남은 예산을 볼 수 있어요"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: showBudget }}
+                aria-checked={showBudget}
+                right={<SwitchMark on={showBudget} />}
+                onPress={() => setShowBudget(!showBudget)}
+              />
+            )
+          ),
+        )}
         {session.user && (
           <Row
             label="사용 가이드 다시 보기"
