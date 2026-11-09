@@ -1,6 +1,6 @@
 # 인수인계 — 텅장관리 앱 (운영 1.9.0)
 
-마지막 갱신 2026-11-08. 이 문서는 **지금 상태와 남은 일**만 적는다. 끝난 작업의 상세 기록(게시 그룹 ID, 날짜별 로그, 실기기 확인 내역)은 `git log`·PR·[`CHANGELOG.md`](CHANGELOG.md)에 있다(11-07 원격 업데이트 기록이 다 있는 판은 커밋 `ffa6903`). 기능별 현재 동작은 [`FEATURES.md`](FEATURES.md).
+마지막 갱신 2026-11-09. 이 문서는 **지금 상태와 남은 일**만 적는다. 끝난 작업의 상세 기록(게시 그룹 ID, 날짜별 로그, 실기기 확인 내역)은 `git log`·PR·[`CHANGELOG.md`](CHANGELOG.md)에 있다(11-07 원격 업데이트 기록이 다 있는 판은 커밋 `ffa6903`). 기능별 현재 동작은 [`FEATURES.md`](FEATURES.md).
 
 **코드 병합과 운영 반영은 다르다.** 배포(서버 `deploy.sh`, EAS 게시·빌드 제출, Play 업로드)는 사람이 직접 한다.
 **저장소는 공개(PUBLIC)다.** 비밀값(키 파일, 비밀번호), 개인 계정 경위, 사용자 이메일은 여기에 적지 않는다.
@@ -9,10 +9,13 @@
 
 | 영역 | 상태 |
 |---|---|
-| 코드 | 11-08 기준 `main` `6169169`(#308)까지. 앱 버전 1.9.0. 앱은 모두 production에 나갔고, **서버 코드는 운영보다 앞서 있다**(4번) |
-| 현재 운영 앱 | **스토어 1.9.0(versionCode 22), 11-07 심사 통과·출시**, 새로 설치 크기 약 30MB(1.8.0 대비 OCR을 Play 서비스 한국어 인식으로, 글꼴 축소). EAS 빌드 `5fd74f31-d509-4b8f-a3a6-8eeff4d4383f`(소스 `f28bff3`), AAB는 작업 PC `~/Downloads/flexable-1.9.0-22.aab`(저장소에 넣지 않음). **원격 업데이트(runtime 1.9.0) production group `f9dcfa0c-7f6f-4e31-9f1e-282a91a22bae`**(11-08, preview `20395a73`에서 승격: #298·#302~#308 — 스크린샷 가져오기, 승급 게이지 리디자인, Lv.2 농부 영상·이름, "결제내역 스크린샷 등록", 광고 안내 제목만, 홈 영상 이어가기·탭 바 높이·예산 설정 정리, 사용 가이드 코치 마크). 되돌리려면 이전 그룹 `ca10252b-bbcb-4f2a-a357-032d71a10f06`(#305까지, 11-08 실기기 수신 확인)을 다시 게시한다. 공개 `app-version.json` `minVersion`은 Android **1.9.0**(#292)이라 1.8.0 이하는 업데이트 창이 뜬다 |
+| 코드 | 11-09 확인 `main` `383c02e`(#315 포함), 앱 버전 2.0.0. 앱 변경은 1.9.0·2.0.0 production 원격 업데이트로 게시됐다. **서버 코드는 운영보다 앞서 있다**(4번) |
+| 2.0.0 빌드·출시 확인 | EAS production Android AAB **빌드 성공**, versionCode **23**, 소스 `d8a823d`, 빌드 `819bfa79-c026-4702-a065-c47a0cbdd23d`(11-09 09:51 KST 완료). **Play 출시 완료는 미확인**: 11-09 조회한 공개 Play 페이지의 현재 버전 필드는 아직 1.9.0. 빌드 성공과 Play 출시를 구분한다. 연결된 Android 기기가 없어 설치·영상 수신은 직접 확인하지 못했다. `minVersion`은 1.9.0 유지 |
+| 최신 원격 업데이트 | 11-09 EAS 목록과 Expo 실제 배포 응답을 모두 확인: production **runtime 1.9.0 `51180ce1-6e92-4795-beac-0c49e04be085`**, **runtime 2.0.0 `c2e3758e-2ed7-4086-9b8c-cd0dab513bda`**(#315, Lv.5·6 영상 포함). 게시 누락으로 확인된 앱 변경은 없어 재게시하지 않았다. 실기기 수신 확인은 별도 |
+| 현재 운영 앱 | 공개 Play 페이지는 **1.9.0(versionCode 22)**(11-09 조회). 기존 빌드 `5fd74f31-d509-4b8f-a3a6-8eeff4d4383f`(소스 `f28bff3`). 최신 원격 업데이트는 위 행 참조. `minVersion`은 Android **1.9.0**(#292)으로 유지 |
 | 마이크 권한 경고 | 1.8.0부터 `RECORD_AUDIO` 때문에 Play가 마이크 없는 기기 약 20종을 지원하지 않는다고 경고한다. 영향이 작아 그대로 둔다(11-07 사용자 결정). 고치려면 `android.hardware.microphone`을 `required="false"`로 선언하는 config plugin과 새 빌드 |
-| 서버 | 아카데미 VM에서 동작(EC2는 중계, 아래 "서버 이전"). 마지막 배포 11-06 15:53 소스 `0a3152a`(Flyway V22). **그 뒤 서버 변경 3건(#279·#281·#290, V23)이 배포 전이고 11-09 배포 예정**(2번 1행). 서버 `.env`에 `GEMINI_API_KEY` 있음·`GEMINI_MODEL` 없음(기본 `gemini-3.5-flash-lite`). 배포는 아카데미 네트워크 PC에서만 된다 |
+| 서버 | 아카데미 VM에서 동작(EC2는 중계, 아래 "서버 이전"). 마지막 배포 11-06 15:53 소스 `0a3152a`, Flyway **V22**(11-09 SSH·기동 로그 확인). 이후 #279·#281·#290·#299·#303·#304·#310·#315 변경은 **미배포**, 최신 스키마는 V26. 11-09 외부 `/actuator/health` 전부 UP. 서버 `.env`에 `GEMINI_API_KEY` 있음·`GEMINI_MODEL` 없음(기본 `gemini-3.5-flash-lite`, 이전 확인 기록). 배포는 아카데미 네트워크 PC에서만 된다 |
+| 서버 배포 준비 | 11-09 13:58 KST 배포 전 DB 백업 실행·gzip 무결성 확인, 기존 JAR 보관·SHA-256 일치 확인. 최신 main 로컬 `gradlew.bat test` **181개 통과(실패·오류·건너뜀 0, 정책 4종 포함)**, `bootJar` 성공. 같은 커밋 CI의 백엔드·Android 모듈·프론트·웹 E2E 통과. **코스튬 영상 실기기 수신 확인을 기다리며 배포 미실행**(V24~V26 선행 조건) |
 | 웹 | Vercel이 `main` 자동 배포(방침·약관·계정 삭제·`app-version.json`). 시연·웹사이트는 별도 저장소 `flexable-web` |
 | 감시·CI | 서버 감시 15분 간격(`server-health.yml`), PR마다 백엔드·프론트·E2E. 오류 기록(`error_events`)은 서버 배포 뒤부터 쌓이고, 보는 법은 [`error-logs.md`](error-logs.md) |
 | Play | 1.9.0 프로덕션 출시(11-07). **데이터 보안 양식 반영 완료(11-08, 사용자)**: AI 메이트 메시지(기타 사용자 제작 콘텐츠), 마이크 권한, "앱 정보 및 성능 → 진단"(1.9.0 오류 기록) |
@@ -23,10 +26,11 @@
 
 | 순서 | 할 일 | 완료 기준·주의 |
 |---|---|---|
-| 1 | **11-09 서버 배포**(아카데미 네트워크 PC) | 담는 것: 일정 금액 예측 시간대 제거(#279), 광고 시청 시간 보너스 `POST /coins/ad-bonus`(#281), 오류 기록 V23 `error_events`·`POST /client-errors`·서버 500 기록·매일 30일 삭제(#290), 2028 공휴일(#299), Lv.2 농부 코스튬 켜기 V24(#303·#304, 2행 앱 수신 확인 뒤). 순서: ① **DB 백업** ② `backend/deploy/academy/deploy.sh` ③ `/actuator/health` 전부 `UP`, Flyway 로그 "now at version v24" ④ 앱에서 광고를 30초 넘게 보고 "+20 코인을 받았어요" ⑤ AI 메이트에 일정을 말해 금액이 나오는지 ⑥ DB에서 `select event_day, source, kind, status, code, path, message, occurrences from error_events order by last_at desc limit 20`이 에러 없이 도는지. ⑦ 레벨 2 이상 계정의 상점에서 농부 코스튬이 열리는지. 끝나면 4번의 서버 줄을 지운다 |
-| 2 | **production `f9dcfa0c` 실기기 확인** | 11-08 승격(#298·#302~#308). `ca10252b`까지는 11-08 수신 확인. Wi-Fi에서 앱을 30초 이상 켜 둔 뒤 완전히 껐다 켜기. 앱을 두 번 열어 받은 뒤 확인: 스크린샷 등록 때 모든 항목이 기본 선택되는지(이미 기록된 것 같은 거래만 빠짐), 토스 스크린샷에 "금액의 원 표시를 정확히 읽지 못했어요"가 더는 안 뜨는지, 홈 게이지가 0에서 차오르고 채움 끝에 고양이가 있는지, 레벨 안내가 아이콘만인지(Lv.2 🌾), 음성 입력·스크린샷 등록을 중간에 닫아도 홈 영상이 다시 도는지, 마이 [사용 가이드 다시 보기]의 비춤 위치가 맞는지. 이게 확인돼야 1행 서버 배포에 V24(Lv.2 농부 켜기)를 함께 담아도 된다 |
-| 3 | **웹 연동 시드머니 운영 응답 확인**(서비스 키 필요) | 웹은 `EXTRA` 처리를 끝냈다(11-08 웹 회신: 계약 enum·타입·"바로 보낸 돈" 라벨, 같은 날 여러 건·`startedOn` null 테스트). 남은 것: 가짜 테스트 계정으로 웹을 연동하고 서비스 키로 운영 `GET /internal/v1/web-links/{linkId}/seed-money`를 불러 `entries`·`startedOn`이 오는지, 키 없이 401인지 확인. 운영에서 그래프를 확인한 기록이 아직 없다([`web-seed-entries-handoff.md`](web-seed-entries-handoff.md)) |
-| 4 | **11-09 새 앱 빌드·실기기 확인**(#311, Issue #312) | 버전은 2.0.0으로 확정(`app.json`, 아이콘·스플래시 교체가 큰 변화). 빌드·Play 제출은 사람이 한다. 확인: 알림창 "오늘 남은 예산"이 아이콘 높이 안에 들어오는지, 거래 저장·예산 변경 때 금액 갱신, 자정 뒤 갱신, 앱을 닫은 채 신한 SOL페이 승인 알림이 오면 금액이 줄어드는지, Android 13 권한·14 밀어서 지우기, 홈 화면 아이콘이 흐리지 않은지(512px 원본을 1024로 키웠음, 흐리면 큰 원본 필요). 주의: main이 2.0.0이라 운영 1.9.0 앱에 보낼 원격 업데이트는 `669e2f4` 이전 커밋에서 브랜치를 따서 낸다(§3). |
+| 1 | **서버 배포 전 영상 수신 확인** | 최신 1.9.0 또는 2.0.0에서 Lv.2~6 영상 수신을 확인한다. production 게시 자체는 확인 완료. 2.0.0 Play 업데이트 버튼이 안 보인다는 사용자 회신(11-09)이 있어 출시·설치를 완료로 기록하지 않는다 |
+| 2 | **서버 배포(V23~V26)** | 11-09 백업·기존 JAR 보관·테스트·bootJar 완료. 위 영상 수신 확인 후 `backend/deploy/academy/deploy.sh academy` → `/actuator/health` 전부 UP → Flyway "now at version v26" 확인. 광고 30초 초과 보상 +20, AI 일정 금액 예측, 오류 수집, 최고 단계별 코스튬 해금은 실기기에서 별도 확인 |
+| 3 | **2.0.0 Play 출시 상태 확인** | EAS production AAB 빌드 성공(versionCode 23). Play Console에서 제출·심사·출시 트랙·게시 상태 확인 후 Play 설치. 원격 업데이트 게시만으로 스토어 버전이 올라가지는 않는다 |
+| 4 | **웹 연동 시드머니 운영 응답 확인**(서비스 키 필요) | 웹은 `EXTRA` 처리를 끝냈다(11-08 웹 회신: 계약 enum·타입·"바로 보낸 돈" 라벨, 같은 날 여러 건·`startedOn` null 테스트). 남은 것: 가짜 테스트 계정으로 웹을 연동하고 서비스 키로 운영 `GET /internal/v1/web-links/{linkId}/seed-money`를 불러 `entries`·`startedOn`이 오는지, 키 없이 401인지 확인. 운영에서 그래프를 확인한 기록이 아직 없다([`web-seed-entries-handoff.md`](web-seed-entries-handoff.md)) |
+| 5 | **2.0.0 실기기 확인**(#311, Issue #312) | 2.0.0 AAB(versionCode 23) 빌드 완료. Play 출시·설치 확인 뒤 진행한다. 확인: 알림창 "오늘 남은 예산"이 아이콘 높이 안에 들어오는지, 거래 저장·예산 변경 때 금액 갱신, 자정 뒤 갱신, 앱을 닫은 채 신한 SOL페이 승인 알림이 오면 금액이 줄어드는지, Android 13 권한·14 밀어서 지우기, 홈 화면 아이콘이 흐리지 않은지(512px 원본을 1024로 키웠음, 흐리면 큰 원본 필요). 주의: main이 2.0.0이라 운영 1.9.0 앱에 보낼 원격 업데이트는 `669e2f4` 이전 커밋에서 브랜치를 따서 낸다(§3). |
 
 ## 3. 그 다음 할 일
 
@@ -59,7 +63,7 @@
 - [ ] Lv.2 코스튬 켜기(#303, #304): Flyway **V24** `costume-lv2` `active = TRUE`(최고 단계 2 이상이면 열림), 이름 마구간지기→농부(#304, 앱 🌾 아이콘·레벨 안내는 아이콘만). **앱 원격 업데이트(영상 연결) 수신 확인 → 서버 배포** 순서(먼저 켜면 옛 앱이 광부 그림으로 보임). 앱은 production(11-08)으로 나갔다
 - [ ] Lv.3 상인·Lv.4 기사 코스튬 켜기(#310): Flyway **V25** `costume-lv3`·`lv4` `active = TRUE`(최고 단계 3·4 이상이면 열림). 농부 영상도 `--scale 0.8`로 다시 만들어 교체. **앱 원격 업데이트(영상 연결) 수신 확인 → 서버 배포** 순서(V24와 같음) preview 게시(그룹 `f4110774`)·production 승격 완료(그룹 `4bd63ea3`, 11-08), 서버 V25 배포 전
 
-**앱**: 1.9.0 빌드(`f28bff3`)와 원격 업데이트 `f9dcfa0c`(#308)까지 나갔다. preview에만 있는 것은 없다. 이후 앱 PR은 원격 업데이트(`main`, runtime 1.9.0) 또는 새 빌드로 나간다.
+**앱**: 1.9.0 최신 원격 업데이트 `51180ce1`과 2.0.0 최신 원격 업데이트 `c2e3758e`(#315)는 production 게시·실제 제공 확인(11-09). 2.0.0 AAB(versionCode 23)는 빌드 성공했으나 Play 출시·설치·최신 영상 수신은 미확인. `main`에서 게시하면 runtime 2.0.0으로만 나간다.
 - [ ] 알림창 상시 알림 "오늘 남은 예산"(Android, 앱을 닫은 채 결제 알림이 오면 임시로 차감), 앱·스플래시 아이콘을 새 고양이 캐릭터로 교체(#311, Issue #312): 네이티브 모듈 `budget-notification`과 아이콘 파일이 바뀌어 **새 빌드 필요**(원격 업데이트 불가, `app.json` `version` 올림 필요). 서버 배포는 무관. 실기기에서 알림 모양·자정 갱신 확인 필요.
 - [ ] Lv.5 귀족·Lv.6 왕족 코스튬 켜기(#315): Flyway **V26** `costume-lv5`·`lv6` `active = TRUE`(최고 단계 5·6 이상이면 열림), 앱은 `cat-noble`·`cat-king` 영상 연결. **앱 원격 업데이트(영상 연결, 2.0.0 runtime) 수신 확인 → 서버 배포** 순서(V24·V25와 같음). 서버 배포 한 번에 V24~V26이 함께 적용된다. 원격 업데이트는 11-09 production 승격 완료: runtime 1.9.0 그룹 `51180ce1`(3bf4778 기준), runtime 2.0.0 그룹 `c2e3758e`(main). 2.0.0 앱은 Play 심사·출시 뒤 수신
 
@@ -111,7 +115,7 @@ npx eas-cli@latest build -p android --profile production   # Play 업로드용 A
 - 새 production 빌드는 AAB를 Play에 올리고 사용자가 업데이트해야 반영된다. 아이콘·권한·네이티브 모듈 변경은 원격 업데이트로 못 보낸다.
 - `runtimeVersion`은 `appVersion` 정책이다. **앱 버전이 다르면 서로 원격 업데이트를 받지 못한다**(1.5.0 앱은 1.6.0 번들을 못 받는다). 네이티브가 바뀌면 `app.json`의 `version`을 올리고 새로 빌드한다.
 - **원격 업데이트**(JS·이미지·영상만): `npm run update:preview -- --message "…" --non-interactive`로 preview 게시 → 실기기 확인 → `npm run update:promote -- <preview 그룹 ID> --message "…"`로 production 승격(preview·production 환경변수가 같을 때만). 직접 게시는 `npx eas-cli@latest update --channel production --environment production --platform android --message "…" --non-interactive`. 되돌리기는 이전 그룹을 `update:republish --group <이전 그룹 ID>`로 다시 게시한다(그룹은 `update:list --branch production`).
-- **`main`의 앱 버전이 운영 앱보다 높을 때**(새 빌드 준비 중) 운영 앱에 보낼 원격 업데이트는 운영 버전 시절 커밋에서 브랜치를 따서 낸다. main에서 내면 새 runtime으로 나가 운영 앱에 가지 않는다(예: 11-07 1.9.0 버전 올림 #288 뒤 1.8.0용은 `27c7220`에서 게시한 preview를 승격). 지금은 main·운영 모두 1.9.0이라 `main`에서 낸다.
+- **`main`의 앱 버전이 운영 앱보다 높을 때**(새 빌드 준비 중) 운영 앱에 보낼 원격 업데이트는 운영 버전 시절 커밋에서 브랜치를 따서 낸다. main에서 내면 새 runtime으로 나가 운영 앱에 가지 않는다(예: 11-07 1.9.0 버전 올림 #288 뒤 1.8.0용은 `27c7220`에서 게시한 preview를 승격). 현재 main은 **2.0.0**이고 공개 Play 페이지는 **1.9.0**으로 확인됐다(11-09). 1.9.0용은 1.9.0 호환 소스에서 따로 게시한다.
 - 앱은 실행할 때 새 업데이트를 받는다. 스플래시 3초 안에 받으면 바로, 늦으면 다음 실행에 적용한다. preview APK는 `preview` 채널, Play AAB는 `production` 채널을 본다.
 - **필수 업데이트**: 앱은 시작할 때와 다시 열 때(10분 간격) `frontend/public/app-version.json`의 `android.minVersion`을 읽고, 설치된 버전이 더 낮으면 닫을 수 없는 업데이트 창(Play 스토어로 이동)을 띄운다. 새 버전이 테스터 Play 스토어에 보이고 설치까지 확인한 **뒤에** minVersion을 올리는 PR을 머지한다(Vercel 자동 배포). 되돌리려면 minVersion을 내린다.
 - Claude Code auto mode는 production 게시를 운영 배포로 보고 막는다. 그 메시지에서 사람이 "production 승격해"처럼 직접 시키면 실행되고, 아니면 사람이 `! <명령>`으로 직접 실행한다.
@@ -121,7 +125,7 @@ npx eas-cli@latest build -p android --profile production   # Play 업로드용 A
 
 - 운영 API: `https://flex-able-sh.duckdns.org/api/v1`. 코드 `backend/`, 계약 `docs/API.md`·`docs/contracts/`. 구성은 `backend/deploy/`(Docker Compose: api + Caddy 자동 HTTPS), 절차는 `backend/README.md`.
 - **지금 배포는 `backend/deploy/academy/deploy.sh`다**(jar 빌드 → VM 업로드 → api 재기동). EC2의 `backend/deploy/deploy.sh`는 `RELAY_MODE` 때문에 멈춘다. EC2 복귀 뒤에는 다시 `backend/deploy/deploy.sh`를 쓴다.
-- 배포 뒤 `/actuator/health`(앱·DB·디스크 `UP`)와 Flyway 로그의 "now at version vN"을 확인한다. 스키마 변경은 `backend/src/main/resources/db/migration/V{n}__*.sql`을 **추가**한다(배포된 파일 수정 금지, 운영 DB의 체크섬을 임의로 고치지 않는다). 지금 최신은 V17.
+- 배포 뒤 `/actuator/health`(앱·DB·디스크 `UP`)와 Flyway 로그의 "now at version vN"을 확인한다. 스키마 변경은 `backend/src/main/resources/db/migration/V{n}__*.sql`을 **추가**한다(배포된 파일 수정 금지, 운영 DB의 체크섬을 임의로 고치지 않는다). 코드 최신은 **V26**, 운영은 **V22**(11-09 배포 전 확인).
 - **외부 감시**(`.github/workflows/server-health.yml`): 15분마다 API 상태·웹 `/privacy`·HTTPS 인증서(만료 10일 미만이면 실패)를 확인하고, 실패하면 `server-health` 라벨 이슈를 연다(정상이 되면 자동으로 닫음). 팀 알림은 이 이슈로 받는다. 공개 저장소는 60일 동안 활동이 없으면 예약 실행이 꺼지므로 Actions 탭에서 다시 켠다.
 - 디스크가 부족하면(남은 300MB 미만이면 `DOWN: diskSpace`) `docker system df`로 확인하고 `sudo apt-get clean`부터 한다. `deploy.sh`는 배포마다 빌드 캐시·이전 이미지를 지운다.
 - EC2: `ssh -i ~/.ssh/sh-flex.pem ubuntu@3.36.103.99`, 보안 그룹 `flex-api-web`의 22번은 관리자 IP만 허용한다. **새 PC나 사무실에서는 공인 IP가 달라 SSH가 막히므로** 22번 소스를 새 IP로 바꾸고, 끝나면 지운다.
