@@ -3,6 +3,8 @@ import { colors, radius } from "@/theme";
 
 export const styles = StyleSheet.create({
   hero: {
+    minHeight: 232,
+    flexGrow: 1,
     backgroundColor: colors.brand,
     borderRadius: radius.soft,
     padding: 22,
@@ -21,12 +23,13 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.16)",
   },
   heroTop: {
+    minHeight: 28,
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
   },
   heroFoot: {
-    marginTop: 14,
+    marginTop: "auto",
     paddingTop: 12,
     minHeight: 36,
     borderTopWidth: 1,
