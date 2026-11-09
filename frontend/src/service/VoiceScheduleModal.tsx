@@ -42,7 +42,9 @@ export function VoiceScheduleModal({
       visible={visible}
       onClose={onClose}
       title="음성 입력"
-      subtitle="날짜와 할 일을 말하면 예정 지출로 등록해요. 예: 금요일에 친구랑 저녁"
+      subtitle={
+        "날짜와 할 일을 말하면 예정 지출로 등록해요.\n예: 금요일에 친구랑 저녁"
+      }
     >
       {visible ? <VoiceSchedule onClose={onClose} /> : <View />}
     </Sheet>

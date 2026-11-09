@@ -95,23 +95,44 @@ test("default categories can move and delete with their saved server order", asy
       categories = categories.filter((c) => c.id !== 1);
       return route.fulfill({ status: 204 });
     }
+    if (method === "PATCH") {
+      const body = route.request().postDataJSON();
+      categories = categories.map((c) => (c.id === 1 ? { ...c, ...body } : c));
+      return route.fulfill({ json: categories.find((c) => c.id === 1) });
+    }
     return route.fulfill({ json: categories });
   });
   await page.goto("/categories");
-  await page
-    .getByRole("button", { name: "식비 아래로 이동", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "식비 위로 이동", exact: true }),
-  ).toBeEnabled();
+  const handle = page.getByRole("button", {
+    name: "식비 순서 변경",
+    exact: true,
+  });
+  const from = await handle.boundingBox();
+  const to = await page
+    .getByRole("button", { name: "교통 순서 변경", exact: true })
+    .boundingBox();
+  if (!from || !to) throw new Error("Category drag handles missing");
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+    steps: 10,
+  });
+  await page.mouse.up();
+  await expect.poll(() => categories[0].name).toBe("교통");
+  await expect(handle).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "교통 위로 이동", exact: true }),
-  ).toBeDisabled();
-  const food = page.getByText("식비", { exact: true }).locator("xpath=../..");
-  await food.getByRole("button", { name: "삭제", exact: true }).click();
+    page.getByRole("button", { name: /순서 변경$/ }).first(),
+  ).toHaveAttribute("aria-label", "교통 순서 변경");
+  await page.getByRole("button", { name: "식비 수정", exact: true }).click();
+  await page
+    .getByLabel("카테고리 이름 (20자 이내)", { exact: true })
+    .fill("식사");
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await expect(page.getByText("식사", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "식사 삭제", exact: true }).click();
   await page.getByRole("button", { name: "삭제", exact: true }).last().click();
-  await expect(page.getByText("식비", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("식사", { exact: true })).toHaveCount(0);
 });
 
 test("Gemini setup failure retries the same question and budget proposal requires confirmation", async ({

@@ -117,11 +117,6 @@ export function TransactionsScreen() {
             })
           }
         />
-        <T size={12} color={colors.textMuted}>
-          {extensions.available
-            ? "지난 날짜는 지출 기록을, 미래 날짜는 지출 예정을 등록할 수 있어요"
-            : "오늘과 지난 날짜의 지출을 기록할 수 있어요. 지출 예정 기능은 준비 중이에요"}
-        </T>
       </Card>
       <Segment
         items={[
