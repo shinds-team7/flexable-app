@@ -97,7 +97,7 @@ export function SeedMoneyCard({
               setTransfer(true);
             }}
           >
-            <Ionicons name="add" size={36} color={colors.onBrand} />
+            <Ionicons name="add" size={32} color={colors.onBrand} />
           </Pressable>
         </View>
         <View
@@ -485,15 +485,15 @@ function ReflectModal({
 const styles = StyleSheet.create({
   amountRow: {
     flexShrink: 0,
-    marginBottom: 14,
+    marginBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     marginTop: 6,
   },
   icon: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: radius.soft,
     backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
