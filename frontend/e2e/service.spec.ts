@@ -422,24 +422,43 @@ test("a new account sees the home guide once after the gift and attendance modal
   await expect(first).toHaveCount(0);
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(first).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "이전", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator("circle#home-guide-highlight")).toHaveCount(1);
+  await expect(
+    page.getByText("카드 결제 자동 기록도 지원해요.", { exact: false }),
+  ).toBeVisible();
   // 실제 버튼·카드를 차례로 비춘다: + 버튼 → 오늘 쓸 수 있는 돈 → 캐릭터 → … → 하단 탭(마이)
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "이전", exact: true }).click();
+  await expect(first).toBeVisible();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
     page.getByRole("heading", {
-      name: "캐릭터를 누르면 상점이에요",
+      name: "캐릭터를 누르면 상점을 볼 수 있어요",
       exact: true,
     }),
   ).toBeVisible();
-  const startButton = page.getByRole("button", { name: "시작하기", exact: true });
+  const startButton = page.getByRole("button", {
+    name: "시작하기",
+    exact: true,
+  });
   // 단계를 넘기면 다음 자리를 재는 동안 설명 카드가 잠깐 빠지므로, 버튼이 다시 보일 때까지 기다린다
   const stepButton = page.getByRole("button", { name: /^(다음|시작하기)$/ });
+  await expect(page.getByText("3 / 9", { exact: true })).toBeVisible();
   for (let i = 0; i < 15; i++) {
     await expect(stepButton).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /^(내역|분석)$/, exact: true }),
+    ).toHaveCount(0);
     if (await startButton.isVisible()) break;
     await stepButton.click();
   }
-  await expect(page.getByRole("heading", { name: "마이", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "마이", exact: true }),
+  ).toBeVisible();
   await startButton.click();
   await expect(first).toHaveCount(0);
   // 다시 홈에 와도 반복하지 않는다
@@ -448,10 +467,24 @@ test("a new account sees the home guide once after the gift and attendance modal
   await page.waitForTimeout(1500);
   await expect(first).toHaveCount(0);
   // 마이에서 다시 볼 수 있다
+  await page.setViewportSize({ width: 390, height: 600 });
+  const homeContent = page.getByLabel("홈 내용", { exact: true });
+  await homeContent.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  await expect
+    .poll(() => homeContent.evaluate((node) => node.scrollTop))
+    .toBeGreaterThan(0);
   await page.getByRole("tab", { name: "마이", exact: true }).click();
-  await page.getByRole("button", { name: "사용 가이드 다시 보기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "사용 가이드 다시 보기", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(first).toBeVisible();
+  await expect
+    .poll(() => homeContent.evaluate((node) => node.scrollTop))
+    .toBe(0);
+  await page.screenshot({ path: test.info().outputPath("guide-replay.png") });
   await page.getByRole("button", { name: "건너뛰기", exact: true }).click();
   await expect(first).toHaveCount(0);
 });

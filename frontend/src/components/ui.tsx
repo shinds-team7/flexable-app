@@ -110,9 +110,9 @@ export function Card({ children, style, onPress, accessibilityLabel }: { childre
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Screen({ children }: { children: ReactNode }) {
+export function Screen({ children, scrollRef, accessibilityLabel }: { children: ReactNode; scrollRef?: RefObject<ScrollView | null>; accessibilityLabel?: string }) {
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} accessibilityLabel={accessibilityLabel} keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>
   );

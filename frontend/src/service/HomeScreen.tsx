@@ -50,6 +50,10 @@ export function HomeScreen() {
   // 첫 check-in이 끝나야 가입 선물·출석 모달을 띄울지 알 수 있다. 첫 홈 가이드는 그 뒤에 띄운다
   const [checkedIn, setCheckedIn] = useState(false);
   const guide = useHomeGuide();
+  const homeScroll = useRef<ScrollView>(null);
+  const prepareGuide = useCallback(() => {
+    homeScroll.current?.scrollTo({ y: 0, animated: false });
+  }, []);
   // 자동 출석 모달은 하루(서버 날짜)에 한 번만 연다. 실패하거나 닫아도 같은 날 또 띄우지 않는다.
   const autoDay = useRef<string | null>(null);
   // Opening or returning to the home runs check-in; the coin chip reads the wallet it returns.
@@ -147,7 +151,7 @@ export function HomeScreen() {
   );
   return (
     <View style={{ flex: 1 }}>
-      <Screen>
+      <Screen scrollRef={homeScroll} accessibilityLabel="홈 내용">
         {result.loading && !s && <Loading />}
         <ErrorNotice error={result.error} retry={result.retry} />
         {s && status && (
@@ -341,6 +345,7 @@ export function HomeScreen() {
         onClose={closeAttendance}
       />
       <HomeGuide
+        onPrepare={prepareGuide}
         visible={
           guide.pending && checkedIn && !shownReward && !attendance && !!s
         }
