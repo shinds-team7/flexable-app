@@ -46,7 +46,7 @@ export function TodayHeroView({
         weight="800"
         color={colors.onBrand}
         num
-        style={{ marginTop: 6, lineHeight: 46 }}
+        style={{ marginTop: 4, lineHeight: 44 }}
         accessibilityLiveRegion="polite"
         accessibilityLabel={`오늘 쓸 수 있는 돈 ${won(s.todayAvailable)}원`}
       >
@@ -57,18 +57,6 @@ export function TodayHeroView({
         </T>
       </T>
 
-      {over && s.daysLeft > 1 && (
-        <T
-          size={13}
-          weight="600"
-          color={colors.onBrand}
-          style={{ marginTop: 2 }}
-          num
-        >
-          남은 {s.daysLeft - 1}일에 나눠서 반영할게요
-        </T>
-      )}
-
       {empty && (
         <View
           style={[
@@ -76,7 +64,7 @@ export function TodayHeroView({
             { flexDirection: "row", alignItems: "center", gap: 8 },
           ]}
         >
-          <T size={12} weight="700" color={colors.onBrand}>
+          <T size={11} weight="700" color={colors.onBrand}>
             {over ? "오늘 예산을 넘었어요" : "오늘 예산을 다 썼어요"}
           </T>
           {over && onOverHelp && (
@@ -88,7 +76,7 @@ export function TodayHeroView({
             >
               <Ionicons
                 name="help-circle-outline"
-                size={22}
+                size={18}
                 color={colors.onBrand}
               />
             </Pressable>

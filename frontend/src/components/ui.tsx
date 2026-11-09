@@ -110,9 +110,9 @@ export function Card({ children, style, onPress, accessibilityLabel }: { childre
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Screen({ children, scrollRef, accessibilityLabel }: { children: ReactNode; scrollRef?: RefObject<ScrollView | null>; accessibilityLabel?: string }) {
+export function Screen({ children, scrollRef, accessibilityLabel, tightBottom }: { children: ReactNode; scrollRef?: RefObject<ScrollView | null>; accessibilityLabel?: string; /** 아래에 고정 버튼이 따로 있으면 마지막 항목 바로 아래에서 스크롤이 끝나게 한다 */ tightBottom?: boolean }) {
   return (
-    <ScrollView ref={scrollRef} accessibilityLabel={accessibilityLabel} keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} accessibilityLabel={accessibilityLabel} keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={tightBottom ? [styles.screen, { paddingBottom: 16 }] : styles.screen} showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>
   );

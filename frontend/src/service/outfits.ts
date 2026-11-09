@@ -55,6 +55,10 @@ const VIDEOS: Record<string, { video: number; poster: ImageSourcePropType }> = {
     video: require("../../assets/outfits/outfit-05.mp4"),
     poster: require("../../assets/outfits/outfit-05.jpg"),
   },
+  "outfit-06": {
+    video: require("../../assets/outfits/outfit-06.mp4"),
+    poster: require("../../assets/outfits/outfit-06.jpg"),
+  },
   "outfit-07": {
     video: require("../../assets/outfits/outfit-07.mp4"),
     poster: require("../../assets/outfits/outfit-07.jpg"),
@@ -67,7 +71,6 @@ const VIDEOS: Record<string, { video: number; poster: ImageSourcePropType }> = {
 
 /** 정지 그림(첫 장면). null이면 기본 캐릭터. 영상이 아직 없는 id(앱보다 서버에 먼저 추가된 상품 포함)는 기본 캐릭터 그림 */
 export function outfitSource(id: string | null): ImageSourcePropType {
-  if (id === ATTENDANCE_OUTFIT_ID) return require("../../assets/chatbot/mate.png");
   return (VIDEOS[id ?? DEFAULT_OUTFIT_ID] ?? VIDEOS[DEFAULT_OUTFIT_ID]).poster;
 }
 

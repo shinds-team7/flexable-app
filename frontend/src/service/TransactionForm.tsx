@@ -287,7 +287,7 @@ function Form({
               ? "거래 삭제 다시 시도"
               : "거래 삭제"
           }
-          variant="ghost"
+          variant="neutral"
           disabled={busy}
           onPress={() => setConfirm(true)}
         />
