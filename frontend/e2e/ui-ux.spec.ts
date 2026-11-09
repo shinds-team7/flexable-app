@@ -16,6 +16,21 @@ test("home help, weekly expenses and seed history use recorded data", async ({
   ).toBeVisible();
   await expect(page.getByText("+20점", { exact: true })).toBeVisible();
   await expect(page.getByText("출석만 해도", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "레벨업 마일스톤", exact: true }),
+  ).toBeVisible();
+  for (const name of ["광부", "농부", "상인", "기사", "귀족", "왕족"]) {
+    await expect(
+      page.getByLabel(`${name} 레벨 아이콘`, { exact: true }),
+    ).toBeVisible();
+  }
+  await expect(
+    page.getByText(/오늘 결과는 내일 반영돼요|점수는 0~500점이에요/),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: test.info().outputPath("level-milestones.png"),
+    animations: "disabled",
+  });
   await page.getByRole("button", { name: "닫기", exact: true }).last().click();
   await page
     .getByRole("button", { name: "이번 주 일별 지출 내역 보기" })
