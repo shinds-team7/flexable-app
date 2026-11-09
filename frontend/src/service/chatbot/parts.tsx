@@ -142,7 +142,10 @@ export function EnterView({
   });
   return (
     <Animated.View
-      style={[{ flex: 1, opacity: v, transform: [{ translateY }] }, style]}
+      style={[
+        { flex: 1, minHeight: 0, opacity: v, transform: [{ translateY }] },
+        style,
+      ]}
     >
       {children}
     </Animated.View>

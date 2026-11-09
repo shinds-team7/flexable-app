@@ -17,6 +17,7 @@ export const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.card },
   center: { textAlign: "center" },
   roomHeader: {
+    flexShrink: 0,
     height: 52,
     flexDirection: "row",
     alignItems: "center",
@@ -105,6 +106,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   composer: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: space[2],

@@ -32,7 +32,9 @@ async function onboard(page: Page) {
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: /^수입일 선택, / }).click();
   await page.getByRole("button", { name: "25일", exact: true }).click();
-  await page.getByRole("button", { name: "25일로 정하기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "25일로 정하기", exact: true })
+    .click();
   await page.getByLabel("예정 수입액 (원)", { exact: true }).fill("2400000");
   for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -267,6 +269,23 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page).toHaveURL(/\/home$/);
   await openShop(page);
   await balance(page, 5);
+  const outfitButtons = page
+    .getByRole("button", { name: "광부", exact: true })
+    .locator("..")
+    .getByRole("button");
+  await expect(outfitButtons.nth(0)).toHaveAttribute("aria-label", "광부");
+  await expect(outfitButtons.nth(1)).toHaveAttribute("aria-label", "선비냥이");
+  await expect(
+    page.getByRole("button", { name: "광부", exact: true }),
+  ).toContainText("레벨 달성 시 해금");
+  await expect(
+    page.getByRole("button", { name: "출석 보상", exact: true }),
+  ).toContainText("도전 과제 달성 시 해금");
+  await expect(
+    page.getByLabel("준비 중인 코스튬, 도전 과제 달성 시 해금", {
+      exact: true,
+    }),
+  ).toHaveCount(1);
   await expect(
     page.getByLabel("선비냥이 미리보기", { exact: true }),
   ).toBeVisible();
@@ -460,9 +479,13 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
   });
   await Promise.all([checkedIn(page), page.reload()]);
   await openShop(page);
-  await expect(page.getByLabel(/ 코스튬, 준비 중$/)).toHaveCount(5);
   await expect(
-    page.getByLabel("농부 코스튬, 준비 중", { exact: true }),
+    page.getByLabel("준비 중인 코스튬, 레벨 달성 시 해금", { exact: true }),
+  ).toHaveCount(5);
+  await expect(
+    page
+      .getByLabel("준비 중인 코스튬, 레벨 달성 시 해금", { exact: true })
+      .first(),
   ).toBeVisible();
   await page.goBack();
   await openCoins(page);
@@ -487,7 +510,7 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
 
   // No button press: after midnight the first visit opens the modal and attends. Day 3 shows the +20 bonus, day 7 the costume.
   await expect(
-    page.getByLabel("3일차, 20코인 보상", { exact: true }),
+    page.getByLabel("3일차, 10코인 보상", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByLabel("7일차, 코스튬 보상", { exact: true }),
@@ -495,7 +518,9 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
   await expect(
     page.getByRole("heading", { name: "1번째 출석 시작", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("1일차, 출석", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("1일차, 출석, 5코인 보상", { exact: true }),
+  ).toBeVisible();
   // The coin chip, now on the character's left, follows the new balance without a reward modal.
   await page.getByRole("button", { name: "확인", exact: true }).last().click();
   await skipGuide(page);

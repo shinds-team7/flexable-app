@@ -108,7 +108,7 @@ public class OutfitService {
 		String equipped = equippedId == null ? DEFAULT_OUTFIT : equippedId;
 		List<OutfitItem> items = outfits.findOrdered()
 			.stream()
-			.filter(o -> o.isActive() || showInactive || bought.contains(o.getId()))
+			.filter(o -> o.isActive() || showInactive || bought.contains(o.getId()) || o.getId().equals(CoinService.ATTENDANCE_OUTFIT))
 			.map(o -> new OutfitItem(o.getId(), o.getName(), o.getPrice(), o.getUnlockLevel(),
 					o.isActive() && o.getUnlockLevel() != null && o.getUnlockLevel() <= peakLevel || bought.contains(o.getId()),
 					o.getId().equals(equipped)))

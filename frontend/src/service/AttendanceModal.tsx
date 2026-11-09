@@ -13,17 +13,15 @@ import { Button, T, useAnimValue, useReducedMotion } from "@/components/ui";
 import { colors, floating } from "@/theme";
 import { sessionGeneration } from "./api/client";
 import { attend } from "./coinApi";
-import { outfitSource } from "./outfits";
+import { ATTENDANCE_OUTFIT_ID, outfitSource } from "./outfits";
 import type { Attendance, CoinReward } from "./types";
 import { ErrorNotice, Loading, useResource } from "./ui";
 import { publishWallet } from "./wallet";
 
 const CYCLE = 7;
-/** 보상이 있는 날(그 주기 안의 순서). 3일차는 보너스 코인(매 주기), 7일차는 첫 주기에만 코스튬 */
+/** 보상이 있는 날(그 주기 안의 순서). 3일차는 코인, 7일차는 첫 주기에만 코스튬 */
 const COIN_DAY = 3;
 const COSTUME_DAY = 7;
-/** 3일차 보너스(기본 +5에 더함). 실제 지급액은 서버 todayReward·rewarded가 기준이고 이 값은 원에 붙는 안내다 */
-const MILESTONE_COIN = 20;
 /** 원의 지름은 줄 폭을 7칸으로 나눈 값에 맞춰 줄어들고 이 크기를 넘지 않는다. 폭·높이를 같은 숫자로 줘야 정확한 원이다 */
 const CIRCLE_MAX = 38;
 const CIRCLE_MIN = 24;
@@ -115,7 +113,7 @@ export function AttendanceModal({
               rewarded={after?.rewarded}
               outfitId={after?.outfitId ?? null}
               budgetBonus={budgetBonus}
-              justChecked={!!after && after.rewarded > 0}
+              justChecked={!!after && (after.rewarded > 0 || !!after.outfitId)}
             />
           )}
           <ErrorNotice error={error} />
@@ -159,7 +157,7 @@ function AttendanceBody({
     Math.min(CIRCLE_MAX, Math.floor((trackWidth - TRACK_PAD * 2) / CYCLE) - 4),
   );
   const done = a.checkedToday ? ((a.total - 1) % CYCLE) + 1 : a.total % CYCLE;
-  // 7일차 코스튬은 처음 7일에만 있다. 8일째부터 7일차는 기본 코인만 받는다
+  // 7일차 코스튬은 처음 7일에만 있다. 8일째부터는 7일차도 코인이다
   const firstCycle = (a.checkedToday ? a.total : a.total + 1) <= CYCLE;
   const title = a.checkedToday
     ? a.total === 1
@@ -218,10 +216,12 @@ function AttendanceBody({
             style={{ textAlign: "center", lineHeight: 23 }}
           >
             오늘 출석하면{" "}
-            <T size={15} weight="800" color={colors.brandDark} num>
-              +{a.todayReward} 🪙
-            </T>
-            {a.todayOutfitId ? " 와 코스튬" : ""}
+            {a.todayReward > 0 && (
+              <T size={15} weight="800" color={colors.brandDark} num>
+                +{a.todayReward} 🪙
+              </T>
+            )}
+            {a.todayOutfitId ? "코스튬" : ""}
           </T>
         )}
         {a.checkedToday && !rewarded && !outfitId && (
@@ -266,7 +266,8 @@ function DayCircle({
   firstCycle: boolean;
 }) {
   const costume = day === COSTUME_DAY && firstCycle;
-  const coin = day === COIN_DAY;
+  const coin = day === COIN_DAY || (day === COSTUME_DAY && !firstCycle);
+  const reward = day === COIN_DAY ? 10 : day === COSTUME_DAY ? 30 : 5;
   const reduced = useReducedMotion();
   const scale = useAnimValue(1);
   const turn = useAnimValue(0);
@@ -315,7 +316,7 @@ function DayCircle({
     <View
       style={styles.col}
       accessible
-      accessibilityLabel={`${day}일차${on ? ", 출석" : ""}${costume ? ", 코스튬 보상" : ""}${coin ? `, ${MILESTONE_COIN}코인 보상` : ""}`}
+      accessibilityLabel={`${day}일차${on ? ", 출석" : ""}${costume ? ", 코스튬 보상" : `, ${reward}코인 보상`}`}
     >
       <T
         size={11}
@@ -347,12 +348,16 @@ function DayCircle({
             color={colors.onBrand}
           />
         ) : costume ? (
-          <Image source={outfitSource("outfit-07")} style={styles.costumeImg} />
-        ) : coin ? (
+          <Image
+            source={outfitSource(ATTENDANCE_OUTFIT_ID)}
+            style={styles.costumeImg}
+            resizeMode="contain"
+          />
+        ) : (
           <T size={11} weight="800" color={GOLD_TEXT} num>
-            +{MILESTONE_COIN}
+            +{reward}
           </T>
-        ) : null}
+        )}
       </Animated.View>
     </View>
   );

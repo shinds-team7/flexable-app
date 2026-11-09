@@ -40,9 +40,14 @@ test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장
 
   // 약속 설정은 일정을 말해 달라는 안내와 예시 질문부터 보여 주고, 누르기 전에는 보내지 않는다
   await page.getByRole("button", { name: "약속 설정", exact: true }).click();
-  await expect(page.getByText(/앞으로 있을 약속을 날짜와 함께 말해 주세요/)).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "이번 주 금요일에 친구랑 저녁", exact: true }),
+    page.getByText(/앞으로 있을 약속을 날짜와 함께 말해 주세요/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "이번 주 금요일에 친구랑 저녁",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByText("기능 업데이트 예정이에요")).toHaveCount(0);
   expect(chats).toHaveLength(0);
@@ -61,6 +66,26 @@ test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장
 
   // 배분 제안은 [확인]을 누르기 전에는 저장하지 않는다
   const input = page.getByLabel("AI 메이트에게 질문", { exact: true });
+  // Shrinking after a reply must keep the input and send button fully visible.
+  // Android's actual keyboard still needs a device check.
+  await page.setViewportSize({ width: 390, height: 420 });
+  await input.focus();
+  await expect
+    .poll(async () => {
+      const field = await input.boundingBox();
+      const send = await page
+        .getByRole("button", { name: "보내기", exact: true })
+        .boundingBox();
+      return (
+        !!field &&
+        !!send &&
+        field.height >= 44 &&
+        field.y >= 0 &&
+        field.y + field.height <= 420 &&
+        send.y + send.height <= 420
+      );
+    })
+    .toBe(true);
   await input.fill("주말에 돈을 더 쓰고 싶어");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
   await expect(page.getByRole("button", { name: "그대로 둘게" })).toBeVisible();

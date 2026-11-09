@@ -6,6 +6,7 @@
 import type { ImageSourcePropType } from "react-native";
 
 export const DEFAULT_OUTFIT_ID = "costume-lv1";
+export const ATTENDANCE_OUTFIT_ID = "outfit-06";
 
 // 파일이 저장소에 들어오면 id마다 영상과 첫 장면을 함께 한 줄씩 추가한다(스크립트가 줄을 출력한다).
 // require는 빌드할 때 파일이 있어야 해서 미리 적어 둘 수 없다.
@@ -66,6 +67,7 @@ const VIDEOS: Record<string, { video: number; poster: ImageSourcePropType }> = {
 
 /** 정지 그림(첫 장면). null이면 기본 캐릭터. 영상이 아직 없는 id(앱보다 서버에 먼저 추가된 상품 포함)는 기본 캐릭터 그림 */
 export function outfitSource(id: string | null): ImageSourcePropType {
+  if (id === ATTENDANCE_OUTFIT_ID) return require("../../assets/chatbot/mate.png");
   return (VIDEOS[id ?? DEFAULT_OUTFIT_ID] ?? VIDEOS[DEFAULT_OUTFIT_ID]).poster;
 }
 

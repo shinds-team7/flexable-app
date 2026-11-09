@@ -533,6 +533,7 @@ function Chat({
             scroll.current?.scrollToEnd({ animated: true })
           }
           keyboardShouldPersistTaps="handled"
+          onLayout={() => scroll.current?.scrollToEnd({ animated: false })}
           showsVerticalScrollIndicator={false}
         >
           {/* 메뉴의 캐릭터·스타일 이름을 작게 이어 받아 같은 대화방처럼 보이게 한다 */}
