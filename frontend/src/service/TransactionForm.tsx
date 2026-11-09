@@ -288,6 +288,7 @@ function Form({
               : "거래 삭제"
           }
           variant="neutral"
+          style={{ backgroundColor: "#D9DEE7" }}
           disabled={busy}
           onPress={() => setConfirm(true)}
         />
