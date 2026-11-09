@@ -4,6 +4,10 @@
 
 형식: `- [#223] 무엇이 바뀌었나 — 영향: 앱 화면·앱 서버·웹·전체`
 
+## 2026-11-09
+
+- [Issue 없음] Lv.5 귀족·Lv.6 왕족 코스튬(`costume-lv5`·`lv6`)에 `cat-noble`·`cat-king` 영상을 연결하고 V26으로 켬. 6단계가 모두 열린다. coin-plan·API·FEATURES·결정 기록(six-level-costumes) — 영향: 앱 화면·앱 서버
+
 ## 2026-11-08
 
 - [#304] Lv.2 단계 이름을 마구간지기(🐴)에서 농부(🌾)로 바꿈(서버 V24, 앱 `LevelIcon`). 레벨 안내 시트의 단계 칸은 아이콘만 보임. policies §4·PRD·coin-plan·API·FEATURES·결정 기록 — 영향: 앱 화면·앱 서버
