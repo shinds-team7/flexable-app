@@ -43,6 +43,12 @@ public class GeminiChatModel implements ChatModel {
 
 	@Override
 	public Reply generate(String system, List<Message> messages, List<String> presets, List<String> categories) {
+        return generate(system, messages, presets, categories, false);
+    }
+
+    @Override
+    public Reply generate(String system, List<Message> messages, List<String> presets,
+            List<String> categories, boolean income) {
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("systemInstruction", Map.of("parts", List.of(Map.of("text", system))));
 		body.put("contents", contents(messages));
@@ -70,6 +76,24 @@ public class GeminiChatModel implements ChatModel {
 					"parameters", Map.of("type", "object", "properties", props,
 							"required", List.of("title", "date", "category"))));
 		}
+        if (income) {
+            Map<String, Object> fields = new LinkedHashMap<>();
+            fields.put("target", Map.of("type", "string", "enum", List.of("TRANSACTION", "SETTINGS")));
+            fields.put("operation", Map.of("type", "string", "enum", List.of("CREATE", "UPDATE")));
+            for (String name : List.of("title", "date", "category", "matchDate", "matchTitle")) {
+                fields.put(name, Map.of("type", "string"));
+            }
+            for (String name : List.of("amount", "payday", "matchAmount")) {
+                fields.put(name, Map.of("type", "integer"));
+            }
+            declarations.add(Map.of("name", "propose_income", "description",
+                    "수입 등록·수정을 제안한다. TRANSACTION은 실제 받은 돈의 거래 기록, SETTINGS는 매달 받을 예정 수입액(amount)·수입일(payday). "
+                    + "둘 중 불명확하면 먼저 되묻는다. CREATE는 명확한 제목·금액·날짜(오늘 기본), UPDATE는 사용자가 말한 수정 필드만 포함. "
+                    + "matchDate(yyyy-MM-dd)·matchAmount·matchTitle은 기존 거래를 찾는 조건이며 새 값과 구분한다. "
+                    + "category는 사용자가 명시한 수입 카테고리만, 날짜는 yyyy-MM-dd. 금액을 추정하거나 거래 ID를 만들지 않는다. 확인 전 저장되지 않는다.",
+                    "parameters", Map.of("type", "object", "properties", fields,
+                            "required", List.of("target", "operation"))));
+        }
 		if (!declarations.isEmpty()) {
 			body.put("tools", List.of(Map.of("functionDeclarations", declarations)));
 		}
@@ -135,6 +159,7 @@ public class GeminiChatModel implements ChatModel {
 		StringBuilder text = new StringBuilder();
 		String preset = null;
 		ScheduleCall schedule = null;
+        IncomeCall income = null;
 		for (Object p : parts) {
 			if (!(p instanceof Map<?, ?> part) || Boolean.TRUE.equals(part.get("thought"))) {
 				continue;
@@ -151,12 +176,28 @@ public class GeminiChatModel implements ChatModel {
 				schedule = new ScheduleCall(str(args.get("title")), str(args.get("date")), str(args.get("category")),
 						num(args.get("amount")));
 			}
+            if (part.get("functionCall") instanceof Map<?, ?> call && "propose_income".equals(call.get("name"))
+                    && call.get("args") instanceof Map<?, ?> args) {
+                income = new IncomeCall(str(args.get("target")), str(args.get("operation")),
+                        str(args.get("title")), str(args.get("date")), str(args.get("category")),
+                        exact(args.get("amount")), exact(args.get("payday")), str(args.get("matchDate")),
+                        exact(args.get("matchAmount")), str(args.get("matchTitle")));
+            }
 		}
-		if (text.isEmpty() && preset == null && schedule == null) {
+		if (text.isEmpty() && preset == null && schedule == null && income == null) {
 			throw new Failure("Gemini 응답에 답변이 없음");
 		}
-		return new Reply(text.toString().trim(), preset, schedule);
+		return new Reply(text.toString().trim(), preset, schedule, income);
 	}
+
+    private static Long exact(Object o) {
+        if (o == null) return null;
+        try {
+            return new java.math.BigDecimal(o.toString().replace(",", "").trim()).longValueExact();
+        } catch (NumberFormatException | ArithmeticException e) {
+            return Long.MIN_VALUE; // invalid supplied value must never become an omitted field
+        }
+    }
 
 	private static String str(Object o) {
 		return o instanceof String s ? s : null;

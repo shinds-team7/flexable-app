@@ -46,6 +46,12 @@ public class BudgetController {
 		return service.put(CurrentUser.id(jwt), req);
 	}
 
+    @org.springframework.web.bind.annotation.PatchMapping("/settings/income")
+    SettingsResponse changeIncome(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody BudgetDtos.IncomeSettingsRequest req) {
+        return service.changeIncome(CurrentUser.id(jwt), req);
+    }
+
 	@GetMapping("/today")
 	TodayResponse today(@AuthenticationPrincipal Jwt jwt) {
 		return service.today(CurrentUser.id(jwt));

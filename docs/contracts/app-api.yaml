@@ -188,6 +188,22 @@ paths:
         '200': { $ref: '#/components/responses/Settings' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
+  /budget/settings/income:
+    patch:
+      tags: [budget]
+      summary: 월 수입액·수입일만 변경(다른 예산 설정과 잔액 기준 시각 보존)
+      description: 기존 값이 expected와 다르면 409 BUDGET_INCOME_CHANGED. 이미 요청 값이면 재시도 성공으로 처리한다. 초기 예산이 없으면 404 BUDGET_NOT_SET.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IncomeSettingsRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Settings' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /budget/today:
     get:
       tags: [budget]
@@ -972,7 +988,7 @@ components:
         code:
           type: string
           enum: [VALIDATION_FAILED, UNAUTHORIZED, INVALID_CREDENTIALS, SOCIAL_ACCOUNT, OAUTH_CODE_INVALID, NOT_FOUND,
-            BUDGET_NOT_SET, EMAIL_UNAVAILABLE, CATEGORY_DUPLICATE, CATEGORY_DEFAULT, SEED_NOT_PENDING,
+            BUDGET_NOT_SET, BUDGET_INCOME_CHANGED, EMAIL_UNAVAILABLE, CATEGORY_DUPLICATE, CATEGORY_DEFAULT, SEED_NOT_PENDING,
             OUTFIT_NOT_FOR_SALE, OUTFIT_OWNED, OUTFIT_LOCKED, COINS_NOT_ENOUGH, REFERRAL_CODE_INVALID,
             REFERRAL_ALREADY, LINK_CODE_INVALID, LINK_NOT_FOUND, TOO_MANY_ATTEMPTS, AD_NOT_REWARDED, CHAT_UNAVAILABLE, CHAT_FAILED, INTERNAL_ERROR]
         message: { type: string }
@@ -1358,6 +1374,33 @@ components:
               expense: { type: integer, format: int64 }
               income: { type: integer, format: int64 }
 
+    IncomeSettingsRequest:
+      type: object
+      additionalProperties: false
+      required: [incomeAmount, payday, expectedIncomeAmount, expectedPayday]
+      properties:
+        incomeAmount: { type: integer, format: int64, minimum: 0, maximum: 999999999999 }
+        payday: { type: integer, minimum: 1, maximum: 31 }
+        expectedIncomeAmount: { type: integer, format: int64, minimum: 0, maximum: 999999999999 }
+        expectedPayday: { type: integer, minimum: 1, maximum: 31 }
+    IncomeSettingsProposal:
+      allOf:
+        - $ref: '#/components/schemas/IncomeSettingsRequest'
+    IncomeTransactionProposal:
+      type: object
+      additionalProperties: false
+      required: [operation, transactionId, title, date, categoryId, category, amount, changes]
+      properties:
+        operation: { type: string, enum: [CREATE, UPDATE] }
+        transactionId: { type: integer, format: int64, nullable: true }
+        title: { type: string, minLength: 1, maxLength: 40 }
+        date: { type: string, format: date }
+        categoryId: { type: integer, format: int64 }
+        category: { type: string }
+        amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+        changes:
+          type: array
+          items: { type: string, enum: [AMOUNT, DATE, TITLE, CATEGORY] }
     ChatMessage:
       type: object
       required: [role, text]
@@ -1382,9 +1425,9 @@ components:
           description: '말투. ANALYST 똑똑한 분석가(기본), FRIEND 다정한 친구, COACH 따끔한 조언가'
         accepts:
           type: array
-          description: '앱이 처리할 수 있는 제안 종류. SCHEDULE이 없으면 서버는 일정 제안(action.type SCHEDULE)을 하지 않는다(옛 앱 보호)'
+          description: '앱이 처리할 수 있는 제안 종류. SCHEDULE·INCOME을 각각 알린 앱에만 일정·수입 제안을 보낸다(옛 앱 보호)'
           maxItems: 4
-          items: { type: string, enum: [SCHEDULE] }
+          items: { type: string, enum: [SCHEDULE, INCOME] }
         pending:
           type: object
           nullable: true
@@ -1407,17 +1450,21 @@ components:
           nullable: true
           description: |
             확인이 필요한 변경 제안. 없으면 null. 서버는 저장하지 않는다.
+            INCOME_TRANSACTION: 확인하면 기존 POST /transactions 또는 PATCH /transactions/{id}로 저장한다. UPDATE는 changes에 있는 필드만 보낸다.
+            INCOME_SETTINGS: 확인하면 PATCH /budget/settings/income으로 저장한다.
             DAY_PRESET: 확인하면 앱이 PUT /budget/day-weights {preset}으로 저장한다.
             SCHEDULE: 확인하면 앱이 POST /scheduled-expenses {amount, categoryId, title, date}로 등록한 뒤 GET /budget/today를 다시 받는다.
           required: [type]
           additionalProperties: false
           properties:
-            type: { type: string, enum: [DAY_PRESET, SCHEDULE] }
+            type: { type: string, enum: [DAY_PRESET, SCHEDULE, INCOME_TRANSACTION, INCOME_SETTINGS] }
             preset:
               type: string
               enum: [EVEN, RECORD, WEEKEND, WEEKDAY]
               description: 'DAY_PRESET일 때만. CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만'
             label: { type: string, description: 'DAY_PRESET일 때만. 프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히)' }
+            incomeTransaction: { $ref: '#/components/schemas/IncomeTransactionProposal' }
+            incomeSettings: { $ref: '#/components/schemas/IncomeSettingsProposal' }
             schedule:
               type: object
               description: 'SCHEDULE일 때만'

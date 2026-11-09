@@ -10,6 +10,7 @@ public enum ErrorCode {
 	OAUTH_CODE_INVALID(HttpStatus.UNAUTHORIZED, "로그인 시간이 지났어요. 다시 시도해 주세요"),
 	NOT_FOUND(HttpStatus.NOT_FOUND, "찾을 수 없어요"),
 	BUDGET_NOT_SET(HttpStatus.NOT_FOUND, "초기 예산을 먼저 설정해 주세요"),
+	BUDGET_INCOME_CHANGED(HttpStatus.CONFLICT, "수입 설정이 바뀌었어요. 다시 요청하고 확인해 주세요"),
 	EMAIL_UNAVAILABLE(HttpStatus.CONFLICT, "이 이메일로 가입할 수 없어요. 로그인하거나 비밀번호를 찾아보세요"),
 	CATEGORY_DUPLICATE(HttpStatus.CONFLICT, "같은 이름의 카테고리가 이미 있어요"),
 	CATEGORY_DEFAULT(HttpStatus.CONFLICT, "기본 카테고리는 삭제할 수 없어요"),

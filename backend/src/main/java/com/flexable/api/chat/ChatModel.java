@@ -32,7 +32,18 @@ public interface ChatModel {
 	}
 
 	/** text는 비어 있을 수 있다. proposedPreset·schedule은 모델이 해당 제안 도구를 불렀을 때만 있다. */
-	record Reply(String text, String proposedPreset, ScheduleCall schedule) {
+    default Reply generate(String system, List<Message> messages, List<String> presets,
+            List<String> categories, boolean income) {
+        return generate(system, messages, presets, categories);
+    }
+
+    record IncomeCall(String target, String operation, String title, String date, String category,
+            Long amount, Long payday, String matchDate, Long matchAmount, String matchTitle) { }
+
+	record Reply(String text, String proposedPreset, ScheduleCall schedule, IncomeCall income) {
+        public Reply(String text, String proposedPreset, ScheduleCall schedule) {
+            this(text, proposedPreset, schedule, null);
+        }
 
 		public Reply(String text, String proposedPreset) {
 			this(text, proposedPreset, null);

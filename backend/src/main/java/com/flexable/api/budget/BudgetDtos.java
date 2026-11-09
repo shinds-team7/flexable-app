@@ -42,6 +42,12 @@ public final class BudgetDtos {
 			@Min(value = 0, message = "모아둔 돈은 0원 이상이어야 해요") @Max(value = MAX_AMOUNT, message = "금액이 너무 커요") Long seedBase) {
 	}
 
+	public record IncomeSettingsRequest(
+            @NotNull @Min(0) @Max(MAX_AMOUNT) Long incomeAmount,
+            @NotNull @Min(1) @Max(31) Integer payday,
+            @NotNull @Min(0) @Max(MAX_AMOUNT) Long expectedIncomeAmount,
+            @NotNull @Min(1) @Max(31) Integer expectedPayday) { }
+
 	public record SettingsResponse(long balance, OffsetDateTime balanceAt, int payday, long incomeAmount,
 			long cardUnpaid, List<FixedItem> fixedExpenses, List<ProtectedEntry> protectedItems, long seedBase,
 			OffsetDateTime updatedAt) {
