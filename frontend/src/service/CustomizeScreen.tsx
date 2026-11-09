@@ -2,10 +2,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { randomUUID } from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
-import { levelLabel, levelName } from "@/components/LevelIcon";
+import { levelLabel } from "@/components/LevelIcon";
 import { colors, radius } from "@/theme";
 import { ApiError, sessionGeneration } from "./api/client";
 import {
@@ -18,7 +18,7 @@ import {
 import { AdRewardCard } from "./AdRewardCard";
 import { showRewardedAd } from "./adReward";
 import { useSession } from "./Session";
-import { DEFAULT_OUTFIT_ID } from "./outfits";
+import { ATTENDANCE_OUTFIT_ID, DEFAULT_OUTFIT_ID } from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
 import { RewardModal } from "./RewardModal";
@@ -26,10 +26,8 @@ import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
 
-// 레벨 코스튬은 6단계(광부·농부·상인·기사·귀족·왕족)다. 디자인 중이라 서버가 아직 내려 주지 않는 칸은
-// cat-unlock 실루엣과 자물쇠로 채운다.
+// 레벨 코스튬은 6단계이며, 서버에 아직 없는 칸은 준비 중인 잠금 칸으로 표시한다.
 const LEVEL_SLOTS = 6;
-const UNLOCK_CAT = require("../../assets/outfits/cat-unlock.png");
 
 export function CustomizeScreen() {
   const [list, setList] = useState<OutfitList>();
@@ -42,7 +40,10 @@ export function CustomizeScreen() {
   const { user } = useSession();
   const [adMessage, setAdMessage] = useState("");
   // 광고를 다 보고 받은 코인 안내("+15 코인을 받았어요")
-  const [adEarned, setAdEarned] = useState<{ total: number; bonus: number } | null>(null);
+  const [adEarned, setAdEarned] = useState<{
+    total: number;
+    bonus: number;
+  } | null>(null);
   const lock = useRef(false);
   const focus = useRef(0);
 
@@ -98,6 +99,21 @@ export function CustomizeScreen() {
 
   const current = list?.items.find((o) => o.id === selected);
   const levels = list?.items.filter((o) => o.unlockLevel !== null) ?? [];
+  const challenges =
+    list?.items.filter((o) => o.id === ATTENDANCE_OUTFIT_ID) ?? [];
+  // 서버의 업데이트 순서를 각 그룹 안에서 유지한다. 구매·해금 응답을 받으면 즉시 재배치한다.
+  const items = [
+    ...(list?.items.filter((o) => o.owned) ?? []),
+    ...(list?.items.filter((o) => !o.owned) ?? []),
+  ];
+  const placeholders = [
+    ...Array<string>(Math.max(0, LEVEL_SLOTS - levels.length)).fill(
+      "레벨 달성 시 해금",
+    ),
+    ...Array<string>(Math.max(0, 2 - challenges.length)).fill(
+      "도전 과제 달성 시 해금",
+    ),
+  ];
   // The outfit list carries the balance shown here; the shared wallet follows so the home and header stay in step.
   const buy = (outfit: Outfit) =>
     run(async () => {
@@ -149,7 +165,9 @@ export function CustomizeScreen() {
         }
         await new Promise((r) => setTimeout(r, 1500));
       }
-      setAdMessage("코인 지급이 조금 늦어지고 있어요. 잠시 후 다시 확인해 주세요");
+      setAdMessage(
+        "코인 지급이 조금 늦어지고 있어요. 잠시 후 다시 확인해 주세요",
+      );
     });
   const apply = (id: string) =>
     run(async () => {
@@ -204,30 +222,14 @@ export function CustomizeScreen() {
             </Card>
             <ErrorNotice error={error} />
             <T size={14} weight="700" color={colors.textSub}>
-              레벨 코스튬
+              코스튬
             </T>
             <Grid
-              items={levels}
+              items={items}
               selected={selected}
               onSelect={setSelected}
-              empty={Math.max(0, LEVEL_SLOTS - levels.length)}
-              emptyFrom={levels.length + 1}
-              captions={false}
+              placeholders={placeholders}
             />
-            <T size={14} weight="700" color={colors.textSub}>
-              코인 코스튬
-            </T>
-            {list.items.some((o) => o.unlockLevel === null) ? (
-              <Grid
-                items={list.items.filter((o) => o.unlockLevel === null)}
-                selected={selected}
-                onSelect={setSelected}
-              />
-            ) : (
-              <Card>
-                <T color={colors.textMuted}>곧 새 코스튬이 나와요</T>
-              </Card>
-            )}
           </>
         )}
       </Screen>
@@ -291,6 +293,16 @@ function Action({
         style={stretch}
       />
     );
+  if (outfit.id === ATTENDANCE_OUTFIT_ID)
+    return (
+      <Button
+        label="도전 과제 달성 시 해금"
+        variant="soft"
+        icon="lock-closed"
+        disabled
+        style={stretch}
+      />
+    );
   const price = outfit.price ?? 0;
   return (
     <Button
@@ -302,37 +314,33 @@ function Action({
   );
 }
 
-/**
- * 가지지 않은 코스튬(잠긴 레벨·안 산 상품)은 그림을 어둡게 덮고 자물쇠를 띄운다. empty 는 뒤에 붙일 준비 중 칸 수.
- * captions=false 면 칸 아래 글자(단계 아이콘·이름, 보유 중 등)를 비운다(레벨 코스튬). 이름은 화면 읽기 라벨로만 남는다.
- */
+/** 잠긴 출석 보상은 빈 자물쇠 칸, 나머지 미보유 코스튬은 그림 위에 자물쇠. 준비 중인 칸은 목록 맨 뒤. */
 function Grid({
   items,
   selected,
   onSelect,
-  empty = 0,
-  emptyFrom = 1,
-  captions = true,
+  placeholders,
 }: {
   items: Outfit[];
   selected: string;
   onSelect: (id: string) => void;
-  empty?: number;
-  /** 첫 준비 중 칸의 레벨(이름을 붙인다) */
-  emptyFrom?: number;
-  captions?: boolean;
+  placeholders: string[];
 }) {
   return (
     <View style={grid.wrap}>
       {items.map((o) => {
         const on = o.id === selected;
-        const caption = o.equipped
-          ? "적용 중"
-          : o.owned
-            ? "보유 중"
-            : o.unlockLevel === null
-              ? `🪙 ${money(o.price ?? 0)}`
-              : levelLabel(o.unlockLevel);
+        const hideLocked = o.id === ATTENDANCE_OUTFIT_ID;
+        const label =
+          o.unlockLevel !== null
+            ? "레벨 달성 시 해금"
+            : hideLocked
+              ? "도전 과제 달성 시 해금"
+              : o.equipped
+                ? "적용 중"
+                : o.owned
+                  ? "보유 중"
+                  : `🪙 ${money(o.price ?? 0)}`;
         return (
           <Pressable
             key={o.id}
@@ -343,44 +351,43 @@ function Grid({
             style={[grid.cell, on && grid.on]}
           >
             <View style={grid.thumbBox}>
-              <OutfitView outfitId={o.id} play={false} style={grid.thumb} />
-              {!o.owned && (
+              {hideLocked && !o.owned ? (
+                <View style={[grid.thumb, grid.center]}>
+                  <Ionicons
+                    name="lock-closed"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </View>
+              ) : (
+                <OutfitView outfitId={o.id} play={false} style={grid.thumb} />
+              )}
+              {!o.owned && !hideLocked && (
                 <View style={[StyleSheet.absoluteFill, grid.shade]}>
                   <Ionicons name="lock-closed" size={18} color="#fff" />
                 </View>
               )}
             </View>
-            {captions && (
-              <T size={12} color={colors.textMuted}>
-                {caption}
-              </T>
-            )}
+            <T size={12} color={colors.textMuted}>
+              {label}
+            </T>
           </Pressable>
         );
       })}
-      {Array.from({ length: empty }, (_, i) => (
+      {placeholders.map((caption, i) => (
         <View
           key={`empty-${i}`}
           accessible
-          accessibilityLabel={`${levelName(emptyFrom + i)} 코스튬, 준비 중`}
+          accessibilityLabel={`준비 중인 코스튬, ${caption}`}
           style={grid.cell}
         >
           <View style={[grid.thumb, grid.center]}>
-            <Image
-              source={UNLOCK_CAT}
-              resizeMode="contain"
-              tintColor={colors.textFaint}
-              style={grid.unlockCat}
-            />
-            <View style={[StyleSheet.absoluteFill, grid.center]}>
-              <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
-            </View>
+            <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
           </View>
-          {captions && (
-            <T size={12} color={colors.textMuted}>
-              {levelLabel(emptyFrom + i)}
-            </T>
-          )}
+          {/* 이름 칸 높이를 맞춰 옆 칸과 줄이 어긋나지 않게 한다 */}
+          <T size={12} color={colors.textMuted}>
+            {caption}
+          </T>
         </View>
       ))}
     </View>
@@ -419,5 +426,4 @@ const grid = StyleSheet.create({
     backgroundColor: "rgba(16, 24, 40, 0.32)",
   },
   center: { alignItems: "center", justifyContent: "center" },
-  unlockCat: { width: "100%", height: "86%", opacity: 0.55 },
 });

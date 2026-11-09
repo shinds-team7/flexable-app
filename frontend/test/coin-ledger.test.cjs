@@ -32,7 +32,10 @@ test("puts the signed amount before the reason", () => {
     "-200 코스튬 구매",
   );
   assert.equal(ledgerTitle({ reason: "PASSIVE", amount: 3 }), "+3 코인 모으기");
-  assert.equal(ledgerTitle({ reason: "AD_REWARD", amount: 10 }), "+10 광고 시청");
+  assert.equal(
+    ledgerTitle({ reason: "AD_REWARD", amount: 10 }),
+    "+10 광고 시청",
+  );
   assert.equal(
     ledgerTitle({ reason: "REFUND", amount: 1200 }),
     "+1,200 코스튬 구매 코인 돌려받음",
@@ -55,6 +58,15 @@ test("budget bonus names the day it was kept", () => {
 });
 
 test("attendance marks the milestone bonus day", () => {
+  assert.equal(
+    ledgerDetail({ reason: "ATTENDANCE", amount: 0 }),
+    "7일차 코스튬 보상",
+  );
+  for (const amount of [10, 30])
+    assert.equal(
+      ledgerDetail({ reason: "ATTENDANCE", amount }),
+      "누적 출석 보너스",
+    );
   assert.equal(ledgerTitle({ reason: "ATTENDANCE", amount: 5 }), "+5 출석체크");
   assert.equal(ledgerDetail({ reason: "ATTENDANCE", amount: 5 }), "");
   assert.equal(

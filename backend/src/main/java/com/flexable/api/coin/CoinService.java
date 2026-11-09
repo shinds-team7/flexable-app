@@ -50,11 +50,9 @@ public class CoinService {
 	public static final int AD_BONUS_MID = 5;
 	public static final int AD_BONUS_LONG = 10;
 	public static final int ATTENDANCE_REWARD = 5;
-	/** 누적 출석 보너스: 3일째, 그리고 8일째부터 7일 주기의 3·7번째 날. 그날 기본 5에 더해서 준다 */
-	public static final int ATTENDANCE_MILESTONE_REWARD = 20;
 	public static final int ATTENDANCE_CYCLE = 7;
 	/** 누적 7일째에 한 번만 주는 코스튬. 상점에서는 팔지 않는다(V16) */
-	public static final String ATTENDANCE_OUTFIT = "outfit-07";
+	public static final String ATTENDANCE_OUTFIT = "outfit-06";
 	public static final String ONCE = "once";
 	public static final int LEDGER_DEFAULT_LIMIT = 30;
 	public static final int LEDGER_MAX_LIMIT = 100;
@@ -191,10 +189,12 @@ public class CoinService {
 		return new AttendResponse(before.todayReward(), outfit, attendance(userId, today), view(w));
 	}
 
-	/** 누적 n번째 출석의 코인. 기본 5에, 7일 주기의 3번째 날(3·10·17…일째)은 보너스 20을 더해 25(2026-11-06 변경, 7번째 날은 기본 5) */
+	/** 누적 출석: 매 주기 3번째 10, 첫 7번째는 코스튬만, 이후 7번째 30, 나머지 5. */
 	public static int attendanceReward(int n) {
 		int day = (n - 1) % ATTENDANCE_CYCLE + 1;
-		return day == 3 ? ATTENDANCE_REWARD + ATTENDANCE_MILESTONE_REWARD : ATTENDANCE_REWARD;
+		if (day == 3) return 10;
+		if (day == ATTENDANCE_CYCLE) return n == ATTENDANCE_CYCLE ? 0 : 30;
+		return ATTENDANCE_REWARD;
 	}
 
 	private Attendance attendance(long userId, LocalDate today) {
