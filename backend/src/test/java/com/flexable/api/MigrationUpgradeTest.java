@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("26");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("27");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -71,7 +71,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(13);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(14);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -80,6 +80,7 @@ class MigrationUpgradeTest {
 		assertThat(jdbc.queryForList("select outfit_id from user_outfits where user_id=1 order by outfit_id", String.class))
 			.containsExactly("outfit-01", "outfit-02", "outfit-05");
 		assertThat(jdbc.queryForObject("select count(*) from user_outfits where user_id=2", Integer.class)).isZero();
+		assertThat(jdbc.queryForList("select day_weights_chosen_at from budget_settings")).isEmpty();
 		// V22: 직장냥이·잭팟은 200코인 상품, 새 5단계는 꺼 둔 자리. V24~V26: 그중 Lv.2~6을 켬
 		assertThat(jdbc.queryForObject("select price from outfits where id='outfit-02'", Integer.class)).isEqualTo(200);
 		assertThat(jdbc.queryForObject("select unlock_level from outfits where id='outfit-01'", Integer.class)).isNull();

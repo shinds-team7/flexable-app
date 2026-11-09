@@ -152,8 +152,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await openShop(page);
   await balance(page, 205);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
-  // Local mode also lists inactive reserve costumes, so no empty slot is needed.
-  await expect(page.getByLabel(/ 코스튬, 준비 중$/)).toHaveCount(0);
+  await expect(page.getByLabel("준비 중인 코스튬, 업데이트 예정")).toHaveCount(2);
   // The shop's top card has the [광고 🪙] button instead of [모으기]; the web build cannot show ads, so it is disabled.
   await expect(collect).toHaveCount(0);
   await expect(
@@ -201,10 +200,10 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();
-  // Level costumes stay locked (still being designed): the inactive 귀족 slot shows in local mode only.
+  // 미해금 레벨은 미리볼 수 있지만 적용 동작은 자물쇠만 보인다.
   await page.getByRole("button", { name: "귀족", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "🎩 귀족 달성 시 열림", exact: true }),
+    page.getByRole("button", { name: "🔒", exact: true }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "잭팟", exact: true }).click();
   await expect(page.getByLabel("잭팟 미리보기", { exact: true })).toBeVisible();
@@ -268,29 +267,26 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page).toHaveURL(/\/home$/);
   await openShop(page);
   await balance(page, 5);
-  const outfitButtons = page
-    .getByRole("button", { name: "광부", exact: true })
-    .locator("..")
-    .getByRole("button");
-  await expect(outfitButtons.nth(0)).toHaveAttribute("aria-label", "광부");
-  await expect(outfitButtons.nth(1)).toHaveAttribute("aria-label", "선비냥이");
+  await expect(page.getByRole("button", { name: "광부", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "선비냥이", exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "광부", exact: true }),
-  ).toContainText("레벨 달성 시 해금");
+  ).toContainText("보유 중");
   await expect(
     page.getByRole("button", { name: "출석 보상", exact: true }),
-  ).toContainText("도전 과제 달성 시 해금");
+  ).toContainText("도전과제 달성하기");
+  await expect(page.getByRole("button", { name: "출석 보상", exact: true })).toBeDisabled();
   await expect(
-    page.getByLabel("준비 중인 코스튬, 도전 과제 달성 시 해금", {
+    page.getByLabel("준비 중인 코스튬, 도전과제 달성하기", {
       exact: true,
     }),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
   await expect(
     page.getByLabel("선비냥이 미리보기", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "선비냥이", exact: true }),
-  ).toHaveText("적용 중");
+  ).toHaveText("보유 중");
   await expect(
     page.getByRole("button", { name: "적용 중", exact: true }),
   ).toBeDisabled();

@@ -65,7 +65,7 @@ export function SeedMoneyCard({
             }}
             style={styles.help}
           >
-            <Ionicons name="help" size={16} color={colors.textSub} />
+            <Ionicons name="help" size={12} color="rgba(255,255,255,0.7)" />
           </Pressable>
         </View>
         <View style={styles.amountRow}>
@@ -508,11 +508,12 @@ const styles = StyleSheet.create({
     borderLeftColor: "rgba(255,255,255,0.22)",
   },
   help: {
-    width: 24,
-    height: 24,
+    width: 17,
+    height: 17,
     marginLeft: 8,
-    borderRadius: 12,
-    backgroundColor: colors.sunken,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.55)",
     alignItems: "center",
     justifyContent: "center",
   },

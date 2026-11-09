@@ -208,7 +208,7 @@ export function HomeScreen() {
                   <T size={12}>레벨 안내</T>
                   <Ionicons
                     name="help-circle-outline"
-                    size={20}
+                    size={14}
                     color={colors.textSub}
                   />
                 </Pressable>

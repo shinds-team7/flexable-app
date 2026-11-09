@@ -175,15 +175,26 @@ public class BudgetService {
 				fixedList.stream().map(FixedExpense::getAmount).toList(), protectedTotal, txs,
 				!txs.isEmpty() || transactions.existsByUserId(userId),
 				seedEntries.sumCreatedAfter(userId, s.getBalanceAt()) + seedAdditions.sumCreatedAfter(userId, s.getBalanceAt()),
-				s.getDays(), plans);
+				effectiveDays(s, userId, today), plans);
 		return BudgetCalculator.compute(input, today, zone);
 	}
 
-	/** 저장된 요일별 비중과 고를 수 있는 프리셋(§5). 내 기록 기준은 부를 때마다 어제까지 기록으로 다시 낸다. */
+	/** RECORD 적용 비중은 매주 월요일에 확정하고 그 주에는 유지한다. */
 	@Transactional(readOnly = true)
 	public DayWeightsResponse dayWeights(long userId) {
 		LocalDate today = LocalDate.now(clock.withZone(zone));
-		return toDayWeights(require(userId).getDays(), recordWeights(userId, today));
+		BudgetSettings s = require(userId);
+		return toDayWeights(effectiveDays(s, userId, today), recordWeights(userId, today));
+	}
+
+	private DayWeights.Setting effectiveDays(BudgetSettings s, long userId, LocalDate today) {
+		DayWeights.Setting stored = s.getDays();
+		if (stored.preset() != DayWeights.Preset.RECORD) return stored;
+		LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1L);
+		if (s.getDayWeightsChosenAt() != null &&
+				!s.getDayWeightsChosenAt().atZone(zone).toLocalDate().isBefore(monday)) return stored;
+		List<Integer> current = recordWeights(userId, monday).weights();
+		return current == null ? stored : new DayWeights.Setting(DayWeights.Preset.RECORD, current);
 	}
 
 	/** 프리셋을 고르면 서버가 비중을 채우고, CUSTOM은 보낸 비중을 그대로 저장한다. 오늘 하루 예산부터 바로 바뀐다. */
@@ -208,7 +219,7 @@ public class BudgetService {
 			default -> DayWeights.fixed(req.preset());
 		};
 		DayWeights.Setting days = new DayWeights.Setting(req.preset(), weights);
-		s.applyDays(days);
+		s.applyDays(days, clock.instant());
 		settings.save(s);
 		return toDayWeights(days, record);
 	}

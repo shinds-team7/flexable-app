@@ -158,13 +158,35 @@ export function Segment<K extends string>({
   items,
   value,
   onChange,
+  animated = false,
 }: {
   items: { key: K; label: string }[];
   value: K;
   onChange: (k: K) => void;
+  animated?: boolean;
 }) {
+  const [width, setWidth] = useState(0);
+  const reduced = useReducedMotion();
+  const index = items.findIndex((item) => item.key === value);
+  const position = useAnimValue(index);
+  useEffect(() => {
+    Animated.timing(position, {
+      toValue: index,
+      duration: reduced ? 0 : 220,
+      easing: motion.easeOut,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [index, position, reduced]);
+  const cellWidth = (width - 8 - 4 * (items.length - 1)) / items.length;
   return (
-    <View style={styles.segment}>
+    <View style={styles.segment} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      {animated && width > 0 && (
+        <Animated.View pointerEvents="none" style={[styles.segOn, {
+          position: 'absolute', left: 4, top: 4, bottom: 4,
+          width: cellWidth, borderRadius: radius.sm,
+          transform: [{ translateX: position.interpolate({ inputRange: [0, items.length - 1], outputRange: [0, (cellWidth + 4) * (items.length - 1)] }) }],
+        }]} />
+      )}
       {items.map((it) => {
         const on = it.key === value;
         return (
@@ -174,7 +196,7 @@ export function Segment<K extends string>({
             accessibilityState={{ selected: on }}
             aria-selected={on}
             onPress={() => onChange(it.key)}
-            style={[styles.segItem, pressTransition, on && styles.segOn]}
+            style={[styles.segItem, pressTransition, on && !animated && styles.segOn]}
           >
             <T size={15} weight={on ? '700' : '500'} color={on ? colors.text : colors.textSub}>
               {it.label}

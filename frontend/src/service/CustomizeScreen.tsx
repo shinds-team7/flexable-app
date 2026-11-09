@@ -5,7 +5,6 @@ import { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
-import { levelLabel } from "@/components/LevelIcon";
 import { colors, radius } from "@/theme";
 import { ApiError, sessionGeneration } from "./api/client";
 import {
@@ -26,7 +25,6 @@ import type { Outfit, OutfitList } from "./types";
 import { ErrorNotice, Loading, money } from "./ui";
 import { publishWallet, useWallet } from "./wallet";
 
-// 레벨 코스튬은 6단계이며, 서버에 아직 없는 칸은 준비 중인 잠금 칸으로 표시한다.
 const LEVEL_SLOTS = 6;
 
 export function CustomizeScreen() {
@@ -98,21 +96,13 @@ export function CustomizeScreen() {
   };
 
   const current = list?.items.find((o) => o.id === selected);
-  const levels = list?.items.filter((o) => o.unlockLevel !== null) ?? [];
-  const challenges =
-    list?.items.filter((o) => o.id === ATTENDANCE_OUTFIT_ID) ?? [];
-  // 서버의 업데이트 순서를 각 그룹 안에서 유지한다. 구매·해금 응답을 받으면 즉시 재배치한다.
-  const items = [
-    ...(list?.items.filter((o) => o.owned) ?? []),
-    ...(list?.items.filter((o) => !o.owned) ?? []),
-  ];
-  const placeholders = [
-    ...Array<string>(Math.max(0, LEVEL_SLOTS - levels.length)).fill(
-      "레벨 달성 시 해금",
-    ),
-    ...Array<string>(Math.max(0, 2 - challenges.length)).fill(
-      "도전 과제 달성 시 해금",
-    ),
+  const levels = (list?.items.filter((o) => o.unlockLevel !== null) ?? [])
+    .sort((a, b) => (a.unlockLevel ?? 0) - (b.unlockLevel ?? 0));
+  const concepts = [
+    { ids: ["outfit-03", "outfit-07", ATTENDANCE_OUTFIT_ID], placeholders: ["도전과제 달성하기"] },
+    { ids: ["outfit-02", "outfit-01"], placeholders: ["도전과제 달성하기"] },
+    { ids: ["outfit-04", "outfit-05"], placeholders: ["도전과제 달성하기"] },
+    { ids: ["outfit-08"], placeholders: ["업데이트 예정", "업데이트 예정"] },
   ];
   // The outfit list carries the balance shown here; the shared wallet follows so the home and header stay in step.
   const buy = (outfit: Outfit) =>
@@ -225,11 +215,21 @@ export function CustomizeScreen() {
               코스튬
             </T>
             <Grid
-              items={items}
+              items={levels}
               selected={selected}
               onSelect={setSelected}
-              placeholders={placeholders}
+              placeholders={Array<string>(Math.max(0, LEVEL_SLOTS - levels.length)).fill("레벨 달성 시 해금")}
             />
+            {concepts.map((concept, index) => (
+              <View key={index} style={{ marginTop: 16 }}>
+                <Grid
+                  items={concept.ids.map((id) => list.items.find((o) => o.id === id)).filter((o): o is Outfit => !!o)}
+                  selected={selected}
+                  onSelect={setSelected}
+                  placeholders={concept.placeholders.slice(0, 3 - concept.ids.filter((id) => list.items.some((o) => o.id === id)).length)}
+                />
+              </View>
+            ))}
           </>
         )}
       </Screen>
@@ -286,9 +286,8 @@ function Action({
   if (outfit.unlockLevel !== null)
     return (
       <Button
-        label={`${levelLabel(outfit.unlockLevel)} 달성 시 열림`}
+        label="🔒"
         variant="soft"
-        icon="lock-closed"
         disabled
         style={stretch}
       />
@@ -296,9 +295,8 @@ function Action({
   if (outfit.id === ATTENDANCE_OUTFIT_ID)
     return (
       <Button
-        label="도전 과제 달성 시 해금"
+        label="🔒"
         variant="soft"
-        icon="lock-closed"
         disabled
         style={stretch}
       />
@@ -314,7 +312,7 @@ function Action({
   );
 }
 
-/** 잠긴 출석 보상은 빈 자물쇠 칸, 나머지 미보유 코스튬은 그림 위에 자물쇠. 준비 중인 칸은 목록 맨 뒤. */
+/** 잠긴 출석 보상과 준비 중인 칸은 누를 수 없다. */
 function Grid({
   items,
   selected,
@@ -330,23 +328,18 @@ function Grid({
     <View style={grid.wrap}>
       {items.map((o) => {
         const on = o.id === selected;
-        const hideLocked = o.id === ATTENDANCE_OUTFIT_ID;
+        const hideLocked = o.id === ATTENDANCE_OUTFIT_ID && !o.owned;
         const label =
-          o.unlockLevel !== null
-            ? "레벨 달성 시 해금"
-            : hideLocked
-              ? "도전 과제 달성 시 해금"
-              : o.equipped
-                ? "적용 중"
-                : o.owned
-                  ? "보유 중"
-                  : `🪙 ${money(o.price ?? 0)}`;
+          o.owned ? "보유 중" : o.unlockLevel !== null
+            ? "레벨 달성 시 해금" : hideLocked
+              ? "도전과제 달성하기" : `🪙 ${money(o.price ?? 0)}`;
         return (
           <Pressable
             key={o.id}
             accessibilityRole="button"
             accessibilityLabel={o.name}
-            accessibilityState={{ selected: on }}
+            accessibilityState={{ selected: on, disabled: hideLocked }}
+            disabled={hideLocked}
             onPress={() => onSelect(o.id)}
             style={[grid.cell, on && grid.on]}
           >

@@ -1,5 +1,6 @@
 package com.flexable.api.budget;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -166,5 +168,30 @@ class DayWeightsFlowTest {
 		mvc.perform(auth(get("/api/v1/budget/day-weights"), token, null))
 			.andExpect(jsonPath("$.preset", is("CUSTOM")))
 			.andExpect(jsonPath("$.weights", contains(10, 30, 10, 10, 10, 10, 10)));
+	}
+
+	@Test
+	void recordWeightsRefreshOnMondayOnly() throws Exception {
+		clock.now = Instant.parse("2026-10-27T03:00:00Z");
+		try {
+			String token = signup();
+			mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+			String categories = mvc.perform(auth(get("/api/v1/categories?type=EXPENSE"), token, null))
+				.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+			long food = ((Number) JsonPath.<net.minidev.json.JSONArray>read(categories, "$[?(@.name == '식비')].id").get(0)).longValue();
+			for (int i = 0; i < 7; i++) spend(token, food, "2026-10-" + (19 + i), 10000);
+			mvc.perform(auth(put("/api/v1/budget/day-weights"), token, "{\"preset\":\"RECORD\"}"))
+				.andExpect(status().isOk());
+			String old = read(mvc.perform(auth(get("/api/v1/budget/day-weights"), token, null)), "$.weights");
+			clock.now = Instant.parse("2026-11-01T03:00:00Z");
+			for (int i = 0; i < 7; i++) spend(token, food, LocalDate.parse("2026-10-26").plusDays(i).toString(), i == 0 ? 100000 : 1000);
+			String sunday = read(mvc.perform(auth(get("/api/v1/budget/day-weights"), token, null)), "$.weights");
+			assertThat(sunday).isEqualTo(old);
+			clock.now = Instant.parse("2026-11-02T03:00:00Z");
+			String monday = read(mvc.perform(auth(get("/api/v1/budget/day-weights"), token, null)), "$.weights");
+			assertThat(monday).isNotEqualTo(old);
+		} finally {
+			clock.now = Instant.parse("2026-10-27T03:00:00Z");
+		}
 	}
 }
