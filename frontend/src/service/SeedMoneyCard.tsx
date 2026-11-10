@@ -172,6 +172,7 @@ export function SeedMoneyCard({
                     ALL: "남은 돈 전부",
                     MANUAL: "직접 입력",
                     EXTRA: "바로 보냄",
+                    ADJUSTMENT: "총액 정정",
                   }[entry.choice]
                 }
               </T>

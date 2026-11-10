@@ -303,6 +303,27 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
 
+  /budget/seed-money/total:
+    put:
+      tags: [budget]
+      summary: 지금까지 모은 시드머니 총액 정정. 생활비 잔액·과거 기록은 유지
+      description: '0원 이상 1조 미만. 현재 총액과의 차액을 ADJUSTMENT 기록으로 남긴다. 같은 총액으로 다시 저장하면 기록을 추가하지 않는다. 총액 계산과 정정은 회원별 잠금 안에서 수행한다.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [total]
+              additionalProperties: false
+              properties:
+                total: { type: integer, format: int64, minimum: 0, maximum: 999999999999 }
+      responses:
+        '200': { $ref: '#/components/responses/SeedMoney' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
   /categories:
     get:
       tags: [category]
@@ -1008,8 +1029,8 @@ components:
       description: 'GOAL 매달 저축할 돈, ALL 남은 돈 전부, MANUAL 직접 입력'
     SeedEntryChoice:
       type: string
-      enum: [GOAL, ALL, MANUAL, EXTRA]
-      description: '기록에 보이는 방법. GOAL·ALL·MANUAL은 수입일 전날 반영, EXTRA는 지금 예산에서 바로 옮김'
+      enum: [GOAL, ALL, MANUAL, EXTRA, ADJUSTMENT]
+      description: '기록에 보이는 방법. GOAL·ALL·MANUAL은 수입일 전날 반영, EXTRA는 지금 예산에서 바로 옮김, ADJUSTMENT는 생활비를 바꾸지 않는 총액 정정(차액은 음수 가능)'
 
     User:
       type: object
@@ -1232,7 +1253,7 @@ components:
       additionalProperties: false
       properties:
         base: { type: integer, format: int64, description: '모아둔 돈(seedBase)' }
-        saved: { type: integer, format: int64, description: '주기마다 옮긴 돈의 합' }
+        saved: { type: integer, format: int64, description: '주기별 반영·바로 보내기·총액 정정 차액의 합. 정정으로 음수일 수 있으며 사용자 화면에는 total을 표시한다' }
         total: { type: integer, format: int64 }
         monthlyGoal: { type: integer, format: int64, description: '매달 저축할 돈 합' }
         movable: { type: integer, format: int64, description: '지금 예산에서 시드머니로 바로 보낼 수 있는 최대 금액(남은 생활비, 0 이상)' }
@@ -1265,7 +1286,7 @@ components:
       required: [cycleEnd, choice, amount, createdAt]
       additionalProperties: false
       properties:
-        cycleEnd: { type: string, format: date, description: 'EXTRA는 옮긴 날짜' }
+        cycleEnd: { type: string, format: date, description: 'EXTRA는 옮긴 날짜, ADJUSTMENT는 총액 정정 날짜' }
         choice: { $ref: '#/components/schemas/SeedEntryChoice' }
         amount: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
