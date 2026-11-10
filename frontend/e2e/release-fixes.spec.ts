@@ -183,6 +183,7 @@ test("예산 설정의 모아둔 돈 옆 도움말은 시드머니 카드와 같
     }),
   );
   await page.goto("/budget/settings");
+  await expect(page.getByRole("heading", { name: "모아둔 돈", exact: true })).toBeVisible();
   await expect(page.getByText("(시드머니", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "시드머니가 무엇인지 보기", exact: true })

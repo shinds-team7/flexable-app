@@ -148,7 +148,7 @@ function Form({ initial }: { initial: Saved }) {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
-              <T size={17} weight="800">
+              <T size={17} weight="800" accessibilityRole="header">
                 모아둔 돈
               </T>
               <SeedMoneyHelp label />
