@@ -199,32 +199,59 @@ test("예산 설정의 모아둔 돈 옆 도움말은 시드머니 카드와 같
   );
 });
 
-test("시드머니는 총액·이번 달 목표만 표시하고 총액 정정 API로 저장한다", async ({ page }) => {
+test("시드머니는 총액·이번 달 목표만 표시하고 총액 정정 API로 저장한다", async ({
+  page,
+}) => {
   await session(page);
   let total = 80000;
   const writes: unknown[] = [];
-  await page.route("**/api/v1/budget/seed-money", route => route.fulfill({ json: {
-    base: 50000, saved: total - 50000, total, monthlyGoal: 30000, movable: 100000,
-    pending: null, entries: [],
-  }}));
-  await page.route("**/api/v1/budget/seed-money/total", route => {
+  await page.route("**/api/v1/budget/seed-money", (route) =>
+    route.fulfill({
+      json: {
+        base: 50000,
+        saved: total - 50000,
+        total,
+        monthlyGoal: 30000,
+        movable: 100000,
+        pending: null,
+        entries: [],
+      },
+    }),
+  );
+  await page.route("**/api/v1/budget/seed-money/total", (route) => {
     const body = route.request().postDataJSON();
     writes.push(body);
     total = body.total;
     return route.fulfill({ json: {} });
   });
   await page.goto("/home");
-  await expect(page.getByLabel("지금까지 모은 돈 80,000원", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("이번 달 모을 돈 30,000원", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("지금까지 모은 돈 80,000원", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("이번 달 모을 돈 30,000원", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("반영한 돈", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "시드머니가 무엇인지 보기", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "시드머니가 뭐예요?", exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "시드머니가 무엇인지 보기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "시드머니가 뭐예요?", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "시드머니 모은 기록", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "시드머니 모은 기록 보기", exact: true }).click();
-  await page.getByRole("button", { name: "시드머니 수정", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "시드머니 모은 기록", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "시드머니 모은 기록 보기", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "시드머니 수정", exact: true })
+    .click();
   await page.getByLabel("지금까지 모은 돈 (원)", { exact: true }).fill("10000");
   await page.getByRole("button", { name: "저장", exact: true }).click();
-  await expect(page.getByLabel("시드머니 10,000원", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("시드머니 10,000원", { exact: true }),
+  ).toBeVisible();
   expect(writes).toEqual([{ total: 10000 }]);
 });
