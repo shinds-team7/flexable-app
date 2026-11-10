@@ -2,7 +2,7 @@ package com.flexable.api.coin;
 
 /** 코인 내역 사유. ref_key로 같은 지급을 한 번만 한다(괄호 안이 ref_key). */
 public enum CoinReason {
-	/** 가입 선물(once). 1.4.0 전에 가입한 사용자도 첫 check-in에 받으므로 모달 문구는 '업데이트 기념'이다(docs/coin-plan.md) */
+	/** 신규 계정 생성 때 500코인(once). 기존 200코인 기록은 유지한다(docs/coin-plan.md). */
 	SIGNUP_GIFT,
 	/** 어제 예산을 지킴(그 날짜) */
 	BUDGET_BONUS,

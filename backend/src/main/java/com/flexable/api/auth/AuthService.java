@@ -21,6 +21,7 @@ import com.flexable.api.auth.AuthDtos.LoginRequest;
 import com.flexable.api.auth.AuthDtos.SignupRequest;
 import com.flexable.api.budget.SettingsRepository;
 import com.flexable.api.category.CategoryService;
+import com.flexable.api.coin.CoinService;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.Times;
@@ -43,6 +44,7 @@ public class AuthService {
 	private final TokenService tokens;
 	private final LoginAttemptLimiter limiter;
 	private final CategoryService categories;
+	private final CoinService coins;
 	private final SettingsRepository settings;
 	private final AccountDeletionService deletion;
 	private final Clock clock;
@@ -53,7 +55,8 @@ public class AuthService {
 	public AuthService(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens,
 			LoginAttemptLimiter limiter, CategoryService categories, AccountDeletionService deletion, Clock clock,
 			AppProperties props, UserIdentityRepository identities, OAuthProviderClient oauthClient, OAuthProperties oauthProps,
-			SettingsRepository settings) {
+			SettingsRepository settings, CoinService coins) {
+		this.coins = coins;
 		this.settings = settings;
 		this.identities = identities;
 		this.oauthClient = oauthClient;
@@ -83,6 +86,7 @@ public class AuthService {
 			throw new ApiException(ErrorCode.EMAIL_UNAVAILABLE);
 		}
 		categories.createDefaults(user.getId());
+		coins.grantSignupGift(user.getId());
 		return respond(user);
 	}
 

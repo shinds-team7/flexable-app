@@ -51,7 +51,7 @@ async function skipGuide(page: Page) {
 // A new account's first home visit shows the coin gift modal once (docs/coin-plan.md); close it before using the home.
 async function closeGift(page: Page) {
   await expect(
-    page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
+    page.getByRole("heading", { name: "신규가입 500코인 선물" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
   // The first visit of the day then attends by itself in the attendance modal.
@@ -403,7 +403,7 @@ test("a new account sees the home guide once after the gift and attendance modal
     exact: true,
   });
   await expect(
-    page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
+    page.getByRole("heading", { name: "신규가입 500코인 선물" }),
   ).toBeVisible();
   await expect(first).toHaveCount(0);
   await page.getByRole("button", { name: "확인", exact: true }).click();

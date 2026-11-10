@@ -1,18 +1,15 @@
 import { Stack, usePathname } from "expo-router";
 import { NavigationBar } from "expo-navigation-bar";
-import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ToastProvider } from "@/components/Toast";
 import { BudgetDraftProvider } from "@/service/BudgetDraft";
 import { ForceUpdate } from "@/service/ForceUpdate";
-import {
-  useFetchUpdateOnResume,
-  useLaunchUpdateSettled,
-} from "@/service/LaunchUpdate";
+import { useFetchUpdateOnResume } from "@/service/LaunchUpdate";
+import { LaunchSplash } from "@/service/LaunchSplash";
 import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 import { useAppFonts } from "@/service/AppFonts";
@@ -20,8 +17,6 @@ import { installErrorReporting, setErrorScreen } from "@/service/errorReport";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
-/** 스플래시는 앱 시작 후 최소 1초, 세션 확인·새 원격 업데이트 확인(최대 3초)이 더 오래 걸리면 끝날 때까지 띄운다. */
-const SPLASH_MIN_MS = 1000;
 // 자동 숨김 방지는 index.js에서 Router와 화면 모듈보다 먼저 등록한다.
 installErrorReporting();
 
@@ -34,18 +29,11 @@ function ErrorScreenTracker() {
   return null;
 }
 
-function SplashGate({ fontsReady }: { fontsReady: boolean }) {
-  const [startedAt] = useState(() => Date.now());
+function SessionReady({ onReady }: { onReady: (ready: boolean) => void }) {
   const { ready } = useSession();
-  const updateSettled = useLaunchUpdateSettled();
   useEffect(() => {
-    if (!ready || !updateSettled || !fontsReady) return;
-    const t = setTimeout(
-      () => SplashScreen.hideAsync().catch(() => {}),
-      Math.max(0, startedAt + SPLASH_MIN_MS - Date.now()),
-    );
-    return () => clearTimeout(t);
-  }, [ready, updateSettled, fontsReady, startedAt]);
+    onReady(ready);
+  }, [ready, onReady]);
   return null;
 }
 
@@ -53,6 +41,9 @@ function SplashGate({ fontsReady }: { fontsReady: boolean }) {
 export default function RootLayout() {
   useFetchUpdateOnResume();
   const [fontsReady, fontError] = useAppFonts();
+  const [minimumShown, setMinimumShown] = useState(Platform.OS === "web");
+  const [sessionReady, setSessionReady] = useState(false);
+  const finishMinimum = useCallback(() => setMinimumShown(true), []);
   useEffect(() => {
     if (Platform.OS !== "android") return;
     const sub = AppState.addEventListener("change", (state) => {
@@ -61,30 +52,38 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
   if (fontError) throw fontError;
-  // 세션 복원 중 화면 이동이 일어나기 전에 네비게이터가 함께 마운트되게 한다.
-  if (!fontsReady) return null;
+  // 시작 화면 1초가 끝나기 전에는 홈의 보상·출석 모달이 그 위로 열리지 않게 한다.
+  // 세션과 네비게이터는 함께 마운트해 복원 중 화면 이동도 안전하게 처리한다.
   return (
     <SafeAreaProvider>
       <View style={styles.outer}>
         <SafeAreaView style={styles.phone} edges={["top", "bottom"]}>
           <StatusBar style="dark" />
           {Platform.OS === "android" && <NavigationBar hidden />}
-          <ToastProvider>
-            <SessionProvider>
-              <SplashGate fontsReady={fontsReady} />
-              <ErrorScreenTracker />
-              <BudgetDraftProvider>
-                {Platform.OS === "android" && <ForceUpdate />}
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.bg },
-                  }}
-                />
-              </BudgetDraftProvider>
-            </SessionProvider>
-          </ToastProvider>
+          {fontsReady && minimumShown && (
+            <ToastProvider>
+              <SessionProvider>
+                <SessionReady onReady={setSessionReady} />
+                <ErrorScreenTracker />
+                <BudgetDraftProvider>
+                  {Platform.OS === "android" && <ForceUpdate />}
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.bg },
+                    }}
+                  />
+                </BudgetDraftProvider>
+              </SessionProvider>
+            </ToastProvider>
+          )}
         </SafeAreaView>
+        {Platform.OS !== "web" && (
+          <LaunchSplash
+            appReady={!!fontsReady && sessionReady}
+            onMinimumShown={finishMinimum}
+          />
+        )}
       </View>
     </SafeAreaProvider>
   );

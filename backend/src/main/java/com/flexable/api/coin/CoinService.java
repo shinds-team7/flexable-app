@@ -38,7 +38,7 @@ import com.flexable.api.outfit.UserOutfitRepository;
 @Service
 public class CoinService {
 
-	public static final int SIGNUP_GIFT = 200;
+	public static final int SIGNUP_GIFT = 500;
 	public static final int BUDGET_BONUS = 5;
 	public static final int PASSIVE_LIMIT = 10;
 	static final Duration PASSIVE_EVERY = Duration.ofHours(1);
@@ -74,12 +74,17 @@ public class CoinService {
 		this.zone = props.zoneId();
 	}
 
-	/** 앱을 열 때·앞으로 돌아올 때. 가입 선물, 어제 예산 보너스(그날 첫 요청에서 어제 하루치만), 시간 적립 시작. */
+	/** 신규 계정을 만드는 트랜잭션에서만 호출한다. 기존 계정 로그인·연결·check-in에는 재지급하지 않는다. */
+	@Transactional
+	public void grantSignupGift(long userId) {
+		post(lockWallet(userId), CoinReason.SIGNUP_GIFT, ONCE, SIGNUP_GIFT, false);
+	}
+
+	/** 앱을 열 때·앞으로 돌아올 때. 받은 선물 안내, 어제 예산 보너스, 시간 적립 시작. */
 	@Transactional
 	public CheckInResponse checkIn(long userId) {
 		LocalDate today = today();
 		CoinWallet w = lockWallet(userId);
-		post(w, CoinReason.SIGNUP_GIFT, ONCE, SIGNUP_GIFT, false);
 		if (!today.equals(w.getPassiveDate())) {
 			w.startPassive(today, clock.instant());
 			LocalDate yesterday = today.minusDays(1);
@@ -87,7 +92,13 @@ public class CoinService {
 				post(w, CoinReason.BUDGET_BONUS, yesterday.toString(), BUDGET_BONUS, false);
 			}
 		}
-		List<Reward> rewards = ledger.findUnnotified(userId).stream().map(this::toReward).toList();
+		// 종료한 업데이트 기념/옛 200코인 모달만 확인 처리한다. 지급 잔액·내역은 유지한다.
+		List<CoinLedger> unnotified = ledger.findUnnotified(userId);
+		List<Long> oldGiftIds = unnotified.stream()
+			.filter(l -> l.getReason() == CoinReason.SIGNUP_GIFT && l.getAmount() == 200)
+			.map(CoinLedger::getId).toList();
+		if (!oldGiftIds.isEmpty()) ledger.markNotified(userId, oldGiftIds, clock.instant());
+		List<Reward> rewards = unnotified.stream().filter(l -> !oldGiftIds.contains(l.getId())).map(this::toReward).toList();
 		return new CheckInResponse(view(w), rewards);
 	}
 

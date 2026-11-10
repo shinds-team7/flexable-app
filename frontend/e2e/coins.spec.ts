@@ -89,7 +89,12 @@ async function closeReward(
 ) {
   const dialog = page.getByRole("heading", { name: title, exact: true });
   await expect(dialog).toBeVisible();
-  await expect(page.getByText(`+${amount}`, { exact: true })).toBeVisible();
+  if (title.startsWith("신규가입")) {
+    await expect(page.getByText(`+${amount}`, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/앱에서 쓰는 코인/)).toHaveCount(0);
+  } else {
+    await expect(page.getByText(`+${amount}`, { exact: true })).toBeVisible();
+  }
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   if (attendance) {
@@ -142,7 +147,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await onboard(page);
 
   // First check-in: the gift modal once. The home itself keeps only the costume, no coin row.
-  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+  await closeReward(page, "신규가입 500코인 선물", 500);
   // The default costume plays as a video that fits the 16:9 stage (web <video> must not keep its 1280px size).
   const video = page.locator("video");
   await expect(video).toHaveCount(1);
@@ -150,7 +155,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   const collect = page.getByRole("button", { name: "모으기", exact: true });
   await expect(collect).toHaveCount(0);
   await openShop(page);
-  await balance(page, 205);
+  await balance(page, 505);
   await expect(page.getByText(/앱에서만 쓰는 코인/)).toHaveCount(0);
   await expect(page.getByLabel("준비 중인 코스튬, 업데이트 예정")).toHaveCount(2);
   // The shop's top card has the [광고 🪙] button instead of [모으기]; the web build cannot show ads, so it is disabled.
@@ -171,7 +176,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page).toHaveURL(/\/home$/);
   await Promise.all([checkedIn(page), page.reload()]);
   await expect(
-    page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
+    page.getByRole("heading", { name: "신규가입 500코인 선물" }),
   ).toHaveCount(0);
   // Nothing has accrued within the first hour, and collecting then is not an error.
   expect((await api(page, "POST", "/coins/collect")).collected).toBe(0);
@@ -251,22 +256,22 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   // Back on the home with the new costume; the shop shows the balance spent.
   await expect(page).toHaveURL(/\/home$/);
   const wallet = await api(page, "GET", "/coins");
-  expect(wallet.balance).toBe(5);
+  expect(wallet.balance).toBe(305);
   expect(wallet.equippedOutfitId).toBe("outfit-03");
   // The coin chip over the video opens the history, newest first with the amount in front.
   await page
-    .getByRole("button", { name: "보유 코인 5개, 코인 내역 보기", exact: true })
+    .getByRole("button", { name: "보유 코인 305개, 코인 내역 보기", exact: true })
     .click();
   await expect(page).toHaveURL(/\/coins\/history$/);
   const rows = page.getByLabel(/^[+-]\d[\d,]* .+, \d\d:\d\d$/);
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toHaveText(/^-200 코스튬 구매/);
   await expect(rows.nth(1)).toHaveText(/^\+5 출석체크/);
-  await expect(rows.nth(2)).toHaveText(/^\+200 가입 선물/);
+  await expect(rows.nth(2)).toHaveText(/^\+500 가입 선물/);
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await openShop(page);
-  await balance(page, 5);
+  await balance(page, 305);
   await expect(page.getByRole("button", { name: "광부", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "선비냥이", exact: true })).toBeVisible();
   await expect(
@@ -293,7 +298,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await page.getByRole("button", { name: "유령냥이", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "200코인으로 구매", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(page.getByText(/모자라요/)).toHaveCount(0);
 
   // Referral: the invitee enters the code on My page.
@@ -311,7 +316,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
 
   await signup(page, email("invitee"));
   await onboard(page);
-  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+  await closeReward(page, "신규가입 500코인 선물", 500);
   await page.goto("/my");
   await page.getByRole("button", { name: "추천 코드", exact: true }).click();
   // My page keeps only the referral; the shop is reached from the coin history alone.
@@ -326,7 +331,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(
     page.getByText("코인 100개를 받았어요", { exact: true }),
   ).toBeVisible();
-  expect((await api(page, "GET", "/coins")).balance).toBe(305);
+  expect((await api(page, "GET", "/coins")).balance).toBe(605);
   await expect(
     page.getByLabel("친구에게 받은 추천 코드", { exact: true }),
   ).toHaveCount(0);
@@ -337,7 +342,7 @@ test("signup gift, buy and apply a costume, the home shows it; a referral pays b
   await expect(page).toHaveURL(/\/home$/);
   await closeReward(page, "추천 코드가 사용됐어요", 100, false);
   await openShop(page);
-  await balance(page, 105);
+  await balance(page, 405);
   await page.goto("/my");
   await page.getByRole("button", { name: "추천 코드", exact: true }).click();
   await expect(page.getByText(/\(지금까지 1명\)/)).toBeVisible();
@@ -349,7 +354,7 @@ test("the top level caps the home gauge and a costume refund is acknowledged onc
 }) => {
   await signup(page, email("refund"));
   await onboard(page);
-  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+  await closeReward(page, "신규가입 500코인 선물", 500);
   const today = await api(page, "GET", "/budget/today");
   const wallet = await api(page, "GET", "/coins");
   await page.route("**/api/v1/budget/today", (route) =>
@@ -404,7 +409,7 @@ test("collect takes the coins that accrued since the first check-in (accrual moc
 }) => {
   await signup(page, email("collect"));
   await onboard(page);
-  await closeReward(page, "업데이트 기념 200코인 선물", 200);
+  await closeReward(page, "신규가입 500코인 선물", 500);
   // Accrual needs real hours, so only the server's answers are mocked here.
   const passive = (collectable: number, collectedToday: number) => ({
     collectable,
@@ -501,7 +506,7 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
 }) => {
   await signup(page, email("attendance"));
   await onboard(page);
-  await closeReward(page, "업데이트 기념 200코인 선물", 200, false);
+  await closeReward(page, "신규가입 500코인 선물", 500, false);
 
   // No button press: after midnight the first visit opens the modal and attends. Day 3 shows the +20 bonus, day 7 the costume.
   await expect(
@@ -521,7 +526,7 @@ test("attendance: the first visit of the day opens the modal and pays by itself,
   await skipGuide(page);
   await expect(
     page.getByRole("button", {
-      name: "보유 코인 205개, 코인 내역 보기",
+      name: "보유 코인 505개, 코인 내역 보기",
       exact: true,
     }),
   ).toBeVisible();
