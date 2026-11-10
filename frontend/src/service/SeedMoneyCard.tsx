@@ -128,9 +128,7 @@ export function SeedMoneyCard({
         title="시드머니 모은 기록"
       >
         <ScrollView contentContainerStyle={{ gap: 16 }}>
-          <T>
-            지금까지 모은 돈 {money(seed.total)}원
-          </T>
+          <T>지금까지 모은 돈 {money(seed.total)}원</T>
           <T size={13} color={colors.textMuted}>
             최근 12개 반영 기록이에요
           </T>

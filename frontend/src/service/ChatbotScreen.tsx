@@ -192,7 +192,11 @@ function ChatbotRoom() {
       if (stale()) return;
       const schedule =
         result.action?.type === "SCHEDULE" ? result.action.schedule : undefined;
-      const income = result.action?.type === "INCOME_TRANSACTION" || result.action?.type === "INCOME_SETTINGS" ? result.action : undefined;
+      const income =
+        result.action?.type === "INCOME_TRANSACTION" ||
+        result.action?.type === "INCOME_SETTINGS"
+          ? result.action
+          : undefined;
       if (result.action) proposal.current = schedule ?? null;
       push({
         from: "bot",
@@ -204,8 +208,16 @@ function ChatbotRoom() {
         choices:
           result.action && !schedule && !income
             ? confirmChoices(result.action)
-            : !result.action && /배분/.test(result.reply) && /예산|요일|하루/.test(result.reply) && /바꾸|변경|조정|버튼/.test(result.reply)
-              ? [{ label: "하루 예산 배분 바꾸기", run: () => router.push("/budget/day-weights") }]
+            : !result.action &&
+                /배분/.test(result.reply) &&
+                /예산|요일|하루/.test(result.reply) &&
+                /바꾸|변경|조정|버튼/.test(result.reply)
+              ? [
+                  {
+                    label: "하루 예산 배분 바꾸기",
+                    run: () => router.push("/budget/day-weights"),
+                  },
+                ]
               : undefined,
       });
       if (schedule && speakOn.current) speak(confirmSpeech(schedule));

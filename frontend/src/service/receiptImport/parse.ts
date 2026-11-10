@@ -185,7 +185,8 @@ function detect(rows: OcrLine[][]): ImportSource | null {
       DATE_KOR.test(row.map((l) => l.text).join(" "))
     )
       dated = true;
-    const pair = hasBankColumns(row, rows[i + 1] ?? []) &&
+    const pair =
+      hasBankColumns(row, rows[i + 1] ?? []) &&
       BANK_LOOSE_AMOUNT.test(row[row.length - 1].text);
     if (pair) bankPairs++;
     return dated && pair;
@@ -228,9 +229,17 @@ function finish(source: ImportSource, raws: Raw[]): ImportCandidate[] {
     let type: ImportCandidate["type"] = null;
     const next = raws[i + 1];
     if (r.sign) type = r.sign === "+" ? "INCOME" : "EXPENSE";
-    else if (r.balance != null && next?.balance != null && r.balance - next.balance === r.amount)
+    else if (
+      r.balance != null &&
+      next?.balance != null &&
+      r.balance - next.balance === r.amount
+    )
       type = "INCOME";
-    else if (r.balance != null && next?.balance != null && r.balance - next.balance === -r.amount)
+    else if (
+      r.balance != null &&
+      next?.balance != null &&
+      r.balance - next.balance === -r.amount
+    )
       type = "EXPENSE";
     else if (REFUND.test(r.sub) || /입금|급여/.test(r.sub)) type = "INCOME";
     if (type === null) review.push(REVIEW_TYPE);
@@ -281,12 +290,21 @@ function parseBalanceStyle(rows: OcrLine[][], today: string): Raw[] {
     const exactAmount = amountLine?.text.match(AMOUNT);
     // 화면 맨 아래 거래는 시각·잔액 줄이 잘릴 수 있다. 날짜가 보이고
     // 금액이 별도 오른쪽 열에 있을 때만 원 없는 숫자를 검토 후보로 남긴다.
-    const noMoreTransactionColumns = rows.slice(i + 1).every((later) =>
-      later.every((line) => !TIME.test(line.text) && !BANK_LOOSE_AMOUNT.test(line.text)));
-    const croppedAmount = date && noMoreTransactionColumns && row.length >= 2 &&
+    const noMoreTransactionColumns = rows
+      .slice(i + 1)
+      .every((later) =>
+        later.every(
+          (line) => !TIME.test(line.text) && !BANK_LOOSE_AMOUNT.test(line.text),
+        ),
+      );
+    const croppedAmount =
+      date &&
+      noMoreTransactionColumns &&
+      row.length >= 2 &&
       amountLine.x > row[row.length - 2].x * 2 &&
       BARE_AMOUNT.test(amountLine.text)
-      ? amountLine.text.match(BANK_LOOSE_AMOUNT) : null;
+        ? amountLine.text.match(BANK_LOOSE_AMOUNT)
+        : null;
     const am =
       exactAmount ??
       (bankColumns ? amountLine.text.match(BANK_LOOSE_AMOUNT) : croppedAmount);
@@ -317,7 +335,8 @@ function parseBalanceStyle(rows: OcrLine[][], today: string): Raw[] {
       amount: won(am),
       sign: am[1] ? (am[1] === "+" ? "+" : "-") : null,
       balance: bm ? won(bm) : null,
-      amountReview: !exactAmount && (!BARE_AMOUNT.test(amountLine.text) || !bankColumns),
+      amountReview:
+        !exactAmount && (!BARE_AMOUNT.test(amountLine.text) || !bankColumns),
     });
     if (bm || bankColumns) i++;
   }
