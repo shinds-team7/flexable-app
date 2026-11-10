@@ -683,6 +683,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/budget/seed-money/total": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 지금까지 모은 시드머니 총액 정정. 생활비 잔액·과거 기록은 유지
+         * @description 0원 이상 1조 미만. 현재 총액과의 차액을 ADJUSTMENT 기록으로 남긴다. 같은 총액으로 다시 저장하면 기록을 추가하지 않는다. 총액 계산과 정정은 회원별 잠금 안에서 수행한다.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int64 */
+                        total: number;
+                    };
+                };
+            };
+            responses: {
+                200: components["responses"]["SeedMoney"];
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                404: components["responses"]["Error"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/categories": {
         parameters: {
             query?: never;
@@ -2087,10 +2128,10 @@ export interface components {
          */
         SeedChoice: "GOAL" | "ALL" | "MANUAL";
         /**
-         * @description 기록에 보이는 방법. GOAL·ALL·MANUAL은 수입일 전날 반영, EXTRA는 지금 예산에서 바로 옮김
+         * @description 기록에 보이는 방법. GOAL·ALL·MANUAL은 수입일 전날 반영, EXTRA는 지금 예산에서 바로 옮김, ADJUSTMENT는 생활비를 바꾸지 않는 총액 정정(차액은 음수 가능)
          * @enum {string}
          */
-        SeedEntryChoice: "GOAL" | "ALL" | "MANUAL" | "EXTRA";
+        SeedEntryChoice: "GOAL" | "ALL" | "MANUAL" | "EXTRA" | "ADJUSTMENT";
         User: {
             /** Format: int64 */
             id: number;
@@ -2417,7 +2458,7 @@ export interface components {
             base: number;
             /**
              * Format: int64
-             * @description 주기마다 옮긴 돈의 합
+             * @description 주기별 반영·바로 보내기·총액 정정 차액의 합. 정정으로 음수일 수 있으며 사용자 화면에는 total을 표시한다
              */
             saved: number;
             /** Format: int64 */
@@ -2449,7 +2490,7 @@ export interface components {
         SeedEntry: {
             /**
              * Format: date
-             * @description EXTRA는 옮긴 날짜
+             * @description EXTRA는 옮긴 날짜, ADJUSTMENT는 총액 정정 날짜
              */
             cycleEnd: string;
             choice: components["schemas"]["SeedEntryChoice"];
