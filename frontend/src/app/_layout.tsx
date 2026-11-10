@@ -22,7 +22,7 @@ export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
 /** 스플래시는 앱 시작 후 최소 1초, 세션 확인·새 원격 업데이트 확인(최대 3초)이 더 오래 걸리면 끝날 때까지 띄운다. */
 const SPLASH_MIN_MS = 1000;
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// 자동 숨김 방지는 index.js에서 Router와 화면 모듈보다 먼저 등록한다.
 installErrorReporting();
 
 /** 오류 기록에 남길 지금 화면 경로를 알린다 */
