@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { randomUUID } from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
@@ -17,7 +17,7 @@ import {
 import { AdRewardCard } from "./AdRewardCard";
 import { showRewardedAd } from "./adReward";
 import { useSession } from "./Session";
-import { ATTENDANCE_OUTFIT_ID, DEFAULT_OUTFIT_ID } from "./outfits";
+import { ATTENDANCE_OUTFIT_ID, DEFAULT_OUTFIT_ID, LOCKED_OUTFIT_SOURCE } from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
 import { RewardModal } from "./RewardModal";
@@ -345,13 +345,7 @@ function Grid({
           >
             <View style={grid.thumbBox}>
               {hideLocked && !o.owned ? (
-                <View style={[grid.thumb, grid.center]}>
-                  <Ionicons
-                    name="lock-closed"
-                    size={18}
-                    color={colors.textMuted}
-                  />
-                </View>
+                <LockedOutfitThumbnail />
               ) : (
                 <OutfitView outfitId={o.id} play={false} style={grid.thumb} />
               )}
@@ -374,15 +368,29 @@ function Grid({
           accessibilityLabel={`준비 중인 코스튬, ${caption}`}
           style={grid.cell}
         >
-          <View style={[grid.thumb, grid.center]}>
-            <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
-          </View>
+          <LockedOutfitThumbnail />
           {/* 이름 칸 높이를 맞춰 옆 칸과 줄이 어긋나지 않게 한다 */}
           <T size={12} color={colors.textMuted}>
             {caption}
           </T>
         </View>
       ))}
+    </View>
+  );
+}
+
+/** 출석·도전과제·업데이트 예정은 흰색 고양이 위에 같은 잠금 표시를 겹친다. */
+function LockedOutfitThumbnail() {
+  return (
+    <View style={grid.thumb} testID="locked-outfit-thumbnail">
+      <Image
+        source={LOCKED_OUTFIT_SOURCE}
+        resizeMode="contain"
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={[StyleSheet.absoluteFill, grid.shade]}>
+        <Ionicons name="lock-closed" size={18} color="#fff" />
+      </View>
     </View>
   );
 }
@@ -416,7 +424,6 @@ const grid = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.soft,
-    backgroundColor: "rgba(16, 24, 40, 0.32)",
+    backgroundColor: "rgba(16, 24, 40, 0.64)",
   },
-  center: { alignItems: "center", justifyContent: "center" },
 });

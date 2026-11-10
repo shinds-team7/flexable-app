@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("27");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("28");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -71,7 +71,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(14);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(15);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -92,6 +92,41 @@ class MigrationUpgradeTest {
 		assertThat(jdbc.queryForObject("select balance from coin_wallets where user_id=1", Long.class)).isEqualTo(250L);
 		assertThat(jdbc.queryForObject("select count(*) from coin_ledger where user_id=1 and reason='SIGNUP_GIFT' "
 			+ "and ref_key='update-1.6.0' and amount=200 and notified_at is null", Integer.class)).isEqualTo(1);
+		assertThat(flyway.migrate().migrationsExecuted).isZero();
+	}
+
+	@Test
+	void restoresMissingFirstWeekCostumeWithoutChangingPriorRewardsOrIneligibleUsers() {
+		var database = database();
+		Flyway.configure().dataSource(database).locations("classpath:db/migration").target("27").load().migrate();
+		var jdbc = new JdbcTemplate(database);
+		for (int user = 1; user <= 4; user++) {
+			jdbc.update("insert into users(id,email,password_hash,agreed_at,created_at) "
+				+ "values(?,?,'unused',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", user, "attendance" + user + "@example.com");
+			jdbc.update("insert into coin_wallets(user_id,balance,created_at) values(?,35,CURRENT_TIMESTAMP)", user);
+			int days = user == 2 ? 6 : user == 3 ? 8 : 7;
+			for (int day = 1; day <= days; day++) {
+				jdbc.update("insert into coin_ledger(user_id,amount,reason,ref_key,created_at) "
+					+ "values(?,?,'ATTENDANCE',?,CURRENT_TIMESTAMP)", user, day == 7 ? 0 : 5, "2026-11-0" + day);
+			}
+		}
+		// 옛 출석 보상을 받은 7일 달성자와, 7일 미만인데 낚시 고양이를 산 회원을 구분한다.
+		jdbc.update("insert into user_outfits(user_id,outfit_id,acquired_at) values(1,'outfit-07',TIMESTAMP '2026-11-01 00:00:00')");
+		jdbc.update("insert into user_outfits(user_id,outfit_id,acquired_at) values(2,'outfit-07',CURRENT_TIMESTAMP)");
+		jdbc.update("insert into user_outfits(user_id,outfit_id,acquired_at) values(3,'outfit-06',TIMESTAMP '2026-11-02 00:00:00')");
+		// 출석이 아닌 내역을 합쳐 7개가 되어도 출석 조건을 채운 것은 아니다.
+		jdbc.update("insert into coin_ledger(user_id,amount,reason,ref_key,created_at) values(2,200,'SIGNUP_GIFT','once',CURRENT_TIMESTAMP)");
+		var oldRewards = jdbc.queryForList("select * from coin_ledger order by id");
+		var oldWallets = jdbc.queryForList("select * from coin_wallets order by user_id");
+		var oldOutfits = jdbc.queryForList("select * from user_outfits order by user_id,outfit_id");
+		var flyway = current(database);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+		flyway.validate();
+		assertThat(jdbc.queryForList("select user_id from user_outfits where outfit_id='outfit-06' order by user_id", Long.class))
+			.containsExactly(1L, 3L, 4L);
+		assertThat(jdbc.queryForList("select * from user_outfits order by user_id,outfit_id")).containsAll(oldOutfits);
+		assertThat(jdbc.queryForList("select * from coin_ledger order by id")).isEqualTo(oldRewards);
+		assertThat(jdbc.queryForList("select * from coin_wallets order by user_id")).isEqualTo(oldWallets);
 		assertThat(flyway.migrate().migrationsExecuted).isZero();
 	}
 

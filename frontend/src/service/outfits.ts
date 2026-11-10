@@ -7,6 +7,8 @@ import type { ImageSourcePropType } from "react-native";
 
 export const DEFAULT_OUTFIT_ID = "costume-lv1";
 export const ATTENDANCE_OUTFIT_ID = "outfit-06";
+/** 아직 공개하지 않은 코스튬의 공통 실루엣. 실제 보상 영상과 별도로 유지한다. */
+export const LOCKED_OUTFIT_SOURCE: ImageSourcePropType = require("../../assets/outfits/cat-unlock.png");
 
 // 파일이 저장소에 들어오면 id마다 영상과 첫 장면을 함께 한 줄씩 추가한다(스크립트가 줄을 출력한다).
 // require는 빌드할 때 파일이 있어야 해서 미리 적어 둘 수 없다.

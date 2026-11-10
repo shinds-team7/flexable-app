@@ -11,13 +11,13 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { router } from "expo-router";
-import { Button, ConfirmModal, RadioMark, Sheet, T } from "@/components/ui";
+import { Button, RadioMark, Sheet, T } from "@/components/ui";
 import { colors, floating, radius } from "@/theme";
 import { styles as heroStyles } from "@/components/HomeStyles";
 import { api } from "./api/client";
 import { ErrorNotice, MoneyField, money } from "./ui";
 import type { SeedChoice, SeedMoney } from "./types";
+import { SeedMoneyHelp } from "./SeedMoneyHelp";
 /**
  * 시드머니 합계 카드. 카드를 누르면 모은 기록(맨 아래 [시드머니 수정])이 열리고, [+]를 누르면 지금 예산에서 시드머니로 보낼 돈을 적는 창이 열린다.
  * 수입일 전날부터는 반영 창이 뜬다. 반영하기 전까지는 홈에 올 때마다 다시 뜬다
@@ -35,7 +35,6 @@ export function SeedMoneyCard({
 }) {
   const [later, setLater] = useState<string | null>(null);
   const [history, setHistory] = useState(false);
-  const [help, setHelp] = useState(false);
   const [transfer, setTransfer] = useState(false);
   const [edit, setEdit] = useState(false);
   const pending = seed.pending;
@@ -55,18 +54,7 @@ export function SeedMoneyCard({
           <T size={15} weight="700" color={colors.onBrand}>
             시드머니
           </T>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="시드머니가 무엇인지 보기"
-            hitSlop={8}
-            onPress={(event) => {
-              event.stopPropagation();
-              setHelp(true);
-            }}
-            style={styles.help}
-          >
-            <Ionicons name="help" size={12} color="rgba(255,255,255,0.7)" />
-          </Pressable>
+          <SeedMoneyHelp light onNavigate={() => setHistory(false)} />
         </View>
         <View style={styles.amountRow}>
           {/* 자릿수가 늘면 글자를 줄여 줄바꿈 없이 한 줄에 둔다 */}
@@ -106,9 +94,8 @@ export function SeedMoneyCard({
         >
           {(
             [
-              ["모아둔 돈", seed.base],
-              ["반영한 돈", seed.saved],
-              ["매달 저축액", seed.monthlyGoal],
+              ["지금까지 모은 돈", seed.total],
+              ["이번 달 모을 돈", seed.monthlyGoal],
             ] as const
           ).map(([label, value], i) => (
             <View
@@ -142,7 +129,7 @@ export function SeedMoneyCard({
       >
         <ScrollView contentContainerStyle={{ gap: 16 }}>
           <T>
-            모아둔 돈 {money(seed.base)}원 · 반영한 돈 {money(seed.saved)}원
+            지금까지 모은 돈 {money(seed.total)}원
           </T>
           <T size={13} color={colors.textMuted}>
             최근 12개 반영 기록이에요
@@ -189,21 +176,6 @@ export function SeedMoneyCard({
           }}
         />
       </Sheet>
-      <ConfirmModal
-        visible={help}
-        title="시드머니가 뭐예요?"
-        message={
-          "시드머니는 재테크에 쓸 수 있는 돈을 기록해 두는 곳이에요. 앱에서는 따로 쓸 일이 없고, 모아둔 돈을 기록하는 의미예요.\n\n텅장관리 웹사이트에 연동하면 이 시드머니로 투자·적금을 실험해 볼 수 있어요."
-        }
-        cancelLabel="닫기"
-        confirmLabel="웹서비스 연동하기"
-        onCancel={() => setHelp(false)}
-        onConfirm={() => {
-          setHelp(false);
-          setHistory(false);
-          router.push("/web-links");
-        }}
-      />
       {transfer && (
         <AmountModal
           title="시드머니로 보내기"

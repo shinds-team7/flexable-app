@@ -221,22 +221,24 @@ type Raw = {
 };
 
 function finish(source: ImportSource, raws: Raw[]): ImportCandidate[] {
-  // 화면은 최신순이다. 다음 항목(더 오래된 거래)의 잔액과 비교하면 부호를 확인할 수 있다.
+  // OCR 누락·필터로 거래가 연속하지 않을 수 있다. 잔액 차이가 정확히 맞을 때만 부호 확인에 쓴다.
   return raws.map((r, i) => {
     const review: string[] = [];
     if (!r.date) review.push(REVIEW_DATE);
     let type: ImportCandidate["type"] = null;
     const next = raws[i + 1];
     if (r.sign) type = r.sign === "+" ? "INCOME" : "EXPENSE";
-    else if (r.balance != null && next?.balance != null)
-      type = r.balance - next.balance === r.amount ? "INCOME" : "EXPENSE";
+    else if (r.balance != null && next?.balance != null && r.balance - next.balance === r.amount)
+      type = "INCOME";
+    else if (r.balance != null && next?.balance != null && r.balance - next.balance === -r.amount)
+      type = "EXPENSE";
     else if (REFUND.test(r.sub) || /입금|급여/.test(r.sub)) type = "INCOME";
     if (type === null) review.push(REVIEW_TYPE);
     let balanceOk = false;
     if (r.balance != null && next?.balance != null && type) {
       const delta = type === "INCOME" ? r.amount : -r.amount;
       balanceOk = r.balance - next.balance === delta;
-      if (!balanceOk) review.push("잔액과 금액이 맞지 않아요");
+      // +/-와 금액이 명확하면 앞뒤 잔액 차이만으로 정상 거래를 막지 않는다.
     }
     // 원 자리가 다른 글자로 읽힌 금액은 잔액으로 맞는지 확인될 때만 확인 없이 가져온다.
     if (r.amountReview && !balanceOk)
