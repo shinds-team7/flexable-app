@@ -24,6 +24,9 @@ public class SeedMoneyAddition {
 	@Column(nullable = false)
 	private long amount;
 
+	@Column(name = "is_adjustment", nullable = false)
+	private boolean adjustment;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -38,6 +41,16 @@ public class SeedMoneyAddition {
 
 	public long getAmount() {
 		return amount;
+	}
+
+	public static SeedMoneyAddition adjustment(long userId, long delta, Instant now) {
+		SeedMoneyAddition entry = new SeedMoneyAddition(userId, delta, now);
+		entry.adjustment = true;
+		return entry;
+	}
+
+	public boolean isAdjustment() {
+		return adjustment;
 	}
 
 	public Instant getCreatedAt() {

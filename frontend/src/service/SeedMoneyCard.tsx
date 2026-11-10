@@ -135,9 +135,9 @@ export function SeedMoneyCard({
           {seed.entries.length === 0 && (
             <T>아직 시드머니에 반영한 기록이 없어요</T>
           )}
-          {seed.entries.map((entry) => (
+          {seed.entries.map((entry, index) => (
             <View
-              key={entry.cycleEnd}
+              key={`${entry.createdAt}-${entry.choice}-${index}`}
               style={{
                 gap: 4,
                 paddingVertical: 12,
@@ -147,7 +147,7 @@ export function SeedMoneyCard({
             >
               <T weight="700">{money(entry.amount)}원</T>
               <T size={13}>
-                {entry.choice === "EXTRA"
+                {entry.choice === "EXTRA" || entry.choice === "ADJUSTMENT"
                   ? entry.cycleEnd
                   : `${entry.cycleEnd}까지`}{" "}
                 ·{" "}
@@ -197,17 +197,17 @@ export function SeedMoneyCard({
       {edit && (
         <AmountModal
           title="시드머니 수정"
-          caption="모아둔 돈만 고쳐요. 반영한 돈과 보낸 돈 기록은 그대로예요"
-          label="모아둔 돈 (원)"
-          initial={seed.base}
+          caption="지금까지 모은 총액을 고쳐요. 생활비 잔액과 이전에 모은 기록은 그대로예요"
+          label="지금까지 모은 돈 (원)"
+          initial={seed.total}
           min={0}
           confirmLabel="저장"
           busyLabel="저장하는 중…"
           onClose={() => setEdit(false)}
-          submit={async (base) => {
-            await api("/budget/seed-money/base", {
+          submit={async (total) => {
+            await api("/budget/seed-money/total", {
               method: "PUT",
-              body: { base },
+              body: { total },
             });
             onChanged();
           }}
@@ -259,8 +259,9 @@ function AmountModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const tooMuch = max !== undefined && amount > max;
+  const invalid = !Number.isSafeInteger(amount) || amount >= 1e12;
   const save = async () => {
-    if (busy || tooMuch || amount < min) return;
+    if (busy || tooMuch || invalid || amount < min) return;
     setBusy(true);
     setError(undefined);
     try {
@@ -291,6 +292,11 @@ function AmountModal({
               </T>
             </View>
             <MoneyField label={label} value={amount} onChange={setAmount} />
+            {invalid && (
+              <T size={13} color={colors.danger} accessibilityRole="alert">
+                금액은 1조 미만으로 입력해 주세요
+              </T>
+            )}
             {tooMuch && (
               <T size={13} color={colors.danger} accessibilityRole="alert">
                 보낼 수 있는 돈({money(max)}원)보다 많아요
@@ -307,7 +313,7 @@ function AmountModal({
               />
               <Button
                 label={busy ? busyLabel : confirmLabel}
-                disabled={busy || tooMuch || amount < min}
+                disabled={busy || tooMuch || invalid || amount < min}
                 style={{ flex: 1 }}
                 onPress={save}
               />

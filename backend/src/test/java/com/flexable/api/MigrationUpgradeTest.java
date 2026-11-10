@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("28");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("29");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -71,7 +71,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(15);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(16);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -120,7 +120,7 @@ class MigrationUpgradeTest {
 		var oldWallets = jdbc.queryForList("select * from coin_wallets order by user_id");
 		var oldOutfits = jdbc.queryForList("select * from user_outfits order by user_id,outfit_id");
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
 		flyway.validate();
 		assertThat(jdbc.queryForList("select user_id from user_outfits where outfit_id='outfit-06' order by user_id", Long.class))
 			.containsExactly(1L, 3L, 4L);

@@ -123,6 +123,80 @@ class SeedMoneyFlowTest {
 	}
 
 	@Test
+	void correctTotalPreservesLivingBudgetAndHistoryIncludingZeroAndFutureTransfers() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}"))
+			.andExpect(status().isOk());
+		clock.now = clock.now.plusSeconds(1);
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token, "{\"amount\":100000}"))
+			.andExpect(status().isCreated()).andExpect(jsonPath("$.total").value(600000));
+		String estimated = read(mvc.perform(auth(get("/api/v1/budget/today"), token, null)), "$.estimatedBalance");
+		String daily = read(mvc.perform(auth(get("/api/v1/budget/today"), token, null)), "$.dailyBudget");
+		String linkId = link(token);
+		clock.now = clock.now.plusSeconds(1);
+		mvc.perform(auth(put("/api/v1/budget/seed-money/total"), token, "{\"total\":10000}"))
+			.andExpect(status().isOk()).andExpect(jsonPath("$.total").value(10000))
+			.andExpect(jsonPath("$.entries[0].choice").value("ADJUSTMENT"))
+			.andExpect(jsonPath("$.entries[0].amount").value(-590000))
+			.andExpect(jsonPath("$.entries[1].choice").value("EXTRA"));
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance").value(Long.parseLong(estimated)))
+			.andExpect(jsonPath("$.dailyBudget").value(Long.parseLong(daily)));
+		webSeed(linkId).andExpect(status().isOk())
+			.andExpect(jsonPath("$.entries[0].totalAfter").value(600000))
+			.andExpect(jsonPath("$.entries[1].choice").value("ADJUSTMENT"))
+			.andExpect(jsonPath("$.entries[1].totalAfter").value(10000))
+			.andExpect(jsonPath("$.lastEntry.amount").value(-590000));
+		// 같은 총액을 다시 저장해도 차액을 중복 반영하지 않는다.
+		mvc.perform(auth(put("/api/v1/budget/seed-money/total"), token, "{\"total\":10000}"))
+			.andExpect(jsonPath("$.entries", hasSize(2)));
+		clock.now = clock.now.plusSeconds(1);
+		mvc.perform(auth(put("/api/v1/budget/seed-money/total"), token, "{\"total\":200000}"))
+			.andExpect(jsonPath("$.total").value(200000));
+		clock.now = clock.now.plusSeconds(1);
+		mvc.perform(auth(put("/api/v1/budget/seed-money/total"), token, "{\"total\":0}"))
+			.andExpect(jsonPath("$.total").value(0));
+		mvc.perform(auth(put("/api/v1/budget/seed-money/base"), token, "{\"base\":0}"))
+			.andExpect(status().isBadRequest());
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":0}"))
+			.andExpect(status().isBadRequest());
+		clock.now = clock.now.plusSeconds(1);
+		mvc.perform(auth(post("/api/v1/budget/seed-money/transfers"), token, "{\"amount\":1000}"))
+			.andExpect(status().isCreated()).andExpect(jsonPath("$.total").value(1000));
+		mvc.perform(auth(get("/api/v1/budget/today"), token, null))
+			.andExpect(jsonPath("$.estimatedBalance").value(Long.parseLong(estimated) - 1000));
+		String other = signup();
+		mvc.perform(auth(put("/api/v1/budget/seed-money/total"), other, "{\"total\":1000}"))
+			.andExpect(status().isNotFound());
+		mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null)).andExpect(jsonPath("$.total").value(1000));
+	}
+
+	@Test
+	void simultaneousTotalCorrectionsDoNotDuplicateTheDifference() throws Exception {
+		clock.seoulNoon("2026-10-01");
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS + ",\"seedBase\":500000}"))
+			.andExpect(status().isOk());
+		var start = new java.util.concurrent.CountDownLatch(1);
+		try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+			java.util.concurrent.Callable<Void> correct = () -> {
+				start.await();
+				mvc.perform(auth(put("/api/v1/budget/seed-money/total"), token, "{\"total\":0}"))
+					.andExpect(status().isOk());
+				return null;
+			};
+			var first = workers.submit(correct);
+			var second = workers.submit(correct);
+			start.countDown();
+			first.get(20, java.util.concurrent.TimeUnit.SECONDS);
+			second.get(20, java.util.concurrent.TimeUnit.SECONDS);
+		}
+		mvc.perform(auth(get("/api/v1/budget/seed-money"), token, null))
+			.andExpect(jsonPath("$.total").value(0)).andExpect(jsonPath("$.entries", hasSize(1)));
+	}
+
+	@Test
 	void confirmOncePerCycleAndWaitUntilNextCycle() throws Exception {
 		clock.seoulNoon("2026-10-01");
 		String token = signup();

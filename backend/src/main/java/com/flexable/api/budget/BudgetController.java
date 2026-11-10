@@ -15,6 +15,7 @@ import com.flexable.api.auth.CurrentUser;
 import com.flexable.api.budget.BudgetDtos.DayWeightsRequest;
 import com.flexable.api.budget.BudgetDtos.DayWeightsResponse;
 import com.flexable.api.budget.BudgetDtos.SeedBaseRequest;
+import com.flexable.api.budget.BudgetDtos.SeedTotalRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyRequest;
 import com.flexable.api.budget.BudgetDtos.SeedMoneyResponse;
 import com.flexable.api.budget.BudgetDtos.SeedTransferRequest;
@@ -87,5 +88,10 @@ public class BudgetController {
 	@PutMapping("/seed-money/base")
 	SeedMoneyResponse putSeedBase(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SeedBaseRequest req) {
 		return seedMoney.setBase(CurrentUser.id(jwt), req.base());
+	}
+
+	@PutMapping("/seed-money/total")
+	SeedMoneyResponse putSeedTotal(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SeedTotalRequest req) {
+		return seedMoney.setTotal(CurrentUser.id(jwt), req.total());
 	}
 }

@@ -306,6 +306,10 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 - 홈 시드머니 카드의 [+]가 쓴다. 수입일과 상관없이 아무 때나 여러 번 보낼 수 있다. `amount`는 1원 이상이고 응답의 `movable`(남은 생활비)보다 크면 400 `VALIDATION_FAILED`(`fields.amount`)
 - 보낸 돈은 `seed_money_additions`(V17)에 남고 추정 잔액에서 빠진다. 기록에는 `choice: "EXTRA"`로 보인다
 
+### `PUT /budget/seed-money/total` → 200 (응답은 GET과 같음)
+
+`{ "total": 10000 }`으로 지금까지 모은 총액을 정정한다(0원 이상 1조 미만). 기존 반영·바로 보내기 기록을 유지하고 차액을 `ADJUSTMENT`로 남긴다. 차액은 음수일 수 있고 같은 총액 재저장은 새 기록을 만들지 않는다. 생활비 잔액·하루 예산은 바뀌지 않는다. 이 기록은 앱·웹 시드머니 합계와 웹 `totalAfter`에 포함한다. 카드에는 총액과 이번 달 저축 목표만 보여 준다. 기존 모아둔 돈(`base`) 수정으로 합계가 음수가 되는 경우는 400으로 막고 총액 정정으로 안내한다.
+
 ### `PUT /budget/seed-money/base` → 200 (응답은 GET과 같음)
 
 ```json

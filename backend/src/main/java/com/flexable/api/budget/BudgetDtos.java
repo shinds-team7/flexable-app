@@ -76,6 +76,10 @@ public final class BudgetDtos {
 			@NotNull(message = "금액을 입력해 주세요") @Min(value = 0, message = "금액은 0원 이상이어야 해요") @Max(value = MAX_AMOUNT, message = "금액이 너무 커요") Long base) {
 	}
 
+	public record SeedTotalRequest(
+			@NotNull(message = "금액을 입력해 주세요") @Min(value = 0, message = "금액은 0원 이상이어야 해요") @Max(value = MAX_AMOUNT, message = "금액이 너무 커요") Long total) {
+	}
+
 	public record SeedMoneyRequest(
 			@NotNull(message = "반영할 주기를 확인해 주세요") LocalDate cycleEnd,
 			@NotNull(message = "반영 방법을 골라 주세요") SeedMoneyEntry.Choice choice,
