@@ -12,7 +12,7 @@ class BudgetRolloverTest {
     Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul")).apply { clear(); set(y, m - 1, d, h, min) }.timeInMillis
 
   private val week = listOf(10_000L, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000)
-  private fun saved(date: String) = BudgetSnapshot(date, 40_000, 5_000, 35_000, 0, week)
+  private fun saved(date: String) = BudgetSnapshot(date, 40_000, 5_000, 35_000, 0, week, weekAvailable = 95_000)
 
   @Test fun sameDayKeepsServerValue() {
     val now = seoul(2026, 11, 9)
@@ -27,6 +27,7 @@ class BudgetRolloverTest {
     assertEquals(0, r.spent)
     assertEquals(20_000, r.remaining)
     assertTrue(r.stale)
+    assertNull(r.weekAvailable)
   }
 
   @Test fun sundayIsLastIndex() {
@@ -49,6 +50,7 @@ class BudgetRolloverTest {
     assertEquals(17_000, r.spent)
     assertEquals(23_000, r.remaining)
     assertTrue(r.stale)
+    assertNull(r.weekAvailable)
   }
 
   @Test fun paymentAfterRolloverStartsFromWeekdayBudget() {

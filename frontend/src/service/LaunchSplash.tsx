@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { AppState, Image, Modal, StyleSheet, Text, View } from "react-native";
 import { useLaunchUpdateSettled } from "./LaunchUpdate";
+import { markSplashHidden } from "./splashVisibility";
 
 /** 네이티브 스플래시가 먼저 사라져도 앱이 그린 시작 화면은 1초 이상 유지한다. */
 export function LaunchSplash({
@@ -44,6 +45,10 @@ export function LaunchSplash({
   useEffect(() => {
     if (minimumShown && updateSettled) onMinimumShown();
   }, [minimumShown, updateSettled, onMinimumShown]);
+
+  useEffect(() => {
+    if (!visible) markSplashHidden();
+  }, [visible]);
 
   if (visible && minimumShown && updateSettled && appReady) setVisible(false);
 

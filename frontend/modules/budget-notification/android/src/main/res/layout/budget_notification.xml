@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 모든 구성이 아이콘 높이(48dp) 안에 들어간다: 왼쪽 고양이, 가운데 2행(라벨·금액), 오른쪽 기록·홈 -->
+<!-- Android가 그리는 기본 아이콘 옆에 라벨·금액과 기록·홈 버튼을 둔다. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="match_parent"
   android:layout_height="48dp"
   android:gravity="center_vertical"
   android:orientation="horizontal">
-
-  <ImageView
-    android:layout_width="48dp"
-    android:layout_height="48dp"
-    android:contentDescription="@null"
-    android:scaleType="fitCenter"
-    android:src="@drawable/budget_cat" />
 
   <LinearLayout
     android:layout_width="0dp"
@@ -36,7 +29,7 @@
       android:layout_marginTop="2dp"
       android:includeFontPadding="false"
       android:maxLines="1"
-      android:textColor="#0046FF"
+      android:textColor="#FFFFFF"
       android:textSize="20sp"
       android:textStyle="bold" />
   </LinearLayout>

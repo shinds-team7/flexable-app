@@ -96,9 +96,17 @@ export function Composer({
   const [draft, setDraft] = useState(initial ?? "");
   // 음성 입력을 시작할 때 입력창에 있던 글. 들은 문장은 그 뒤에 붙인다
   const base = useRef("");
+  const voiceSent = useRef(false);
   const onVoice = useCallback(
-    (text: string) => setDraft(base.current ? `${base.current} ${text}` : text),
-    [],
+    (text: string, final: boolean) => {
+      const next = base.current ? `${base.current} ${text}` : text;
+      if (final && !voiceSent.current && !busy && next.trim()) {
+        voiceSent.current = true;
+        onSend(next.trim());
+        setDraft("");
+      } else if (!voiceSent.current) setDraft(next);
+    },
+    [busy, onSend],
   );
   const voice = useVoiceInput(onVoice);
   const listening = voice.status !== "idle";
@@ -154,6 +162,7 @@ export function Composer({
                 ? voice.stop
                 : () => {
                     base.current = draft.trim();
+                    voiceSent.current = false;
                     stopSpeaking();
                     void voice.start();
                   }

@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Platform, Pressable, Share, StyleSheet, View } from "react-native";
+import { Linking, Platform, Pressable, Share, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -15,6 +15,7 @@ import { useToast } from "@/components/Toast";
 import { colors } from "@/theme";
 import { ApiError, api, sessionGeneration } from "./api/client";
 import { getReferral, registerReferral } from "./coinApi";
+import { requestBudgetNotificationPermission, useBudgetNotificationStatus } from "./budgetNotification";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config";
 import {
   useBudgetNotificationSetting,
@@ -177,6 +178,7 @@ export function MyScreen() {
   const [remindEntry, setRemindEntry] = useEntryReminderSetting();
   // 알림창 상시 알림. 끄면 지우고, 켜면 서비스 레이아웃이 다시 띄운다.
   const [showBudget, setShowBudget] = useBudgetNotificationSetting();
+  const budgetStatus = useBudgetNotificationStatus();
   const [entryTime, setEntryTime] = useEntryReminderTime();
   const [timeSheet, setTimeSheet] = useState(false);
   // 시트를 열 때마다 새로 만들어 저장하지 않은 선택이 남지 않게 한다
@@ -282,15 +284,29 @@ export function MyScreen() {
               <Row
                 key="budget-notification"
                 label="알림창에 오늘 남은 예산"
-                caption="알림창을 내리면 남은 예산을 볼 수 있어요"
+                caption={showBudget
+                  ? budgetStatus === "unavailable" ? "설치된 앱에 알림 기능이 없어요. 새 앱 빌드가 필요해요"
+                  : budgetStatus === "permission" ? "휴대폰에서 이 앱의 알림을 허용해 주세요"
+                  : budgetStatus === "error" ? "알림을 표시하지 못했어요. 다시 켜 보세요"
+                  : budgetStatus === "checking" ? "알림을 준비하고 있어요"
+                  : "알림창을 내리면 남은 예산을 볼 수 있어요"
+                  : "알림창에서 남은 예산을 표시하지 않아요"}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: showBudget }}
                 aria-checked={showBudget}
                 right={<SwitchMark on={showBudget} />}
-                onPress={() => setShowBudget(!showBudget)}
+                onPress={() => {
+                  if (showBudget) setShowBudget(false);
+                  else void requestBudgetNotificationPermission()
+                    .catch(() => false)
+                    .then(() => setShowBudget(true));
+                }}
               />
             )
           ),
+        )}
+        {Platform.OS === "android" && showBudget && budgetStatus === "permission" && (
+          <Row label="휴대폰 알림 설정 열기" onPress={() => void Linking.openSettings()} />
         )}
         {session.user && (
           <Row

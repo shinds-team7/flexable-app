@@ -14,6 +14,8 @@ data class BudgetSnapshot(
   val dayBudgets: List<Long>,
   /** true면 날짜가 바뀐 뒤 앱에서 아직 서버 값을 받지 못한 추정값 */
   val stale: Boolean = false,
+  /** 서버가 준 이번 주 쓸 수 있는 돈. 추정 상태에서는 표시하지 않는다. */
+  val weekAvailable: Long? = null,
 )
 
 object BudgetClock {
@@ -53,7 +55,7 @@ object BudgetRollover {
     if (saved.date == today) return saved
     if (saved.date > today) return null
     val budget = saved.dayBudgets.getOrNull(BudgetClock.weekdayIndex(now)) ?: return null
-    return saved.copy(date = today, budget = budget, spent = 0, remaining = budget, updatedAt = now, stale = true)
+    return saved.copy(date = today, budget = budget, spent = 0, remaining = budget, updatedAt = now, stale = true, weekAvailable = null)
   }
 
   /**
@@ -63,6 +65,6 @@ object BudgetRollover {
   fun withPayment(saved: BudgetSnapshot, amount: Long, postedAt: Long, now: Long): BudgetSnapshot? {
     if (BudgetClock.today(postedAt) != BudgetClock.today(now)) return null
     val today = forToday(saved, now) ?: return null
-    return today.copy(spent = today.spent + amount, remaining = today.remaining - amount, updatedAt = now, stale = true)
+    return today.copy(spent = today.spent + amount, remaining = today.remaining - amount, updatedAt = now, stale = true, weekAvailable = null)
   }
 }

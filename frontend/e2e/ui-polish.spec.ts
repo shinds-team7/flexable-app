@@ -78,6 +78,8 @@ test("analysis has week/month arrows and a compact three-choice all-period menu"
 }) => {
   await session(page, "2026-11-09");
   await page.goto("/analysis");
+  await expect(page.getByText("2026년 11월", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "이번 주", exact: true }).click();
   await expect(page.getByText("11/9 ~ 11/15", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "이전 주", exact: true }).click();
   await expect(page.getByText("11/2 ~ 11/8", { exact: true })).toBeVisible();

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical">
+
+  <include layout="@layout/budget_notification" />
+
+  <View
+    android:layout_width="match_parent"
+    android:layout_height="1dp"
+    android:layout_marginTop="6dp"
+    android:background="#33FFFFFF" />
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="36dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:includeFontPadding="false"
+      android:text="이번 주 쓸 수 있는 돈"
+      android:textColor="#A0A4A8"
+      android:textSize="12sp" />
+
+    <TextView
+      android:id="@+id/budget_week_amount"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:includeFontPadding="false"
+      android:textColor="#FFFFFF"
+      android:textSize="14sp"
+      android:textStyle="bold" />
+  </LinearLayout>
+</LinearLayout>

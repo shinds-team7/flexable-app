@@ -14,6 +14,7 @@ import { SessionProvider, useSession } from "@/service/Session";
 import { colors } from "@/theme";
 import { useAppFonts } from "@/service/AppFonts";
 import { installErrorReporting, setErrorScreen } from "@/service/errorReport";
+import { markSplashHidden } from "@/service/splashVisibility";
 
 export { CrashScreen as ErrorBoundary } from "@/service/CrashScreen";
 
@@ -45,6 +46,9 @@ export default function RootLayout() {
   const [sessionReady, setSessionReady] = useState(false);
   const finishMinimum = useCallback(() => setMinimumShown(true), []);
   useEffect(() => {
+    if (Platform.OS === "web") markSplashHidden();
+  }, []);
+  useEffect(() => {
     if (Platform.OS !== "android") return;
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") NavigationBar.setHidden(true);
@@ -52,21 +56,20 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
   if (fontError) throw fontError;
-  // 시작 화면 1초가 끝나기 전에는 홈의 보상·출석 모달이 그 위로 열리지 않게 한다.
-  // 세션과 네비게이터는 함께 마운트해 복원 중 화면 이동도 안전하게 처리한다.
+  // 시작 화면 아래에 네비게이터를 미리 마운트해 홈 데이터를 준비한다.
   return (
     <SafeAreaProvider>
       <View style={styles.outer}>
         <SafeAreaView style={styles.phone} edges={["top", "bottom"]}>
           <StatusBar style="dark" />
           {Platform.OS === "android" && <NavigationBar hidden />}
-          {fontsReady && minimumShown && (
+          {fontsReady && (
             <ToastProvider>
               <SessionProvider>
                 <SessionReady onReady={setSessionReady} />
                 <ErrorScreenTracker />
                 <BudgetDraftProvider>
-                  {Platform.OS === "android" && <ForceUpdate />}
+                  {Platform.OS === "android" && minimumShown && <ForceUpdate />}
                   <Stack
                     screenOptions={{
                       headerShown: false,
