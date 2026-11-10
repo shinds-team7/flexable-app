@@ -5,6 +5,7 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.flexable.api.category.CategoryService;
+import com.flexable.api.coin.CoinService;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
 import com.flexable.api.user.User;
@@ -17,9 +18,11 @@ public class OAuthUserService {
 	private final UserRepository users;
 	private final UserIdentityRepository identities;
 	private final CategoryService categories;
+	private final CoinService coins;
 	private final Clock clock;
 
-	public OAuthUserService(UserRepository users, UserIdentityRepository identities, CategoryService categories, Clock clock) {
+	public OAuthUserService(UserRepository users, UserIdentityRepository identities, CategoryService categories, Clock clock, CoinService coins) {
+		this.coins = coins;
 		this.users = users;
 		this.identities = identities;
 		this.categories = categories;
@@ -39,6 +42,7 @@ public class OAuthUserService {
 		}
 		User user = users.saveAndFlush(new User(email, null, clock.instant()));
 		categories.createDefaults(user.getId());
+		coins.grantSignupGift(user.getId());
 		identities.saveAndFlush(new UserIdentity(user.getId(), provider, profile.providerUserId(), email, clock.instant()));
 		return user.getId();
 	}

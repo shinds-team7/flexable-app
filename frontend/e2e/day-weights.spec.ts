@@ -29,7 +29,7 @@ async function signupAndOnboard(page: Page) {
   await page.getByRole("button", { name: "홈으로", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(
-    page.getByRole("heading", { name: "업데이트 기념 200코인 선물" }),
+    page.getByRole("heading", { name: "신규가입 500코인 선물" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await expect(

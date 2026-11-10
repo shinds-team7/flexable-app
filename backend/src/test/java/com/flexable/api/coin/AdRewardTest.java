@@ -73,7 +73,7 @@ class AdRewardTest {
 		// 4번째는 한도를 넘어 200이지만 주지 않는다
 		callback(me[1], "tx4", "ok").andExpect(status().isOk());
 
-		wallet(me[0]).andExpect(jsonPath("$.balance").value(30))
+		wallet(me[0]).andExpect(jsonPath("$.balance").value(530))
 			.andExpect(jsonPath("$.ad.rewardedToday").value(3));
 	}
 
@@ -89,7 +89,7 @@ class AdRewardTest {
 		callback(me[1], "tx1", "forged").andExpect(status().isForbidden());
 		callback("abc", "tx1", "ok").andExpect(status().isBadRequest());
 		mvc.perform(get("/api/v1/ads/reward-callback")).andExpect(status().isForbidden());
-		wallet(me[0]).andExpect(jsonPath("$.balance").value(0));
+		wallet(me[0]).andExpect(jsonPath("$.balance").value(500));
 	}
 	private ResultActions bonus(String token, String requestId, int seconds) throws Exception {
 		return mvc.perform(post("/api/v1/coins/ad-bonus").header("Authorization", "Bearer " + token)
@@ -109,9 +109,9 @@ class AdRewardTest {
 			.andExpect(jsonPath("$.reward").value(10))
 			.andExpect(jsonPath("$.bonus").value(5))
 			.andExpect(jsonPath("$.total").value(15))
-			.andExpect(jsonPath("$.wallet.balance").value(15));
+			.andExpect(jsonPath("$.wallet.balance").value(515));
 		// 같은 요청을 다시 보내도 한 번만
-		bonus(me[0], "req-0001", 20).andExpect(status().isOk()).andExpect(jsonPath("$.wallet.balance").value(15));
+		bonus(me[0], "req-0001", 20).andExpect(status().isOk()).andExpect(jsonPath("$.wallet.balance").value(515));
 		// 광고 1번에 보너스 1번: 다른 요청 id라도 콜백이 더 오기 전에는 못 받는다
 		bonus(me[0], "req-0002", 40).andExpect(status().isConflict());
 
@@ -125,7 +125,7 @@ class AdRewardTest {
 			.andExpect(jsonPath("$.bonus").value(0))
 			.andExpect(jsonPath("$.total").value(10));
 
-		wallet(me[0]).andExpect(jsonPath("$.balance").value(45)).andExpect(jsonPath("$.ad.rewardedToday").value(3));
+		wallet(me[0]).andExpect(jsonPath("$.balance").value(545)).andExpect(jsonPath("$.ad.rewardedToday").value(3));
 		mvc.perform(get("/api/v1/coins/ledger").header("Authorization", "Bearer " + me[0]))
 			.andExpect(jsonPath("$.items[1].reason").value("AD_BONUS"))
 			.andExpect(jsonPath("$.items[1].amount").value(10));

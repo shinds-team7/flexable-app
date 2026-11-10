@@ -103,6 +103,16 @@ class CoinFlowTest {
 	@Autowired
 	DataSource dataSource;
 
+	@Autowired
+	com.flexable.api.auth.OAuthUserService oauthUsers;
+
+	@Autowired
+	CoinService coins;
+
+	private long userId(String token) throws Exception {
+		return ((Number) read(mvc.perform(auth(get("/api/v1/me"), token, null)), "$.id")).longValue();
+	}
+
 	private static final String SETTINGS = "{\"balance\":1000000,\"payday\":26,\"incomeAmount\":2000000,"
 			+ "\"cardUnpaid\":50000,\"fixedExpenses\":[],\"protectedItems\":[]}";
 
@@ -171,23 +181,24 @@ class CoinFlowTest {
 	void signupGiftOnlyOnceAndRewardsRepeatUntilAck() throws Exception {
 		clock.seoul("2026-10-21T09:00");
 		String token = signup();
+		wallet(token).andExpect(jsonPath("$.balance").value(500));
 		// 초기 예산 설정 전이어도 check-in은 된다(어제 보너스만 건너뜀).
 		Object giftId = read(checkIn(token)
-			.andExpect(jsonPath("$.wallet.balance").value(200))
+			.andExpect(jsonPath("$.wallet.balance").value(500))
 			.andExpect(jsonPath("$.rewards", hasSize(1)))
 			.andExpect(jsonPath("$.rewards[0].reason").value("SIGNUP_GIFT"))
-			.andExpect(jsonPath("$.rewards[0].amount").value(200))
+			.andExpect(jsonPath("$.rewards[0].amount").value(500))
 			.andExpect(jsonPath("$.rewards[0].refDate").value(nullValue())), "$.rewards[0].id");
 
 		// ack 전에 다시 오면 같은 보상이 또 오지만 지급은 한 번
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(200))
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(500))
 			.andExpect(jsonPath("$.rewards", hasSize(1)))
 			.andExpect(jsonPath("$.rewards[0].id").value(giftId));
 		ackAll(token);
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(200)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(500)).andExpect(jsonPath("$.rewards", hasSize(0)));
 
 		clock.seoul("2026-10-22T09:00");
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(200)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(500)).andExpect(jsonPath("$.rewards", hasSize(0)));
 	}
 
 	@Test
@@ -202,6 +213,40 @@ class CoinFlowTest {
 	}
 
 	// ---- 출석 ----
+
+	@Test
+	void legacyGiftsStayInLedgerButDoNotReopenOrReceiveNewSignupGift() throws Exception {
+		String token = signup();
+		long id = userId(token);
+		jdbc.update("delete from coin_ledger where user_id = ?", id);
+		jdbc.update("update coin_wallets set balance = 400 where user_id = ?", id);
+		for (String ref : List.of("once", "update-1.6.0")) {
+			jdbc.update("insert into coin_ledger(user_id,amount,reason,ref_key,created_at) values(?,200,'SIGNUP_GIFT',?,CURRENT_TIMESTAMP)", id, ref);
+		}
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(400)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(400)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		assertThat(jdbc.queryForObject("select count(*) from coin_ledger where user_id = ? and amount = 200 and notified_at is not null", Integer.class, id)).isEqualTo(2);
+		// 예전에 가입했지만 한 번도 선물을 받지 않은 계정도 이제 check-in으로 신규 선물을 받지 않는다.
+		jdbc.update("delete from coin_ledger where user_id = ?", id);
+		jdbc.update("update coin_wallets set balance = 0 where user_id = ?", id);
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(0)).andExpect(jsonPath("$.rewards", hasSize(0)));
+	}
+
+	@Test
+	void socialSignupGives500OnceButLoginAndLinkingExistingAccountDoNot() throws Exception {
+		var profile = new com.flexable.api.auth.OAuthProviderClient.Profile("gift-" + UUID.randomUUID(), "social-gift-" + UUID.randomUUID() + "@example.com", true);
+		long id = oauthUsers.findOrCreate("google", profile);
+		assertThat(coins.wallet(id).balance()).isEqualTo(500);
+		assertThat(oauthUsers.findOrCreate("google", profile)).isEqualTo(id);
+		assertThat(coins.wallet(id).balance()).isEqualTo(500);
+		String token = signup();
+		long existing = userId(token);
+		String email = jdbc.queryForObject("select email from users where id = ?", String.class, existing);
+		jdbc.update("update coin_wallets set balance = 200 where user_id = ?", existing);
+		var link = new com.flexable.api.auth.OAuthProviderClient.Profile("link-" + UUID.randomUUID(), email, true);
+		assertThat(oauthUsers.findOrCreate("kakao", link)).isEqualTo(existing);
+		assertThat(coins.wallet(existing).balance()).isEqualTo(200);
+	}
 
 	private ResultActions attend(String token) throws Exception {
 		return mvc.perform(auth(post("/api/v1/coins/attendance"), token, null)).andExpect(status().isOk());
@@ -223,14 +268,14 @@ class CoinFlowTest {
 
 		attend(token).andExpect(jsonPath("$.rewarded").value(5))
 			.andExpect(jsonPath("$.outfitId").doesNotExist())
-			.andExpect(jsonPath("$.wallet.balance").value(5))
+			.andExpect(jsonPath("$.wallet.balance").value(505))
 			.andExpect(jsonPath("$.attendance.total").value(1))
 			.andExpect(jsonPath("$.attendance.checkedToday").value(true));
 		clock.seoul("2026-10-21T23:59");
-		attend(token).andExpect(jsonPath("$.rewarded").value(0)).andExpect(jsonPath("$.wallet.balance").value(5));
+		attend(token).andExpect(jsonPath("$.rewarded").value(0)).andExpect(jsonPath("$.wallet.balance").value(505));
 
 		mvc.perform(auth(get("/api/v1/coins/ledger"), token, null))
-			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.items", hasSize(2)))
 			.andExpect(jsonPath("$.items[0].reason").value("ATTENDANCE"))
 			.andExpect(jsonPath("$.items[0].amount").value(5));
 		// 출석 코인은 출석 모달에서 바로 보여 주므로 check-in 모달에는 가입 선물만 온다
@@ -247,7 +292,7 @@ class CoinFlowTest {
 		attend(token).andExpect(jsonPath("$.rewarded").value(5));
 		clock.seoul("2026-10-03T09:00");
 		attendance(token).andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.todayReward").value(10));
-		attend(token).andExpect(jsonPath("$.rewarded").value(10)).andExpect(jsonPath("$.wallet.balance").value(20));
+		attend(token).andExpect(jsonPath("$.rewarded").value(10)).andExpect(jsonPath("$.wallet.balance").value(520));
 		// 빠진 날이 있어도 누적이라 초기화하지 않는다: 10-04~10-08 건너뛰고 4~6번째 출석
 		for (String day : new String[] { "09", "10", "11" }) {
 			clock.seoul("2026-10-" + day + "T09:00");
@@ -260,7 +305,7 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.todayReward").value(0))
 			.andExpect(jsonPath("$.todayOutfitId").value("outfit-06"));
 		attend(token).andExpect(jsonPath("$.rewarded").value(0))
-			.andExpect(jsonPath("$.wallet.balance").value(35))
+			.andExpect(jsonPath("$.wallet.balance").value(535))
 			.andExpect(jsonPath("$.outfitId").value("outfit-06"))
 			.andExpect(jsonPath("$.attendance.total").value(7));
 		// 받은 코스튬은 상점 목록에 보이고, 다시 눌러도 또 주지 않는다
@@ -309,7 +354,7 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.items[0].amount").value(-200))
 			.andExpect(jsonPath("$.items[0].outfitId").value("outfit-03"))
 			.andExpect(jsonPath("$.items[1].reason").value("SIGNUP_GIFT"))
-			.andExpect(jsonPath("$.items[1].amount").value(200))
+			.andExpect(jsonPath("$.items[1].amount").value(500))
 			.andExpect(jsonPath("$.items[1].outfitId").value(nullValue()))
 			.andExpect(jsonPath("$.nextBefore").value(nullValue())), "$.items[0].id");
 
@@ -331,7 +376,8 @@ class CoinFlowTest {
 		String other = signup();
 		mvc.perform(auth(get("/api/v1/coins/ledger"), other, null))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.items", hasSize(0)));
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.items[0].reason").value("SIGNUP_GIFT"));
 	}
 
 	// ---- 시간 적립 ----
@@ -341,7 +387,7 @@ class CoinFlowTest {
 		clock.seoul("2026-10-21T09:00");
 		String token = signup();
 		// check-in 전에는 쌓이지 않는다.
-		wallet(token).andExpect(jsonPath("$.balance").value(0))
+		wallet(token).andExpect(jsonPath("$.balance").value(500))
 			.andExpect(jsonPath("$.passive.collectable").value(0))
 			.andExpect(jsonPath("$.passive.dailyLimit").value(10))
 			.andExpect(jsonPath("$.passive.nextAt").value(nullValue()));
@@ -361,7 +407,7 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.passive.nextAt").value("2026-10-21T11:10:00+09:00"));
 		mvc.perform(auth(post("/api/v1/coins/collect"), token, null))
 			.andExpect(jsonPath("$.collected").value(1))
-			.andExpect(jsonPath("$.wallet.balance").value(201))
+			.andExpect(jsonPath("$.wallet.balance").value(501))
 			.andExpect(jsonPath("$.wallet.passive.collectable").value(0))
 			.andExpect(jsonPath("$.wallet.passive.collectedToday").value(1));
 
@@ -375,11 +421,11 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.passive.nextAt").value(nullValue()));
 		mvc.perform(auth(post("/api/v1/coins/collect"), token, null))
 			.andExpect(jsonPath("$.collected").value(9))
-			.andExpect(jsonPath("$.wallet.balance").value(210))
+			.andExpect(jsonPath("$.wallet.balance").value(510))
 			.andExpect(jsonPath("$.wallet.passive.collectedToday").value(10));
 		mvc.perform(auth(post("/api/v1/coins/collect"), token, null))
 			.andExpect(jsonPath("$.collected").value(0))
-			.andExpect(jsonPath("$.wallet.balance").value(210));
+			.andExpect(jsonPath("$.wallet.balance").value(510));
 	}
 
 	@Test
@@ -396,7 +442,7 @@ class CoinFlowTest {
 			.andExpect(jsonPath("$.passive.collectedToday").value(0))
 			.andExpect(jsonPath("$.passive.nextAt").value(nullValue()));
 		mvc.perform(auth(post("/api/v1/coins/collect"), token, null)).andExpect(jsonPath("$.collected").value(0));
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(200))
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(500))
 			.andExpect(jsonPath("$.wallet.passive.collectable").value(0))
 			.andExpect(jsonPath("$.wallet.passive.nextAt").value("2026-10-22T01:30:00+09:00"));
 	}
@@ -419,29 +465,29 @@ class CoinFlowTest {
 
 		// 어제(10/21) 0원 = 지킨 날
 		clock.seoul("2026-10-22T12:00");
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(205))
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(505))
 			.andExpect(jsonPath("$.rewards", hasSize(1)))
 			.andExpect(jsonPath("$.rewards[0].reason").value("BUDGET_BONUS"))
 			.andExpect(jsonPath("$.rewards[0].amount").value(5))
 			.andExpect(jsonPath("$.rewards[0].refDate").value("2026-10-21"));
 		ackAll(token);
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(205)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(505)).andExpect(jsonPath("$.rewards", hasSize(0)));
 
 		// 10/22 예산을 넘김 → 10/23에는 보너스 없음
 		long budget = recordToday(token);
 		spend(token, budget + 1);
 		clock.seoul("2026-10-23T12:00");
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(205)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(505)).andExpect(jsonPath("$.rewards", hasSize(0)));
 
 		// 10/23 지킴, 10/24 넘김, 10/24엔 앱을 안 열고 10/25에 열면 어제(10/24) 하루치만 본다 → 이틀 전(10/23)은 안 줌
 		clock.seoul("2026-10-24T12:00");
 		spend(token, 500_000);
 		clock.seoul("2026-10-25T12:00");
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(205)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(505)).andExpect(jsonPath("$.rewards", hasSize(0)));
 
 		// 10/25 지킴(지출 없음) → 10/26 +5
 		clock.seoul("2026-10-26T09:00");
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(210))
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(510))
 			.andExpect(jsonPath("$.rewards[0].refDate").value("2026-10-25"));
 	}
 
@@ -453,7 +499,7 @@ class CoinFlowTest {
 		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
 		ackAll(token);
 		clock.seoul("2026-10-22T12:00");
-		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(200)).andExpect(jsonPath("$.rewards", hasSize(0)));
+		checkIn(token).andExpect(jsonPath("$.wallet.balance").value(500)).andExpect(jsonPath("$.rewards", hasSize(0)));
 	}
 
 	// ---- 코스튬 ----
@@ -462,7 +508,8 @@ class CoinFlowTest {
 	void concurrentPurchaseChargesOnce() throws Exception {
 		clock.seoul("2026-10-21T09:00");
 		String token = signup();
-		checkIn(token); // 200
+		checkIn(token);
+		jdbc.update("update coin_wallets set balance = 200 where user_id = ?", userId(token));
 
 		CountDownLatch start = new CountDownLatch(1);
 		ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -517,7 +564,7 @@ class CoinFlowTest {
 			assertThat(outfits.findById(id).orElseThrow().isActive()).isTrue();
 		}
 		mvc.perform(auth(post("/api/v1/outfits/outfit-02/purchase"), token, null)).andExpect(status().isOk());
-		wallet(token).andExpect(jsonPath("$.balance").value(0));
+		wallet(token).andExpect(jsonPath("$.balance").value(300));
 	}
 
 	/** V10 전에 잭팟을 산 사람: 레벨이 낮아도 계속 보유하고, 낸 코인을 한 번 돌려받아 모달로 안내받는다. */
@@ -569,7 +616,7 @@ class CoinFlowTest {
 
 		// 초기 예산 설정 전: 최고 레벨 1, 기본 캐릭터(costume-lv1) 적용 중
 		mvc.perform(auth(get("/api/v1/outfits"), token, null))
-			.andExpect(jsonPath("$.balance").value(200))
+			.andExpect(jsonPath("$.balance").value(500))
 			.andExpect(jsonPath("$.equippedOutfitId").value(nullValue()))
 			.andExpect(jsonPath("$.peakLevel").value(1))
 			.andExpect(jsonPath("$.items", hasSize(16)))
@@ -586,7 +633,7 @@ class CoinFlowTest {
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("OUTFIT_NOT_FOR_SALE"));
 		}
-		wallet(token).andExpect(jsonPath("$.balance").value(200));
+		wallet(token).andExpect(jsonPath("$.balance").value(500));
 
 		for (String id : List.of("costume-lv2", "outfit-01", "no-such-outfit")) {
 			mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"" + id + "\"}"))
@@ -597,7 +644,7 @@ class CoinFlowTest {
 		// 사도 바로 적용되지 않고, 적용하면 하나만 equipped
 		mvc.perform(auth(post("/api/v1/outfits/outfit-03/purchase"), token, null))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.balance").value(0))
+			.andExpect(jsonPath("$.balance").value(300))
 			.andExpect(jsonPath("$.equippedOutfitId").value(nullValue()));
 		mvc.perform(auth(put("/api/v1/outfits/equipped"), token, "{\"outfitId\":\"outfit-03\"}"))
 			.andExpect(status().isOk())
@@ -674,19 +721,19 @@ class CoinFlowTest {
 		mvc.perform(auth(post("/api/v1/referrals"), b, "{\"code\":\"  " + codeA.toLowerCase() + " \"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.amount").value(100))
-			.andExpect(jsonPath("$.wallet.balance").value(100));
+			.andExpect(jsonPath("$.wallet.balance").value(600));
 		mvc.perform(auth(post("/api/v1/referrals"), b, "{\"code\":\"" + codeC + "\"}"))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("REFERRAL_ALREADY"));
 		mvc.perform(auth(get("/api/v1/referrals/me"), b, null)).andExpect(jsonPath("$.registered").value(true));
-		checkIn(b).andExpect(jsonPath("$.wallet.balance").value(300))
+		checkIn(b).andExpect(jsonPath("$.wallet.balance").value(600))
 			.andExpect(jsonPath("$.rewards[*].reason").value(contains("SIGNUP_GIFT")));
 
 		// 코드 주인은 다음 check-in에서 모달(오래된 순: 추천 보상이 가입 선물보다 먼저 생김)
 		mvc.perform(auth(get("/api/v1/referrals/me"), a, null)).andExpect(jsonPath("$.invitedCount").value(1));
-		checkIn(a).andExpect(jsonPath("$.wallet.balance").value(300))
-			.andExpect(jsonPath("$.rewards[*].reason").value(contains("REFERRAL_INVITER", "SIGNUP_GIFT")))
-			.andExpect(jsonPath("$.rewards[0].amount").value(100));
+		checkIn(a).andExpect(jsonPath("$.wallet.balance").value(600))
+			.andExpect(jsonPath("$.rewards[*].reason").value(contains("SIGNUP_GIFT", "REFERRAL_INVITER")))
+			.andExpect(jsonPath("$.rewards[1].amount").value(100));
 
 		// 기간·인원 제한 없음
 		mvc.perform(auth(post("/api/v1/referrals"), c, "{\"code\":\"" + codeA + "\"}")).andExpect(status().isOk());
@@ -708,7 +755,7 @@ class CoinFlowTest {
 
 		// 초대한 사람이 탈퇴해도 등록한 사람의 기록·코인은 남고, 다시 등록할 수 없다.
 		mvc.perform(auth(get("/api/v1/referrals/me"), b, null)).andExpect(jsonPath("$.registered").value(true));
-		wallet(b).andExpect(jsonPath("$.balance").value(100));
+		wallet(b).andExpect(jsonPath("$.balance").value(600));
 		mvc.perform(auth(post("/api/v1/referrals"), b, "{\"code\":\"" + codeC + "\"}"))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("REFERRAL_ALREADY"));

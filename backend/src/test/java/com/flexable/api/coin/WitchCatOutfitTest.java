@@ -38,7 +38,7 @@ class WitchCatOutfitTest {
 		String bearer = "Bearer " + JsonPath.read(signup, "$.accessToken");
 		mvc.perform(post("/api/v1/coins/check-in").header("Authorization", bearer))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.wallet.balance").value(200));
+			.andExpect(jsonPath("$.wallet.balance").value(500));
 		mvc.perform(get("/api/v1/outfits").header("Authorization", bearer))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.items[?(@.id == 'outfit-05')].name").value(contains("고양마녀")))
@@ -51,7 +51,7 @@ class WitchCatOutfitTest {
 			.andExpect(jsonPath("$.code").value("OUTFIT_LOCKED"));
 		mvc.perform(post("/api/v1/outfits/outfit-05/purchase").header("Authorization", bearer))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.balance").value(0))
+			.andExpect(jsonPath("$.balance").value(300))
 			.andExpect(jsonPath("$.equippedOutfitId").value(nullValue()))
 			.andExpect(jsonPath("$.items[?(@.id == 'outfit-05')].owned").value(contains(true)));
 		mvc.perform(post("/api/v1/outfits/outfit-05/purchase").header("Authorization", bearer))
@@ -63,11 +63,11 @@ class WitchCatOutfitTest {
 			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-05"))
 			.andExpect(jsonPath("$.items[?(@.equipped == true)].id").value(contains("outfit-05")));
 		mvc.perform(post("/api/v1/outfits/outfit-04/purchase").header("Authorization", bearer))
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.code").value("COINS_NOT_ENOUGH"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.balance").value(100));
 		mvc.perform(get("/api/v1/coins").header("Authorization", bearer))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.balance").value(0))
+			.andExpect(jsonPath("$.balance").value(100))
 			.andExpect(jsonPath("$.equippedOutfitId").value("outfit-05"));
 	}
 }
