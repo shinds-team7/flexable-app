@@ -78,7 +78,8 @@ export function ChatbotScreen() {
 function ChatbotRoom() {
   const params = useLocalSearchParams<{ question?: string }>();
   const session = useSession();
-  const [step, setStep] = useState<Step>("loading");
+  const mateKey = session.user ? `${MATE_KEY}.${session.user.id}` : null;
+  const [step, setStep] = useState<Step>(session.user ? "loading" : "select");
   const [mate, setMate] = useState<MateId>("ANALYST");
   // 톱니로 스타일 선택을 열었으면 돌아갈 화면(메뉴·대화), 처음 선택이면 null
   const [settingsFrom, setSettingsFrom] = useState<"menu" | "chat" | null>(
@@ -135,7 +136,8 @@ function ChatbotRoom() {
   // 한 번 고른 스타일은 저장해 두고 다음부터는 메뉴부터 보여 준다.
   useEffect(() => {
     let alive = true;
-    readStorage(MATE_KEY)
+    if (!mateKey) return;
+    readStorage(mateKey)
       .then((v) => {
         if (!alive) return;
         const saved = mates.find((m) => m.id === v?.toUpperCase());
@@ -148,7 +150,7 @@ function ChatbotRoom() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [mateKey]);
 
   const mateName = mates.find((m) => m.id === mate)!.name;
 
@@ -403,7 +405,7 @@ function ChatbotRoom() {
 
   const chooseMate = (m: MateId) => {
     setMate(m);
-    writeStorage(MATE_KEY, m).catch(() => {});
+    if (mateKey) writeStorage(mateKey, m).catch(() => {});
     if (settingsFrom === "chat") {
       setSettingsFrom(null);
       setStep("chat");

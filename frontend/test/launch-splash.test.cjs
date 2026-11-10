@@ -37,6 +37,7 @@ function mount() {
       if (name === 'expo-splash-screen') return { hideAsync: () => Promise.resolve() };
       if (name === 'expo-status-bar') return { StatusBar: 'StatusBar' };
       if (name === './LaunchUpdate') return { useLaunchUpdateSettled: () => settled };
+      if (name === './splashVisibility') return { markSplashHidden: () => {} };
       if (name.endsWith('.png')) return name;
       throw Error(name);
     },

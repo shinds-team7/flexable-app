@@ -98,11 +98,29 @@ test("analysis resets to current month after navigating away and chart selects e
     page.getByRole("radio", { name: "기본 홈", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("tab", { name: "분석", exact: true }).click();
-  // 다시 들어오면 기본인 이번 주로 돌아온다(월 선택 줄 없음)
-  await expect(page.getByText("2026년 10월", { exact: true })).toHaveCount(0);
+  // 다시 들어오면 기본인 이번 달로 돌아온다.
+  await expect(page.getByText("2026년 10월", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "이번 주", exact: true }),
+    page.getByRole("tab", { name: "이번 달", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
+});
+
+test("analysis keeps its cards while the next month loads", async ({ page }) => {
+  await session(page);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/v1/analysis/summary?*", async (route) => {
+    if (new URL(route.request().url()).searchParams.get("from") === "2026-11-01")
+      await Promise.race([held, new Promise((resolve) => setTimeout(resolve, 5000))]);
+    await route.fallback();
+  });
+  await page.goto("/analysis");
+  await expect(page.getByText("카테고리별 사용 현황", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "다음 달", exact: true }).click();
+  await expect(page.getByText("2026년 11월", { exact: true })).toBeVisible();
+  await expect(page.getByText("카테고리별 사용 현황", { exact: true })).toBeVisible();
+  release();
+  await expect(page.getByText("2026년 11월", { exact: true })).toBeVisible();
 });
 
 test("only tapped notifications lose their highlight, including after re-entry and reload", async ({
@@ -178,6 +196,35 @@ test("calendar branches into future planning and past records with the selected 
   }));
   expect(fonts.input).toContain("Pretendard");
   expect(fonts.placeholder).toBe(fonts.input);
+});
+
+test("changing months keeps the transaction card visible and filters swipe", async ({ page }) => {
+  await session(page);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/v1/transactions?*", async (route) => {
+    if (new URL(route.request().url()).searchParams.get("from") === "2026-11-01")
+      await Promise.race([held, new Promise((resolve) => setTimeout(resolve, 5000))]);
+    await route.fallback();
+  });
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: /점심, 12,000원, 상세 보기/ })).toBeVisible();
+  await page.getByRole("button", { name: "다음 달", exact: true }).click();
+  await expect(page.getByText("2026년 11월", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /점심, 12,000원, 상세 보기/ })).toBeVisible();
+  await expect(page.getByTestId("transaction-page-ALL").getByText("거래내역이 없어요", { exact: true })).toHaveCount(0);
+  release();
+  await expect(page.getByTestId("transaction-page-ALL").getByText("거래내역이 없어요", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "이전 달", exact: true }).click();
+  await expect(page.getByRole("button", { name: /점심, 12,000원, 상세 보기/ })).toBeVisible();
+  const pager = page.getByLabel("거래 종류별 목록");
+  const box = await pager.boundingBox();
+  if (!box) throw new Error("Transaction pager is missing");
+  await page.mouse.move(box.x + box.width * 0.8, box.y + 40);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + 40, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.getByRole("tab", { name: "지출", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("issued web code offers a clickable website card without putting the code in the URL", async ({

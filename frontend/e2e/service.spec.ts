@@ -213,7 +213,7 @@ test("real service lifecycle, retry idempotency, edits, logout and deletion", as
     ),
   ).toBeVisible();
   await page.getByRole("tab", { name: "내역", exact: true }).click();
-  await expect(page.getByText("테스트 점심", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("transaction-page-ALL").getByText("테스트 점심", { exact: true })).toBeVisible();
   // 내역 has no add button of its own; income is picked in the form opened by the tab bar + button.
   await expect(
     page.getByRole("button", { name: "+ 거래 추가", exact: true }),

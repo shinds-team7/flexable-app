@@ -10,6 +10,7 @@ import {
   Loading,
   money,
   seoulDate,
+  usePreviousWhileLoading,
   useResource,
 } from "./ui";
 import type { Analysis, Today } from "./types";
@@ -20,7 +21,7 @@ const SPANS = [
   [12, "1년"],
 ] as const;
 export function AnalysisScreen() {
-  const [period, setPeriod] = useState("week");
+  const [period, setPeriod] = useState("month");
   // "전체"에서 고르는 기간(개월). 서버가 한 번에 읽는 최대 366일 안이다
   const [span, setSpan] = useState(12);
   const [spanOpen, setSpanOpen] = useState(false);
@@ -38,7 +39,7 @@ export function AnalysisScreen() {
         openedCategory.current = false;
         return;
       }
-      setPeriod("week");
+      setPeriod("month");
       setSpan(12);
       setOffset(0);
       setSelection(undefined);
@@ -91,7 +92,7 @@ export function AnalysisScreen() {
     ? `/analysis/summary?from=${from}&to=${to}` : null);
   const result = offset !== 0 && period !== "all" ? shiftedResult
     : period === "week" ? weekResult : period === "month" ? monthResult : allResult;
-  const s = result.data;
+  const { displayData: s } = usePreviousWhileLoading(result.data, result.loading);
   const selected =
     selection?.from === from && selection.to === to
       ? s?.byCategory.find((c) => c.categoryId === selection.categoryId)

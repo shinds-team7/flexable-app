@@ -141,14 +141,9 @@ test("AI가 도구 없이 배분 변경 버튼을 안내해도 실제 배분 화
     });
   });
   await page.goto("/chatbot");
-  if (
-    await page
-      .getByRole("radio", { name: "다정한 친구", exact: true })
-      .isVisible()
-  ) {
-    await page.getByRole("radio", { name: "다정한 친구", exact: true }).click();
-    await page.getByRole("button", { name: "선택하고 시작하기" }).click();
-  }
+  await page.getByRole("radio", { name: "다정한 친구", exact: true }).click();
+  await page.getByRole("button", { name: "선택하고 시작하기" }).click();
+  await page.getByRole("button", { name: "기타", exact: true }).click();
   await page
     .getByLabel("AI 메이트에게 질문", { exact: true })
     .fill("배분을 바꾸려면?");

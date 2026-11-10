@@ -12,10 +12,10 @@ Notifications.setNotificationHandler({
 });
 let asking: Promise<boolean> | null = null;
 /** 권한은 처음 한 번만 묻는다. 두 알림이 동시에 예약해도 한 번만 묻도록 묻는 중인 요청을 같이 쓴다. */
-export function notificationsAllowed() {
+export function notificationsAllowed(requestIfDenied = false) {
   asking ??= (async () => {
-    let { status } = await Notifications.getPermissionsAsync();
-    if (status === "undetermined")
+    let { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    if (status === "undetermined" || (requestIfDenied && status !== "granted" && canAskAgain))
       ({ status } = await Notifications.requestPermissionsAsync());
     return status === "granted";
   })().finally(() => {

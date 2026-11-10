@@ -7,6 +7,7 @@ import { session } from "./ui-ux-fixtures";
 test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장·약속 설정은 일정 안내부터", async ({
   page,
 }) => {
+  await page.addInitScript(() => localStorage.setItem("chatbot.mate", "ANALYST"));
   await session(page);
   const chats: { mate: string; messages: { role: string; text: string }[] }[] =
     [];
@@ -37,6 +38,13 @@ test("AI 메이트: 실제 답변·서버 카드·확인 뒤에만 배분 저장
   await page.goto("/chatbot");
   await page.getByRole("radio", { name: "다정한 친구", exact: true }).click();
   await page.getByRole("button", { name: "선택하고 시작하기" }).click();
+  const note = page.getByText(/입력한 잔액·기록 기준으로 답해요/);
+  const composer = page.getByPlaceholder("궁금한 내용을 입력해보세요...");
+  await expect(note).toBeVisible();
+  const noteBox = await note.boundingBox();
+  const composerBox = await composer.boundingBox();
+  if (!noteBox || !composerBox) throw new Error("AI mate menu layout is missing");
+  expect(noteBox.y + noteBox.height).toBeLessThan(composerBox.y);
 
   // 약속 설정은 일정을 말해 달라는 안내와 예시 질문부터 보여 주고, 누르기 전에는 보내지 않는다
   await page.getByRole("button", { name: "약속 설정", exact: true }).click();
@@ -374,7 +382,7 @@ test("AI 메이트: 처음 들어오면 음성 답변을 쓸지 묻고, 대화 �
   ).toHaveLength(1);
 });
 
-test("AI 메이트: 음성 입력은 들은 문장을 입력창에 넣고, 권한 거부·인식 실패는 안내만 한다", async ({
+test("AI 메이트: 음성 인식 완료 시 한 번 전송하고, 권한 거부·인식 실패는 안내만 한다", async ({
   page,
 }) => {
   // 브라우저 음성 인식(webkitSpeechRecognition)을 가짜로 바꾼다. window.__voice로 결과를 고른다.
@@ -447,12 +455,10 @@ test("AI 메이트: 음성 입력은 들은 문장을 입력창에 넣고, 권�
     page.getByRole("button", { name: "음성 입력 멈추기", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/^듣고 있어요/)).toHaveCount(0);
-  // 들은 문장은 입력창에만 들어가고, [보내기]를 눌러야 보낸다
-  await expect(input).toHaveValue("이번 주 식비 얼마야");
-  await expect(mic).toBeVisible();
-  expect(chats).toHaveLength(0);
-  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  // 최종 인식 결과는 한 번만 자동으로 보낸다.
   await expect(page.getByText("식비는 20,000원이에요.")).toBeVisible();
+  await expect(input).toHaveValue("");
+  expect(chats).toHaveLength(1);
   expect(chats[0].messages.at(-1)).toEqual({
     role: "USER",
     text: "이번 주 식비 얼마야",
@@ -461,9 +467,9 @@ test("AI 메이트: 음성 입력은 들은 문장을 입력창에 넣고, 권�
   // 대화 화면에서는 듣는 동안 사용자 쪽에 "…" 말풍선이 뜨고, 끝나면 사라진다
   await mic.click();
   await expect(page.getByLabel("음성을 듣고 있어요")).toBeVisible();
-  await expect(input).toHaveValue("이번 주 식비 얼마야");
   await expect(page.getByLabel("음성을 듣고 있어요")).toHaveCount(0);
-  await input.fill("");
+  await expect.poll(() => chats.length).toBe(2);
+  await expect(input).toHaveValue("");
 
   // 권한 거부: 안내하고 글자 입력은 그대로 쓸 수 있다
   await page.evaluate(() => {

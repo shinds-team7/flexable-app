@@ -55,6 +55,7 @@ export function VoiceScheduleModal({
 
 function VoiceSchedule({ onClose }: { onClose: () => void }) {
   const session = useSession();
+  const userId = session.user?.id;
   const toast = useToast();
   const voiceReply = useVoiceReply();
   const [state, setState] = useState<State>({ kind: "listening" });
@@ -96,7 +97,7 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
       controller.current = c;
       try {
         const saved = (
-          await readStorage("chatbot.mate").catch(() => null)
+          await readStorage(`chatbot.mate.${userId}`).catch(() => null)
         )?.toUpperCase();
         const mate = MATES.find((m) => m === saved) ?? "ANALYST";
         const body: ChatRequest = {
@@ -133,7 +134,7 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
         setState({ kind: "message", heard: text, text: failText(e) });
       }
     },
-    [voiceReply.on],
+    [voiceReply.on, userId],
   );
 
   // 말이 끝나면(듣기가 멈추면) 들은 문장을 보낸다. 못 알아들었으면 안내를 보여 준다

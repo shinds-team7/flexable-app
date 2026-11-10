@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { Pressable, View } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { Card, Screen, Segment, T } from "@/components/ui";
 import { MonthCalendar, type DayTotals } from "@/components/MonthCalendar";
 import {
@@ -11,6 +11,7 @@ import {
   money,
   seoulDate,
   toSeoulInput,
+  usePreviousWhileLoading,
   useResource,
 } from "./ui";
 import type { Transaction } from "./types";
@@ -23,6 +24,8 @@ const NO_CATEGORY = {
   color: colors.textMuted,
 };
 const categoryOf = (t: Transaction) => t.category ?? NO_CATEGORY;
+const FILTERS = ["ALL", "EXPENSE", "INCOME"] as const;
+type Filter = (typeof FILTERS)[number];
 export function TransactionsScreen() {
   const extensions = useServerExtensions();
   const [offset, setOffset] = useState(0);
@@ -32,7 +35,14 @@ export function TransactionsScreen() {
       setOffset(0);
     }, []),
   );
-  const [filter, setFilter] = useState("ALL");
+  const [filter, setFilter] = useState<Filter>("ALL");
+  const [pagerWidth, setPagerWidth] = useState(0);
+  const pager = useRef<ScrollView>(null);
+  const mouseStart = useRef<number | null>(null);
+  const chooseFilter = (value: Filter) => {
+    setFilter(value);
+    pager.current?.scrollTo({ x: FILTERS.indexOf(value) * pagerWidth, animated: true });
+  };
   const [y, m] = seoulDate().split("-").map(Number);
   const month = new Date(Date.UTC(y, m - 1 + offset, 1));
   const from = month.toISOString().slice(0, 10);
@@ -44,14 +54,8 @@ export function TransactionsScreen() {
   const { data, error, loading, retry } = useResource<{ items: Transaction[] }>(
     `/transactions?from=${from}&to=${to}`,
   );
-  const items = data?.items ?? [];
-  const groups = new Map<string, Transaction[]>();
-  items
-    .filter((t) => filter === "ALL" || t.type === filter)
-    .forEach((t) => {
-      const d = toSeoulInput(t.occurredAt).slice(0, 10);
-      groups.set(d, [...(groups.get(d) ?? []), t]);
-    });
+  const { displayData } = usePreviousWhileLoading(data, loading);
+  const items = displayData?.items ?? [];
   const total = (type: string) =>
     items.filter((x) => x.type === type).reduce((a, x) => a + x.amount, 0);
   // 달력은 아래 목록 필터와 상관없이 그달의 지출·수입을 모두 날짜별로 보여준다.
@@ -119,26 +123,79 @@ export function TransactionsScreen() {
         />
       </Card>
       <Segment
+        animated
         items={[
           { key: "ALL", label: "전체" },
           { key: "EXPENSE", label: "지출" },
           { key: "INCOME", label: "수입" },
         ]}
         value={filter}
-        onChange={setFilter}
+        onChange={chooseFilter}
       />
       <ErrorNotice error={error} retry={retry} />
-      {loading ? (
-        <Loading />
-      ) : (
-        !error && (
-          <Card style={{ paddingVertical: 8 }}>
-            {groups.size === 0 && (
-              <T style={{ paddingVertical: 24, textAlign: "center" }}>
-                거래내역이 없어요
-              </T>
-            )}
-            {[...groups].map(([date, list], i) => (
+      {loading && !displayData && <Loading />}
+      {displayData && !error && (
+        <View onLayout={(event) => setPagerWidth(event.nativeEvent.layout.width)}>
+          {pagerWidth > 0 && (
+            <ScrollView
+              ref={pager}
+              accessibilityLabel="거래 종류별 목록"
+              horizontal
+              pagingEnabled
+              snapToInterval={pagerWidth}
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={(event) => {
+                const index = Math.round(event.nativeEvent.contentOffset.x / pagerWidth);
+                if (FILTERS[index] && FILTERS[index] !== filter) setFilter(FILTERS[index]);
+              }}
+              onPointerDown={Platform.OS === "web" ? (event) => {
+                if (event.nativeEvent.pointerType === "mouse") mouseStart.current = event.nativeEvent.pageX;
+              } : undefined}
+              onPointerUp={Platform.OS === "web" ? (event) => {
+                const start = mouseStart.current;
+                mouseStart.current = null;
+                if (start === null) return;
+                const direction = start - event.nativeEvent.pageX;
+                if (Math.abs(direction) < 48) return;
+                const next = FILTERS[FILTERS.indexOf(filter) + (direction > 0 ? 1 : -1)];
+                if (next) chooseFilter(next);
+              } : undefined}
+              onPointerCancel={() => { mouseStart.current = null; }}
+              style={Platform.OS === "web" ? ({ scrollSnapType: "x mandatory" } as object) : undefined}
+            >
+              {FILTERS.map((type) => (
+                <View
+                  key={type}
+                  testID={`transaction-page-${type}`}
+                  aria-hidden={filter !== type}
+                  importantForAccessibility={filter === type ? "auto" : "no-hide-descendants"}
+                  style={{ width: pagerWidth, ...(Platform.OS === "web" ? { scrollSnapAlign: "start" } as object : {}) }}
+                >
+                  <TransactionList items={items.filter((item) => type === "ALL" || item.type === type)} />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
+    </Screen>
+  );
+}
+
+function TransactionList({ items }: { items: Transaction[] }) {
+  const groups = new Map<string, Transaction[]>();
+  items.forEach((t) => {
+    const d = toSeoulInput(t.occurredAt).slice(0, 10);
+    groups.set(d, [...(groups.get(d) ?? []), t]);
+  });
+  return (
+    <Card style={{ paddingVertical: 8 }}>
+      {groups.size === 0 && (
+        <T style={{ paddingVertical: 24, textAlign: "center" }}>거래내역이 없어요</T>
+      )}
+      {[...groups].map(([date, list], i) => (
               <View
                 key={date}
                 style={
@@ -202,11 +259,8 @@ export function TransactionsScreen() {
                   </Pressable>
                 ))}
               </View>
-            ))}
-          </Card>
-        )
-      )}
-    </Screen>
+      ))}
+    </Card>
   );
 }
 function MonthStep({ step, onPress }: { step: -1 | 1; onPress: () => void }) {
