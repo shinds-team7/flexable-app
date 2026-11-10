@@ -15,6 +15,9 @@ public interface SeedMoneyEntryRepository extends JpaRepository<SeedMoneyEntry, 
 
 	boolean existsByUserIdAndCycleEnd(Long userId, LocalDate cycleEnd);
 
+	@Query("select coalesce(sum(e.amount), 0) from SeedMoneyEntry e where e.userId = :userId")
+	long sumByUserId(Long userId);
+
 	/** 잔액 기준 시각 뒤에 옮긴 돈. 통장 잔액에서 빠진 돈이라 추정 잔액에서 뺀다. */
 	@Query("select coalesce(sum(e.amount), 0) from SeedMoneyEntry e where e.userId = :userId and e.createdAt > :since")
 	long sumCreatedAfter(Long userId, Instant since);

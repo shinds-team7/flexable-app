@@ -93,6 +93,7 @@ public class SeedMoneyService {
 				yield req.amount();
 			}
 			case EXTRA -> throw ApiException.invalid("choice", "바로 옮기기는 지금 보내기로 해 주세요");
+			case ADJUSTMENT -> throw ApiException.invalid("choice", "총액 정정은 시드머니 수정에서 해 주세요");
 		};
 		entries.save(new SeedMoneyEntry(userId, p.cycleEnd(), req.choice(), amount, clock.instant()));
 		return view(userId, s, today);
@@ -155,7 +156,23 @@ public class SeedMoneyService {
 		LocalDate today = LocalDate.now(clock.withZone(zone));
 		fixedPoster.postInTransaction(userId, today);
 		BudgetSettings s = settings.findForUpdate(userId).orElseThrow(() -> new ApiException(ErrorCode.BUDGET_NOT_SET));
+		if (base + rowsAscending(userId).stream().mapToLong(Row::amount).sum() < 0) {
+			throw ApiException.invalid("base", "시드머니 총액이 0원보다 작아져요. 시드머니 수정에서 총액을 고쳐 주세요");
+		}
 		s.changeSeedBase(base, clock.instant());
+		return view(userId, s, today);
+	}
+
+	/** 현재 총액만 정정한다. 과거 기록과 생활비 차감액은 바꾸지 않는다. */
+	@Transactional
+	public SeedMoneyResponse setTotal(long userId, long total) {
+		LocalDate today = LocalDate.now(clock.withZone(zone));
+		fixedPoster.postInTransaction(userId, today);
+		BudgetSettings s = settings.findForUpdate(userId).orElseThrow(() -> new ApiException(ErrorCode.BUDGET_NOT_SET));
+		long current = s.getSeedBase() + rowsAscending(userId).stream().mapToLong(Row::amount).sum();
+		if (total != current) {
+			additions.save(SeedMoneyAddition.adjustment(userId, total - current, clock.instant()));
+		}
 		return view(userId, s, today);
 	}
 
@@ -174,7 +191,7 @@ public class SeedMoneyService {
 			rows.add(new Row(e.getCycleEnd(), e.getChoice(), e.getAmount(), e.getCreatedAt()));
 		}
 		for (SeedMoneyAddition a : additions.findByUserIdOrderByCreatedAtAscIdAsc(userId)) {
-			rows.add(new Row(LocalDate.ofInstant(a.getCreatedAt(), zone), SeedMoneyEntry.Choice.EXTRA, a.getAmount(),
+			rows.add(new Row(LocalDate.ofInstant(a.getCreatedAt(), zone), a.isAdjustment() ? SeedMoneyEntry.Choice.ADJUSTMENT : SeedMoneyEntry.Choice.EXTRA, a.getAmount(),
 					a.getCreatedAt()));
 		}
 		rows.sort(Comparator.comparing(Row::createdAt).thenComparing(Row::date));

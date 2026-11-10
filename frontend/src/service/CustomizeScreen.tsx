@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { randomUUID } from "expo-crypto";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors, radius } from "@/theme";
@@ -17,7 +17,11 @@ import {
 import { AdRewardCard } from "./AdRewardCard";
 import { showRewardedAd } from "./adReward";
 import { useSession } from "./Session";
-import { ATTENDANCE_OUTFIT_ID, DEFAULT_OUTFIT_ID } from "./outfits";
+import {
+  ATTENDANCE_OUTFIT_ID,
+  DEFAULT_OUTFIT_ID,
+  LOCKED_OUTFIT_SOURCE,
+} from "./outfits";
 import { OutfitView } from "./OutfitView";
 import { PurchaseModal } from "./PurchaseModal";
 import { RewardModal } from "./RewardModal";
@@ -96,10 +100,14 @@ export function CustomizeScreen() {
   };
 
   const current = list?.items.find((o) => o.id === selected);
-  const levels = (list?.items.filter((o) => o.unlockLevel !== null) ?? [])
-    .sort((a, b) => (a.unlockLevel ?? 0) - (b.unlockLevel ?? 0));
+  const levels = (list?.items.filter((o) => o.unlockLevel !== null) ?? []).sort(
+    (a, b) => (a.unlockLevel ?? 0) - (b.unlockLevel ?? 0),
+  );
   const concepts = [
-    { ids: ["outfit-03", "outfit-07", ATTENDANCE_OUTFIT_ID], placeholders: ["도전과제 달성하기"] },
+    {
+      ids: ["outfit-03", "outfit-07", ATTENDANCE_OUTFIT_ID],
+      placeholders: ["도전과제 달성하기"],
+    },
     { ids: ["outfit-02", "outfit-01"], placeholders: ["도전과제 달성하기"] },
     { ids: ["outfit-04", "outfit-05"], placeholders: ["도전과제 달성하기"] },
     { ids: ["outfit-08"], placeholders: ["업데이트 예정", "업데이트 예정"] },
@@ -218,15 +226,25 @@ export function CustomizeScreen() {
               items={levels}
               selected={selected}
               onSelect={setSelected}
-              placeholders={Array<string>(Math.max(0, LEVEL_SLOTS - levels.length)).fill("레벨 달성 시 해금")}
+              placeholders={Array<string>(
+                Math.max(0, LEVEL_SLOTS - levels.length),
+              ).fill("레벨 달성 시 해금")}
             />
             {concepts.map((concept, index) => (
               <View key={index} style={{ marginTop: 16 }}>
                 <Grid
-                  items={concept.ids.map((id) => list.items.find((o) => o.id === id)).filter((o): o is Outfit => !!o)}
+                  items={concept.ids
+                    .map((id) => list.items.find((o) => o.id === id))
+                    .filter((o): o is Outfit => !!o)}
                   selected={selected}
                   onSelect={setSelected}
-                  placeholders={concept.placeholders.slice(0, 3 - concept.ids.filter((id) => list.items.some((o) => o.id === id)).length)}
+                  placeholders={concept.placeholders.slice(
+                    0,
+                    3 -
+                      concept.ids.filter((id) =>
+                        list.items.some((o) => o.id === id),
+                      ).length,
+                  )}
                 />
               </View>
             ))}
@@ -284,23 +302,9 @@ function Action({
       />
     );
   if (outfit.unlockLevel !== null)
-    return (
-      <Button
-        label="🔒"
-        variant="soft"
-        disabled
-        style={stretch}
-      />
-    );
+    return <Button label="🔒" variant="soft" disabled style={stretch} />;
   if (outfit.id === ATTENDANCE_OUTFIT_ID)
-    return (
-      <Button
-        label="🔒"
-        variant="soft"
-        disabled
-        style={stretch}
-      />
-    );
+    return <Button label="🔒" variant="soft" disabled style={stretch} />;
   const price = outfit.price ?? 0;
   return (
     <Button
@@ -329,10 +333,13 @@ function Grid({
       {items.map((o) => {
         const on = o.id === selected;
         const hideLocked = o.id === ATTENDANCE_OUTFIT_ID && !o.owned;
-        const label =
-          o.owned ? "보유 중" : o.unlockLevel !== null
-            ? "레벨 달성 시 해금" : hideLocked
-              ? "도전과제 달성하기" : `🪙 ${money(o.price ?? 0)}`;
+        const label = o.owned
+          ? "보유 중"
+          : o.unlockLevel !== null
+            ? "레벨 달성 시 해금"
+            : hideLocked
+              ? "도전과제 달성하기"
+              : `🪙 ${money(o.price ?? 0)}`;
         return (
           <Pressable
             key={o.id}
@@ -345,13 +352,7 @@ function Grid({
           >
             <View style={grid.thumbBox}>
               {hideLocked && !o.owned ? (
-                <View style={[grid.thumb, grid.center]}>
-                  <Ionicons
-                    name="lock-closed"
-                    size={18}
-                    color={colors.textMuted}
-                  />
-                </View>
+                <LockedOutfitThumbnail />
               ) : (
                 <OutfitView outfitId={o.id} play={false} style={grid.thumb} />
               )}
@@ -374,15 +375,29 @@ function Grid({
           accessibilityLabel={`준비 중인 코스튬, ${caption}`}
           style={grid.cell}
         >
-          <View style={[grid.thumb, grid.center]}>
-            <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
-          </View>
+          <LockedOutfitThumbnail />
           {/* 이름 칸 높이를 맞춰 옆 칸과 줄이 어긋나지 않게 한다 */}
           <T size={12} color={colors.textMuted}>
             {caption}
           </T>
         </View>
       ))}
+    </View>
+  );
+}
+
+/** 출석·도전과제·업데이트 예정은 흰색 고양이 위에 같은 잠금 표시를 겹친다. */
+function LockedOutfitThumbnail() {
+  return (
+    <View style={grid.thumb} testID="locked-outfit-thumbnail">
+      <Image
+        source={LOCKED_OUTFIT_SOURCE}
+        resizeMode="contain"
+        style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+      />
+      <View style={[StyleSheet.absoluteFill, grid.shade]}>
+        <Ionicons name="lock-closed" size={18} color="#fff" />
+      </View>
     </View>
   );
 }
@@ -416,7 +431,6 @@ const grid = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.soft,
-    backgroundColor: "rgba(16, 24, 40, 0.32)",
+    backgroundColor: "rgba(16, 24, 40, 0.64)",
   },
-  center: { alignItems: "center", justifyContent: "center" },
 });

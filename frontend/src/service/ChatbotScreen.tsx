@@ -6,7 +6,7 @@
  * [반영]·[수정]을 누른 뒤에만 POST /scheduled-expenses로 저장한다. 하루 예산은 GET /budget/today의 서버 값을 그대로 보여 준다.
  * AI 음성 답변을 켜 두면 예정 지출 확인 질문 한 줄만 기기 음성 합성으로 읽는다.
  */
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Keyboard, Platform, ScrollView, View } from "react-native";
 import { goBack } from "@/components/SubHeader";
@@ -192,7 +192,11 @@ function ChatbotRoom() {
       if (stale()) return;
       const schedule =
         result.action?.type === "SCHEDULE" ? result.action.schedule : undefined;
-      const income = result.action?.type === "INCOME_TRANSACTION" || result.action?.type === "INCOME_SETTINGS" ? result.action : undefined;
+      const income =
+        result.action?.type === "INCOME_TRANSACTION" ||
+        result.action?.type === "INCOME_SETTINGS"
+          ? result.action
+          : undefined;
       if (result.action) proposal.current = schedule ?? null;
       push({
         from: "bot",
@@ -204,7 +208,17 @@ function ChatbotRoom() {
         choices:
           result.action && !schedule && !income
             ? confirmChoices(result.action)
-            : undefined,
+            : !result.action &&
+                /배분/.test(result.reply) &&
+                /예산|요일|하루/.test(result.reply) &&
+                /바꾸|변경|조정|버튼/.test(result.reply)
+              ? [
+                  {
+                    label: "하루 예산 배분 바꾸기",
+                    run: () => router.push("/budget/day-weights"),
+                  },
+                ]
+              : undefined,
       });
       if (schedule && speakOn.current) speak(confirmSpeech(schedule));
     } catch (e) {

@@ -94,6 +94,9 @@ public class BudgetService {
 				req.cardUnpaid() == null ? 0 : req.cardUnpaid(), now);
 		// 1.3.0 이전 앱은 seedBase를 보내지 않는다. 그때는 저장된 값을 지키도록 null이면 바꾸지 않는다.
 		if (req.seedBase() != null) {
+			if (req.seedBase() + seedEntries.sumByUserId(userId) + seedAdditions.sumByUserId(userId) < 0) {
+				throw ApiException.invalid("seedBase", "시드머니 총액이 0원보다 작아져요. 홈의 시드머니 수정에서 총액을 고쳐 주세요");
+			}
 			s.applySeedBase(req.seedBase());
 		}
 		settings.save(s);

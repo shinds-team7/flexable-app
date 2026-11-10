@@ -33,6 +33,32 @@ const lines = (rows) =>
 const brief = (r) =>
   r.items.map((i) => [i.date.slice(5), i.title, i.type, i.amount]);
 
+test("filtered or skipped transactions do not invalidate an explicit signed amount", () => {
+  const result = parseReceipt(lines([
+    [100, [40, "10월 25일"]],
+    [150, [160, "가상상점"], [800, "-5,000원"]],
+    [190, [160, "체크카드"], [800, "잔액 10,000원"]],
+    [250, [160, "가상급여"], [800, "+20,000원"]],
+    [290, [160, "입금"], [800, "잔액 30,000원"]],
+  ]), TODAY);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].type, "EXPENSE");
+  assert.equal(result.items[0].amount, 5000);
+  assert.deepEqual(result.items[0].review, []);
+});
+
+test("an unsigned amount with unmatched balances requires a type instead of guessing expense", () => {
+  const result = parseReceipt(lines([
+    [100, [40, "10월 25일"]],
+    [150, [160, "가상거래"], [800, "5,000원"]],
+    [190, [160, "거래"], [800, "잔액 10,000원"]],
+    [250, [160, "가상상점"], [800, "-20,000원"]],
+    [290, [160, "체크카드"], [800, "잔액 30,000원"]],
+  ]), TODAY);
+  assert.equal(result.items[0].type, null);
+  assert.deepEqual(result.items[0].review, [api.REVIEW_TYPE]);
+});
+
 const TOSS1 = lines([
   [320, [50, "2,336,700원"]],
   [437, [180, "채우기"], [620, "보내기"]],
@@ -195,12 +221,12 @@ test("kakaopay: amount sits under the title, no balance column", () => {
   );
 });
 
-test("a balance that does not match asks for review", () => {
+test("a misread balance does not invalidate a clearly signed transaction", () => {
   const broken = KAKAOBANK.map((l) =>
     l.text === "잔액 2,150,000원" ? { ...l, text: "잔액 2,100,000원" } : l,
   );
   const r = parseReceipt(broken, TODAY);
-  assert.ok(r.items[0].review.length > 0);
+  assert.deepEqual(r.items[0].review, []);
 });
 
 test("a screen with no transactions is not supported", () => {

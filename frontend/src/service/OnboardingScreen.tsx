@@ -14,6 +14,7 @@ import { useBudgetDraft } from "./BudgetDraft";
 import { markHomeGuidePending } from "./HomeGuide";
 import { api } from "./api/client";
 import { useSession } from "./Session";
+import { SeedMoneyHelp } from "./SeedMoneyHelp";
 import {
   ErrorNotice,
   Guard,
@@ -52,7 +53,10 @@ function Start() {
     started.current = attempt;
     (async () => {
       try {
-        if (draft.step !== "index" && (draft.editing || !session.user?.onboarded))
+        if (
+          draft.step !== "index" &&
+          (draft.editing || !session.user?.onboarded)
+        )
           setDest(path(resumeStep(draft.step)));
         else {
           await state.begin(!!session.user?.onboarded);
@@ -113,7 +117,10 @@ function Content({ step }: { step: Step }) {
       setError("고정지출의 이름, 금액, 날짜를 확인해 주세요");
       return;
     }
-    if (step === "protect" && v.protectedItems.some((x) => !protectedValid(x))) {
+    if (
+      step === "protect" &&
+      v.protectedItems.some((x) => !protectedValid(x))
+    ) {
       setError("저축 항목의 이름과 금액을 확인해 주세요");
       return;
     }
@@ -199,8 +206,17 @@ function Content({ step }: { step: Step }) {
                 잔액이 0원이면 오늘 쓸 수 있는 돈도 0원이에요
               </T>
             )}
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <T size={14} weight="700">
+                모아둔 돈
+              </T>
+              <SeedMoneyHelp label size={14} />
+            </View>
             <MoneyField
               label="모아둔 돈 (원)"
+              hideLabel
               placeholder="없으면 비워 두세요"
               value={v.seedBase ?? 0}
               onChange={(seedBase) => set({ ...v, seedBase })}
