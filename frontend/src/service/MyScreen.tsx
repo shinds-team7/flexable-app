@@ -279,7 +279,7 @@ export function MyScreen() {
               onPress={() => router.push(href)}
             />
           ) : (
-            // 알림창 상시 알림은 기본 켜짐. 앱(Android)에서만 보인다.
+            // 알림창 상시 알림은 기본 꺼짐. 직접 켤 때 권한을 요청한다.
             Platform.OS !== "web" && (
               <Row
                 key="budget-notification"

@@ -438,18 +438,33 @@ test("a new account sees the home guide once after the gift and attendance modal
   });
   // 단계를 넘기면 다음 자리를 재는 동안 설명 카드가 잠깐 빠지므로, 버튼이 다시 보일 때까지 기다린다
   const stepButton = page.getByRole("button", { name: /^(다음|시작하기)$/ });
-  await expect(page.getByText("3 / 9", { exact: true })).toBeVisible();
+  await expect(page.getByText("3 / 11", { exact: true })).toBeVisible();
   for (let i = 0; i < 15; i++) {
     await expect(stepButton).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /^(내역|분석)$/, exact: true }),
     ).toHaveCount(0);
-    if (await startButton.isVisible()) break;
+    if (await page.getByRole("heading", { name: "마이", exact: true }).isVisible()) break;
     await stepButton.click();
   }
   await expect(
     page.getByRole("heading", { name: "마이", exact: true }),
   ).toBeVisible();
+  await expect(startButton).toHaveCount(0);
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "신한카드 결제 알림을 자동으로 기록해요", exact: true })).toBeVisible();
+  await expect(page.getByText(/동의하고 알림 접근을 허용한 뒤 켜 주세요/)).toBeVisible();
+  await expect(page.getByText("10 / 11", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  const budgetGuide = page.getByRole("heading", { name: "알림창에서 오늘 남은 예산을 봐요", exact: true });
+  await expect(budgetGuide).toBeVisible();
+  await expect(page.getByText(/기본은 꺼져 있고, 직접 켤 때 알림 권한을 요청해요/)).toBeVisible();
+  await expect(page.getByText("11 / 11", { exact: true })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("guide-budget-notification.png"), animations: "disabled" });
+  await page.getByRole("button", { name: "이전", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "신한카드 결제 알림을 자동으로 기록해요", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(budgetGuide).toBeVisible();
   await startButton.click();
   await expect(first).toHaveCount(0);
   // 다시 홈에 와도 반복하지 않는다

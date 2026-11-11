@@ -17,6 +17,8 @@ class BudgetNotificationModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("BudgetNotification")
+    // JS uses the collapsed layout on older builds whose expanded layout cannot render.
+    Function("supportsExpandedLayout") { true }
     // 앱이 받은 오늘 값을 저장하고 알림을 같은 ID로 갱신한다. 값은 서버가 준 것을 그대로 넘긴다.
     AsyncFunction("update") { date: String, budget: Long, spent: Long, remaining: Long, dayBudgets: List<Long> ->
       update(date, budget, spent, remaining, dayBudgets, null)
