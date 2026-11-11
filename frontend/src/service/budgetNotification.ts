@@ -10,6 +10,7 @@ import type { Today } from "./types";
 
 // 알림창에 "오늘 남은 예산"을 계속 보여 준다(Android 상시 알림). 값은 기기에만 저장하고 서버로 보내는 정보는 없다.
 type Native = {
+  supportsExpandedLayout?(): boolean;
   update(
     date: string,
     budget: number,
@@ -66,7 +67,9 @@ export async function clearBudgetNotification() {
 /** 서버가 계산한 오늘 값을 그대로 넘긴다. 화면에서 다시 계산하지 않는다. */
 export function publishBudgetNotification(t: Today) {
   const values = [t.date, t.dailyBudget, t.todaySpent, t.todayAvailable, t.dayBudgets] as const;
-  return native?.updateExpanded
+  // 2.0.1's expanded RemoteViews contains an unsupported View. Until the fixed
+  // native layout is installed, publish the working collapsed layout instead.
+  return native?.supportsExpandedLayout?.() && native.updateExpanded
     ? native.updateExpanded(...values, t.weekAvailable)
     : native?.update(...values);
 }
