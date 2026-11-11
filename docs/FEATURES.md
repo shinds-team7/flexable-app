@@ -9,6 +9,7 @@
 
 | 기능 | 화면·경로 | API·저장 | 확인 방법 |
 |---|---|---|---|
+| 필수 앱 업데이트 | Android 배포 앱은 시작할 때와 다시 열 때(10분 간격) 최소 지원 버전을 확인하고, 설치 버전이 낮으면 Play 스토어 업데이트 창을 표시한다(`service/ForceUpdate.tsx`). 최소 지원 버전 2.0.1(11-11 사용자 출시 확인·상향 요청) | 공개 `frontend/public/app-version.json`의 `android.minVersion`. 서버 API·계산·DB 변경 없음, Vercel 자동 반영 | 공개 `/app-version.json` 값 확인, 프론트 타입·린트·단위·CI. 실기기 업데이트 창 확인은 별도 |
 | 첫 화면·탭 전환·상시 알림 사용성(Issue #349) | 스플래시가 내려간 뒤 홈 승급 게이지가 시작되고 Android에서는 네이티브 애니메이션으로 움직인다. 분석은 이번 달이 기본이다. 내역·분석에서 달·기간을 바꾸는 동안 직전 카드를 유지하고, 내역 [전체·지출·수입]은 좌우 스와이프와 탭으로 전환한다. AI 메이트는 계정마다 첫 진입 때 스타일을 고르고 메뉴의 캐릭터를 줄여 하단 안내까지 한 화면에 보인다. 대화 음성 인식 최종 결과는 한 번 자동 전송한다. Android 상시 알림은 채널을 만든 뒤 권한을 요청하며, 기본 앱 아이콘만 쓰고 금액은 흰색이다. 펼친 알림에는 서버가 준 이번 주 쓸 수 있는 돈을 구분선 아래에 표시한다. [홈]은 홈 최상단으로 간다. | 기존 `GET /budget/today`·`GET /transactions`·`GET /analysis/summary`·`POST /chat/messages` 사용. 알림의 주간 금액은 서버 `weekAvailable` 값이며 날짜가 바뀌거나 기기 결제 알림으로 추정 상태가 되면 숨긴다. 알림 모양·확장 내용·딥링크는 새 Android 빌드 필요 | 프론트 타입·린트·단위·웹 빌드, E2E `chatbot.spec.ts`·`ui-ux.spec.ts`·`ui-polish.spec.ts`, Android `BudgetRolloverTest`; 알림 실기기 확인 필요 |
 | 시작 분기 | `/` → `src/app/index.tsx` (로그인·예산 설정 여부로 `/home`·`/onboarding`·시작 화면) | `GET /me` | E2E `expired token returns to start…` |
 | 회원가입·로그인·로그아웃 | `/auth/signup`, `/auth/login` → `service/AuthScreen.tsx` | `POST /auth/signup·login·logout`. 토큰은 앱 SecureStore, 웹 localStorage(`service/storage.ts`) | 백엔드 `ApiFlowTest`(가입 검증·로그인 제한·로그아웃 폐기), E2E `real service lifecycle…` |
