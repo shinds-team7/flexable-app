@@ -67,6 +67,23 @@ test("future expense creation, editing, reload and deletion use the scheduled AP
   await expect(
     page.getByText("30,000원 · 식비", { exact: true }),
   ).toBeVisible();
+  // 등록한 예정은 내역 달력과 목록에 "예정"으로 보이지만 실제 지출 합계에는 들어가지 않는다
+  await page.goto("/transactions");
+  await expect(
+    page.getByRole("button", {
+      name: "10월 30일, 예정 지출 30,000원",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const plannedRow = page
+    .getByRole("button", {
+      name: "예정, 생일 선물, 30,000원, 예정 지출 보기",
+      exact: true,
+    })
+    .first();
+  await expect(plannedRow).toBeVisible();
+  await expect(page.getByText("30,000원", { exact: true })).toHaveCount(0);
+  await plannedRow.click();
   await page
     .getByRole("button", { name: "생일 선물 삭제", exact: true })
     .click();
