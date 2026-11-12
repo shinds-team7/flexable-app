@@ -99,10 +99,12 @@ public class ChatService {
 		ChatModel.Reply r;
 		try {
             if (req.accepts(Accept.INCOME)) {
-                String system = expenseCategories.isEmpty() ? ChatPrompt.system(req.mate(), context)
-                        : ChatPrompt.system(req.mate(), context, scheduleInfo(req, expenseCategories));
-                r = model.generate(system + "\n수입 거래 등록·수정 및 월 수입 설정 변경은 propose_income으로 제안할 수 있다. 확인 전 저장됐다고 말하지 않는다.",
-                        req.messages(), presets, expenseCategories.stream().map(Category::getName).toList(), true);
+                List<String> incomeCategories = categories.findAllOrdered(userId, TxType.INCOME).stream()
+                        .map(Category::getName).toList();
+                String system = ChatPrompt.system(req.mate(), context,
+                        expenseCategories.isEmpty() ? null : scheduleInfo(req, expenseCategories), incomeCategories);
+                r = model.generate(system, req.messages(), presets,
+                        expenseCategories.stream().map(Category::getName).toList(), true);
             }
             else if (expenseCategories.isEmpty()) {
 				r = model.generate(ChatPrompt.system(req.mate(), context), req.messages(), presets);

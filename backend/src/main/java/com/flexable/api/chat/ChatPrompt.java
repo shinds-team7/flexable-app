@@ -56,6 +56,17 @@ final class ChatPrompt {
 			- [직전에 제안한 일정]이 있고 사용자가 금액·날짜·제목을 바꾸자고 하면 반영해서 propose_schedule을 다시 호출한다. 바꾸지 않은 값은 그대로 넘기고, 날짜나 제목만 바꿀 때는 직전 금액을 amount로 넘긴다. 사용자가 그만두겠다고 하면 도구 없이 짧게 답한다.
 			""";
 
+	private static final String INCOME_RULES = """
+
+			수입 등록
+			- 사용자가 실제로 받은 돈(예: "오늘 용돈 3만원 받았어")이나 매달 받을 수입액·수입일 변경을 말하면 반드시 propose_income 도구를 호출한다. 도구 없이 말로만 등록해 주겠다고 하거나 '버튼을 누르라'고 하지 않는다. 확인 문구와 버튼은 앱이 붙인다.
+			- 받은 돈은 target TRANSACTION, 매달 받을 예정 수입액·수입일은 target SETTINGS다. 어느 쪽인지 정말 알 수 없을 때만 도구 없이 짧게 묻는다.
+			- 새로 받은 돈은 operation CREATE, 이미 남긴 수입 기록을 고치는 것은 UPDATE다. title은 사용자가 말한 이름을 짧게 쓴다(예: 용돈, 월급). 날짜를 말하지 않았으면 date를 넣지 않는다(오늘로 제안된다).
+			- category는 [수입 카테고리] 이름 중 사용자가 말한 것과 같은 것이 있을 때만 넣는다. 없으면 넣지 않는다.
+			- 금액은 사용자가 말한 값만 원 단위 정수로 넣고(3만원 → 30000) 추측하지 않는다. 금액을 말하지 않았으면 도구 없이 금액을 묻는다.
+			- 확인 전에는 저장되지 않는다. 등록했다고 말하지 않는다.
+			""";
+
 	private static final String NARRATE_RULES = """
 			너는 가계부 앱 '텅장관리'의 AI 메이트다. 사용자가 말한 일정에 대해 서버가 계산한 [일정 예측 결과]를 자연스럽게 전하고 예정 지출로 등록할지 묻는다.
 
@@ -88,9 +99,17 @@ final class ChatPrompt {
 	}
 
 	static String system(Mate mate, Context c, Schedule schedule) {
+		return system(mate, c, schedule, null);
+	}
+
+	/** income이 null이 아니면 수입 제안 규칙과 사용자의 수입 카테고리 이름을 넣는다. */
+	static String system(Mate mate, Context c, Schedule schedule, List<String> income) {
 		StringBuilder sb = new StringBuilder(RULES);
 		if (schedule != null) {
 			sb.append(SCHEDULE_RULES);
+		}
+		if (income != null) {
+			sb.append(INCOME_RULES);
 		}
 		sb.append("\n말투: ").append(tone(mate == null ? Mate.ANALYST : mate)).append("\n\n[사용자 정보]\n").append(context(c));
 		if (schedule != null) {
@@ -100,6 +119,9 @@ final class ChatPrompt {
 				sb.append("- 직전에 제안한 일정: ").append(p.title()).append(", ").append(day(p.date())).append(", ")
 					.append(p.category()).append(", ").append(p.amount() == null ? "금액 미정" : won(p.amount())).append('\n');
 			}
+		}
+		if (income != null) {
+			sb.append("- 수입 카테고리: ").append(income.isEmpty() ? "없음" : String.join(", ", income)).append('\n');
 		}
 		return sb.toString();
 	}
