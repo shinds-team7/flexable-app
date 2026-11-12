@@ -497,6 +497,9 @@ class ContractTest {
         var system = org.mockito.ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(chatModel).generate(system.capture(), any(), any(), any(), org.mockito.ArgumentMatchers.eq(true));
         assertThat(system.getValue()).contains("시드머니는").doesNotContain("2,000,000", "2000000");
+        // 도구를 건너뛰고 "아래 버튼을 눌러"라고 말로만 답하지 않게, 일정과 같은 강도의 수입 규칙과 수입 카테고리 이름을 준다
+        assertThat(system.getValue()).contains("반드시 propose_income 도구를 호출한다", "'버튼을 누르라'고 하지 않는다")
+                .containsPattern("- 수입 카테고리: .*급여.*용돈");
     }
 
     @Test
