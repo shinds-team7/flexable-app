@@ -3,7 +3,8 @@ import { T } from "./ui";
 import { colors } from "@/theme";
 import { DOW, won } from "@/utils/format";
 
-export type DayTotals = { expense: number; income: number };
+/** planned는 예정 지출 합계(실제 지출이 아니라 따로 표시) */
+export type DayTotals = { expense: number; income: number; planned?: number };
 
 /** 32,400 → "3.2만". 칸이 좁아 만 원 단위로 줄이고, 금액 규칙대로 내림한다 */
 function short(n: number) {
@@ -25,7 +26,7 @@ export function monthWeeks(year: number, month: number) {
 }
 
 /**
- * 한 달 달력에 날짜별 지출(-)·수입(+) 합계를 표시한다. 일요일부터 시작한다.
+ * 한 달 달력에 날짜별 지출(-)·수입(+) 합계와 예정 지출("예정")을 표시한다. 일요일부터 시작한다.
  * 합계는 화면이 받은 거래 금액을 날짜별로 더한 값을 props로 받는다.
  */
 export function MonthCalendar({
@@ -74,6 +75,7 @@ export function MonthCalendar({
               `${month}월 ${day}일${on ? ", 오늘" : ""}`,
               t?.expense ? `지출 ${won(t.expense)}원` : null,
               t?.income ? `수입 ${won(t.income)}원` : null,
+              t?.planned ? `예정 지출 ${won(t.planned)}원` : null,
             ]
               .filter(Boolean)
               .join(", ");
@@ -111,6 +113,17 @@ export function MonthCalendar({
                     numberOfLines={1}
                   >
                     +{short(t.income)}
+                  </T>
+                )}
+                {!!t?.planned && (
+                  <T
+                    size={10}
+                    weight="600"
+                    color={colors.warn}
+                    num
+                    numberOfLines={1}
+                  >
+                    예정 {short(t.planned)}
                   </T>
                 )}
               </Pressable>
