@@ -10,7 +10,7 @@
 
 ## 2026-11-14
 
-- [#PR, Issue #327] 거래내역서 PDF 가져오기: `POST /transactions/statement-import`(multipart `file`·`password`, 결과 `StatementImport`)와 오류 코드 `STATEMENT_PASSWORD`·`STATEMENT_UNSUPPORTED`를 `app-api.yaml`에 더하고 policies §9·`tests/policy/statement-import.json`·[결정](decisions/2026-11-14-statement-pdf-import.md)을 추가했다. 신한은행 거래내역조회만, 검토 없이 모두 저장(간편결제 출금도 지출), 같은 거래·잔액 기준 시각 이후 거래는 건너뜀, PDF·비밀번호 미저장. 개인정보처리방침 추가 개정(5)(11-14 공고·시행, 2.1.0부터). 기존 응답은 그대로 — 영향: 앱 서버(배포 먼저)·앱 화면(2.1.0 새 빌드)·공개 방침
+- [#362, Issue #327] 거래내역서 PDF 가져오기: `POST /transactions/statement-import`(multipart `file`·`password`, 결과 `StatementImport`)와 오류 코드 `STATEMENT_PASSWORD`·`STATEMENT_UNSUPPORTED`를 `app-api.yaml`에 더하고 policies §9·`tests/policy/statement-import.json`·[결정](decisions/2026-11-14-statement-pdf-import.md)을 추가했다. 신한은행 거래내역조회만, 검토 없이 모두 저장(간편결제 출금도 지출), 같은 거래·잔액 기준 시각 이후 거래는 건너뜀, PDF·비밀번호 미저장. 개인정보처리방침 추가 개정(5)(11-14 공고·시행, 2.1.0부터). 기존 응답은 그대로 — 영향: 앱 서버(배포 먼저)·앱 화면(2.1.0 새 빌드)·공개 방침
 
 ## 2026-11-11
 
