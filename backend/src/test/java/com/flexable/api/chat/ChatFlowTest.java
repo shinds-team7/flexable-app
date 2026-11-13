@@ -47,7 +47,8 @@ import com.jayway.jsonpath.JsonPath;
  * AI 메이트: 서버 계산 예산과 카테고리별 합계만 모델에 넘기고, 변경은 제안(action)만 돌려준다.
  * 2026-10-27(화) 정오로 시계를 고정한다. 수입일 25일, 잔액 1,000,000원이면 기본 배분 하루 예산은 34,482원이다.
  */
-@SpringBootTest(properties = { "app.chat.gemini-api-key=test-gemini-key", "app.chat.narrate-timeout=1s" })
+@SpringBootTest(properties = { "app.chat.gemini-api-key=test-gemini-key", "app.chat.narrate-timeout=1s",
+		"app.chat.reply-budget=3s" })
 @AutoConfigureMockMvc
 class ChatFlowTest {
 
@@ -381,6 +382,22 @@ class ChatFlowTest {
 			.andExpect(jsonPath("$.action.type", is("SCHEDULE")))
 			.andExpect(jsonPath("$.action.schedule.amount", is(30000)));
 		assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(4));
+	}
+
+	@Test
+	void slowFirstAnswerFailsBeforeTheAppGivesUp() throws Exception {
+		// 첫 호출(일정 추출)이 기한(테스트 3초)을 넘으면 앱이 끊기 전에 CHAT_FAILED로 알린다
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+		when(model.generate(anyString(), anyList(), anyList(), anyList())).thenAnswer(inv -> {
+			Thread.sleep(6000);
+			return new ChatModel.Reply("", null, new ChatModel.ScheduleCall("데이트", "2026-10-30", "식비", 30000L));
+		});
+		long started = System.nanoTime();
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isBadGateway())
+			.andExpect(jsonPath("$.code", is("CHAT_FAILED")));
+		assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(5));
 	}
 
 	@Test
