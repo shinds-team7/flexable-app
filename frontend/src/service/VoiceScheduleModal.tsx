@@ -102,7 +102,7 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
         const mate = MATES.find((m) => m === saved) ?? "ANALYST";
         const body: ChatRequest = {
           mate,
-          accepts: ["SCHEDULE", "INCOME"],
+          accepts: ["SCHEDULE", "INCOME", "EXPENSE"],
           messages: [{ role: "USER", text: text.slice(0, 1000) }],
         };
         const result = await api<ChatResponse>("/chat/messages", {
@@ -116,7 +116,7 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
           result.action?.type === "SCHEDULE"
             ? result.action.schedule
             : undefined;
-        if (result.action?.type === "INCOME_TRANSACTION" || result.action?.type === "INCOME_SETTINGS") {
+        if (result.action?.type === "INCOME_TRANSACTION" || result.action?.type === "INCOME_SETTINGS" || result.action?.type === "EXPENSE_TRANSACTION") {
           setState({ kind: "income", heard: text, action: result.action });
           if (voiceReply.on) speak(result.reply);
         } else if (schedule) {

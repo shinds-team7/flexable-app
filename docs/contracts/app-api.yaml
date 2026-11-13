@@ -1422,6 +1422,21 @@ components:
         changes:
           type: array
           items: { type: string, enum: [AMOUNT, DATE, TITLE, CATEGORY] }
+    ExpenseTransactionProposal:
+      type: object
+      additionalProperties: false
+      required: [operation, transactionId, title, date, categoryId, category, amount, changes]
+      properties:
+        operation: { type: string, enum: [CREATE, UPDATE] }
+        transactionId: { type: integer, format: int64, nullable: true }
+        title: { type: string, minLength: 1, maxLength: 40 }
+        date: { type: string, format: date }
+        categoryId: { type: integer, format: int64 }
+        category: { type: string }
+        amount: { type: integer, format: int64, minimum: 1, maximum: 999999999999 }
+        changes:
+          type: array
+          items: { type: string, enum: [AMOUNT, DATE, TITLE, CATEGORY] }
     ChatMessage:
       type: object
       required: [role, text]
@@ -1446,9 +1461,9 @@ components:
           description: '말투. ANALYST 똑똑한 분석가(기본), FRIEND 다정한 친구, COACH 따끔한 조언가'
         accepts:
           type: array
-          description: '앱이 처리할 수 있는 제안 종류. SCHEDULE·INCOME을 각각 알린 앱에만 일정·수입 제안을 보낸다(옛 앱 보호)'
+          description: '앱이 처리할 수 있는 제안 종류. SCHEDULE·INCOME·EXPENSE를 각각 알린 앱에만 일정·수입·지출 기록 제안을 보낸다(옛 앱 보호)'
           maxItems: 4
-          items: { type: string, enum: [SCHEDULE, INCOME] }
+          items: { type: string, enum: [SCHEDULE, INCOME, EXPENSE] }
         pending:
           type: object
           nullable: true
@@ -1473,12 +1488,13 @@ components:
             확인이 필요한 변경 제안. 없으면 null. 서버는 저장하지 않는다.
             INCOME_TRANSACTION: 확인하면 기존 POST /transactions 또는 PATCH /transactions/{id}로 저장한다. UPDATE는 changes에 있는 필드만 보낸다.
             INCOME_SETTINGS: 확인하면 PATCH /budget/settings/income으로 저장한다.
+            EXPENSE_TRANSACTION: 확인하면 기존 POST /transactions(type EXPENSE) 또는 PATCH /transactions/{id}로 저장한다. UPDATE는 changes에 있는 필드만 보낸다.
             DAY_PRESET: 확인하면 앱이 PUT /budget/day-weights {preset}으로 저장한다.
             SCHEDULE: 확인하면 앱이 POST /scheduled-expenses {amount, categoryId, title, date}로 등록한 뒤 GET /budget/today를 다시 받는다.
           required: [type]
           additionalProperties: false
           properties:
-            type: { type: string, enum: [DAY_PRESET, SCHEDULE, INCOME_TRANSACTION, INCOME_SETTINGS] }
+            type: { type: string, enum: [DAY_PRESET, SCHEDULE, INCOME_TRANSACTION, INCOME_SETTINGS, EXPENSE_TRANSACTION] }
             preset:
               type: string
               enum: [EVEN, RECORD, WEEKEND, WEEKDAY]
@@ -1486,6 +1502,7 @@ components:
             label: { type: string, description: 'DAY_PRESET일 때만. 프리셋 이름(기본 배분·내 기록 기준·주말 넉넉히·평일 넉넉히)' }
             incomeTransaction: { $ref: '#/components/schemas/IncomeTransactionProposal' }
             incomeSettings: { $ref: '#/components/schemas/IncomeSettingsProposal' }
+            expenseTransaction: { $ref: '#/components/schemas/ExpenseTransactionProposal' }
             schedule:
               type: object
               description: 'SCHEDULE일 때만'

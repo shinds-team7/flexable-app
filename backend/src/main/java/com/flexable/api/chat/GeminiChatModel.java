@@ -26,6 +26,7 @@ public class GeminiChatModel implements ChatModel {
 	static final String URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
 	static final String PROPOSE = "propose_day_preset";
 	static final String SCHEDULE = "propose_schedule";
+	static final String EXPENSE = "propose_expense";
 	private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() { };
 
 	private final RestClient http;
@@ -49,6 +50,12 @@ public class GeminiChatModel implements ChatModel {
     @Override
     public Reply generate(String system, List<Message> messages, List<String> presets,
             List<String> categories, boolean income) {
+        return generate(system, messages, presets, categories, income, List.of());
+    }
+
+    @Override
+    public Reply generate(String system, List<Message> messages, List<String> presets,
+            List<String> categories, boolean income, List<String> expenseCategories) {
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("systemInstruction", Map.of("parts", List.of(Map.of("text", system))));
 		body.put("contents", contents(messages));
@@ -93,6 +100,23 @@ public class GeminiChatModel implements ChatModel {
                     + "category는 사용자가 명시한 수입 카테고리만, 날짜는 yyyy-MM-dd. 금액을 추정하거나 거래 ID를 만들지 않는다. 확인 전 저장되지 않는다.",
                     "parameters", Map.of("type", "object", "properties", fields,
                             "required", List.of("target", "operation"))));
+        }
+        if (!expenseCategories.isEmpty()) {
+            Map<String, Object> fields = new LinkedHashMap<>();
+            fields.put("operation", Map.of("type", "string", "enum", List.of("CREATE", "UPDATE")));
+            fields.put("category", Map.of("type", "string", "enum", expenseCategories));
+            for (String name : List.of("title", "date", "matchDate", "matchTitle")) {
+                fields.put(name, Map.of("type", "string"));
+            }
+            for (String name : List.of("amount", "matchAmount")) {
+                fields.put(name, Map.of("type", "integer"));
+            }
+            declarations.add(Map.of("name", EXPENSE, "description",
+                    "이미 쓴 돈의 지출 거래 기록 추가·수정을 제안한다(예: '식비로 14000원 빼줘', '점심 9천원 썼어'). "
+                    + "앞으로의 약속·일정은 propose_schedule이다. CREATE는 금액과 category 필수, title은 말한 이름(없으면 category 이름), "
+                    + "date는 yyyy-MM-dd(말하지 않으면 넣지 않는다, 오늘 이하). UPDATE는 바꿀 필드만 넣고 matchDate·matchAmount·matchTitle로 "
+                    + "기존 기록을 찾는다. 금액을 추정하거나 거래 ID를 만들지 않는다. 확인 전 저장되지 않는다.",
+                    "parameters", Map.of("type", "object", "properties", fields, "required", List.of("operation"))));
         }
 		if (!declarations.isEmpty()) {
 			body.put("tools", List.of(Map.of("functionDeclarations", declarations)));
@@ -160,6 +184,7 @@ public class GeminiChatModel implements ChatModel {
 		String preset = null;
 		ScheduleCall schedule = null;
         IncomeCall income = null;
+        ExpenseCall expense = null;
 		for (Object p : parts) {
 			if (!(p instanceof Map<?, ?> part) || Boolean.TRUE.equals(part.get("thought"))) {
 				continue;
@@ -183,11 +208,17 @@ public class GeminiChatModel implements ChatModel {
                         exact(args.get("amount")), exact(args.get("payday")), str(args.get("matchDate")),
                         exact(args.get("matchAmount")), str(args.get("matchTitle")));
             }
+            if (part.get("functionCall") instanceof Map<?, ?> call && EXPENSE.equals(call.get("name"))
+                    && call.get("args") instanceof Map<?, ?> args) {
+                expense = new ExpenseCall(str(args.get("operation")), str(args.get("title")), str(args.get("date")),
+                        str(args.get("category")), exact(args.get("amount")), str(args.get("matchDate")),
+                        exact(args.get("matchAmount")), str(args.get("matchTitle")));
+            }
 		}
-		if (text.isEmpty() && preset == null && schedule == null && income == null) {
+		if (text.isEmpty() && preset == null && schedule == null && income == null && expense == null) {
 			throw new Failure("Gemini 응답에 답변이 없음");
 		}
-		return new Reply(text.toString().trim(), preset, schedule, income);
+		return new Reply(text.toString().trim(), preset, schedule, income, expense);
 	}
 
     private static Long exact(Object o) {
