@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -28,9 +29,11 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.atlassian.oai.validator.OpenApiInteractionValidator;
@@ -40,6 +43,9 @@ import com.atlassian.oai.validator.report.LevelResolver;
 import com.atlassian.oai.validator.report.ValidationReport;
 import com.flexable.api.chat.ChatModel;
 import com.flexable.api.coin.AdSignatureVerifier;
+import com.flexable.api.common.ApiException;
+import com.flexable.api.common.ErrorCode;
+import com.flexable.api.statement.StatementPdfReader;
 import com.jayway.jsonpath.JsonPath;
 
 /**
@@ -101,6 +107,9 @@ class ContractTest {
 	@MockitoBean
 	AdSignatureVerifier adVerifier;
 
+	@MockitoBean
+	StatementPdfReader statementReader;
+
 	private static OpenApiInteractionValidator validator(String file) {
 		try {
 			String spec = Files.readString(Path.of("..", "docs", "contracts", file));
@@ -122,7 +131,7 @@ class ContractTest {
 	}
 
 	/** 요청을 보내고 상태 코드를 확인한 뒤 응답을 스펙으로 검사한다. */
-	private MvcResult call(OpenApiInteractionValidator spec, MockHttpServletRequestBuilder req, int expectedStatus)
+	private MvcResult call(OpenApiInteractionValidator spec, AbstractMockHttpServletRequestBuilder<?> req, int expectedStatus)
 			throws Exception {
 		MvcResult r = mvc.perform(req).andReturn();
 		var res = r.getResponse();
@@ -147,7 +156,7 @@ class ContractTest {
 		return r;
 	}
 
-	private MvcResult app(MockHttpServletRequestBuilder req, int status) throws Exception {
+	private MvcResult app(AbstractMockHttpServletRequestBuilder<?> req, int status) throws Exception {
 		return call(APP, req, status);
 	}
 
@@ -159,7 +168,7 @@ class ContractTest {
 		return req.contentType(MediaType.APPLICATION_JSON).content(body);
 	}
 
-	private static MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder req, String token) {
+	private static <B extends AbstractMockHttpServletRequestBuilder<B>> B auth(B req, String token) {
 		return req.header("Authorization", "Bearer " + token);
 	}
 
@@ -545,4 +554,19 @@ class ContractTest {
         MvcResult old = app(auth(json(post("/api/v1/chat/messages"), "{\"messages\":[{\"role\":\"USER\",\"text\":\"수입 수정\"}]}"), token), 200);
         assertThat(read(old, "$.action")).isEqualTo("null");
     }
+
+	@Test
+	void 거래내역서_가져오기() throws Exception {
+		String token = signup();
+		MockMultipartFile pdf = new MockMultipartFile("file", "s.pdf", "application/pdf", "%PDF-test".getBytes());
+		when(statementReader.lines(any(), any())).thenReturn(List.of("거래내역조회", "계좌번호 [신한]110-***-*00000 성명 홍*동",
+				"조회기간 2026.10.01~2026.10.31", "20261003 12:00:00 이자 0 500 09.01~09.30 38,500 영업부"));
+		app(auth(multipart("/api/v1/transactions/statement-import").file(pdf).param("password", "000000"), token), 200);
+		when(statementReader.lines(any(), any())).thenReturn(List.of("다른 은행"));
+		app(auth(multipart("/api/v1/transactions/statement-import").file(pdf), token), 400);
+		when(statementReader.lines(any(), any())).thenThrow(new ApiException(ErrorCode.STATEMENT_PASSWORD));
+		app(auth(multipart("/api/v1/transactions/statement-import").file(pdf), token), 400);
+		app(auth(multipart("/api/v1/transactions/statement-import").param("password", "1"), token), 400);
+		app(multipart("/api/v1/transactions/statement-import").file(pdf), 401);
+	}
 }

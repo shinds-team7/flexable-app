@@ -27,6 +27,8 @@ public enum ErrorCode {
 	AD_NOT_REWARDED(HttpStatus.CONFLICT, "광고 보상을 아직 확인하지 못했어요. 잠시 후 다시 확인해 주세요"),
 	CHAT_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "지금은 AI 메이트를 쓸 수 없어요"),
 	CHAT_FAILED(HttpStatus.BAD_GATEWAY, "AI 메이트가 답하지 못했어요. 잠시 후 다시 시도해 주세요"),
+	STATEMENT_PASSWORD(HttpStatus.BAD_REQUEST, "PDF 비밀번호가 맞지 않아요"),
+	STATEMENT_UNSUPPORTED(HttpStatus.BAD_REQUEST, "읽을 수 없는 거래내역서예요. 신한은행 거래내역조회 PDF를 올려 주세요"),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요");
 
 	private final HttpStatus status;
