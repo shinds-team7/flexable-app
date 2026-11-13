@@ -15,6 +15,7 @@ import { markHomeGuidePending } from "./HomeGuide";
 import { api } from "./api/client";
 import { useSession } from "./Session";
 import { SeedMoneyHelp } from "./SeedMoneyHelp";
+import { statementResultText, useStatementImport } from "./StatementImport";
 import {
   ErrorNotice,
   Guard,
@@ -88,6 +89,18 @@ function Content({ step }: { step: Step }) {
   // The exact draft object last PUT; a retry after a later step fails re-sends only if the input changed.
   const saved = useRef<BudgetSettings | null>(null);
   const [error, setError] = useState<unknown>();
+  const [importNote, setImportNote] = useState<string>();
+  const statement = useStatementImport({
+    onDone: (result) => {
+      setImportNote(statementResultText(result));
+      // 저장한 거래가 내역·분석 화면에 바로 보이게 한다
+      session.invalidate();
+    },
+    onError: (message) => {
+      if (message) setImportNote(undefined);
+      setError(message);
+    },
+  });
   if (!state.draft)
     return state.error ? <ErrorNotice error={state.error} /> : <Loading />;
   const { value: v, editing } = state.draft;
@@ -256,9 +269,9 @@ function Content({ step }: { step: Step }) {
             items={v.fixedExpenses}
             onChange={(fixedExpenses) => set({ ...v, fixedExpenses })}
             onError={setError}
-            onImportPdf={() =>
-              setError("거래내역서 PDF 등록은 아직 준비 중이에요")
-            }
+            onImportPdf={statement.start}
+            importBusy={statement.busy}
+            importNote={importNote}
           />
         )}
         {step === "protect" && (
@@ -269,6 +282,7 @@ function Content({ step }: { step: Step }) {
           />
         )}
         <ErrorNotice error={error ?? state.error} />
+        {statement.modal}
       </OnboardingFrame>
     </KeyboardAvoidingView>
   );
