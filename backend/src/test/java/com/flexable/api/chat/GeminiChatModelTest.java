@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.util.List;
@@ -15,7 +16,9 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -99,10 +102,31 @@ class GeminiChatModelTest {
 		server.verify();
 		server.reset();
 
-		server.expect(requestTo(URL)).andRespond(withServerError());
+		// 과부하(500)는 한 번만 다시 묻고, 또 실패하면 알린다
+		server.expect(ExpectedCount.times(2), requestTo(URL)).andRespond(withServerError());
 		assertThatThrownBy(() -> model.generate("규칙", List.of(new Message(Role.USER, "안녕")), List.of()))
 			.isInstanceOf(ChatModel.Failure.class)
-			.hasMessage("Gemini 응답 500");
+			.hasMessage("Gemini 응답 500 (재시도 후)");
+		server.verify();
+	}
+
+	@Test
+	void retriesOnceWhenOverloadedThenAnswers() {
+		server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+		server.expect(requestTo(URL)).andRespond(withSuccess("""
+				{"candidates":[{"content":{"role":"model","parts":[{"text":"다시 답해요"}]}}]}
+				""", MediaType.APPLICATION_JSON));
+		assertThat(model.generate("규칙", List.of(new Message(Role.USER, "안녕")), List.of()).text()).isEqualTo("다시 답해요");
+		server.verify();
+	}
+
+	@Test
+	void doesNotRetryRequestErrors() {
+		server.expect(ExpectedCount.once(), requestTo(URL)).andRespond(withStatus(HttpStatus.BAD_REQUEST));
+		assertThatThrownBy(() -> model.generate("규칙", List.of(new Message(Role.USER, "안녕")), List.of()))
+			.isInstanceOf(ChatModel.Failure.class)
+			.hasMessage("Gemini 응답 400");
+		server.verify();
 	}
 
     @Test

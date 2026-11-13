@@ -1,5 +1,9 @@
 package com.flexable.api.chat;
 
+import static org.hamcrest.Matchers.containsString;
+
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -43,7 +47,7 @@ import com.jayway.jsonpath.JsonPath;
  * AI 메이트: 서버 계산 예산과 카테고리별 합계만 모델에 넘기고, 변경은 제안(action)만 돌려준다.
  * 2026-10-27(화) 정오로 시계를 고정한다. 수입일 25일, 잔액 1,000,000원이면 기본 배분 하루 예산은 34,482원이다.
  */
-@SpringBootTest(properties = "app.chat.gemini-api-key=test-gemini-key")
+@SpringBootTest(properties = { "app.chat.gemini-api-key=test-gemini-key", "app.chat.narrate-timeout=1s" })
 @AutoConfigureMockMvc
 class ChatFlowTest {
 
@@ -356,6 +360,27 @@ class ChatFlowTest {
 			.andExpect(jsonPath("$.action.schedule.amount", is(nullValue())))
 			.andExpect(jsonPath("$.action.schedule.basis", is(nullValue())))
 			.andExpect(jsonPath("$.action.schedule.preview", is(nullValue())));
+	}
+
+	@Test
+	void slowNarrationFallsBackToServerSentenceInTime() throws Exception {
+		// 음성 "다음주 금요일 데이트, 3만원" 처럼 금액을 말한 일정. 두 번째 호출(문장 다듬기)이 늦어도 제안은 바로 나간다
+		String token = signup();
+		mvc.perform(auth(put("/api/v1/budget/settings"), token, SETTINGS)).andExpect(status().isOk());
+		when(model.generate(anyString(), anyList(), anyList(), anyList()))
+			.thenReturn(new ChatModel.Reply("", null, new ChatModel.ScheduleCall("데이트", "2026-10-30", "식비", 30000L)));
+		when(model.generate(anyString(), anyList(), anyList())).thenAnswer(inv -> {
+			Thread.sleep(5000);
+			return new ChatModel.Reply("늦은 문장 **30,000원**", null);
+		});
+		long started = System.nanoTime();
+		mvc.perform(auth(post("/api/v1/chat/messages"), token, ASK_SCHEDULE))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.reply", containsString("**30,000원**")))
+			.andExpect(jsonPath("$.reply", containsString("데이트")))
+			.andExpect(jsonPath("$.action.type", is("SCHEDULE")))
+			.andExpect(jsonPath("$.action.schedule.amount", is(30000)));
+		assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(4));
 	}
 
 	@Test

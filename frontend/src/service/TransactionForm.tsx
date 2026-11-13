@@ -152,7 +152,7 @@ function Form({
         !existing &&
         e instanceof Error &&
         "code" in e &&
-        (e.code === "NETWORK" || e.code === "INTERNAL_ERROR")
+        (e.code === "NETWORK" || e.code === "TIMEOUT" || e.code === "INTERNAL_ERROR")
       )
         setUncertain(true);
       else {
