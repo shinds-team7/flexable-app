@@ -486,6 +486,34 @@ class ContractTest {
     }
 
     @Test
+    void expenseProposalValidatesLocallyNeverWritesAndHidesFromOldApps() throws Exception {
+        String token = signup();
+        clock.seoulNoon("2026-11-09");
+        app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+        when(chatModel.generate(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any()))
+                .thenReturn(new ChatModel.Reply("", null, null, null,
+                        new ChatModel.ExpenseCall("CREATE", null, null, "식비", 14000L, null, null, null)));
+        String body = "{\"accepts\":[\"EXPENSE\"],\"messages\":[{\"role\":\"USER\",\"text\":\"식비로 14000원 빼줘\"}]}";
+        MvcResult proposed = app(auth(json(post("/api/v1/chat/messages"), body), token), 200);
+        assertThat(read(proposed, "$.action.type")).isEqualTo("EXPENSE_TRANSACTION");
+        assertThat(read(proposed, "$.action.expenseTransaction.operation")).isEqualTo("CREATE");
+        assertThat(read(proposed, "$.action.expenseTransaction.amount")).isEqualTo("14000");
+        assertThat(read(proposed, "$.action.expenseTransaction.category")).isEqualTo("식비");
+        assertThat(read(proposed, "$.action.expenseTransaction.title")).isEqualTo("식비");
+        assertThat(read(proposed, "$.action.expenseTransaction.date")).isEqualTo("2026-11-09");
+        assertThat(read(app(auth(get("/api/v1/transactions?from=2026-11-09&to=2026-11-09"), token), 200), "$.items")).isEqualTo("[]");
+        var system = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(chatModel).generate(system.capture(), any(), any(), any(),
+                org.mockito.ArgumentMatchers.anyBoolean(), any());
+        assertThat(system.getValue()).contains("propose_expense", "지출 카테고리: ");
+        // 옛 앱(EXPENSE를 알리지 않음)에는 지출 제안 도구를 열지 않는다
+        when(chatModel.generate(any(), any(), any())).thenReturn(new ChatModel.Reply("앱 화면에서 해 주세요.", null));
+        MvcResult old = app(auth(json(post("/api/v1/chat/messages"),
+                "{\"messages\":[{\"role\":\"USER\",\"text\":\"식비로 14000원 빼줘\"}]}"), token), 200);
+        assertThat(read(old, "$.action")).isEqualTo("null");
+    }
+
+    @Test
     void incomeSettingsProposalUsesCurrentOtherFieldAndDoesNotLeakRecords() throws Exception {
         String token = signup();
         app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);

@@ -98,7 +98,18 @@ public class ChatService {
 				? categories.findAllOrdered(userId, TxType.EXPENSE) : List.of();
 		ChatModel.Reply r;
 		try {
-            if (req.accepts(Accept.INCOME)) {
+            if (req.accepts(Accept.EXPENSE)) {
+                List<String> incomeCategories = req.accepts(Accept.INCOME)
+                        ? categories.findAllOrdered(userId, TxType.INCOME).stream().map(Category::getName).toList() : null;
+                List<String> expenseNames = categories.findAllOrdered(userId, TxType.EXPENSE).stream()
+                        .map(Category::getName).toList();
+                String system = ChatPrompt.system(req.mate(), context,
+                        expenseCategories.isEmpty() ? null : scheduleInfo(req, expenseCategories), incomeCategories,
+                        expenseNames);
+                r = model.generate(system, req.messages(), presets,
+                        expenseCategories.stream().map(Category::getName).toList(), incomeCategories != null, expenseNames);
+            }
+            else if (req.accepts(Accept.INCOME)) {
                 List<String> incomeCategories = categories.findAllOrdered(userId, TxType.INCOME).stream()
                         .map(Category::getName).toList();
                 String system = ChatPrompt.system(req.mate(), context,
@@ -118,6 +129,9 @@ public class ChatService {
 			log.warn("AI 메이트 응답 실패: {}", e.getMessage());
 			throw new ApiException(ErrorCode.CHAT_FAILED);
 		}
+        if (req.accepts(Accept.EXPENSE) && r.expense() != null) {
+            return new ExpenseProposals(transactions, categories, zone).reply(userId, context.date(), r.expense());
+        }
         if (req.accepts(Accept.INCOME) && r.income() != null) {
             return new IncomeProposals(budget, transactions, categories, zone).reply(userId, context.date(), r.income());
         }

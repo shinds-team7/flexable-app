@@ -67,6 +67,16 @@ final class ChatPrompt {
 			- 확인 전에는 저장되지 않는다. 등록했다고 말하지 않는다.
 			""";
 
+	private static final String EXPENSE_RULES = """
+
+			지출 기록
+			- 사용자가 이미 쓴 돈을 기록·수정하려는 말(예: "식비로 14000원 빼줘", "점심 9천원 썼어", "어제 커피 4500원")을 하면 반드시 propose_expense 도구를 호출한다. 앱 화면에서 직접 하라고 안내하거나 도구 없이 말로만 기록해 주겠다고 하지 않는다. '버튼을 누르라'고도 하지 않는다. 확인 문구와 버튼은 앱이 붙인다.
+			- 새 기록은 operation CREATE, 이미 남긴 지출 기록을 고치는 것은 UPDATE다. 앞으로의 약속·일정은 propose_schedule이다.
+			- category는 [지출 카테고리] 이름 중 사용자가 말한 것(또는 가장 가까운 것)을 넣는다. title은 사용자가 말한 이름을 짧게 쓰고, 말하지 않았으면 카테고리 이름을 쓴다. 날짜를 말하지 않았으면 date를 넣지 않는다(오늘로 기록된다).
+			- 금액은 사용자가 말한 값만 원 단위 정수로 넣고(1.4만원 → 14000) 추측하지 않는다. 새 기록인데 금액이나 카테고리를 말하지 않았을 때만 도구 없이 짧게 묻는다.
+			- 확인 전에는 저장되지 않는다. 기록했다고 말하지 않는다.
+			""";
+
 	private static final String NARRATE_RULES = """
 			너는 가계부 앱 '텅장관리'의 AI 메이트다. 사용자가 말한 일정에 대해 서버가 계산한 [일정 예측 결과]를 자연스럽게 전하고 예정 지출로 등록할지 묻는다.
 
@@ -104,7 +114,15 @@ final class ChatPrompt {
 
 	/** income이 null이 아니면 수입 제안 규칙과 사용자의 수입 카테고리 이름을 넣는다. */
 	static String system(Mate mate, Context c, Schedule schedule, List<String> income) {
+		return system(mate, c, schedule, income, null);
+	}
+
+	/** expense가 null이 아니면 지출 기록 제안 규칙과 사용자의 지출 카테고리 이름을 넣는다. */
+	static String system(Mate mate, Context c, Schedule schedule, List<String> income, List<String> expense) {
 		StringBuilder sb = new StringBuilder(RULES);
+		if (expense != null) {
+			sb.append(EXPENSE_RULES);
+		}
 		if (schedule != null) {
 			sb.append(SCHEDULE_RULES);
 		}
@@ -112,6 +130,9 @@ final class ChatPrompt {
 			sb.append(INCOME_RULES);
 		}
 		sb.append("\n말투: ").append(tone(mate == null ? Mate.ANALYST : mate)).append("\n\n[사용자 정보]\n").append(context(c));
+		if (expense != null && schedule == null) {
+			sb.append("- 지출 카테고리: ").append(expense.isEmpty() ? "없음" : String.join(", ", expense)).append('\n');
+		}
 		if (schedule != null) {
 			sb.append("- 지출 카테고리: ").append(String.join(", ", schedule.categories())).append('\n');
 			PendingText p = schedule.pending();

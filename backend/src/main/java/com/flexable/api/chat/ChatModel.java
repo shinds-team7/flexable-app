@@ -40,7 +40,20 @@ public interface ChatModel {
     record IncomeCall(String target, String operation, String title, String date, String category,
             Long amount, Long payday, String matchDate, Long matchAmount, String matchTitle) { }
 
-	record Reply(String text, String proposedPreset, ScheduleCall schedule, IncomeCall income) {
+    default Reply generate(String system, List<Message> messages, List<String> presets,
+            List<String> categories, boolean income, List<String> expenseCategories) {
+        return generate(system, messages, presets, categories, income);
+    }
+
+    /** 지출 거래 기록(추가·수정) 제안 도구 호출. 값은 서버가 검증한다. */
+    record ExpenseCall(String operation, String title, String date, String category, Long amount,
+            String matchDate, Long matchAmount, String matchTitle) { }
+
+	record Reply(String text, String proposedPreset, ScheduleCall schedule, IncomeCall income, ExpenseCall expense) {
+        public Reply(String text, String proposedPreset, ScheduleCall schedule, IncomeCall income) {
+            this(text, proposedPreset, schedule, income, null);
+        }
+
         public Reply(String text, String proposedPreset, ScheduleCall schedule) {
             this(text, proposedPreset, schedule, null);
         }

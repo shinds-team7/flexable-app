@@ -39,7 +39,7 @@ public final class ChatDtos {
 
 	/** 앱이 처리할 수 있는 제안 종류. 모르는 종류의 제안을 받은 옛 앱이 깨지지 않게 앱이 알린 것만 제안한다. */
 	public enum Accept {
-		SCHEDULE, INCOME
+		SCHEDULE, INCOME, EXPENSE
 	}
 
 	/** 직전에 제안한 일정. 수정 의견을 줄 때 앱이 함께 보낸다. */
@@ -65,7 +65,7 @@ public final class ChatDtos {
 	}
 
 	public enum ActionType {
-		DAY_PRESET, SCHEDULE, INCOME_TRANSACTION, INCOME_SETTINGS
+		DAY_PRESET, SCHEDULE, INCOME_TRANSACTION, INCOME_SETTINGS, EXPENSE_TRANSACTION
 	}
 
 	/** SLOT은 11-06까지 쓰던 시간대 기준으로 지금은 내보내지 않는다(옛 앱 호환으로 값만 남김). */
@@ -94,14 +94,22 @@ public final class ChatDtos {
     public enum IncomeField { AMOUNT, DATE, TITLE, CATEGORY }
     public record IncomeTransactionProposal(IncomeOperation operation, Long transactionId, String title,
             LocalDate date, long categoryId, String category, long amount, List<IncomeField> changes) { }
+    public record ExpenseTransactionProposal(IncomeOperation operation, Long transactionId, String title,
+            LocalDate date, long categoryId, String category, long amount, List<IncomeField> changes) { }
     public record IncomeSettingsProposal(long incomeAmount, int payday, long expectedIncomeAmount,
             int expectedPayday) { }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
 	public record ChatAction(ActionType type, DayWeights.Preset preset, String label, ScheduleProposal schedule,
-            IncomeTransactionProposal incomeTransaction, IncomeSettingsProposal incomeSettings) {
+            IncomeTransactionProposal incomeTransaction, IncomeSettingsProposal incomeSettings,
+            ExpenseTransactionProposal expenseTransaction) {
+        public ChatAction(ActionType type, DayWeights.Preset preset, String label, ScheduleProposal schedule,
+                IncomeTransactionProposal incomeTransaction, IncomeSettingsProposal incomeSettings) {
+            this(type, preset, label, schedule, incomeTransaction, incomeSettings, null);
+        }
+
         public ChatAction(ActionType type, DayWeights.Preset preset, String label, ScheduleProposal schedule) {
-            this(type, preset, label, schedule, null, null);
+            this(type, preset, label, schedule, null, null, null);
         }
 
 		public ChatAction(ActionType type, DayWeights.Preset preset, String label) {

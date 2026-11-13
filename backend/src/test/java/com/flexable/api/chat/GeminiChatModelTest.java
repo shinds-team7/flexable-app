@@ -106,6 +106,23 @@ class GeminiChatModelTest {
 	}
 
     @Test
+    void expenseToolIsDeclaredWithCategoryEnumAndParsed() {
+        server.expect(requestTo(URL))
+                .andExpect(jsonPath("$.tools[0].functionDeclarations[0].name").value("propose_expense"))
+                .andExpect(jsonPath("$.tools[0].functionDeclarations[0].parameters.properties.category.enum[0]").value("식비"))
+                .andRespond(withSuccess("""
+                    {"candidates":[{"content":{"parts":[{"functionCall":{"name":"propose_expense","args":{
+                    "operation":"CREATE","category":"식비","amount":14000}}}]}}]}
+                    """, MediaType.APPLICATION_JSON));
+        var r = model.generate("규칙", List.of(new Message(Role.USER, "식비로 14000원 빼줘")), List.of(), List.of(), false,
+                List.of("식비", "교통"));
+        assertThat(r.expense().category()).isEqualTo("식비");
+        assertThat(r.expense().amount()).isEqualTo(14000L);
+        assertThat(r.expense().title()).isNull();
+        server.verify();
+    }
+
+    @Test
     void incomeToolReadsExplicitFieldsAndRejectsFractionalAmounts() {
         server.expect(requestTo(URL))
                 .andExpect(jsonPath("$.tools[0].functionDeclarations[0].name").value("propose_income"))

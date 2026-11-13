@@ -167,7 +167,7 @@ function ChatbotRoom() {
       started !== focus.current || generation !== sessionGeneration();
     const body: ChatRequest = {
       mate,
-      accepts: ["SCHEDULE", "INCOME"],
+      accepts: ["SCHEDULE", "INCOME", "EXPENSE"],
       pending: proposal.current
         ? {
             title: proposal.current.title,
@@ -196,7 +196,8 @@ function ChatbotRoom() {
         result.action?.type === "SCHEDULE" ? result.action.schedule : undefined;
       const income =
         result.action?.type === "INCOME_TRANSACTION" ||
-        result.action?.type === "INCOME_SETTINGS"
+        result.action?.type === "INCOME_SETTINGS" ||
+        result.action?.type === "EXPENSE_TRANSACTION"
           ? result.action
           : undefined;
       if (result.action) proposal.current = schedule ?? null;

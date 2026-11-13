@@ -2625,6 +2625,21 @@ export interface components {
             amount: number;
             changes: ("AMOUNT" | "DATE" | "TITLE" | "CATEGORY")[];
         };
+        ExpenseTransactionProposal: {
+            /** @enum {string} */
+            operation: "CREATE" | "UPDATE";
+            /** Format: int64 */
+            transactionId: number | null;
+            title: string;
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            categoryId: number;
+            category: string;
+            /** Format: int64 */
+            amount: number;
+            changes: ("AMOUNT" | "DATE" | "TITLE" | "CATEGORY")[];
+        };
         ChatMessage: {
             /**
              * @description USER 사용자, MODEL 이전 AI 답변
@@ -2641,8 +2656,8 @@ export interface components {
              * @enum {string}
              */
             mate?: "ANALYST" | "FRIEND" | "COACH";
-            /** @description 앱이 처리할 수 있는 제안 종류. SCHEDULE·INCOME을 각각 알린 앱에만 일정·수입 제안을 보낸다(옛 앱 보호) */
-            accepts?: ("SCHEDULE" | "INCOME")[];
+            /** @description 앱이 처리할 수 있는 제안 종류. SCHEDULE·INCOME·EXPENSE를 각각 알린 앱에만 일정·수입·지출 기록 제안을 보낸다(옛 앱 보호) */
+            accepts?: ("SCHEDULE" | "INCOME" | "EXPENSE")[];
             /** @description 직전에 제안한 일정. 사용자가 수정 의견을 줄 때 함께 보내면 서버가 이것을 바탕으로 다시 제안한다 */
             pending?: {
                 title: string;
@@ -2671,12 +2686,13 @@ export interface components {
              * @description 확인이 필요한 변경 제안. 없으면 null. 서버는 저장하지 않는다.
              *     INCOME_TRANSACTION: 확인하면 기존 POST /transactions 또는 PATCH /transactions/{id}로 저장한다. UPDATE는 changes에 있는 필드만 보낸다.
              *     INCOME_SETTINGS: 확인하면 PATCH /budget/settings/income으로 저장한다.
+             *     EXPENSE_TRANSACTION: 확인하면 기존 POST /transactions(type EXPENSE) 또는 PATCH /transactions/{id}로 저장한다. UPDATE는 changes에 있는 필드만 보낸다.
              *     DAY_PRESET: 확인하면 앱이 PUT /budget/day-weights {preset}으로 저장한다.
              *     SCHEDULE: 확인하면 앱이 POST /scheduled-expenses {amount, categoryId, title, date}로 등록한 뒤 GET /budget/today를 다시 받는다.
              */
             action: {
                 /** @enum {string} */
-                type: "DAY_PRESET" | "SCHEDULE" | "INCOME_TRANSACTION" | "INCOME_SETTINGS";
+                type: "DAY_PRESET" | "SCHEDULE" | "INCOME_TRANSACTION" | "INCOME_SETTINGS" | "EXPENSE_TRANSACTION";
                 /**
                  * @description DAY_PRESET일 때만. CUSTOM은 제안하지 않는다. RECORD는 기록이 충분할 때만
                  * @enum {string}
@@ -2686,6 +2702,7 @@ export interface components {
                 label?: string;
                 incomeTransaction?: components["schemas"]["IncomeTransactionProposal"];
                 incomeSettings?: components["schemas"]["IncomeSettingsProposal"];
+                expenseTransaction?: components["schemas"]["ExpenseTransactionProposal"];
                 /** @description SCHEDULE일 때만 */
                 schedule?: {
                     title: string;

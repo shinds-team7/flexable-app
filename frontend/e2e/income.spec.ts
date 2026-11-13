@@ -28,7 +28,7 @@ for (const via of ["text", "voice"]) {
       const action = isSettings ? { type: "INCOME_SETTINGS", incomeSettings: settings } : { type: "INCOME_TRANSACTION", incomeTransaction: tx };
       const saves: { body: unknown; method: string; key?: string }[] = [];
       await page.route("**/api/v1/chat/messages", async (route) => {
-        expect(route.request().postDataJSON().accepts).toEqual(["SCHEDULE", "INCOME"]);
+        expect(route.request().postDataJSON().accepts).toEqual(["SCHEDULE", "INCOME", "EXPENSE"]);
         await route.fulfill({ json: { reply: "확인해 주세요", action } });
       });
       await page.route(isSettings ? "**/api/v1/budget/settings/income" : mode === "update" ? "**/api/v1/transactions/42" : "**/api/v1/transactions", async (route) => {
