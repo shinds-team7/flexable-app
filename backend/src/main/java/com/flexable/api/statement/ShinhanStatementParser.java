@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,11 +24,15 @@ public final class ShinhanStatementParser {
 	private static final Pattern ACCOUNT = Pattern.compile("계좌번호\\s*\\[신한\\]");
 	private static final Pattern PERIOD = Pattern
 		.compile("조회기간\\s*(\\d{4})\\.(\\d{2})\\.(\\d{2})\\s*~\\s*(\\d{4})\\.(\\d{2})\\.(\\d{2})");
-	/** 거래 줄은 8자리 날짜로 시작한다. 이렇게 시작하는데 아래 형식이 아니면 읽지 못한 것으로 본다. */
-	private static final Pattern ROW_START = Pattern.compile("^\\d{8}\\b");
+	/** 표 머리(쪽마다 다시 나온다). 이 줄 다음부터는 거래·표 머리·꼬리글만 있어야 한다. */
+	private static final Pattern COLUMNS = Pattern.compile("^거래일자 거래시간 적요");
+	/** 표 구간에서 거래가 아니어도 되는 줄: 안내(*로 시작), 저작권 표시, 쪽 번호. 나머지는 읽지 못한 거래로 본다. */
+	private static final Pattern FOOTER = Pattern.compile(
+			"^\\*.*|.*SHINHAN ?BANK.*|.*All ?rights ?reserved.*|^\\d+ ?/ ?\\d+$|^- ?\\d+ ?-$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern ROW = Pattern.compile(
 			"^(\\d{8}) (\\d{2}:\\d{2}:\\d{2}) (\\S+) ([\\d,]+) ([\\d,]+) (?:(.*?) )?(-?[\\d,]+) (\\S+)$");
-	private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss");
+	private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("uuuuMMdd HH:mm:ss")
+		.withResolverStyle(ResolverStyle.STRICT);
 
 	private ShinhanStatementParser() {
 	}
@@ -46,16 +51,25 @@ public final class ShinhanStatementParser {
 		LocalDate from = date(period.group(1), period.group(2), period.group(3));
 		LocalDate to = date(period.group(4), period.group(5), period.group(6));
 
+		int start = -1;
+		for (int i = 0; i < lines.size() && start < 0; i++) {
+			if (COLUMNS.matcher(lines.get(i)).find()) {
+				start = i + 1;
+			}
+		}
+		if (start < 0) {
+			throw new UnreadableStatementException("표 머리 없음");
+		}
 		List<StatementRow> rows = new ArrayList<>();
-		for (String line : lines) {
-			if (!ROW_START.matcher(line).find()) {
-				continue;
-			}
+		for (String line : lines.subList(start, lines.size())) {
 			Matcher m = ROW.matcher(line);
-			if (!m.matches()) {
-				throw new UnreadableStatementException("거래 줄 형식이 다름 (" + rows.size() + "번째 다음)");
+			if (m.matches()) {
+				rows.add(row(m));
 			}
-			rows.add(row(m));
+			else if (!COLUMNS.matcher(line).find() && !FOOTER.matcher(line).matches()) {
+				// 날짜가 깨진 거래 줄 등. 버리면 거래가 빠진 채 저장되므로 전체를 거절한다.
+				throw new UnreadableStatementException("읽지 못한 줄 (" + rows.size() + "번째 거래 다음)");
+			}
 		}
 		checkBalances(rows);
 		return Optional.of(new ParsedStatement(BANK, from, to, rows));

@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Modal, Platform, View } from "react-native";
 import { Button, T, styles } from "@/components/ui";
 import { colors } from "@/theme";
 import { ApiError, api, errorText } from "./api/client";
+import { deleteStatementCopy } from "./statementCache";
 import { Field } from "./ui";
 import type { StatementImport } from "./types";
 
@@ -50,17 +51,31 @@ export function useStatementImport({
   const [busy, setBusy] = useState(false);
   const [modalError, setModalError] = useState<string>();
 
+  /** 모달을 닫고 앱 캐시에 복사된 사본을 지운다 */
+  const finish = (asset: Picked | null) => {
+    if (asset && !asset.file) deleteStatementCopy(asset.uri);
+    setPdf(null);
+    setPassword("");
+  };
+
   const start = async () => {
     onError(undefined);
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: "application/pdf",
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
+    let picked: DocumentPicker.DocumentPickerResult;
+    try {
+      picked = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+    } catch {
+      return onError("파일을 열지 못했어요. 다시 골라 주세요");
+    }
     if (picked.canceled || !picked.assets?.[0]) return;
     const asset = picked.assets[0];
-    if (asset.size != null && asset.size > MAX_BYTES)
+    if (asset.size != null && asset.size > MAX_BYTES) {
+      finish(asset);
       return onError("10MB 이하 PDF만 올릴 수 있어요");
+    }
     setPassword("");
     setModalError(undefined);
     setPdf(asset);
@@ -68,8 +83,7 @@ export function useStatementImport({
 
   const close = () => {
     if (busy) return;
-    setPdf(null);
-    setPassword("");
+    finish(pdf);
   };
 
   const submit = async () => {
@@ -81,16 +95,14 @@ export function useStatementImport({
         "/transactions/statement-import",
         { method: "POST", body: form(pdf, password), timeoutMs: 60000 },
       );
-      setPdf(null);
-      setPassword("");
+      finish(pdf);
       onDone(result);
     } catch (e) {
       if (e instanceof ApiError && e.code === "STATEMENT_PASSWORD") {
         setModalError(e.message);
         setPassword("");
       } else {
-        setPdf(null);
-        setPassword("");
+        finish(pdf);
         onError(errorText(e));
       }
     } finally {

@@ -19,13 +19,45 @@
       "name": "예산 설정 전: 모두 저장. 출금은 지출, 입금은 수입, 카테고리는 내용으로 추정, 이자는 제목을 '이자'로",
       "now": "2026-11-01T12:00:00",
       "expected": {
-        "imported": 5, "duplicates": 0, "afterBalance": 0,
+        "imported": 5,
+        "duplicates": 0,
+        "afterBalance": 0,
         "saved": [
-          { "type": "EXPENSE", "amount": 3000, "title": "CU 테스트점", "category": "생활·마트", "at": "2026-10-31T09:00:00" },
-          { "type": "EXPENSE", "amount": 50000, "title": "토스페이", "category": "기타", "at": "2026-10-20T13:00:00" },
-          { "type": "EXPENSE", "amount": 12000, "title": "동네치킨", "category": "식비", "at": "2026-10-15T19:20:10" },
-          { "type": "INCOME", "amount": 200000, "title": "가나다", "category": "기타 수입", "at": "2026-10-10T08:30:00" },
-          { "type": "INCOME", "amount": 500, "title": "이자", "category": "기타 수입", "at": "2026-10-03T12:00:00" }
+          {
+            "type": "EXPENSE",
+            "amount": 3000,
+            "title": "CU 테스트점",
+            "category": "생활·마트",
+            "at": "2026-10-31T09:00:00"
+          },
+          {
+            "type": "EXPENSE",
+            "amount": 50000,
+            "title": "토스페이",
+            "category": "기타",
+            "at": "2026-10-20T13:00:00"
+          },
+          {
+            "type": "EXPENSE",
+            "amount": 12000,
+            "title": "동네치킨",
+            "category": "식비",
+            "at": "2026-10-15T19:20:10"
+          },
+          {
+            "type": "INCOME",
+            "amount": 200000,
+            "title": "가나다",
+            "category": "기타 수입",
+            "at": "2026-10-10T08:30:00"
+          },
+          {
+            "type": "INCOME",
+            "amount": 500,
+            "title": "이자",
+            "category": "기타 수입",
+            "at": "2026-10-03T12:00:00"
+          }
         ]
       }
     },
@@ -33,19 +65,57 @@
       "name": "같은 거래내역서를 다시 올리면 이미 있는 거래로 모두 건너뜀",
       "now": "2026-11-01T12:00:00",
       "uploadTwice": true,
-      "expected": { "imported": 0, "duplicates": 5, "afterBalance": 0 }
+      "expected": {
+        "imported": 0,
+        "duplicates": 5,
+        "afterBalance": 0
+      }
     },
     {
       "name": "직접 기록한 같은 거래(종류·금액·시각·제목)는 건너뜀",
       "now": "2026-11-01T12:00:00",
-      "existing": [{ "type": "EXPENSE", "amount": 12000, "title": "동네치킨", "category": "식비", "at": "2026-10-15T19:20:10" }],
-      "expected": { "imported": 4, "duplicates": 1, "afterBalance": 0 }
+      "existing": [
+        {
+          "type": "EXPENSE",
+          "amount": 12000,
+          "title": "동네치킨",
+          "category": "식비",
+          "at": "2026-10-15T19:20:10"
+        }
+      ],
+      "expected": {
+        "imported": 4,
+        "duplicates": 1,
+        "afterBalance": 0
+      }
+    },
+    {
+      "name": "직접 기록한 거래에 소수 초가 있어도 초 단위로 같으면 같은 거래",
+      "now": "2026-11-01T12:00:00",
+      "existing": [
+        {
+          "type": "EXPENSE",
+          "amount": 12000,
+          "title": "동네치킨",
+          "category": "식비",
+          "at": "2026-10-15T19:20:10.750"
+        }
+      ],
+      "expected": {
+        "imported": 4,
+        "duplicates": 1,
+        "afterBalance": 0
+      }
     },
     {
       "name": "잔액 기준 시각과 같거나 늦은 거래는 잔액에 이미 반영됐거나 직접 기록할 거래라 건너뜀",
       "balanceAt": "2026-10-20T13:00:00",
       "now": "2026-11-01T12:00:00",
-      "expected": { "imported": 3, "duplicates": 0, "afterBalance": 2 }
+      "expected": {
+        "imported": 3,
+        "duplicates": 0,
+        "afterBalance": 2
+      }
     }
   ]
 }

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,7 +110,9 @@ public class StatementImportService {
 		Instant max = candidates.stream().map(c -> c.key().at()).max(Instant::compareTo).orElseThrow();
 		Map<Key, Integer> existing = new HashMap<>();
 		for (Transaction t : transactions.findInRange(userId, min, max.plusSeconds(1))) {
-			existing.merge(new Key(t.getType(), t.getAmount(), t.getOccurredAt(), t.getTitle()), 1, Integer::sum);
+			// 직접 기록한 거래는 소수 초가 있을 수 있다. 거래내역서는 초까지라 초 단위로 맞춰 비교한다.
+			existing.merge(new Key(t.getType(), t.getAmount(), t.getOccurredAt().truncatedTo(ChronoUnit.SECONDS),
+					t.getTitle()), 1, Integer::sum);
 		}
 
 		Map<String, Category> categoryByName = new HashMap<>();

@@ -96,4 +96,29 @@ class ShinhanStatementParserTest {
 		assertThat(StatementImportService.title(new StatementRow(LocalDateTime.now(), "신한체", 1, 0, "가".repeat(50), 0)))
 			.hasSize(40);
 	}
+	@Test
+	void 없는_날짜는_보정하지_않고_거절() {
+		assertThatThrownBy(() -> ShinhanStatementParser.parse(statement("20260230 09:00:00 신한체 3,000 0 편의점 235,000 원신한")))
+			.isInstanceOf(UnreadableStatementException.class);
+	}
+
+	@Test
+	void 표_안에서_날짜가_깨진_줄이_있으면_거절() {
+		assertThatThrownBy(() -> ShinhanStatementParser.parse(statement(
+				"20261031 09:00:00 신한체 3,000 0 CU 테스트점 235,500 원신한",
+				"20261010 08:30:00 타행MB 0 200,000 가나다 238,500 (토스)",
+				"2026103 12:00:00 이자 0 500 09.01~09.30 38,500 영업부")))
+			.isInstanceOf(UnreadableStatementException.class);
+	}
+
+	@Test
+	void 쪽마다_나오는_표_머리와_꼬리글은_건너뛴다() {
+		ParsedStatement p = ShinhanStatementParser.parse(statement(
+				"20261031 09:00:00 신한체 3,000 0 CU 테스트점 235,500 원신한",
+				"*안내 문구입니다.", "ⓒSHINHANBANK.Allrightsreserved.", "ⓒ SHINHAN BANK. All rights reserved.", "1 / 2",
+				"거래일자 거래시간 적요 출금(원) 입금(원) 내용 잔액(원) 거래점",
+				"20261010 08:30:00 타행MB 0 200,000 가나다 238,500 (토스)"))
+			.orElseThrow();
+		assertThat(p.rows()).hasSize(2);
+	}
 }

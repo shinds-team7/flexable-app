@@ -560,7 +560,7 @@ class ContractTest {
 		String token = signup();
 		MockMultipartFile pdf = new MockMultipartFile("file", "s.pdf", "application/pdf", "%PDF-test".getBytes());
 		when(statementReader.lines(any(), any())).thenReturn(List.of("거래내역조회", "계좌번호 [신한]110-***-*00000 성명 홍*동",
-				"조회기간 2026.10.01~2026.10.31", "20261003 12:00:00 이자 0 500 09.01~09.30 38,500 영업부"));
+				"조회기간 2026.10.01~2026.10.31", "거래일자 거래시간 적요 출금(원) 입금(원) 내용 잔액(원) 거래점", "20261003 12:00:00 이자 0 500 09.01~09.30 38,500 영업부"));
 		app(auth(multipart("/api/v1/transactions/statement-import").file(pdf).param("password", "000000"), token), 200);
 		when(statementReader.lines(any(), any())).thenReturn(List.of("다른 은행"));
 		app(auth(multipart("/api/v1/transactions/statement-import").file(pdf), token), 400);
