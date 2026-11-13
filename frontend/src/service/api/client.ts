@@ -64,7 +64,11 @@ export async function api<T>(
 ): Promise<T> {
   const url = apiUrl(path);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 15000);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, options.timeoutMs ?? 15000);
   const abort = () => controller.abort();
   options.signal?.addEventListener("abort", abort);
   try {
@@ -117,6 +121,22 @@ export async function api<T>(
     return data as T;
   } catch (e) {
     if (e instanceof ApiError) throw e;
+    // 연결은 됐지만 답이 늦은 경우(예: AI 메이트)는 연결 문제로 안내하지 않는다.
+    if (timedOut) {
+      try {
+        failureListener?.({
+          path,
+          method: options.method ?? "GET",
+          status: 0,
+          code: "TIMEOUT",
+          message: `응답 없음 ${options.timeoutMs ?? 15000}ms`,
+        });
+      } catch {}
+      throw new ApiError(
+        "TIMEOUT",
+        "응답이 늦어지고 있어요. 입력한 내용은 그대로 있어요. 잠시 뒤 다시 시도해 주세요",
+      );
+    }
     throw new ApiError(
       "NETWORK",
       "연결이 불안정해요. 입력한 내용은 그대로 있어요. 연결 후 다시 시도해 주세요",

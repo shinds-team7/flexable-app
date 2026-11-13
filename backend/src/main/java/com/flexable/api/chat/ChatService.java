@@ -1,5 +1,15 @@
 package com.flexable.api.chat;
 
+import jakarta.annotation.PreDestroy;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.time.Duration;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -42,6 +52,7 @@ import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.TxType;
 import com.flexable.api.config.AppProperties;
 import com.flexable.api.config.ChatProperties;
+import org.springframework.beans.factory.annotation.Value;
 import com.flexable.api.transaction.Transaction;
 import com.flexable.api.transaction.TransactionRepository;
 
@@ -67,10 +78,62 @@ public class ChatService {
 	private final ScheduleEstimator estimator;
 	private final Clock clock;
 	private final ZoneId zone;
+	/** 일정 안내 문장(두 번째 모델 호출)에 쓸 최대 시간. 넘으면 서버 기본 문장으로 답한다. */
+	private final Duration narrateLimit;
+	/**
+	 * 한 요청 전체에 쓸 시간. 앱은 40초 뒤 끊으므로 그보다 짧게 둔다. 첫 호출이 오래 걸렸으면 문장 다듬기를 건너뛴다.
+	 */
+	private final Duration replyBudget;
+	/**
+	 * 모델 호출 전용 스레드. 시간 초과로 버린 호출도 HTTP 읽기 제한까지 스레드를 쥐고 있으므로 수를 제한한다.
+	 * 다 차면 첫 호출은 CHAT_FAILED, 안내 문장은 서버 기본 문장으로 답한다.
+	 */
+	private final ThreadPoolExecutor modelCalls = new ThreadPoolExecutor(MODEL_THREADS, MODEL_THREADS, 30,
+			TimeUnit.SECONDS, new ArrayBlockingQueue<>(MODEL_QUEUE), r -> {
+				Thread t = new Thread(r, "chat-model");
+				t.setDaemon(true);
+				return t;
+			});
+	static final int MODEL_THREADS = 8;
+	static final int MODEL_QUEUE = 8;
+
+	@PreDestroy
+	void shutdown() {
+		modelCalls.shutdownNow();
+	}
+
+	/** 기한 안에 모델 답을 받는다. 기한을 넘기면 TimeoutException, 대기열이 차면 RejectedExecutionException. */
+	private ChatModel.Reply within(Callable<ChatModel.Reply> call, Duration limit) throws TimeoutException {
+		Future<ChatModel.Reply> job = modelCalls.submit(call);
+		try {
+			return job.get(Math.max(1, limit.toMillis()), TimeUnit.MILLISECONDS);
+		}
+		catch (TimeoutException e) {
+			job.cancel(true);
+			throw e;
+		}
+		catch (InterruptedException e) {
+			job.cancel(true);
+			Thread.currentThread().interrupt();
+			throw new ChatModel.Failure("중단됨");
+		}
+		catch (ExecutionException e) {
+			if (e.getCause() instanceof ChatModel.Failure f) {
+				throw f;
+			}
+			if (e.getCause() instanceof RuntimeException re) {
+				throw re;
+			}
+			throw new ChatModel.Failure("모델 호출 오류: " + e.getCause());
+		}
+	}
 
 	public ChatService(ChatModel model, ChatProperties props, ChatRateLimiter limiter, BudgetService budget,
 			TransactionRepository transactions, CategoryRepository categories, ScheduleEstimator estimator, Clock clock,
-			AppProperties app) {
+			AppProperties app, @Value("${app.chat.narrate-timeout:6s}") Duration narrateLimit,
+			@Value("${app.chat.reply-budget:30s}") Duration replyBudget) {
+		this.narrateLimit = narrateLimit;
+		this.replyBudget = replyBudget;
 		this.model = model;
 		this.props = props;
 		this.limiter = limiter;
@@ -90,14 +153,15 @@ public class ChatService {
 			throw ApiException.invalid("messages", "마지막 메시지는 내가 보낸 메시지여야 해요");
 		}
 		limiter.acquire(userId);
+		long started = System.nanoTime();
 
 		ChatPrompt.Context context = context(userId);
 		List<String> presets = context.proposable().stream().map(Preset::name).toList();
 		// 일정 제안은 앱이 알린 경우에만, 예산이 있고 지출 카테고리가 있을 때만 한다.
 		List<Category> expenseCategories = req.accepts(Accept.SCHEDULE) && context.today() != null
 				? categories.findAllOrdered(userId, TxType.EXPENSE) : List.of();
-		ChatModel.Reply r;
-		try {
+		// DB에서 필요한 값은 여기서 읽고, 모델 호출만 기한이 있는 작업으로 돌린다(요청 전체 replyBudget).
+		Callable<ChatModel.Reply> call;
             if (req.accepts(Accept.EXPENSE)) {
                 List<String> incomeCategories = req.accepts(Accept.INCOME)
                         ? categories.findAllOrdered(userId, TxType.INCOME).stream().map(Category::getName).toList() : null;
@@ -106,7 +170,7 @@ public class ChatService {
                 String system = ChatPrompt.system(req.mate(), context,
                         expenseCategories.isEmpty() ? null : scheduleInfo(req, expenseCategories), incomeCategories,
                         expenseNames);
-                r = model.generate(system, req.messages(), presets,
+                call = () -> model.generate(system, req.messages(), presets,
                         expenseCategories.stream().map(Category::getName).toList(), incomeCategories != null, expenseNames);
             }
             else if (req.accepts(Accept.INCOME)) {
@@ -114,16 +178,23 @@ public class ChatService {
                         .map(Category::getName).toList();
                 String system = ChatPrompt.system(req.mate(), context,
                         expenseCategories.isEmpty() ? null : scheduleInfo(req, expenseCategories), incomeCategories);
-                r = model.generate(system, req.messages(), presets,
+                call = () -> model.generate(system, req.messages(), presets,
                         expenseCategories.stream().map(Category::getName).toList(), true);
             }
             else if (expenseCategories.isEmpty()) {
-				r = model.generate(ChatPrompt.system(req.mate(), context), req.messages(), presets);
+				call = () -> model.generate(ChatPrompt.system(req.mate(), context), req.messages(), presets);
 			}
 			else {
-				r = model.generate(ChatPrompt.system(req.mate(), context, scheduleInfo(req, expenseCategories)),
+				call = () -> model.generate(ChatPrompt.system(req.mate(), context, scheduleInfo(req, expenseCategories)),
 						req.messages(), presets, expenseCategories.stream().map(Category::getName).toList());
 			}
+		ChatModel.Reply r;
+		try {
+			r = within(call, replyBudget);
+		}
+		catch (TimeoutException | RejectedExecutionException e) {
+			log.warn("AI 메이트 응답 시간 초과 또는 대기 초과: {}", e.getClass().getSimpleName());
+			throw new ApiException(ErrorCode.CHAT_FAILED);
 		}
 		catch (ChatModel.Failure e) {
 			log.warn("AI 메이트 응답 실패: {}", e.getMessage());
@@ -136,7 +207,7 @@ public class ChatService {
             return new IncomeProposals(budget, transactions, categories, zone).reply(userId, context.date(), r.income());
         }
 		if (r.schedule() != null && !expenseCategories.isEmpty()) {
-			return scheduleReply(userId, req, context, r, expenseCategories);
+			return scheduleReply(userId, req, context, r, expenseCategories, started);
 		}
 
 		String proposed = r.proposedPreset() != null ? r.proposedPreset() : mentioned(r.text(), context.proposable());
@@ -178,7 +249,7 @@ public class ChatService {
 	 * 전하는 문장만 쓴다. 저장은 하지 않고 제안(action)만 돌려준다.
 	 */
 	private ChatResponse scheduleReply(long userId, ChatRequest req, ChatPrompt.Context context, ChatModel.Reply r,
-			List<Category> expense) {
+			List<Category> expense, long started) {
 		ChatModel.ScheduleCall call = r.schedule();
 		LocalDate today = context.date();
 		LocalDate date = parseDate(call.date());
@@ -221,7 +292,7 @@ public class ChatService {
 			}
 		}
 
-		String reply = narrate(req, new ChatPrompt.ScheduleResult(title, date, category.getName(), amount,
+		String reply = narrate(req, started, new ChatPrompt.ScheduleResult(title, date, category.getName(), amount,
 				basisText(basis), preview == null ? null : preview.dayBudget(),
 				preview == null ? null : preview.dailyBudgetBefore(),
 				preview == null ? null : preview.dailyBudgetAfter(), afterPayday));
@@ -229,14 +300,29 @@ public class ChatService {
 				new ScheduleProposal(title, date, category.getId(), category.getName(), amount, basis, preview)));
 	}
 
-	/** 서버 결과를 모델이 전하게 한다. 실패하거나 서버 금액이 문장에 그대로 없으면 서버 기본 문장을 쓴다. */
-	private String narrate(ChatRequest req, ChatPrompt.ScheduleResult res) {
+	/**
+	 * 서버 결과를 모델이 전하게 한다. 실패하거나, 남은 시간 안에 오지 않거나, 서버 금액이 문장에 그대로 없으면
+	 * 서버 기본 문장을 쓴다. 문장은 꾸밈일 뿐이라 제안(action)은 늘 서버 값으로 나간다.
+	 */
+	private String narrate(ChatRequest req, long started, ChatPrompt.ScheduleResult res) {
 		String text = "";
-		try {
-			text = model.generate(ChatPrompt.narrate(req.mate(), res), req.messages(), List.of()).text();
+		Duration left = replyBudget.minus(Duration.ofNanos(System.nanoTime() - started));
+		Duration limit = left.compareTo(narrateLimit) < 0 ? left : narrateLimit;
+		if (limit.toMillis() < 1000) {
+			log.warn("AI 메이트 일정 안내 문장 건너뜀: 첫 응답이 늦음");
 		}
-		catch (ChatModel.Failure e) {
-			log.warn("AI 메이트 일정 안내 문장 실패, 기본 문장 사용: {}", e.getMessage());
+		else {
+			try {
+				ChatModel.Reply reply = within(
+						() -> model.generate(ChatPrompt.narrate(req.mate(), res), req.messages(), List.of()), limit);
+				text = reply == null || reply.text() == null ? "" : reply.text();
+			}
+			catch (TimeoutException | RejectedExecutionException e) {
+				log.warn("AI 메이트 일정 안내 문장 {}({}ms), 기본 문장 사용", e.getClass().getSimpleName(), limit.toMillis());
+			}
+			catch (ChatModel.Failure e) {
+				log.warn("AI 메이트 일정 안내 문장 실패, 기본 문장 사용: {}", e.getMessage());
+			}
 		}
 		if (!text.isBlank() && (res.amount() == null || text.contains(String.format("%,d", res.amount())))) {
 			return text;

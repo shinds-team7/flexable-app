@@ -27,6 +27,9 @@ test("unexpected server answers are reported, expected ones and logouts are not"
   assert.equal(shouldReportApi(400, "VALIDATION_FAILED"), true);
   assert.equal(shouldReportApi(500, "INTERNAL_ERROR"), true);
   assert.equal(shouldReportApi(502, "CHAT_FAILED"), true);
+  // 앱이 기다리다 끊은 경우(status 0)는 서버·AI가 느린 신호라 기록한다
+  assert.equal(shouldReportApi(0, "TIMEOUT"), true);
+  assert.equal(shouldReportApi(0, undefined), false);
   assert.equal(shouldReportApi(404, "NOT_FOUND"), true);
   assert.equal(shouldReportApi(503, undefined), true);
   assert.equal(shouldReportApi(401, "UNAUTHORIZED"), false);

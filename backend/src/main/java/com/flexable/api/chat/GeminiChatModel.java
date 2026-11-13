@@ -29,6 +29,10 @@ public class GeminiChatModel implements ChatModel {
 	static final String EXPENSE = "propose_expense";
 	private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() { };
 
+	/** 첫 호출이 이 시간 안에 과부하로 실패했을 때만 다시 묻는다 */
+	static final long RETRY_WITHIN_NANOS = 5_000_000_000L;
+	static final long RETRY_DELAY_MILLIS = 700;
+
 	private final RestClient http;
 	private final ChatProperties props;
 
@@ -124,24 +128,32 @@ public class GeminiChatModel implements ChatModel {
 		// 생각 단계를 줄여 응답을 빠르게 한다(Gemini 3 계열 thinkingLevel).
 		body.put("generationConfig", Map.of("temperature", 0.6, "thinkingConfig", Map.of("thinkingLevel", "low")));
 
-		Map<String, Object> res;
-		try {
-			res = http.post()
-				.uri(URL, props.model())
-				.header("x-goog-api-key", props.geminiApiKey().trim())
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
-				.retrieve()
-				.body(MAP);
+		long started = System.nanoTime();
+		for (int attempt = 1;; attempt++) {
+			try {
+				return parse(http.post()
+					.uri(URL, props.model())
+					.header("x-goog-api-key", props.geminiApiKey().trim())
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(body)
+					.retrieve()
+					.body(MAP));
+			}
+			catch (RestClientResponseException e) {
+				int status = e.getStatusCode().value();
+				// 과부하(429·500·503)를 빨리 돌려받았으면 한 번만 다시 묻는다. 오래 기다린 뒤라면 앱이 끊기 전에 실패를 알린다.
+				boolean transientError = status == 429 || status == 500 || status == 503;
+				if (attempt == 1 && transientError && System.nanoTime() - started < RETRY_WITHIN_NANOS) {
+					pause(RETRY_DELAY_MILLIS);
+					continue;
+				}
+				// 응답 본문에는 요청 내용이 섞일 수 있어 상태 코드만 남긴다.
+				throw new Failure("Gemini 응답 " + status + (attempt > 1 ? " (재시도 후)" : ""), e);
+			}
+			catch (RestClientException e) {
+				throw new Failure("Gemini 호출 실패: " + e.getClass().getSimpleName(), e);
+			}
 		}
-		catch (RestClientResponseException e) {
-			// 응답 본문에는 요청 내용이 섞일 수 있어 상태 코드만 남긴다.
-			throw new Failure("Gemini 응답 " + e.getStatusCode().value(), e);
-		}
-		catch (RestClientException e) {
-			throw new Failure("Gemini 호출 실패: " + e.getClass().getSimpleName(), e);
-		}
-		return parse(res);
 	}
 
 	/** 첫 사용자 메시지 앞의 인사말(MODEL)은 버리고, 같은 역할이 이어지면 한 턴으로 합친다(Gemini는 user·model을 번갈아 받는다). */
@@ -248,5 +260,15 @@ public class GeminiChatModel implements ChatModel {
 			}
 		}
 		return null;
+	}
+
+	private static void pause(long millis) {
+		try {
+			Thread.sleep(millis);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new Failure("Gemini 재시도 중단");
+		}
 	}
 }
