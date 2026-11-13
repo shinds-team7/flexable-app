@@ -372,6 +372,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 |---|---|
 | `GET /transactions?from=2026-10-01&to=2026-10-31&type=&categoryId=` | `{ "items": Transaction[] }`, `occurredAt` 내림차순. `from`/`to` 필수(포함), 최대 366일 |
 | `POST /transactions` | 201. 헤더 `Idempotency-Key: <uuid>` 권장(64자 이하, 넘으면 400) — 같은 키 재전송 시(동시에 온 요청 포함) 처음 만든 거래를 200으로 돌려준다 |
+| `POST /transactions/statement-import` | multipart `file`(PDF, 10MB 이하)·`password`(선택). 200 `{ bank, from, to, imported, duplicates, afterBalance }`. 신한은행 거래내역조회 PDF를 읽어 검토 없이 모두 저장하고 같은 거래·잔액 기준 시각 이후 거래는 건너뛴다. 비밀번호 오류 400 `STATEMENT_PASSWORD`, 읽을 수 없으면 400 `STATEMENT_UNSUPPORTED`(아무것도 저장 안 함). [policies §9](policies.md) |
 | `GET /transactions/{id}` | 200 |
 | `PATCH /transactions/{id}` | 200. 보낸 필드만 수정. `memo`는 생략하면 유지, `"memo": null`이면 삭제. 그 밖의 필드(`type`, `amount`, `categoryId`, `title`, `occurredAt`)는 생략하거나 null이면 유지. `type`이나 `categoryId`를 바꾸면 바뀐 조합으로 카테고리 종류를 다시 검사한다 |
 | `DELETE /transactions/{id}` | 204 |
