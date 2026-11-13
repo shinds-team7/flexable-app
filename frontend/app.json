@@ -2,7 +2,7 @@
   "expo": {
     "name": "텅장관리",
     "slug": "flexable",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

@@ -26,6 +26,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.flywaydb:flyway-mysql'
+	// 거래내역서 PDF 글자 읽기(statement.StatementPdfReader)
+	implementation 'org.apache.pdfbox:pdfbox:3.0.5'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	developmentOnly 'com.h2database:h2'
 	testRuntimeOnly 'com.h2database:h2'

@@ -1124,6 +1124,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transactions/statement-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 거래내역서 PDF를 읽어 거래로 저장(policies §9). 지금은 신한은행 거래내역조회만 받는다
+         * @description 검토 없이 읽은 거래를 모두 저장한다. 출금은 지출, 입금은 수입이고 카테고리는 내용으로 추정한다(못 맞추면 기타·기타 수입).
+         *     이미 있는 같은 거래(종류·금액·시각·제목)는 건너뛰고(duplicates), 잔액 기준 시각(balanceAt, 예산 설정 전이면 지금) 이후 거래도 건너뛴다(afterBalance).
+         *     한 줄이라도 읽지 못하거나 잔액이 이어지지 않으면 아무것도 저장하지 않고 400 STATEMENT_UNSUPPORTED.
+         *     PDF와 비밀번호는 저장하지 않는다. 읽기는 30초·글자 200만 자까지이고 넘으면 400 STATEMENT_UNSUPPORTED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description PDF, 10MB 이하·100쪽 이하
+                         */
+                        file: string;
+                        /** @description PDF 비밀번호. 없으면 생략 */
+                        password?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 저장 결과 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StatementImport"];
+                    };
+                };
+                400: components["responses"]["Error"];
+                401: components["responses"]["Error"];
+                429: components["responses"]["Error"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/{id}": {
         parameters: {
             query?: never;
@@ -2103,7 +2160,7 @@ export interface components {
     schemas: {
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "BUDGET_INCOME_CHANGED" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "AD_NOT_REWARDED" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "INTERNAL_ERROR";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "SOCIAL_ACCOUNT" | "OAUTH_CODE_INVALID" | "NOT_FOUND" | "BUDGET_NOT_SET" | "BUDGET_INCOME_CHANGED" | "EMAIL_UNAVAILABLE" | "CATEGORY_DUPLICATE" | "CATEGORY_DEFAULT" | "SEED_NOT_PENDING" | "OUTFIT_NOT_FOR_SALE" | "OUTFIT_OWNED" | "OUTFIT_LOCKED" | "COINS_NOT_ENOUGH" | "REFERRAL_CODE_INVALID" | "REFERRAL_ALREADY" | "LINK_CODE_INVALID" | "LINK_NOT_FOUND" | "TOO_MANY_ATTEMPTS" | "AD_NOT_REWARDED" | "CHAT_UNAVAILABLE" | "CHAT_FAILED" | "STATEMENT_PASSWORD" | "STATEMENT_UNSUPPORTED" | "INTERNAL_ERROR";
             message: string;
             /** @description VALIDATION_FAILED에서 필드별 문장 */
             fields?: {
@@ -2119,6 +2176,26 @@ export interface components {
              * @enum {string}
              */
             provider?: "kakao" | "google";
+        };
+        StatementImport: {
+            /** @enum {string} */
+            bank: "SHINHAN";
+            /**
+             * Format: date
+             * @description 거래내역서 조회기간 시작
+             */
+            from: string;
+            /**
+             * Format: date
+             * @description 거래내역서 조회기간 끝
+             */
+            to: string;
+            /** @description 새로 저장한 거래 수 */
+            imported: number;
+            /** @description 이미 있어서 건너뛴 거래 수 */
+            duplicates: number;
+            /** @description 잔액 기준 시각 이후라 건너뛴 거래 수 */
+            afterBalance: number;
         };
         /** @enum {string} */
         TxType: "EXPENSE" | "INCOME";

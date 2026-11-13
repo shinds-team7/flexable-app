@@ -205,12 +205,18 @@ export function FixedExpensesEditor({
   onChange,
   onError,
   onImportPdf,
+  importBusy,
+  importNote,
 }: {
   items: FixedItem[];
   onChange: (next: FixedItem[]) => void;
   onError: (message?: string) => void;
   /** 주면 추가 버튼 아래에 [거래내역서 PDF 등록]을 보인다(온보딩) */
   onImportPdf?: () => void;
+  /** 거래내역서를 올리는 중 */
+  importBusy?: boolean;
+  /** 거래내역서 저장 결과 문장 */
+  importNote?: string;
 }) {
   const e = useItemEditing(items, onChange);
   const full = items.length >= 30;
@@ -304,12 +310,17 @@ export function FixedExpensesEditor({
       />
       {onImportPdf && (
         <Button
-          label="거래내역서 PDF 등록"
+          label={importBusy ? "거래내역서를 읽는 중이에요" : "거래내역서 PDF 등록"}
           variant="neutral"
-          disabled={editing}
+          disabled={editing || importBusy}
           style={editing && s.covered}
           onPress={onImportPdf}
         />
+      )}
+      {onImportPdf && importNote && (
+        <T size={14} color={colors.textSub} accessibilityRole="alert">
+          {importNote}
+        </T>
       )}
     </View>
   );

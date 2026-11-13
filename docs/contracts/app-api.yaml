@@ -527,6 +527,34 @@ paths:
         '201': { $ref: '#/components/responses/Transaction' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
+  /transactions/statement-import:
+    post:
+      tags: [transaction]
+      summary: 거래내역서 PDF를 읽어 거래로 저장(policies §9). 지금은 신한은행 거래내역조회만 받는다
+      description: |
+        검토 없이 읽은 거래를 모두 저장한다. 출금은 지출, 입금은 수입이고 카테고리는 내용으로 추정한다(못 맞추면 기타·기타 수입).
+        이미 있는 같은 거래(종류·금액·시각·제목)는 건너뛰고(duplicates), 잔액 기준 시각(balanceAt, 예산 설정 전이면 지금) 이후 거래도 건너뛴다(afterBalance).
+        한 줄이라도 읽지 못하거나 잔액이 이어지지 않으면 아무것도 저장하지 않고 400 STATEMENT_UNSUPPORTED.
+        PDF와 비밀번호는 저장하지 않는다. 읽기는 30초·글자 200만 자까지이고 넘으면 400 STATEMENT_UNSUPPORTED.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: 'PDF, 10MB 이하·100쪽 이하' }
+                password: { type: string, maxLength: 64, description: 'PDF 비밀번호. 없으면 생략' }
+      responses:
+        '200':
+          description: 저장 결과
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StatementImport' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /transactions/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
@@ -1011,7 +1039,8 @@ components:
           enum: [VALIDATION_FAILED, UNAUTHORIZED, INVALID_CREDENTIALS, SOCIAL_ACCOUNT, OAUTH_CODE_INVALID, NOT_FOUND,
             BUDGET_NOT_SET, BUDGET_INCOME_CHANGED, EMAIL_UNAVAILABLE, CATEGORY_DUPLICATE, CATEGORY_DEFAULT, SEED_NOT_PENDING,
             OUTFIT_NOT_FOR_SALE, OUTFIT_OWNED, OUTFIT_LOCKED, COINS_NOT_ENOUGH, REFERRAL_CODE_INVALID,
-            REFERRAL_ALREADY, LINK_CODE_INVALID, LINK_NOT_FOUND, TOO_MANY_ATTEMPTS, AD_NOT_REWARDED, CHAT_UNAVAILABLE, CHAT_FAILED, INTERNAL_ERROR]
+            REFERRAL_ALREADY, LINK_CODE_INVALID, LINK_NOT_FOUND, TOO_MANY_ATTEMPTS, AD_NOT_REWARDED, CHAT_UNAVAILABLE, CHAT_FAILED,
+            STATEMENT_PASSWORD, STATEMENT_UNSUPPORTED, INTERNAL_ERROR]
         message: { type: string }
         fields:
           type: object
@@ -1019,6 +1048,18 @@ components:
           additionalProperties: { type: string }
         retryAfterSeconds: { type: integer, format: int64, description: 'TOO_MANY_ATTEMPTS' }
         provider: { type: string, enum: [kakao, google], description: 'SOCIAL_ACCOUNT의 가입 공급자' }
+
+    StatementImport:
+      type: object
+      required: [bank, from, to, imported, duplicates, afterBalance]
+      additionalProperties: false
+      properties:
+        bank: { type: string, enum: [SHINHAN] }
+        from: { type: string, format: date, description: '거래내역서 조회기간 시작' }
+        to: { type: string, format: date, description: '거래내역서 조회기간 끝' }
+        imported: { type: integer, minimum: 0, description: '새로 저장한 거래 수' }
+        duplicates: { type: integer, minimum: 0, description: '이미 있어서 건너뛴 거래 수' }
+        afterBalance: { type: integer, minimum: 0, description: '잔액 기준 시각 이후라 건너뛴 거래 수' }
 
     TxType:
       type: string

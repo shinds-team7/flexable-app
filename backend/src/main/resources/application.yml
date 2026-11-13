@@ -15,6 +15,11 @@ spring:
       hibernate.jdbc.time_zone: UTC
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      # 거래내역서 PDF 업로드(statement.StatementImportController.MAX_BYTES와 같게)
+      max-file-size: 10MB
+      max-request-size: 11MB
 
 server:
   port: ${PORT:8080}

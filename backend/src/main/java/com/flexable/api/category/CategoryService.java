@@ -133,6 +133,27 @@ public class CategoryService {
 		return req.ids().stream().map(id->CategoryResponse.of(byId.get(id))).toList();
 	}
 
+	/**
+	 * 이름이 같은 내 카테고리, 없으면 '기타'·'기타 수입', 그것도 없으면 그 종류의 첫 카테고리.
+	 * 그 종류를 모두 지웠으면 '기타'·'기타 수입'을 새로 만든다(거래내역서 가져오기).
+	 */
+	@Transactional
+	public Category byNameOrFallback(long userId, TxType type, String name) {
+		List<Category> list = categories.findAllOrdered(userId, type);
+		String fallbackName = type == TxType.EXPENSE ? EXPENSE_FALLBACK : INCOME_FALLBACK;
+		return list.stream()
+			.filter(c -> c.getName().equals(name))
+			.findFirst()
+			.or(() -> list.stream().filter(c -> c.getName().equals(fallbackName)).findFirst())
+			.or(() -> list.stream().findFirst())
+			.orElseGet(() -> {
+				Category created = new Category(userId, fallbackName, type, DEFAULT_COLOR, DEFAULT_ICON, false,
+						clock.instant());
+				created.reorder(0);
+				return categories.save(created);
+			});
+	}
+
 	/** 본인 소유이고 종류가 맞는 카테고리인지 확인한다. */
 	@Transactional(readOnly = true)
 	public Category requireForType(long userId, long id, TxType type) {

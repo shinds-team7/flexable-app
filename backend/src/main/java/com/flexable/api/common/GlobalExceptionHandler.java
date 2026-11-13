@@ -19,6 +19,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.flexable.api.auth.CurrentUser;
@@ -60,6 +63,16 @@ public class GlobalExceptionHandler {
 			MethodArgumentTypeMismatchException.class, MissingRequestHeaderException.class })
 	ResponseEntity<Map<String, Object>> handleBadRequest(Exception e) {
 		return ErrorResponses.of(ErrorCode.VALIDATION_FAILED);
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException e) {
+		return handleApi(ApiException.invalid("file", "10MB 이하 PDF만 올릴 수 있어요"));
+	}
+
+	@ExceptionHandler({ MissingServletRequestPartException.class, MultipartException.class })
+	ResponseEntity<Map<String, Object>> handleBadMultipart(Exception e) {
+		return handleApi(ApiException.invalid("file", "PDF 파일을 골라 주세요"));
 	}
 
 	@ExceptionHandler({ NoResourceFoundException.class, HttpRequestMethodNotSupportedException.class })

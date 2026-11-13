@@ -8,6 +8,10 @@
 
 - [#361] AI 메이트·음성 입력 지출 기록 제안: 채팅 `accepts`에 `EXPENSE`, 액션 `EXPENSE_TRANSACTION`·`expenseTransaction`을 `app-api.yaml`에 추가 — 영향: 앱 화면·앱 서버
 
+## 2026-11-14
+
+- [#362, Issue #327] 거래내역서 PDF 가져오기: `POST /transactions/statement-import`(multipart `file`·`password`, 결과 `StatementImport`)와 오류 코드 `STATEMENT_PASSWORD`·`STATEMENT_UNSUPPORTED`를 `app-api.yaml`에 더하고 policies §9·`tests/policy/statement-import.json`·[결정](decisions/2026-11-14-statement-pdf-import.md)을 추가했다. 신한은행 거래내역조회만, 검토 없이 모두 저장(간편결제 출금도 지출), 같은 거래·잔액 기준 시각 이후 거래는 건너뜀, PDF·비밀번호 미저장. 개인정보처리방침 추가 개정(5)(11-14 공고·시행, 사용자 결정, 2.1.0부터). 기존 응답은 그대로 — 영향: 앱 서버(배포 먼저)·앱 화면(2.1.0 새 빌드)·공개 방침
+
 ## 2026-11-11
 
 - [사용자 요청] PRD §3·§4를 현재 앱(Play 2.0.1, 11-10 서버) 기준으로 갱신: 초기 설정 5단계, 분석 기본 이번 달, AI 수입 제안, 시드머니 총액, 레벨 코스튬 전체 해금, 알림·사용 안내 행 추가. FEATURES 소비 분석 기본 기간을 코드대로 이번 달로 정정. 동작·계약 변경 없음 — 영향: 문서

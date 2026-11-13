@@ -70,15 +70,22 @@ export async function api<T>(
   try {
     const auth = options.token === undefined ? token : options.token;
     const started = generation;
+    // 파일 업로드(FormData)는 fetch가 multipart 경계를 붙이도록 Content-Type을 비워 둔다.
+    const form =
+      typeof FormData !== "undefined" && options.body instanceof FormData;
     const res = await fetch(url, {
       method: options.method ?? "GET",
       headers: {
-        "Content-Type": "application/json",
+        ...(form ? {} : { "Content-Type": "application/json" }),
         ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         ...(options.key ? { "Idempotency-Key": options.key } : {}),
       },
       body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+        options.body === undefined
+          ? undefined
+          : form
+            ? (options.body as FormData)
+            : JSON.stringify(options.body),
       signal: controller.signal,
     });
     if (res.status === 204) return undefined as T;
