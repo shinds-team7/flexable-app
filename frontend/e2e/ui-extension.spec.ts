@@ -57,13 +57,29 @@ test("future expense creation, editing, reload and deletion use the scheduled AP
     page.getByRole("button", { name: "생일 선물 수정", exact: true }),
   ).toBeVisible();
   await page.reload();
+  // 수정은 등록 화면과 분리된 상세 화면에서, 저장된 금액·내용을 그대로 채워 보여 준다
   await page
     .getByRole("button", { name: "생일 선물 수정", exact: true })
     .click();
-  await page.getByLabel("예정 금액 (원)", { exact: true }).fill("30000");
+  await expect(page).toHaveURL(/\/scheduled-expenses\/1\?date=2026-10-30$/);
+  await expect(
+    page.getByRole("textbox", { name: "예정 금액 (원)", exact: true }),
+  ).toHaveValue("25,000");
+  await expect(
+    page.getByRole("textbox", { name: "예정 지출 내용", exact: true }),
+  ).toHaveValue("생일 선물");
+  await expect(
+    page.getByRole("button", { name: "예정 지출 등록", exact: true }),
+  ).toHaveCount(0);
+  // 등록 화면(스택 뒤에 숨어 있음)의 날짜 제목·목록은 상세 화면에 보이지 않는다
+  await expect(page.getByText("2026-10-30 지출 예정")).toBeHidden();
+  await page
+    .getByRole("textbox", { name: "예정 금액 (원)", exact: true })
+    .fill("30000");
   await page
     .getByRole("button", { name: "예정 지출 수정", exact: true })
     .click();
+  await expect(page).toHaveURL(/\/scheduled-expenses\?date=2026-10-30$/);
   await expect(
     page.getByText("30,000원 · 식비", { exact: true }),
   ).toBeVisible();
@@ -83,14 +99,21 @@ test("future expense creation, editing, reload and deletion use the scheduled AP
     .first();
   await expect(plannedRow).toBeVisible();
   await expect(page.getByText("30,000원", { exact: true })).toHaveCount(0);
+  // 내역의 "예정" 줄은 그 예정의 상세 화면으로 간다(새 등록 화면이 아님)
   await plannedRow.click();
+  await expect(page).toHaveURL(/\/scheduled-expenses\/1\?date=2026-10-30$/);
+  await expect(
+    page.getByRole("textbox", { name: "예정 금액 (원)", exact: true }),
+  ).toHaveValue("30,000");
+  await expect(
+    page.getByRole("textbox", { name: "예정 지출 내용", exact: true }),
+  ).toHaveValue("생일 선물");
   await page
-    .getByRole("button", { name: "생일 선물 삭제", exact: true })
+    .getByRole("button", { name: "예정 지출 삭제", exact: true })
     .click();
   await page.getByRole("button", { name: "삭제", exact: true }).click();
-  await expect(
-    page.getByText("등록한 지출 예정이 없어요", { exact: true }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/transactions$/);
+  await expect(plannedRow).toHaveCount(0);
 });
 
 test("default categories can move and delete with their saved server order", async ({

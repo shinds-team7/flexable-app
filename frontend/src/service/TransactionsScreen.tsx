@@ -18,6 +18,7 @@ import type { ScheduledExpense, Transaction } from "./types";
 import { dayAmounts, historyGroups } from "./historyRows";
 import { colors } from "@/theme";
 import { useServerExtensions } from "./serverExtensions";
+import { scheduledDetailHref } from "./ScheduledExpensesScreen";
 // 서버가 거래의 카테고리를 찾지 못하면 category가 null로 온다(docs/contracts/app-api.yaml Transaction).
 const NO_CATEGORY = {
   name: "카테고리 없음",
@@ -280,19 +281,14 @@ function TxRow({ t }: { t: Transaction }) {
   );
 }
 
-/** 예정 지출 한 줄. 실제 거래와 구분되게 "예정" 표시를 붙이고, 누르면 그 날짜의 예정 지출 화면으로 간다 */
+/** 예정 지출 한 줄. 실제 거래와 구분되게 "예정" 표시를 붙이고, 누르면 그 예정의 상세(수정·삭제) 화면으로 간다 */
 function PlannedRow({ plan }: { plan: ScheduledExpense }) {
   const category = categoryOf(plan);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`예정, ${plan.title}, ${money(plan.amount)}원, 예정 지출 보기`}
-      onPress={() =>
-        router.push({
-          pathname: "/scheduled-expenses",
-          params: { date: plan.date },
-        })
-      }
+      onPress={() => router.push(scheduledDetailHref(plan))}
       style={{
         flexDirection: "row",
         alignItems: "center",
