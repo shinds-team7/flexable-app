@@ -67,6 +67,7 @@ test("old queue rows without a package and SOL Pay rows use the Shinhan parser; 
     "com.kbcard.cxh.appcard",
     "com.lcacApp",
     "kr.co.samsungcard.mpocket",
+    "nh.smart.nhallonepay",
   ]);
 });
 
