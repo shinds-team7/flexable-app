@@ -1,5 +1,5 @@
 import { normalizeTitle } from "../receiptImport/review";
-import { parsePaymentNotice } from "./sources";
+import { paymentSourceName, parsePaymentNotice } from "./sources";
 import type { PaymentNotice } from "./native";
 
 export type PaymentBody = {
@@ -107,7 +107,7 @@ export async function importPaymentNotices(
         ...approval,
         type: "EXPENSE",
         categoryId,
-        memo: "신한카드 결제 알림에서 자동 기록",
+        memo: `${paymentSourceName(notice)} 결제 알림에서 자동 기록`,
       });
     }
     if (!deps.current()) break;

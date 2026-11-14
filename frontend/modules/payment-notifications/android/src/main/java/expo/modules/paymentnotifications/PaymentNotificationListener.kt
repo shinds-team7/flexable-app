@@ -39,7 +39,8 @@ class PaymentNotificationListener : NotificationListenerService() {
       val collected = PaymentStore.enqueue(this, notification.postTime) {
         val title = item.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty().take(300)
         val body = (item.extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: item.extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(2000)
-        if (!Regex("승인|결제|이용|취소").containsMatchIn("$title\n$body")) return@enqueue null
+        // 롯데카드 한 줄 형식처럼 "승인"이 없는 승인 알림도 있어 할부 표시도 받는다(다음 네이티브 빌드부터).
+        if (!Regex("승인|결제|이용|취소|일시불|할부|\\d\\s*개월").containsMatchIn("$title\n$body")) return@enqueue null
         amount = PaymentAmount.parse(title, body)
         val identity = "${notification.key}\n${item.`when`.takeIf { it > 0 } ?: notification.postTime}\n$title\n$body"
         val id = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }

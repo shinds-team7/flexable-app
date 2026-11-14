@@ -452,7 +452,7 @@ test("a new account sees the home guide once after the gift and attendance modal
   ).toBeVisible();
   await expect(startButton).toHaveCount(0);
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "신한카드 결제 알림을 자동으로 기록해요", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "카드 결제 알림을 자동으로 기록해요", exact: true })).toBeVisible();
   await expect(page.getByText(/동의하고 알림 접근을 허용한 뒤 켜 주세요/)).toBeVisible();
   await expect(page.getByText("10 / 11", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -462,7 +462,7 @@ test("a new account sees the home guide once after the gift and attendance modal
   await expect(page.getByText("11 / 11", { exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("guide-budget-notification.png"), animations: "disabled" });
   await page.getByRole("button", { name: "이전", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "신한카드 결제 알림을 자동으로 기록해요", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "카드 결제 알림을 자동으로 기록해요", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(budgetGuide).toBeVisible();
   await startButton.click();

@@ -281,10 +281,10 @@ export function MyScreen() {
               }}
             />
           )}
-          {/* 신한카드 자동 기록은 알림 설정과 같은 카드, 기록 알림 시간 아래 */}
+          {/* 카드 자동 기록은 알림 설정과 같은 카드, 기록 알림 시간 아래 */}
           {Platform.OS === "android" && (
             <Row
-              label="신한카드 자동 기록"
+              label="카드 자동 기록"
               caption="결제 알림을 읽어 지출로 기록해요"
               onPress={() => router.push("/payment-notifications")}
             />
