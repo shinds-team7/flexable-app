@@ -16,6 +16,8 @@
 5. 네이티브 리스너는 신한 SOL페이 외에 앱(JS)이 알려 준 카드 앱 패키지(`setSources`)도 모은다. 지금은 빈 목록이다. 2.1.0 빌드에 넣어 두어, 이후 카드사 추가는 **새 빌드 없이 원격 업데이트**로 할 수 있다. 대기열 항목에 보낸 앱(`packageName`)을 남기고, 예전 항목은 신한으로 본다. 앱을 열기 전 알림창 예산 임시 차감은 신한 형식에만 한다.
 6. 은행 앱 알림은 계속 읽지 않는다. KB국민 체크카드는 은행 출금 알림과 겹칠 수 있다는 안내가 있어서다.
 
+7. (2026-11-14 추가, 사용자 결정) 실제 원문을 기다리지 않고 조사 자료의 SMS 예시 모양으로 삼성·현대·KB국민·롯데 파서를 먼저 만든다(`service/paymentNotifications/cards.ts`, 줄바꿈 형식·한 줄 형식 모두). 실제 알림이 다르면 그때 원문을 테스트에 더하고 고친다. 원문 확인 화면은 모은 알림마다 각 파서의 결과를 보여 준다(저장하지 않음). 자동 기록 대상(`sources.ts`)에 넣는 것은 카드 앱 패키지명을 확인하고 개인정보처리방침·동의 문구를 고칠 때 한다.
+
 ## 바뀌는 것
 
 `modules/payment-notifications`(`DevCaptureStore`·`PaymentSources`, 리스너·모듈 함수), `service/DevNotificationsScreen.tsx`, `service/paymentNotifications/sources.ts`·`mask.ts`, 마이의 버전 표시, FEATURES·HANDOFF·CHANGELOG. API 계약과 서버는 바꾸지 않는다.
