@@ -8,6 +8,54 @@ import { colors } from "@/theme";
 import { ErrorNotice } from "./ui";
 import { paymentNative, type DevCapture } from "./paymentNotifications/native";
 import { maskNoticeText, maskedCaptureJson } from "./paymentNotifications/mask";
+import {
+  CARD_BRAND_NAMES,
+  parseCardNotice,
+  type CardBrand,
+} from "./paymentNotifications/cards";
+import { parseShinhanNotice } from "./paymentNotifications/parse";
+
+/**
+ * 이 알림을 각 카드사 파서에 넣었을 때 결과. 실제 원문으로 파서가 맞는지 바로 확인하려는 것이다(저장하지 않는다).
+ * 자동 기록과 같게 펼친 본문이 있으면 그것을, 없으면 기본 본문을 쓴다.
+ */
+function ParserPreview({ item }: { item: DevCapture }) {
+  const notice = {
+    id: "preview",
+    title: item.title,
+    body: item.bigText || item.text,
+    postedAt: item.postedAt,
+    prepared: "",
+  };
+  const results = [
+    ["신한카드", parseShinhanNotice(notice)] as const,
+    ...(Object.keys(CARD_BRAND_NAMES) as CardBrand[]).map(
+      (brand) =>
+        [CARD_BRAND_NAMES[brand], parseCardNotice(brand, notice)] as const,
+    ),
+  ];
+  const read = results.filter(([, r]) => r.approval);
+  return (
+    <View style={{ gap: 2 }}>
+      <T size={12} color={colors.textMuted}>
+        파서 결과(저장 안 함)
+      </T>
+      {read.length === 0 ? (
+        <T size={13}>
+          어느 카드사 파서로도 읽지 못했어요 (
+          {results.map(([name, r]) => `${name}: ${r.reason}`).join(" / ")})
+        </T>
+      ) : (
+        read.map(([name, r]) => (
+          <T key={name} size={13} selectable>
+            {name}: {r.approval!.title} · {r.approval!.amount.toLocaleString()}
+            원 · {r.approval!.occurredAt.slice(5, 16).replace("T", " ")}
+          </T>
+        ))
+      )}
+    </View>
+  );
+}
 
 /**
  * 개발자용 알림 원문 확인을 열 수 있는 빌드인지. Play 운영 앱(production 채널)에서는 열리지 않는다.
@@ -156,6 +204,7 @@ export function DevNotificationsScreen() {
                     </T>
                   </View>
                 ))}
+                <ParserPreview item={item} />
                 <Button
                   label="가려서 공유"
                   variant="soft"
