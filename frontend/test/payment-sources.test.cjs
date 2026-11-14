@@ -29,7 +29,7 @@ function load(file) {
 const { parsePaymentNotice, extraPaymentSources } = load(
   "paymentNotifications/sources.ts",
 );
-const { maskNoticeText, maskedCaptureJson } = load(
+const { maskNoticeText, maskedCaptureJson, maskedNoticeJson } = load(
   "paymentNotifications/mask.ts",
 );
 
@@ -131,4 +131,16 @@ test("masking hides names, card digits and long numbers but keeps amounts, dates
   });
   assert.match(json, /"text": "○○○님\\n1,500원\(일시불\)"/);
   assert.match(json, /"packageName": "com.example.card"/);
+});
+
+test("unread card notices in the review list are shared with names and card digits masked", () => {
+  const json = maskedNoticeJson({
+    ...shinhan,
+    packageName: "com.hyundaicard.appcard",
+    title: "[현대카드] 승인",
+    body: "김*수님 2*5* 1,500원 일시불",
+  });
+  assert.match(json, /"packageName": "com.hyundaicard.appcard"/);
+  assert.match(json, /"body": "○○○님 \*\*\*\* 1,500원 일시불"/);
+  assert.doesNotMatch(json, /"id"|"prepared"/);
 });

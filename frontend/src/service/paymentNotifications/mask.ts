@@ -1,4 +1,4 @@
-import type { DevCapture } from "./native";
+import type { DevCapture, PaymentNotice } from "./native";
 
 /**
  * 개발자용 알림 원문을 공유하기 전에 사람·카드를 알아볼 수 있는 부분을 가린다.
@@ -39,6 +39,20 @@ export function maskedCaptureJson(item: DevCapture): string {
       bigText: maskNoticeText(item.bigText),
       textLines: maskNoticeText(item.textLines),
       subText: maskNoticeText(item.subText),
+    },
+    null,
+    2,
+  );
+}
+
+/** 자동 기록 확인 목록에서 읽지 못한 카드 알림을 공유할 때 쓰는 JSON(이름·카드번호를 가림) */
+export function maskedNoticeJson(notice: PaymentNotice): string {
+  return JSON.stringify(
+    {
+      packageName: notice.packageName ?? "com.shcard.smartpay",
+      postedAt: new Date(notice.postedAt).toISOString(),
+      title: maskNoticeText(notice.title),
+      body: maskNoticeText(notice.body),
     },
     null,
     2,

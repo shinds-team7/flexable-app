@@ -375,6 +375,7 @@ function settingsScreen(platform = "android", present = true) {
       Platform: { OS: platform },
       View: "View",
       Pressable: "Pressable",
+      Share: { share: async () => {} },
     },
     "@/components/ui": {
       Button: "Button",
@@ -388,6 +389,7 @@ function settingsScreen(platform = "android", present = true) {
     "./Session": { useSession: () => ({ user: { id: 42 } }) },
     "./ui": { ErrorNotice: "ErrorNotice" },
     "./api/client": { sessionGeneration: () => 1 },
+    "./paymentNotifications/mask": { maskedNoticeJson: () => "{}" },
     "./paymentNotifications/native": {
       paymentNative: present
         ? {
