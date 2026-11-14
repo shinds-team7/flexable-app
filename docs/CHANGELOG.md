@@ -10,7 +10,7 @@
 
 ## 2026-11-14
 
-- [#PR, Issue #327] 거래내역서 가져오기에서 결제 취소 쌍(출금 뒤 31일 안 같은 적요·내용·금액 입금)을 둘 다 빼는 규칙: policies §9 ③·예시 표 한 줄·`tests/policy/statement-import.json` 사례·결정 기록 한 줄 — 영향: 앱 서버
+- [#369, Issue #327] 거래내역서 가져오기에서 결제 취소 쌍(출금 뒤 31일 안 같은 적요·내용·금액 입금)을 둘 다 빼는 규칙: policies §9 ③·예시 표 한 줄·`tests/policy/statement-import.json` 사례·결정 기록 한 줄 — 영향: 앱 서버
 - [#368, Issue #327] 거래내역서 PDF에 KB국민은행 "계좌 거래내역 조회" 형식 추가: `StatementImport.bank`에 `KB`, policies §9 형식 항목, 거래내역서 결정 기록에 한 줄 — 영향: 앱 서버
 - [#367, Issue #334] 다른 카드사 결제 알림 결정 기록 추가: 개발자 빌드에서만 열리는 숨은 알림 원문 확인, 카드사를 실제 원문 검증 뒤 하나씩 추가, 네이티브 수집 대상 앱을 앱이 지정(`setSources`) — 영향: 앱 화면
 - [#362, Issue #327] 거래내역서 PDF 가져오기: `POST /transactions/statement-import`(multipart `file`·`password`, 결과 `StatementImport`)와 오류 코드 `STATEMENT_PASSWORD`·`STATEMENT_UNSUPPORTED`를 `app-api.yaml`에 더하고 policies §9·`tests/policy/statement-import.json`·[결정](decisions/2026-11-14-statement-pdf-import.md)을 추가했다. 신한은행 거래내역조회만, 검토 없이 모두 저장(간편결제 출금도 지출), 같은 거래·잔액 기준 시각 이후 거래는 건너뜀, PDF·비밀번호 미저장. 개인정보처리방침 추가 개정(5)(11-14 공고·시행, 사용자 결정, 2.1.0부터). 기존 응답은 그대로 — 영향: 앱 서버(배포 먼저)·앱 화면(2.1.0 새 빌드)·공개 방침
