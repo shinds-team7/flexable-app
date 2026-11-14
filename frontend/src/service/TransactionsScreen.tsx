@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
-import { Card, Screen, Segment, T } from "@/components/ui";
+import { Card, Screen, Segment, Sheet, T } from "@/components/ui";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import {
   CategoryIcon,
@@ -39,13 +39,17 @@ export function TransactionsScreen() {
       setOffset(0);
     }, []),
   );
+  const [picking, setPicking] = useState(false);
   const [filter, setFilter] = useState<Filter>("ALL");
   const [pagerWidth, setPagerWidth] = useState(0);
   const pager = useRef<ScrollView>(null);
   const mouseStart = useRef<number | null>(null);
   const chooseFilter = (value: Filter) => {
     setFilter(value);
-    pager.current?.scrollTo({ x: FILTERS.indexOf(value) * pagerWidth, animated: true });
+    pager.current?.scrollTo({
+      x: FILTERS.indexOf(value) * pagerWidth,
+      animated: true,
+    });
   };
   const [y, m] = seoulDate().split("-").map(Number);
   const month = new Date(Date.UTC(y, m - 1 + offset, 1));
@@ -86,9 +90,18 @@ export function TransactionsScreen() {
           }}
         >
           <MonthStep step={-1} onPress={() => setOffset((x) => x - 1)} />
-          <T weight="800">
-            {month.getUTCFullYear()}년 {month.getUTCMonth() + 1}월
-          </T>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${month.getUTCFullYear()}년 ${month.getUTCMonth() + 1}월, 월 선택하기`}
+            onPress={() => setPicking(true)}
+            hitSlop={8}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+          >
+            <T weight="800">
+              {month.getUTCFullYear()}년 {month.getUTCMonth() + 1}월
+            </T>
+            <Ionicons name="chevron-down" size={16} color={colors.textSub} />
+          </Pressable>
           <MonthStep step={1} onPress={() => setOffset((x) => x + 1)} />
         </View>
         <View
@@ -130,6 +143,15 @@ export function TransactionsScreen() {
           }
         />
       </Card>
+      <MonthPickerSheet
+        visible={picking}
+        offset={offset}
+        onClose={() => setPicking(false)}
+        onPick={(value) => {
+          setOffset(value);
+          setPicking(false);
+        }}
+      />
       <Segment
         animated
         items={[
@@ -143,7 +165,9 @@ export function TransactionsScreen() {
       <ErrorNotice error={error} retry={retry} />
       {loading && !displayData && <Loading />}
       {displayData && !error && (
-        <View onLayout={(event) => setPagerWidth(event.nativeEvent.layout.width)}>
+        <View
+          onLayout={(event) => setPagerWidth(event.nativeEvent.layout.width)}
+        >
           {pagerWidth > 0 && (
             <ScrollView
               ref={pager}
@@ -155,31 +179,59 @@ export function TransactionsScreen() {
               showsHorizontalScrollIndicator={false}
               scrollEventThrottle={16}
               onScroll={(event) => {
-                const index = Math.round(event.nativeEvent.contentOffset.x / pagerWidth);
-                if (FILTERS[index] && FILTERS[index] !== filter) setFilter(FILTERS[index]);
+                const index = Math.round(
+                  event.nativeEvent.contentOffset.x / pagerWidth,
+                );
+                if (FILTERS[index] && FILTERS[index] !== filter)
+                  setFilter(FILTERS[index]);
               }}
-              onPointerDown={Platform.OS === "web" ? (event) => {
-                if (event.nativeEvent.pointerType === "mouse") mouseStart.current = event.nativeEvent.pageX;
-              } : undefined}
-              onPointerUp={Platform.OS === "web" ? (event) => {
-                const start = mouseStart.current;
+              onPointerDown={
+                Platform.OS === "web"
+                  ? (event) => {
+                      if (event.nativeEvent.pointerType === "mouse")
+                        mouseStart.current = event.nativeEvent.pageX;
+                    }
+                  : undefined
+              }
+              onPointerUp={
+                Platform.OS === "web"
+                  ? (event) => {
+                      const start = mouseStart.current;
+                      mouseStart.current = null;
+                      if (start === null) return;
+                      const direction = start - event.nativeEvent.pageX;
+                      if (Math.abs(direction) < 48) return;
+                      const next =
+                        FILTERS[
+                          FILTERS.indexOf(filter) + (direction > 0 ? 1 : -1)
+                        ];
+                      if (next) chooseFilter(next);
+                    }
+                  : undefined
+              }
+              onPointerCancel={() => {
                 mouseStart.current = null;
-                if (start === null) return;
-                const direction = start - event.nativeEvent.pageX;
-                if (Math.abs(direction) < 48) return;
-                const next = FILTERS[FILTERS.indexOf(filter) + (direction > 0 ? 1 : -1)];
-                if (next) chooseFilter(next);
-              } : undefined}
-              onPointerCancel={() => { mouseStart.current = null; }}
-              style={Platform.OS === "web" ? ({ scrollSnapType: "x mandatory" } as object) : undefined}
+              }}
+              style={
+                Platform.OS === "web"
+                  ? ({ scrollSnapType: "x mandatory" } as object)
+                  : undefined
+              }
             >
               {FILTERS.map((type) => (
                 <View
                   key={type}
                   testID={`transaction-page-${type}`}
                   aria-hidden={filter !== type}
-                  importantForAccessibility={filter === type ? "auto" : "no-hide-descendants"}
-                  style={{ width: pagerWidth, ...(Platform.OS === "web" ? { scrollSnapAlign: "start" } as object : {}) }}
+                  importantForAccessibility={
+                    filter === type ? "auto" : "no-hide-descendants"
+                  }
+                  style={{
+                    width: pagerWidth,
+                    ...(Platform.OS === "web"
+                      ? ({ scrollSnapAlign: "start" } as object)
+                      : {}),
+                  }}
                 >
                   <TransactionList items={items} plans={plans} filter={type} />
                 </View>
@@ -356,5 +408,72 @@ function MonthStep({ step, onPress }: { step: -1 | 1; onPress: () => void }) {
         color={colors.brandDark}
       />
     </Pressable>
+  );
+}
+
+/** 월 선택에 보여 줄 달 수(이번 달부터 거꾸로) */
+export const MONTH_PICKER_COUNT = 36;
+
+/** "YYYY-MM"(서울 이번 달) 기준으로 이번 달부터 거꾸로 count개: offset 0, -1, -2… */
+export function pickerMonths(today: string, count = MONTH_PICKER_COUNT) {
+  const [y, m] = today.split("-").map(Number);
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(Date.UTC(y, m - 1 - i, 1));
+    return {
+      offset: -i,
+      label: `${d.getUTCFullYear()}년 ${d.getUTCMonth() + 1}월`,
+    };
+  });
+}
+
+/** 내역 위 "2026년 11월"을 누르면 아래에서 올라오는 월 선택 창. 이번 달이 맨 위, 아래로 지난 달 */
+function MonthPickerSheet({
+  visible,
+  offset,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  offset: number;
+  onClose: () => void;
+  onPick: (offset: number) => void;
+}) {
+  return (
+    <Sheet visible={visible} onClose={onClose} title="월 선택하기">
+      <ScrollView style={{ maxHeight: 420 }}>
+        {pickerMonths(seoulDate()).map((item) => {
+          const on = item.offset === offset;
+          return (
+            <Pressable
+              key={item.offset}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              accessibilityState={{ selected: on }}
+              onPress={() => onPick(item.offset)}
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: on ? colors.bg : "transparent",
+              }}
+            >
+              <T
+                size={16}
+                weight={on ? "800" : "500"}
+                color={on ? colors.brand : colors.text}
+              >
+                {item.label}
+              </T>
+              {on && (
+                <Ionicons name="checkmark" size={20} color={colors.brand} />
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </Sheet>
   );
 }
