@@ -40,9 +40,23 @@ test("date range covers every candidate and refuses more than a year", () => {
 });
 
 test("category guess falls back to the default 기타 categories", () => {
-  assert.equal(guessCategoryName("스타벅스", "EXPENSE"), "카페·간식");
-  assert.equal(guessCategoryName("CU 광화문점", "EXPENSE"), "생활·마트");
+  assert.equal(guessCategoryName("스타벅스", "EXPENSE"), "카페");
+  assert.equal(guessCategoryName("CU 광화문점", "EXPENSE"), "생활");
   assert.equal(guessCategoryName("처음 보는 가게", "EXPENSE"), "기타");
   assert.equal(guessCategoryName("급여", "INCOME"), "급여");
   assert.equal(guessCategoryName("홍길동", "INCOME"), "기타 수입");
 });
+
+// tests/policy/category-guess.json: 키워드 표가 같고 모든 사례가 맞아야 한다(서버 CategoryGuessTest와 같은 파일).
+const policy = JSON.parse(
+  fs.readFileSync(require.resolve("../../tests/policy/category-guess.json"), "utf8"),
+);
+test("category keyword tables match tests/policy/category-guess.json", () => {
+  const { EXPENSE_RULES, INCOME_RULES } = load("guessCategory.ts");
+  assert.equal(JSON.stringify(EXPENSE_RULES), JSON.stringify(policy.rules.EXPENSE));
+  assert.equal(JSON.stringify(INCOME_RULES), JSON.stringify(policy.rules.INCOME));
+});
+for (const c of policy.cases)
+  test(`category guess: ${c.title} (${c.type}) → ${c.expected}`, () => {
+    assert.equal(guessCategoryName(c.title, c.type), c.expected);
+  });

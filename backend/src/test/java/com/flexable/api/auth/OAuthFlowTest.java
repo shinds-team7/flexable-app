@@ -148,7 +148,7 @@ class OAuthFlowTest {
 				.andExpect(jsonPath("$.user.email", is(email))).andExpect(jsonPath("$.user.provider", is(name)))
 				.andExpect(jsonPath("$.user.hasPassword", is(false))));
 			Number id = JsonPath.read(auth, "$.user.id");
-			assertEquals(11, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
+			assertEquals(18, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
 			assertNull(jdbc.queryForObject("select password_hash from users where id=?", String.class, id));
 			assertNotNull(jdbc.queryForObject("select agreed_at from users where id=?", java.sql.Timestamp.class, id));
 			String token = JsonPath.read(auth, "$.accessToken");
@@ -197,7 +197,7 @@ class OAuthFlowTest {
 			.andExpect(jsonPath("$.user.provider", is("google"))).andExpect(jsonPath("$.user.hasPassword", is(false)));
 		// 비밀번호는 지우지 않는다.
 		assertNotNull(jdbc.queryForObject("select password_hash from users where id=?", String.class, id));
-		assertEquals(11, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
+		assertEquals(18, jdbc.queryForObject("select count(*) from categories where user_id=?", Integer.class, id));
 		assertEquals(1, jdbc.queryForObject("select count(*) from user_identities where user_id=?", Integer.class, id));
 		// 남의 주소로 먼저 가입한 사람이 기존 세션이나 맞는 비밀번호로 다시 들어오지 못하고 Google로 안내된다.
 		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + oldToken)).andExpect(status().isUnauthorized());

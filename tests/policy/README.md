@@ -9,6 +9,7 @@
 | `character.json` | §4 캐릭터 점수 | `backend/src/test/.../budget/CharacterPolicyTest` |
 | `day-weights.json` | §5 요일별 비중 — 내 기록 기준(`record`) | `backend/src/test/.../budget/DayWeightsPolicyTest` |
 | `statement-import.json` | §9 거래내역서 PDF 가져오기(PDF 글자 줄 → 저장·건너뜀, API로 검사) | `backend/src/test/.../statement/StatementImportPolicyTest` |
+| `category-guess.json` | §10 이름으로 카테고리 추정(키워드 표 + 사례). 앱 단위 테스트도 같은 파일로 키워드 표를 검사한다 | `backend/src/test/.../category/CategoryGuessPolicyTest`, `frontend/test/receipt-review.test.cjs` |
 
 - 정책을 바꾸면 `policies.md` 표와 이 JSON을 같은 PR에서 고치고 `spec-change` 라벨과 CHANGELOG 한 줄을 붙인다(CODEOWNERS 리뷰).
 - 실행: `cd backend && ./gradlew test --tests "*PolicyTest"`(CI의 `./gradlew test`에 포함). 테스트는 `backend/` 기준 `../tests/policy/`를 읽는다. 시각(`at`, `balanceAt`)은 `Asia/Seoul` 현지 시각이다.

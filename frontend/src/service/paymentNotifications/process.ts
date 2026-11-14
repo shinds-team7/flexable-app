@@ -1,3 +1,4 @@
+import { guessCategoryName } from "../receiptImport/guessCategory";
 import { normalizeTitle } from "../receiptImport/review";
 import { paymentSourceName, parsePaymentNotice } from "./sources";
 import type { PaymentNotice } from "./native";
@@ -18,7 +19,8 @@ type Existing = {
 };
 export type ImportDependencies = {
   current(): boolean;
-  category(): Promise<number | null>;
+  /** 가맹점 이름으로 고른 지출 카테고리 ID(`pickExpenseCategory`). 없으면 null */
+  category(title: string): Promise<number | null>;
   existing(date: string): Promise<Existing[]>;
   prepare(id: string, body: PaymentBody): Promise<PaymentBody>;
   save(id: string, body: PaymentBody): Promise<void>;
@@ -33,6 +35,22 @@ export type PaymentProblem = {
   /** 읽지 못한 알림의 원문(기기 안에서만). 확인 목록에서 가려서 공유해 파서를 고칠 때 쓴다 */
   notice?: PaymentNotice;
 };
+
+/**
+ * 가맹점 이름으로 추정한 카테고리(guessCategory.ts)와 이름이 같은 내 지출 카테고리, 없으면 기본 '기타'.
+ * 둘 다 없으면 null(아무 카테고리나 고르지 않는다).
+ */
+export function pickExpenseCategory(
+  categories: { id: number; name: string; isDefault: boolean }[],
+  title: string,
+) {
+  const guess = guessCategoryName(title, "EXPENSE");
+  return (
+    categories.find((c) => c.name === guess)?.id ??
+    categories.find((c) => c.isDefault && c.name === "기타")?.id ??
+    null
+  );
+}
 
 /** The native id is a 64-char SHA-256 hex digest, exactly the server's Idempotency-Key limit (64). Send it as is, never prefixed. */
 export const paymentIdempotencyKey = (id: string) => id;
@@ -79,7 +97,7 @@ export async function importPaymentNotices(
         continue;
       }
       const approval = parsed.approval;
-      const categoryId = await deps.category();
+      const categoryId = await deps.category(approval.title);
       if (!deps.current()) break;
       if (!categoryId) {
         problems.push({

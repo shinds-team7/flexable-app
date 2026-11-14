@@ -32,7 +32,7 @@ class MigrationUpgradeTest {
 	void freshDatabaseIncludesWitchCatAndBothUiExtensions() {
 		var database = database();
 		var flyway = current(database);
-		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("29");
+		assertThat(flyway.migrate().targetSchemaVersion).isEqualTo("30");
 		flyway.validate();
 		assertExtensionsAndWitchCat(new JdbcTemplate(database));
 	}
@@ -71,7 +71,7 @@ class MigrationUpgradeTest {
 		jdbc.update("insert into daily_budgets(user_id,budget_date,daily_budget) values(2,CURRENT_DATE - 2,30000)");
 
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(16);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(17);
 		flyway.validate();
 		assertThat(jdbc.queryForObject("select checksum from flyway_schema_history where version='13'", Integer.class))
 			.isEqualTo(deployedChecksum);
@@ -120,13 +120,57 @@ class MigrationUpgradeTest {
 		var oldWallets = jdbc.queryForList("select * from coin_wallets order by user_id");
 		var oldOutfits = jdbc.queryForList("select * from user_outfits order by user_id,outfit_id");
 		var flyway = current(database);
-		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(3);
 		flyway.validate();
 		assertThat(jdbc.queryForList("select user_id from user_outfits where outfit_id='outfit-06' order by user_id", Long.class))
 			.containsExactly(1L, 3L, 4L);
 		assertThat(jdbc.queryForList("select * from user_outfits order by user_id,outfit_id")).containsAll(oldOutfits);
 		assertThat(jdbc.queryForList("select * from coin_ledger order by id")).isEqualTo(oldRewards);
 		assertThat(jdbc.queryForList("select * from coin_wallets order by user_id")).isEqualTo(oldWallets);
+		assertThat(flyway.migrate().migrationsExecuted).isZero();
+	}
+
+	@Test
+	void categoryRefreshRenamesOldDefaultsAddsMissingAndKeepsRecords() {
+		var database = database();
+		Flyway.configure().dataSource(database).locations("classpath:db/migration").target("29").load().migrate();
+		var jdbc = new JdbcTemplate(database);
+		for (int user = 1; user <= 2; user++) {
+			jdbc.update("insert into users(id,email,password_hash,agreed_at,created_at) "
+				+ "values(?,?,'unused',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", user, "category" + user + "@example.com");
+		}
+		// 사용자 1: 옛 기본 목록 그대로. 사용자 2: '카페'를 직접 만들어 두었고 '건강'도 있고 '문화·여가'는 지웠다.
+		String[][] old = { { "식비", "EXPENSE" }, { "카페·간식", "EXPENSE" }, { "쇼핑", "EXPENSE" }, { "교통", "EXPENSE" },
+				{ "문화·여가", "EXPENSE" }, { "생활·마트", "EXPENSE" }, { "고정지출", "EXPENSE" }, { "기타", "EXPENSE" },
+				{ "급여", "INCOME" }, { "용돈", "INCOME" }, { "기타 수입", "INCOME" } };
+		long id = 1;
+		for (int i = 0; i < old.length; i++) {
+			jdbc.update("insert into categories(id,user_id,type,name,color,icon,is_default,sort_order,created_at) "
+				+ "values(?,1,?,?,'#12B76A','cart',true,?,CURRENT_TIMESTAMP)", id++, old[i][1], old[i][0], i);
+		}
+		String[] second = { "식비", "카페·간식", "카페", "건강", "생활·마트", "기타" };
+		for (int i = 0; i < second.length; i++) {
+			jdbc.update("insert into categories(id,user_id,type,name,color,icon,is_default,sort_order,created_at) "
+				+ "values(?,2,'EXPENSE',?,'#12B76A','cart',?,?,CURRENT_TIMESTAMP)", id++, second[i], !second[i].equals("카페"), i);
+		}
+		jdbc.update("insert into transactions(user_id,category_id,type,amount,title,occurred_at,created_at,updated_at) "
+			+ "values(1,6,'EXPENSE',3000,'CU 광운',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+
+		var flyway = current(database);
+		assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+		flyway.validate();
+		String order = "select name from categories where user_id=? and type=? order by sort_order, id";
+		assertThat(jdbc.queryForList(order, String.class, 1, "EXPENSE")).containsExactly("식비", "카페", "쇼핑", "교통",
+				"여가", "생활", "고정지출", "주거", "통신", "건강", "교육", "구독", "기타");
+		assertThat(jdbc.queryForList(order, String.class, 1, "INCOME")).containsExactly("급여", "용돈", "금융수입", "환급",
+				"지원금", "기타 수입");
+		// 이미 있는 이름은 바꾸지도 더하지도 않는다. 지운 '문화·여가' 대신 '여가'는 새로 생기지 않는다(새 목록에 없던 이름만 더함).
+		assertThat(jdbc.queryForList(order, String.class, 2, "EXPENSE")).containsExactly("식비", "카페·간식", "카페", "건강",
+				"생활", "주거", "통신", "교육", "구독", "기타");
+		assertThat(jdbc.queryForList(order, String.class, 2, "INCOME")).containsExactly("금융수입", "환급", "지원금");
+		// 이름만 바뀌고 거래는 같은 카테고리에 남는다
+		assertThat(jdbc.queryForObject("select c.name from transactions t join categories c on c.id=t.category_id",
+				String.class)).isEqualTo("생활");
 		assertThat(flyway.migrate().migrationsExecuted).isZero();
 	}
 

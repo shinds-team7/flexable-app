@@ -328,8 +328,9 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 - `type`: `EXPENSE` | `INCOME`. `icon`은 Ionicons 이름, `color`는 `#RRGGBB`.
 - 가입 시 기본 생성(`isDefault=true`):
-  - 지출: 식비 `#12B76A restaurant`, 카페·간식 `#F79009 cafe`, 쇼핑 `#7A5AF8 bag-handle`, 교통 `#2E90FA bus`, 문화·여가 `#EE46BC film`, 생활·마트 `#15B79E cart`, 고정지출 `#667085 repeat`, 기타 `#98A2B3 ellipsis-horizontal`
-  - 수입: 급여 `#2E90FA cash`, 용돈 `#12B76A gift`, 기타 수입 `#98A2B3 add-circle`
+  - 지출(2026-11-14부터 12개): 식비 `#12B76A restaurant`, 카페 `#F79009 cafe`, 생활 `#15B79E cart`, 교통 `#2E90FA bus`, 주거 `#6172F3 home`, 통신 `#0BA5EC phone-portrait`, 쇼핑 `#7A5AF8 bag-handle`, 여가 `#EE46BC film`, 건강 `#F04438 medkit`, 교육 `#444CE7 school`, 구독 `#DD2590 play-circle`, 기타 `#98A2B3 ellipsis-horizontal`
+  - 수입(6개): 급여 `#2E90FA cash`, 용돈 `#12B76A gift`, 금융수입 `#F79009 trending-up`, 환급 `#15B79E receipt`, 지원금 `#7A5AF8 ribbon`, 기타 수입 `#98A2B3 add-circle`
+  - 그 전 가입자는 V30이 옛 이름(카페·간식·생활·마트·문화·여가)을 새 이름으로 바꾸고 없는 카테고리를 더한다. 옛 "고정지출"은 그대로 남는다([policies §10](policies.md))
 
 | 요청 | 설명 |
 |---|---|
@@ -361,7 +362,7 @@ state와 loginCode는 주입 Clock 기준 메모리 저장소에 보관하고 �
 
 - 실패했을 때: 내역(`GET /transactions`)·분석은 기록을 별도 트랜잭션으로 먼저 커밋하고, DB 오류로 실패하면 경고 로그만 남기고 조회를 계속한다(다음 조회 때 다시 시도). 오늘 쓸 수 있는 돈과 시드머니 조회·반영은 설정 행을 잠근 같은 트랜잭션에서 기록하고 계산하므로, 기록이 실패하면 그 요청도 실패한다
 
-- 카테고리 기본 "고정지출"(이름을 바꿨으면 아이콘 `repeat`인 기본, 없으면 "기타"), `title` = 고정지출 이름, `memo` = "고정지출 자동 기록", `fromFixed` = true, `occurredAt` = 그 날짜 0시(잔액 기준일 당일이면 기준 시각 직후)
+- 카테고리 "고정지출"(2026-11-14 전 가입자만 있음, 이름을 바꿨으면 아이콘 `repeat`인 것), 없으면 "기타", `title` = 고정지출 이름, `memo` = "고정지출 자동 기록", `fromFixed` = true, `occurredAt` = 그 날짜 0시(잔액 기준일 당일이면 기준 시각 직후)
 - 날짜·항목(일자·이름·순번)마다 한 번만 만든다. 사용자가 거래를 지우거나 설정을 다시 저장해도 같은 날짜는 다시 만들지 않는다
 - 설정에서 항목 이름을 바꾸면(또는 같은 저장에서 항목을 지우고 같은 날짜의 항목을 넣으면) 사라진 항목이 이미 기록한 날짜는 새 항목이 그 기록을 이어받아 다시 빼지 않는다. 사라진 항목의 기록이 없는 날짜, 그리고 기존 항목을 그대로 두고 새로 더한 항목은 그대로 기록한다
 - 같은 날 같은 이름·금액의 지출을 이미 직접 기록했으면 만들지 않는다(직접 기록 한 건이 고정지출 한 건을 대신한다)

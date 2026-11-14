@@ -539,3 +539,19 @@ test("network, server, rate-limit and session failures still stop the run and ke
     );
   }
 });
+
+test("auto-record picks the category guessed from the merchant, else the default 기타, never a random one", () => {
+  const { pickExpenseCategory } = load("paymentNotifications/process.ts");
+  const categories = [
+    { id: 1, name: "식비", isDefault: true },
+    { id: 3, name: "생활", isDefault: true },
+    { id: 9, name: "건강", isDefault: false },
+    { id: 12, name: "기타", isDefault: true },
+  ];
+  assert.equal(pickExpenseCategory(categories, "GS25 연남한양점"), 3);
+  assert.equal(pickExpenseCategory(categories, "임인학치과의원"), 9);
+  // 추정한 이름(여가)이 내 목록에 없으면 기타
+  assert.equal(pickExpenseCategory(categories, "짱오락실강남"), 12);
+  assert.equal(pickExpenseCategory(categories, "처음 보는 가게"), 12);
+  assert.equal(pickExpenseCategory([{ id: 1, name: "식비", isDefault: true }], "처음 보는 가게"), null);
+});

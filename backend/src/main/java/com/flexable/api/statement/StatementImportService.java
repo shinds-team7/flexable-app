@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.flexable.api.budget.BudgetSettings;
 import com.flexable.api.budget.SettingsRepository;
 import com.flexable.api.category.Category;
+import com.flexable.api.category.CategoryGuess;
 import com.flexable.api.category.CategoryService;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
@@ -133,7 +134,7 @@ public class StatementImportService {
 				duplicates++;
 				continue;
 			}
-			String name = StatementCategoryGuess.name(c.key().title(), c.key().type());
+			String name = CategoryGuess.name(c.key().title(), c.key().type());
 			Category category = categoryByName.computeIfAbsent(c.key().type() + ":" + name,
 					k -> categories.byNameOrFallback(userId, c.key().type(), name));
 			transactions.save(new Transaction(userId, category.getId(), c.key().type(), c.key().amount(),

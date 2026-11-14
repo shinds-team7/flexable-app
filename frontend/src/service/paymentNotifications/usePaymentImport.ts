@@ -10,6 +10,7 @@ import {
 } from "./native";
 import {
   importPaymentNotices,
+  pickExpenseCategory,
   paymentIdempotencyKey,
   type PaymentBody,
   type PaymentProblem,
@@ -101,13 +102,9 @@ export function useAutomaticPaymentImport() {
         let categories: Category[] | undefined;
         const result = await importPaymentNotices(notices, {
           current,
-          category: async () => {
+          category: async (title) => {
             categories ??= await api<Category[]>("/categories?type=EXPENSE");
-            return (
-              categories.find(
-                (category) => category.isDefault && category.name === "기타",
-              )?.id ?? null
-            );
+            return pickExpenseCategory(categories, title);
           },
           existing: async (date) =>
             (
