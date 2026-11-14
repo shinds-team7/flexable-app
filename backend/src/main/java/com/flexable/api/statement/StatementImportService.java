@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,7 +68,7 @@ public class StatementImportService {
 	public ParsedStatement read(byte[] pdf, String password) {
 		List<String> lines = reader.lines(pdf, password);
 		try {
-			ParsedStatement parsed = ShinhanStatementParser.parse(lines)
+			ParsedStatement parsed = parseAny(lines)
 				.orElseThrow(() -> new ApiException(ErrorCode.STATEMENT_UNSUPPORTED));
 			if (parsed.rows().size() > MAX_ROWS) {
 				throw new ApiException(ErrorCode.STATEMENT_UNSUPPORTED, "거래가 너무 많아요. 기간을 나눠서 올려 주세요");
@@ -77,6 +78,11 @@ public class StatementImportService {
 		catch (UnreadableStatementException e) {
 			throw new ApiException(ErrorCode.STATEMENT_UNSUPPORTED);
 		}
+	}
+
+	/** 지원하는 은행 형식(신한은행·KB국민은행) 중 맞는 것으로 읽는다. 어느 것도 아니면 빈 값. */
+	static Optional<ParsedStatement> parseAny(List<String> lines) {
+		return ShinhanStatementParser.parse(lines).or(() -> KbStatementParser.parse(lines));
 	}
 
 	/** PDF는 {@link #read}로 트랜잭션 밖에서 먼저 읽는다. */

@@ -86,11 +86,14 @@ class StatementPdfReaderTest {
 	@EnabledIfEnvironmentVariable(named = "STATEMENT_SAMPLE_PDF", matches = ".+")
 	void 로컬_실제_거래내역서() throws Exception {
 		byte[] file = Files.readAllBytes(Path.of(System.getenv("STATEMENT_SAMPLE_PDF")));
-		ParsedStatement p = ShinhanStatementParser.parse(reader.lines(file, System.getenv("STATEMENT_SAMPLE_PASSWORD")))
+		ParsedStatement p = StatementImportService.parseAny(reader.lines(file, System.getenv("STATEMENT_SAMPLE_PASSWORD")))
 			.orElseThrow();
 		long expenses = p.rows().stream().filter(r -> r.withdrawal() > 0).count();
 		System.out.printf("[statement-sample] %s %s~%s rows=%d expenses=%d incomes=%d%n", p.bank(), p.from(), p.to(),
 				p.rows().size(), expenses, p.rows().size() - expenses);
-		assertThat(p.rows()).isNotEmpty();
+		// 거래내역서 머리의 총 출금·입금액과 맞춰 보도록 합계만 출력한다(거래 내용은 출력하지 않는다).
+		System.out.printf("[statement-sample] withdrawal=%d deposit=%d%n",
+				p.rows().stream().mapToLong(StatementRow::withdrawal).sum(),
+				p.rows().stream().mapToLong(StatementRow::deposit).sum());		assertThat(p.rows()).isNotEmpty();
 	}
 }
