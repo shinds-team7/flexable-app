@@ -62,8 +62,37 @@ test("old queue rows without a package and SOL Pay rows use the Shinhan parser; 
       .approval,
     undefined,
   );
-  // 검증한 다른 카드 파서가 아직 없어서 네이티브에 더할 앱도 없다
-  assert.deepEqual(plain(extraPaymentSources()), []);
+  assert.deepEqual(plain(extraPaymentSources()).sort(), [
+    "com.hyundaicard.appcard",
+    "com.kbcard.cxh.appcard",
+    "com.lcacApp",
+    "kr.co.samsungcard.mpocket",
+  ]);
+});
+
+test("each card app is read only by its own brand's parser", () => {
+  const hyundai = {
+    ...shinhan,
+    title: "",
+    body: "[현대카드]-승인\n김*수님\n1,500원(일시불)\n가상가게\n누적:354,220원",
+    postedAt: Date.parse("2026-11-14T12:30:40+09:00"),
+  };
+  assert.equal(
+    parsePaymentNotice({ ...hyundai, packageName: "com.hyundaicard.appcard" })
+      .approval.title,
+    "가상가게",
+  );
+  // 현대카드 알림이 삼성카드 앱에서 왔다고 하면 읽지 않는다
+  assert.equal(
+    parsePaymentNotice({ ...hyundai, packageName: "kr.co.samsungcard.mpocket" })
+      .approval,
+    undefined,
+  );
+  // 신한 알림도 다른 카드 앱 이름으로는 읽지 않는다
+  assert.equal(
+    parsePaymentNotice({ ...shinhan, packageName: "com.lcacApp" }).approval,
+    undefined,
+  );
 });
 
 test("masking hides names, card digits and long numbers but keeps amounts, dates and line breaks", () => {

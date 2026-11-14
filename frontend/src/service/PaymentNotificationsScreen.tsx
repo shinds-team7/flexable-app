@@ -52,16 +52,16 @@ export function PaymentNotificationsScreen() {
   };
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="신한카드 자동 기록" fallback="/my" />
+      <SubHeader title="카드 자동 기록" fallback="/my" />
       <Screen>
         <Card style={{ gap: 14 }}>
           <T weight="800" size={19}>
             결제 알림을 거래로 기록해요
           </T>
           <T>
-            신한 SOL페이의 국내 원화 승인 알림을 읽어요. 앱을 열면 모인 알림을
-            지출의 기타 카테고리로 자동 기록하며, 내역에서 고치거나 지울 수
-            있어요.
+            신한 SOL페이·삼성카드·현대카드·KB Pay·롯데카드 앱의 국내 원화 승인
+            알림을 읽어요. 앱을 열면 모인 알림을 지출의 기타 카테고리로 자동
+            기록하며, 내역에서 고치거나 지울 수 있어요.
           </T>
           <T>
             취소·해외 이용·읽지 못한 알림과 중복이 의심되는 거래는 자동으로
@@ -89,19 +89,17 @@ export function PaymentNotificationsScreen() {
                 보관해요. 7일 지난 대기 알림은 다음 앱 실행이나 수집 처리에서
                 지워요. 거래로 반영하면 원문을 지우고, 서버에는
                 금액·가맹점·일시·카테고리만 기록해요. 저장된 거래는 직접
-                삭제하거나 회원 탈퇴할 때까지 보관해요. 다른 앱
-                알림·카드번호·이름은 서버로 보내지 않아요.
+                삭제하거나 회원 탈퇴할 때까지 보관해요. 알림
+                원문·카드번호·이름은 서버로 보내지 않아요.
               </T>
               <T>
-                Android 알림 접근 화면은 다른 앱 알림에도 접근할 수 있다고
-                안내하지만, 텅장관리는 신한 SOL페이 알림만 처리해요. 동의하지
-                않아도 나머지 기능은 사용할 수 있어요. 끄거나 로그아웃하면
-                수집과 미반영 원문 보관을 중단해요.
+                동의하지 않아도 나머지 기능은 사용할 수 있어요. 끄거나
+                로그아웃하면 수집과 미반영 원문 보관을 중단해요.
               </T>
               {!status?.enabled && (
                 <Pressable
                   accessibilityRole="checkbox"
-                  accessibilityLabel="선택 신한카드 알림 자동 기록 개인정보 수집·이용 동의"
+                  accessibilityLabel="선택 카드 결제 알림 자동 기록 개인정보 수집·이용 동의"
                   accessibilityState={{ checked: consent }}
                   aria-checked={consent}
                   onPress={() => setAgreement({ owner, accepted: !consent })}
@@ -193,8 +191,8 @@ export function PaymentNotificationsScreen() {
               onPress={() => router.push("/transactions")}
             />
             <T>
-              신한 SOL페이 이용내역과 텅장관리 거래내역을 대조한 뒤 직접
-              기록하거나 수정해 주세요.
+              카드 앱 이용내역과 텅장관리 거래내역을 대조한 뒤 직접 기록하거나
+              수정해 주세요.
             </T>
             <Button
               variant="soft"
