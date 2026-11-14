@@ -96,7 +96,7 @@ public final class ShinhanStatementParser {
 	 * 잔액이 이어지는지 본다. 최신순(신한 기본)과 오래된 순 둘 다 받는다.
 	 * 최신순이면 이전(아래) 줄 잔액 − 이번 출금 + 이번 입금 = 이번 잔액이다.
 	 */
-	private static void checkBalances(List<StatementRow> rows) {
+	static void checkBalances(List<StatementRow> rows) {
 		if (rows.size() < 2) {
 			return;
 		}
@@ -116,7 +116,7 @@ public final class ShinhanStatementParser {
 		return true;
 	}
 
-	private static long amount(String text) {
+	static long amount(String text) {
 		try {
 			return Long.parseLong(text.replace(",", ""));
 		}
@@ -125,7 +125,7 @@ public final class ShinhanStatementParser {
 		}
 	}
 
-	private static LocalDate date(String y, String m, String d) {
+	static LocalDate date(String y, String m, String d) {
 		try {
 			return LocalDate.of(Integer.parseInt(y), Integer.parseInt(m), Integer.parseInt(d));
 		}
@@ -134,7 +134,7 @@ public final class ShinhanStatementParser {
 		}
 	}
 
-	private static String normalize(String line) {
+	static String normalize(String line) {
 		return line.replace(' ', ' ').replaceAll("[\\t ]+", " ").trim();
 	}
 }

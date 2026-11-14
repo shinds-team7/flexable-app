@@ -13,6 +13,8 @@
 - 저장은 온보딩 마지막 단계(예산 설정 저장)를 기다리지 않고 올린 즉시 한다. 같은 PDF를 다시 올려도 같은 거래(종류·금액·시각·제목)는 건너뛰고, 잔액 기준 시각 이후 거래는 넣지 않는다.
 - 읽은 줄이 하나라도 이상하거나 잔액이 이어지지 않으면 전체를 거절한다(일부 저장 없음).
 
+- (2026-11-14 추가) KB국민은행 "계좌 거래내역 조회" PDF도 받는다. 사용자 6개월치 실제 파일로 확인(791건, 전 구간 잔액 연결). 응답 `bank`에 `KB`를 더했다(계약 변경, 옛 앱은 이 값을 쓰지 않음). 검토 없이 모두 저장하는 규칙은 같다.
+
 ## 구현·호환성
 
 `POST /transactions/statement-import`(multipart: `file`, `password`)와 오류 코드 `STATEMENT_PASSWORD`·`STATEMENT_UNSUPPORTED`를 `app-api.yaml`에 더했다. 기존 응답은 바뀌지 않는다. 서버는 PDFBox로 글자를 뽑아 파싱하고(`statement` 패키지), 업로드 한도를 10MB로 올렸다. 앱은 `expo-document-picker`를 더해 **새 빌드가 필요**하다. 서버를 먼저 배포한다. 규칙과 예시는 [policies §9](../policies.md).

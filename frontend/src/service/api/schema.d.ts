@@ -1134,7 +1134,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 거래내역서 PDF를 읽어 거래로 저장(policies §9). 지금은 신한은행 거래내역조회만 받는다
+         * 거래내역서 PDF를 읽어 거래로 저장(policies §9). 신한은행 거래내역조회와 KB국민은행 계좌 거래내역 조회를 받는다
          * @description 검토 없이 읽은 거래를 모두 저장한다. 출금은 지출, 입금은 수입이고 카테고리는 내용으로 추정한다(못 맞추면 기타·기타 수입).
          *     이미 있는 같은 거래(종류·금액·시각·제목)는 건너뛰고(duplicates), 잔액 기준 시각(balanceAt, 예산 설정 전이면 지금) 이후 거래도 건너뛴다(afterBalance).
          *     한 줄이라도 읽지 못하거나 잔액이 이어지지 않으면 아무것도 저장하지 않고 400 STATEMENT_UNSUPPORTED.
@@ -2178,8 +2178,11 @@ export interface components {
             provider?: "kakao" | "google";
         };
         StatementImport: {
-            /** @enum {string} */
-            bank: "SHINHAN";
+            /**
+             * @description 읽은 거래내역서 형식: 신한은행 거래내역조회, KB국민은행 계좌 거래내역 조회
+             * @enum {string}
+             */
+            bank: "SHINHAN" | "KB";
             /**
              * Format: date
              * @description 거래내역서 조회기간 시작
