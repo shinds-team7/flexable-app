@@ -198,6 +198,28 @@ test("calendar branches into future planning and past records with the selected 
   expect(fonts.placeholder).toBe(fonts.input);
 });
 
+test("calendar shows full amounts with income above expense, and the month title opens a month list", async ({
+  page,
+}) => {
+  await session(page);
+  await page.goto("/transactions");
+  const day = page.getByRole("button", { name: "10월 28일, 지출 312,000원", exact: true });
+  await expect(day.getByText("-312,000원", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "2026년 10월, 월 선택하기", exact: true })
+    .click();
+  await expect(page.getByText("월 선택하기", { exact: true })).toBeVisible();
+  const current = page.getByRole("button", { name: "2026년 10월", exact: true });
+  const previous = page.getByRole("button", { name: "2026년 9월", exact: true });
+  await expect(current).toBeVisible();
+  // 이번 달이 맨 위, 바로 아래가 지난 달
+  const [a, b] = [await current.boundingBox(), await previous.boundingBox()];
+  expect(a && b && a.y < b.y).toBe(true);
+  await previous.click();
+  await expect(page.getByText("월 선택하기", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("2026년 9월", { exact: true })).toBeVisible();
+});
+
 test("changing months keeps the transaction card visible and filters swipe", async ({ page }) => {
   await session(page);
   let release!: () => void;
