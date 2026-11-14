@@ -100,7 +100,6 @@ export function TransactionsScreen() {
             <T weight="800">
               {month.getUTCFullYear()}년 {month.getUTCMonth() + 1}월
             </T>
-            <Ionicons name="chevron-down" size={16} color={colors.textSub} />
           </Pressable>
           <MonthStep step={1} onPress={() => setOffset((x) => x + 1)} />
         </View>
