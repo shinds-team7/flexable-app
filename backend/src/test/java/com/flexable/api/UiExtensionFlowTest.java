@@ -85,6 +85,6 @@ class UiExtensionFlowTest {
         mvc.perform(auth(put("/api/v1/categories/order"),other,body)).andExpect(status().isBadRequest());
         assertThat(ids(token,"EXPENSE")).containsExactlyElementsOf(reversed);
         mvc.perform(auth(post("/api/v1/categories"),token,"{\"name\":\"마지막\",\"type\":\"EXPENSE\"}")).andExpect(status().isCreated());
-        mvc.perform(auth(get("/api/v1/categories?type=EXPENSE"),token,null)).andExpect(jsonPath("$[8].name",is("마지막")));
+        mvc.perform(auth(get("/api/v1/categories?type=EXPENSE"),token,null)).andExpect(jsonPath("$[12].name",is("마지막")));
     }
 }

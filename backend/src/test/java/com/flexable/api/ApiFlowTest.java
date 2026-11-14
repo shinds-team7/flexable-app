@@ -197,7 +197,7 @@ class ApiFlowTest {
 	void fullFlow() throws Exception {
 		String token = signup("flow@example.com");
 
-		mvc.perform(json(get("/api/v1/categories"), token, null)).andExpect(jsonPath("$", hasSize(11)));
+		mvc.perform(json(get("/api/v1/categories"), token, null)).andExpect(jsonPath("$", hasSize(18)));
 		mvc.perform(json(get("/api/v1/budget/today"), token, null))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code", is("BUDGET_NOT_SET")));
@@ -340,7 +340,7 @@ class ApiFlowTest {
 			.andExpect(jsonPath("$.items[0].title", is("월세")))
 			.andExpect(jsonPath("$.items[0].type", is("EXPENSE")))
 			.andExpect(jsonPath("$.items[0].amount", is(450000)))
-			.andExpect(jsonPath("$.items[0].category.name", is("고정지출")))
+			.andExpect(jsonPath("$.items[0].category.name", is("기타")))
 			.andExpect(jsonPath("$.items[0].fromFixed", is(true)))
 			.andExpect(jsonPath("$.items[0].memo", is("고정지출 자동 기록")))
 			.andReturn();
