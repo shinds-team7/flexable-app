@@ -27,7 +27,7 @@
             "type": "EXPENSE",
             "amount": 3000,
             "title": "CU 테스트점",
-            "category": "생활·마트",
+            "category": "생활",
             "at": "2026-10-31T09:00:00"
           },
           {
@@ -55,7 +55,7 @@
             "type": "INCOME",
             "amount": 500,
             "title": "이자",
-            "category": "기타 수입",
+            "category": "금융수입",
             "at": "2026-10-03T12:00:00"
           }
         ]
@@ -144,7 +144,7 @@
             "type": "EXPENSE",
             "amount": 3000,
             "title": "CU 테스트점",
-            "category": "생활·마트",
+            "category": "생활",
             "at": "2026-10-31T09:00:00"
           },
           {
@@ -172,7 +172,7 @@
             "type": "INCOME",
             "amount": 500,
             "title": "이자",
-            "category": "기타 수입",
+            "category": "금융수입",
             "at": "2026-10-03T12:00:00"
           }
         ]

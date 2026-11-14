@@ -1,0 +1,87 @@
+package com.flexable.api.category;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import com.flexable.api.common.TxType;
+
+/**
+ * 거래 제목(가맹점·내용)으로 기본 카테고리 이름을 추정한다. 못 맞추면 "기타"·"기타 수입".
+ * 키워드 표의 기준은 tests/policy/category-guess.json이고, 앱(frontend/src/service/receiptImport/guessCategory.ts)도
+ * 같은 표를 쓴다. 한쪽을 바꾸면 세 곳을 같이 고친다(양쪽 테스트가 표가 같은지 검사한다).
+ * 띄어쓰기를 지우고 영문은 대문자로 바꿔 비교한다. 영문 키워드는 앞뒤에 다른 영문 글자가 붙어 있으면 맞지 않는다.
+ * 여러 카테고리가 맞으면 가장 긴 키워드, 길이가 같으면 표에서 앞선 카테고리.
+ */
+public final class CategoryGuess {
+
+	public static final String EXPENSE_FALLBACK = "기타";
+	public static final String INCOME_FALLBACK = "기타 수입";
+
+	static final List<Map.Entry<String, List<String>>> EXPENSE = List.of(
+			rule("식비", "식당", "음식", "김밥", "치킨", "통닭", "피자", "버거", "맥도날드", "롯데리아", "맘스터치", "KFC", "서브웨이", "SUBWAY", "배달의민족", "배민", "요기요", "쿠팡이츠", "땡겨요", "국밥", "분식", "떡볶이", "마라", "한식", "중식", "일식", "양식", "반점", "짜장", "짬뽕", "고기", "갈비", "삼겹", "곱창", "막창", "족발", "보쌈", "냉면", "국수", "우동", "라멘", "초밥", "스시", "돈까스", "돈가스", "도시락", "본죽", "순대", "감자탕", "해장국", "닭갈비", "찜닭", "횟집", "샐러드", "샤브", "뷔페", "찌개", "백반", "덮밥", "파스타", "토스트", "구내식당", "한솥"),
+			rule("카페", "카페", "커피", "COFFEE", "CAFE", "스타벅스", "STARBUCKS", "투썸", "이디야", "메가커피", "메가MGC", "빽다방", "컴포즈", "할리스", "폴바셋", "블루보틀", "커피빈", "탐앤탐스", "엔제리너스", "더벤티", "매머드", "공차", "쥬씨", "스무디", "버블티", "베이커리", "빵", "제과", "디저트", "케이크", "파리바게뜨", "뚜레쥬르", "배스킨", "설빙", "도넛", "던킨", "마카롱", "와플"),
+			rule("생활", "편의점", "CU", "GS25", "세븐일레븐", "7-ELEVEN", "이마트24", "미니스톱", "마트", "슈퍼", "이마트", "홈플러스", "코스트코", "트레이더스", "노브랜드", "GS더프레시", "하나로", "컬리", "다이소", "생필품", "생활용품", "세탁", "빨래방", "철물", "정육", "청과", "반찬", "시장"),
+			rule("교통", "택시", "버스", "지하철", "교통", "티머니", "캐시비", "카카오T", "카카오모빌리티", "우티", "주유", "오일뱅크", "SK에너지", "GS칼텍스", "S-OIL", "에쓰오일", "충전소", "하이패스", "톨게이트", "도로공사", "KTX", "SRT", "코레일", "철도", "주차", "파킹", "PARKING", "쏘카", "그린카", "따릉이", "킥보드", "렌터카", "렌트카"),
+			rule("주거", "월세", "관리비", "공과금", "전기요금", "한국전력", "한전", "가스요금", "도시가스", "수도요금", "상수도", "임대료"),
+			rule("통신", "통신", "휴대폰", "핸드폰", "인터넷", "SKT", "SK텔레콤", "KT", "LGU+", "LG유플러스", "유플러스", "알뜰폰", "헬로모바일", "스마트폰"),
+			rule("쇼핑", "쇼핑", "스마트스토어", "쿠팡", "무신사", "지마켓", "G마켓", "11번가", "옥션", "백화점", "아울렛", "아트박스", "올리브영", "유니클로", "ZARA", "H&M", "탑텐", "스파오", "에잇세컨즈", "에이블리", "지그재그", "29CM", "W컨셉", "알리익스프레스", "테무", "하이마트", "전자랜드", "애플", "APPLE", "삼성스토어", "무인양품", "문구", "핫트랙스", "선물", "꽃집", "플라워", "화장품", "이니스프리", "신세계", "스타필드", "더현대", "SSG"),
+			rule("여가", "영화", "시네마", "CGV", "메가박스", "롯데시네마", "공연", "티켓", "인터파크", "뮤지컬", "콘서트", "전시", "미술관", "박물관", "게임", "오락실", "PC방", "피씨방", "노래방", "노래연습장", "코인노래", "볼링", "당구", "방탈출", "보드게임", "만화카페", "키즈카페", "스크린골프", "골프", "야구", "놀이공원", "롯데월드", "에버랜드", "워터파크", "찜질방", "사우나", "술집", "포차", "포장마차", "호프", "이자카야", "주점", "맥주", "펍", "PUB", "와인", "칵테일", "호텔", "모텔", "펜션", "리조트", "숙박", "에어비앤비", "AIRBNB", "야놀자", "여기어때", "항공", "대한항공", "아시아나", "제주항공", "진에어", "티웨이", "에어부산", "여행", "투어"),
+			rule("건강", "병원", "의원", "치과", "한의원", "약국", "내과", "외과", "피부과", "안과", "이비인후과", "소아과", "소아청소년과", "산부인과", "비뇨", "정신건강", "의학과", "클리닉", "메디컬", "의료", "검진", "보건소", "헬스", "피트니스", "필라테스", "요가", "크로스핏", "수영장", "체육관", "스포츠센터"),
+			rule("교육", "학원", "교육", "교습", "과외", "서점", "문고", "도서", "책방", "알라딘", "예스24", "YES24", "강의", "인강", "클래스101", "인프런", "패스트캠퍼스", "유데미", "자격증", "시험", "토익", "큐넷", "등록금", "학교", "독서실", "스터디카페", "스터디룸"),
+			rule("구독", "구독", "정기결제", "멤버십", "넷플릭스", "NETFLIX", "유튜브", "YOUTUBE", "디즈니", "DISNEY", "티빙", "TVING", "웨이브", "WAVVE", "왓챠", "쿠팡플레이", "쿠팡와우", "네이버플러스", "멜론", "지니뮤직", "스포티파이", "SPOTIFY", "애플뮤직", "APPLE.COM", "ICLOUD", "구글원", "GOOGLE", "챗GPT", "CHATGPT", "OPENAI", "CLAUDE", "ANTHROPIC", "노션", "NOTION", "어도비", "ADOBE", "마이크로소프트", "MICROSOFT", "밀리의서재"));
+
+	static final List<Map.Entry<String, List<String>>> INCOME = List.of(
+			rule("급여", "급여", "월급", "상여", "성과급", "보너스", "알바", "아르바이트", "임금"),
+			rule("용돈", "용돈"),
+			rule("금융수입", "이자", "배당", "투자수익"),
+			rule("환급", "환급", "환불", "취소", "캐시백", "페이백", "연말정산"),
+			rule("지원금", "지원금", "장학", "바우처", "청년수당"));
+
+	private static final Pattern SPACES = Pattern.compile("\\s+");
+	private static final Pattern ASCII = Pattern.compile("[!-~]+");
+
+	private CategoryGuess() {
+	}
+
+	public static String name(String title, TxType type) {
+		String text = compact(title);
+		String best = type == TxType.EXPENSE ? EXPENSE_FALLBACK : INCOME_FALLBACK;
+		int length = 0;
+		for (var rule : type == TxType.EXPENSE ? EXPENSE : INCOME) {
+			for (String keyword : rule.getValue()) {
+				if (keyword.length() > length && contains(text, keyword)) {
+					best = rule.getKey();
+					length = keyword.length();
+				}
+			}
+		}
+		return best;
+	}
+
+	private static String compact(String text) {
+		return SPACES.matcher(text).replaceAll("").toUpperCase(Locale.ROOT);
+	}
+
+	private static boolean contains(String text, String keyword) {
+		String word = compact(keyword);
+		if (!ASCII.matcher(word).matches()) {
+			return text.contains(word);
+		}
+		for (int at = text.indexOf(word); at >= 0; at = text.indexOf(word, at + 1)) {
+			if (!letter(text, at - 1) && !letter(text, at + word.length())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean letter(String text, int at) {
+		return at >= 0 && at < text.length() && text.charAt(at) >= 'A' && text.charAt(at) <= 'Z';
+	}
+
+	private static Map.Entry<String, List<String>> rule(String name, String... keywords) {
+		return Map.entry(name, List.of(keywords));
+	}
+}

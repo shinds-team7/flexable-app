@@ -214,7 +214,10 @@ public class FixedExpensePoster {
 		}
 	}
 
-	/** 기본 "고정지출" 카테고리. 이름을 바꿨으면 같은 아이콘의 기본 카테고리, 그것도 없으면 "기타". */
+	/**
+	 * 2026-11-14 전 가입자의 "고정지출" 카테고리(이름을 바꿨으면 같은 아이콘의 카테고리). 새 가입자에게는 없으므로 "기타",
+	 * 그것도 없으면 첫 지출 카테고리, 지출 카테고리가 하나도 없으면 "기타"를 만든다(policies §10).
+	 */
 	private Long category(long userId) {
 		List<Category> defaults = categories.findAllOrdered(userId, TxType.EXPENSE)
 			.stream()
@@ -226,6 +229,6 @@ public class FixedExpensePoster {
 			.or(() -> defaults.stream().filter(c -> c.getName().equals(FALLBACK)).findFirst())
 			.or(() -> defaults.stream().findFirst())
 			.map(Category::getId)
-			.orElseGet(() -> categories.save(new Category(userId,CATEGORY,TxType.EXPENSE,"#667085","repeat",false,clock.instant())).getId());
+			.orElseGet(() -> categories.save(new Category(userId,FALLBACK,TxType.EXPENSE,"#98A2B3","pricetag",false,clock.instant())).getId());
 	}
 }

@@ -23,24 +23,34 @@ public class CategoryService {
 
 	static final String DEFAULT_COLOR = "#98A2B3";
 	static final String DEFAULT_ICON = "pricetag";
-	static final String EXPENSE_FALLBACK = "기타";
-	static final String INCOME_FALLBACK = "기타 수입";
+	static final String EXPENSE_FALLBACK = CategoryGuess.EXPENSE_FALLBACK;
+	static final String INCOME_FALLBACK = CategoryGuess.INCOME_FALLBACK;
 
 	private record Preset(String name, TxType type, String color, String icon) {
 	}
 
-	/** 가입 시 만드는 기본 카테고리. 순서가 화면 표시 순서다. */
+	/**
+	 * 가입 시 만드는 기본 카테고리. 순서가 화면 표시 순서다(2026-11-14 지출 12개·수입 6개, policies §10).
+	 * 이름은 CategoryGuess 키워드 표의 카테고리 이름과 같아야 한다. 기존 사용자는 V30이 같은 목록으로 맞춘다.
+	 */
 	private static final List<Preset> DEFAULTS = List.of(
 			new Preset("식비", TxType.EXPENSE, "#12B76A", "restaurant"),
-			new Preset("카페·간식", TxType.EXPENSE, "#F79009", "cafe"),
-			new Preset("쇼핑", TxType.EXPENSE, "#7A5AF8", "bag-handle"),
+			new Preset("카페", TxType.EXPENSE, "#F79009", "cafe"),
+			new Preset("생활", TxType.EXPENSE, "#15B79E", "cart"),
 			new Preset("교통", TxType.EXPENSE, "#2E90FA", "bus"),
-			new Preset("문화·여가", TxType.EXPENSE, "#EE46BC", "film"),
-			new Preset("생활·마트", TxType.EXPENSE, "#15B79E", "cart"),
-			new Preset("고정지출", TxType.EXPENSE, "#667085", "repeat"),
+			new Preset("주거", TxType.EXPENSE, "#6172F3", "home"),
+			new Preset("통신", TxType.EXPENSE, "#0BA5EC", "phone-portrait"),
+			new Preset("쇼핑", TxType.EXPENSE, "#7A5AF8", "bag-handle"),
+			new Preset("여가", TxType.EXPENSE, "#EE46BC", "film"),
+			new Preset("건강", TxType.EXPENSE, "#F04438", "medkit"),
+			new Preset("교육", TxType.EXPENSE, "#444CE7", "school"),
+			new Preset("구독", TxType.EXPENSE, "#DD2590", "play-circle"),
 			new Preset(EXPENSE_FALLBACK, TxType.EXPENSE, DEFAULT_COLOR, "ellipsis-horizontal"),
 			new Preset("급여", TxType.INCOME, "#2E90FA", "cash"),
 			new Preset("용돈", TxType.INCOME, "#12B76A", "gift"),
+			new Preset("금융수입", TxType.INCOME, "#F79009", "trending-up"),
+			new Preset("환급", TxType.INCOME, "#15B79E", "receipt"),
+			new Preset("지원금", TxType.INCOME, "#7A5AF8", "ribbon"),
 			new Preset(INCOME_FALLBACK, TxType.INCOME, DEFAULT_COLOR, "add-circle"));
 
 	private final CategoryRepository categories;

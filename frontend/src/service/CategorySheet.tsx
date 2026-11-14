@@ -22,7 +22,15 @@ const icons = [
   "bus",
   "film",
   "cart",
+  "home",
+  "phone-portrait",
+  "medkit",
+  "school",
+  "play-circle",
   "cash",
+  "trending-up",
+  "receipt",
+  "ribbon",
   "gift",
 ];
 export function CategorySheet({
