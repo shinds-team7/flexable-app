@@ -98,7 +98,8 @@ public class StatementImportService {
 
 		List<Candidate> candidates = new ArrayList<>();
 		int afterBalance = 0;
-		for (StatementRow row : parsed.rows()) {
+		// 취소된 결제 쌍은 기준 시각으로 나누기 전에 뺀다(결제만 남고 취소가 잘려 지출이 남는 일을 막는다).
+		for (StatementRow row : StatementCancellations.withoutPairs(parsed.rows())) {
 			Instant at = row.at().atZone(zone).toInstant();
 			if (!at.isBefore(cutoff)) {
 				afterBalance++;
