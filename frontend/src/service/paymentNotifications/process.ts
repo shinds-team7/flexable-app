@@ -26,7 +26,13 @@ export type ImportDependencies = {
   /** Notices the server already rejected in this session, by id. Not resent until the app restarts. */
   rejected: Map<string, string>;
 };
-export type PaymentProblem = { id: string; reason: string; postedAt: number };
+export type PaymentProblem = {
+  id: string;
+  reason: string;
+  postedAt: number;
+  /** 읽지 못한 알림의 원문(기기 안에서만). 확인 목록에서 가려서 공유해 파서를 고칠 때 쓴다 */
+  notice?: PaymentNotice;
+};
 
 /** The native id is a 64-char SHA-256 hex digest, exactly the server's Idempotency-Key limit (64). Send it as is, never prefixed. */
 export const paymentIdempotencyKey = (id: string) => id;
@@ -68,6 +74,7 @@ export async function importPaymentNotices(
           id: notice.id,
           reason: parsed.reason,
           postedAt: notice.postedAt,
+          notice,
         });
         continue;
       }

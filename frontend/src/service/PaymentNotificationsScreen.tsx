@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { router } from "expo-router";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, Pressable, Share, View } from "react-native";
 import { Button, Card, Screen, T } from "@/components/ui";
 import { SubHeader } from "@/components/SubHeader";
 import { colors } from "@/theme";
@@ -12,6 +12,7 @@ import {
   paymentNative,
 } from "./paymentNotifications/native";
 import { sessionGeneration } from "./api/client";
+import { maskedNoticeJson } from "./paymentNotifications/mask";
 import {
   refreshPaymentImport,
   interruptPaymentImport,
@@ -185,6 +186,26 @@ export function PaymentNotificationsScreen() {
                 .slice(5, 16)
                 .replace("T", " ")}
             </T>
+            {item.notice && (
+              <>
+                {/* 읽지 못한 알림: 이름·카드번호를 가린 원문을 보고 개발자에게 보내 파서를 고친다 */}
+                <T size={13} color={colors.textSub} selectable>
+                  {maskedNoticeJson(item.notice)}
+                </T>
+                <Button
+                  variant="soft"
+                  label="가려서 공유"
+                  onPress={() =>
+                    void Share.share({
+                      message: maskedNoticeJson(item.notice!),
+                    })
+                  }
+                />
+                <T size={12} color={colors.textMuted}>
+                  공유 전에 이름·카드번호가 가려졌는지 꼭 확인해 주세요
+                </T>
+              </>
+            )}
             <Button
               variant="soft"
               label="거래내역 열기"
