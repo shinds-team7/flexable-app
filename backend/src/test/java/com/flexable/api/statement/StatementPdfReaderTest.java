@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -94,6 +95,10 @@ class StatementPdfReaderTest {
 		// 거래내역서 머리의 총 출금·입금액과 맞춰 보도록 합계만 출력한다(거래 내용은 출력하지 않는다).
 		System.out.printf("[statement-sample] withdrawal=%d deposit=%d%n",
 				p.rows().stream().mapToLong(StatementRow::withdrawal).sum(),
-				p.rows().stream().mapToLong(StatementRow::deposit).sum());		assertThat(p.rows()).isNotEmpty();
+				p.rows().stream().mapToLong(StatementRow::deposit).sum());
+		List<StatementRow> kept = StatementCancellations.withoutPairs(p.rows());
+		System.out.printf("[statement-sample] cancelPairs=%d withdrawal=%d deposit=%d%n",
+				(p.rows().size() - kept.size()) / 2, kept.stream().mapToLong(StatementRow::withdrawal).sum(),
+				kept.stream().mapToLong(StatementRow::deposit).sum());		assertThat(p.rows()).isNotEmpty();
 	}
 }

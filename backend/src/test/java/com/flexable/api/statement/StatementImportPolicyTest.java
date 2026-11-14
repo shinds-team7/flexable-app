@@ -103,7 +103,13 @@ class StatementImportPolicyTest {
 		return tests.stream();
 	}
 
-	private void run(JsonNode c, List<String> statement) throws Exception {
+	private void run(JsonNode c, List<String> shared) throws Exception {
+		// 사례가 자기 거래내역서를 가지면 그것을, 아니면 공통 거래내역서를 쓴다.
+		List<String> statement = new ArrayList<>(shared);
+		if (c.has("statement")) {
+			statement.clear();
+			c.get("statement").forEach(n -> statement.add(n.asString()));
+		}
 		when(reader.lines(any(), any())).thenReturn(statement);
 		// 토큰 만료는 실제 시각으로 검사하므로 가입은 지금 시각에 한다.
 		clock.now = Instant.now();
