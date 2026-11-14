@@ -27,12 +27,41 @@ import {
   EntryReminderTimeSheet,
   reminderTimeText,
 } from "./EntryReminderTimeSheet";
+import { devToolsAvailable } from "./DevNotificationsScreen";
 import { markHomeGuidePending } from "./HomeGuide";
 import { useSession } from "./Session";
 import { ErrorNotice, Field } from "./ui";
 import { PROVIDER_NAME } from "./oauth";
 import type { Referral, User } from "./types";
 import { publishWallet } from "./wallet";
+/**
+ * 앱 버전. 개발자 빌드(preview·development 채널)에서만 3초 안에 7번 누르면 숨은 개발자용 알림 원문 확인으로 간다.
+ * 운영 앱에서는 눌러도 아무 일도 없다.
+ */
+function VersionText() {
+  const taps = useRef<number[]>([]);
+  const label = (
+    <T size={13} color={colors.textMuted}>
+      앱 버전 {APP_VERSION}
+    </T>
+  );
+  if (!devToolsAvailable()) return label;
+  return (
+    <Pressable
+      accessibilityLabel={`앱 버전 ${APP_VERSION}`}
+      onPress={() => {
+        const now = Date.now();
+        taps.current = [...taps.current.filter((t) => now - t < 3000), now];
+        if (taps.current.length >= 7) {
+          taps.current = [];
+          router.push("/dev-notifications");
+        }
+      }}
+    >
+      {label}
+    </Pressable>
+  );
+}
 /** 이메일, 그리고 카카오·Google 계정이면 어느 계정으로 로그인했는지 */
 export function AccountLine({ user }: { user: User }) {
   const social =
@@ -326,9 +355,7 @@ export function MyScreen() {
         ))}
       </Card>
       <View style={{ gap: 4, paddingHorizontal: 4 }}>
-        <T size={13} color={colors.textMuted}>
-          앱 버전 {APP_VERSION}
-        </T>
+        <VersionText />
         <T size={13} color={colors.textMuted}>
           문의: {SUPPORT_EMAIL}
         </T>

@@ -1,5 +1,5 @@
 import { normalizeTitle } from "../receiptImport/review";
-import { parseShinhanNotice } from "./parse";
+import { parsePaymentNotice } from "./sources";
 import type { PaymentNotice } from "./native";
 
 export type PaymentBody = {
@@ -62,7 +62,7 @@ export async function importPaymentNotices(
     let body: PaymentBody;
     if (notice.prepared) body = JSON.parse(notice.prepared) as PaymentBody;
     else {
-      const parsed = parseShinhanNotice(notice);
+      const parsed = parsePaymentNotice(notice);
       if (!parsed.approval) {
         problems.push({
           id: notice.id,
