@@ -32,8 +32,12 @@ internal object PaymentStore {
     }.generateKey()
   }
 
-  private fun read(context: Context): JSONObject {
-    val source = file(context)
+  private fun read(context: Context): JSONObject = readEncrypted(file(context))
+
+  private fun write(context: Context, state: JSONObject) = writeEncrypted(file(context), state)
+
+  /** 같은 Keystore 키로 암호화한 JSON 파일 읽기(개발자용 원문 확인 저장소도 같이 쓴다). 파일이 없으면 빈 상태 */
+  internal fun readEncrypted(source: AtomicFile): JSONObject {
     if (!source.baseFile.exists()) return JSONObject()
     val envelope = JSONObject(String(source.readFully(), Charsets.UTF_8))
     val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -41,12 +45,11 @@ internal object PaymentStore {
     return JSONObject(String(cipher.doFinal(Base64.decode(envelope.getString("data"), Base64.NO_WRAP)), Charsets.UTF_8))
   }
 
-  private fun write(context: Context, state: JSONObject) {
+  internal fun writeEncrypted(target: AtomicFile, state: JSONObject) {
     val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
     val envelope = JSONObject()
       .put("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
       .put("data", Base64.encodeToString(cipher.doFinal(state.toString().toByteArray(Charsets.UTF_8)), Base64.NO_WRAP))
-    val target = file(context)
     val stream = target.startWrite()
     try {
       stream.write(envelope.toString().toByteArray(Charsets.UTF_8))
@@ -114,7 +117,7 @@ internal object PaymentStore {
     val queue = state.getJSONArray("queue")
     return (0 until queue.length()).map {
       val row = queue.getJSONObject(it)
-      mapOf("id" to row.getString("id"), "title" to row.getString("title"), "body" to row.getString("body"), "postedAt" to row.getLong("postedAt"), "prepared" to row.optString("prepared"))
+      mapOf("id" to row.getString("id"), "packageName" to row.optString("packageName", PaymentSources.SHINHAN), "title" to row.getString("title"), "body" to row.getString("body"), "postedAt" to row.getLong("postedAt"), "prepared" to row.optString("prepared"))
     }
   }
 

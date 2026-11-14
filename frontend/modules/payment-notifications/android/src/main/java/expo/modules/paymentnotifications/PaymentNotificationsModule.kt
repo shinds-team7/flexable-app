@@ -42,6 +42,13 @@ class PaymentNotificationsModule : Module() {
     AsyncFunction("pending") { owner: String -> PaymentStore.pending(context, owner) }
     AsyncFunction("prepare") { owner: String, id: String, body: String -> PaymentStore.prepare(context, owner, id, body) }
     AsyncFunction("acknowledge") { owner: String, id: String -> PaymentStore.acknowledge(context, owner, id) }
-    AsyncFunction("clear") { PaymentStore.clear(context); PaymentEvents.changed() }
+    AsyncFunction("clear") { PaymentStore.clear(context); DevCaptureStore.clear(context); PaymentEvents.changed() }
+    AsyncFunction("setSources") { packages: List<String> -> PaymentSources.set(context, packages) }
+    AsyncFunction("devStatus") { DevCaptureStore.status(context) + mapOf("allowed" to allowed()) }
+    AsyncFunction("setDevCapture") { enabled: Boolean ->
+      if (enabled) check(allowed()) { "Notification access is required" }
+      DevCaptureStore.configure(context, enabled)
+    }
+    AsyncFunction("devCaptures") { DevCaptureStore.list(context) }
   }
 }
