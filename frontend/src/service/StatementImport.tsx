@@ -5,6 +5,7 @@ import { Button, T, styles } from "@/components/ui";
 import { colors } from "@/theme";
 import { ApiError, api, errorText } from "./api/client";
 import { deleteStatementCopy } from "./statementCache";
+import { statementForm } from "./statementForm";
 import { Field } from "./ui";
 import type { StatementImport } from "./types";
 
@@ -20,19 +21,6 @@ export function statementResultText(r: StatementImport) {
   if (r.afterBalance > 0)
     parts.push(`입력한 잔액 이후의 ${r.afterBalance}건은 넣지 않았어요`);
   return parts.join(". ");
-}
-
-function form(pdf: Picked, password: string) {
-  const body = new FormData();
-  if (pdf.file) body.append("file", pdf.file, pdf.name);
-  else
-    body.append("file", {
-      uri: pdf.uri,
-      name: pdf.name || "statement.pdf",
-      type: pdf.mimeType ?? "application/pdf",
-    } as unknown as Blob);
-  if (password) body.append("password", password);
-  return body;
 }
 
 /**
@@ -93,7 +81,7 @@ export function useStatementImport({
     try {
       const result = await api<StatementImport>(
         "/transactions/statement-import",
-        { method: "POST", body: form(pdf, password), timeoutMs: 60000 },
+        { method: "POST", body: statementForm(pdf, password), timeoutMs: 60000 },
       );
       finish(pdf);
       onDone(result);
