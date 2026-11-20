@@ -6,7 +6,7 @@ set -euo pipefail
 HOST="${1:?사용: academy/deploy.sh <user@host>}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 (cd "$DIR/../.." && ./gradlew bootJar -q)
-scp "$DIR/../../build/libs/app.jar" "$DIR/../Dockerfile" "$DIR/docker-compose.yml" "$DIR/backup-db.sh" "$HOST:/opt/flexable/"
+scp "$DIR/../../build/libs/app.jar" "$DIR/../Dockerfile" "$DIR/docker-compose.yml" "$DIR/../backup-db.sh" "$HOST:/opt/flexable/"
 ssh "$HOST" 'set -e; cd /opt/flexable && chmod +x backup-db.sh
 # 컨테이너는 uid 10001로 돈다. 로컬 umask 077로 빌드한 jar(600)는 읽지 못해 "Unable to access jarfile"로 재시작이 반복된다
 chmod 644 app.jar

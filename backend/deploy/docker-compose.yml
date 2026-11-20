@@ -1,18 +1,63 @@
+# EC2(t3.small, 2GB) 운영 구성: 앱 api + 앱 MySQL + Caddy(HTTPS).
+# 같은 EC2에 웹(flexable-web, 별도 compose·별도 MySQL)도 올린다. 웹 nginx는 호스트 127.0.0.1:8081에만 열고,
+# 이 Caddy가 WEB_DOMAIN으로 온 요청을 그곳으로 넘긴다. 메모리 예산·복귀 절차: docs/server-migration.md §8
 services:
+  db:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: flexable
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: UTC
+    # 2GB에 JVM 셋·MySQL 둘이 같이 돈다. 데이터가 작아 버퍼 풀 128MB로 충분하고, 쓰지 않는 기능은 끈다.
+    # 바이너리 로그는 복제·시점 복구를 쓰지 않으므로 끈다(디스크 절약). 백업은 backup-db.sh 매일 덤프.
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=128M
+      - --innodb-log-buffer-size=8M
+      - --performance-schema=OFF
+      - --max-connections=40
+      - --temptable-max-ram=64M
+      - --disable-log-bin
+    mem_limit: 400m
+    # 메모리가 모자라 커널이 프로세스를 죽여야 할 때 웹보다 나중에 죽도록(앱 우선, owner 11-20)
+    oom_score_adj: -500
+    # 포트를 열지 않는다. api만 compose 내부 네트워크로 붙는다.
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   api:
     build: .
     image: flexable-api:latest
     env_file: .env
+    # JAVA_OPTS는 Dockerfile 기본값(-Xmx448m, SerialGC, Metaspace 160m)
     restart: unless-stopped
     mem_limit: 700m
-    expose:
-      - "8080"
+    oom_score_adj: -500
+    # 호스트 루프백에만 연다. 호스트 네트워크의 Caddy가 127.0.0.1:8080으로 넘긴다(외부에서는 닿지 않음).
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/api/v1/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
@@ -20,11 +65,14 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    # 웹 nginx가 호스트 127.0.0.1:8081에만 열려 있어 브리지 네트워크(host-gateway)에서는 닿지 않는다.
+    # 그래서 Caddy만 호스트 네트워크로 띄워 80·443을 직접 받고 두 루프백 포트로 넘긴다.
+    network_mode: host
     environment:
       API_DOMAIN: ${API_DOMAIN}
+      WEB_DOMAIN: ${WEB_DOMAIN}
+    mem_limit: 128m
+    oom_score_adj: -300
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -36,5 +84,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
 volumes:
+  # 운영 DB. `docker compose down -v`를 하면 지워진다(운영에서 -v 금지)
+  mysql_data:
   caddy_data:
   caddy_config:

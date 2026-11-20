@@ -1,5 +1,17 @@
-# API_DOMAIN(.env)으로 Let's Encrypt 인증서를 자동 발급·갱신한다.
+# EC2 Caddy(호스트 네트워크). .env의 API_DOMAIN·WEB_DOMAIN으로 Let's Encrypt 인증서를 자동 발급·갱신하고
+# 호스트 이름으로 나눈다. 두 도메인 모두 이 EC2의 탄력적 IP를 가리켜야 한다.
+# 접속 기록(log)은 켜지 않는다: 앱 개인정보처리방침 "운영 서버는 요청마다 IP 주소 등 접속 기록을 남기지 않습니다".
+# 웹의 접속 기록은 웹 nginx가 웹 방침에 맞춰 남긴다.
+
+# 앱 서버(앱·OAuth 콜백·웹 연동·서버 감시가 쓰는 주소)
 {$API_DOMAIN} {
 	encode gzip
-	reverse_proxy api:8080
+	reverse_proxy 127.0.0.1:8080
+}
+
+# 웹(flexable-web). 웹 compose의 nginx가 호스트 127.0.0.1:8081에서 정적 파일과 /api를 처리한다.
+# X-Forwarded-For·X-Forwarded-Proto(https)·Host는 Caddy가 기본으로 넘긴다.
+{$WEB_DOMAIN} {
+	encode gzip
+	reverse_proxy 127.0.0.1:8081
 }
