@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { Card, Screen, Segment, Sheet, T } from "@/components/ui";
 import { MonthCalendar } from "@/components/MonthCalendar";
@@ -63,7 +63,7 @@ export function TransactionsScreen() {
     `/transactions?from=${from}&to=${to}`,
   );
   const { displayData } = usePreviousWhileLoading(data, loading);
-  const items = displayData?.items ?? [];
+  const items = displayData?.items ?? NO_TRANSACTIONS;
   // 예정 지출(음성·AI 메이트·달력에서 등록)은 같은 달 것을 따로 받아 달력과 목록에 "예정"으로 함께 보여 준다.
   // 예정 API가 없는 구버전 서버에서는 부르지 않고, 실패해도 실제 거래 내역은 그대로 보인다.
   const planned = useResource<{ items: ScheduledExpense[] }>(
@@ -74,11 +74,24 @@ export function TransactionsScreen() {
     planned.loading,
   );
   const plans =
-    extensions.available && !planned.error ? (plannedData?.items ?? []) : [];
+    extensions.available && !planned.error
+      ? (plannedData?.items ?? NO_PLANS)
+      : NO_PLANS;
   const total = (type: string) =>
     items.filter((x) => x.type === type).reduce((a, x) => a + x.amount, 0);
   // 달력은 아래 목록 필터와 상관없이 그달의 지출·수입·예정을 모두 날짜별로 보여준다. 위 지출 합계에는 예정을 넣지 않는다.
-  const daily = dayAmounts(items, plans, txDate);
+  // 필터를 넘길 때마다 달력·세 목록을 다시 그리지 않게 같은 값이면 그대로 둔다
+  const daily = useMemo(() => dayAmounts(items, plans, txDate), [items, plans]);
+  const openDay = useCallback(
+    (date: string) =>
+      router.push({
+        pathname:
+          // 오늘·지난 날짜는 그 날짜가 채워진 거래 직접 기록으로 바로 간다
+          date > seoulDate() ? "/scheduled-expenses" : "/transactions/new",
+        params: { date },
+      }),
+    [],
+  );
   return (
     <Screen>
       <Card style={{ paddingTop: 8, gap: 8 }}>
@@ -130,16 +143,7 @@ export function TransactionsScreen() {
           today={seoulDate()}
           totals={daily}
           allowFuture={extensions.available}
-          onSelect={(date) =>
-            router.push({
-              pathname:
-                // 오늘·지난 날짜는 그 날짜가 채워진 거래 직접 기록으로 바로 간다
-                date > seoulDate()
-                  ? "/scheduled-expenses"
-                  : "/transactions/new",
-              params: { date },
-            })
-          }
+          onSelect={openDay}
         />
       </Card>
       <MonthPickerSheet
@@ -243,7 +247,11 @@ export function TransactionsScreen() {
   );
 }
 
-function TransactionList({
+const NO_TRANSACTIONS: Transaction[] = [];
+const NO_PLANS: ScheduledExpense[] = [];
+
+/** 한 쪽(전체·지출·수입) 목록. 쪽마다 filter가 고정이라 다른 쪽으로 넘겨도 다시 그리지 않는다 */
+const TransactionList = memo(function TransactionList({
   items,
   plans,
   filter,
@@ -289,7 +297,7 @@ function TransactionList({
       ))}
     </Card>
   );
-}
+});
 
 function TxRow({ t }: { t: Transaction }) {
   return (

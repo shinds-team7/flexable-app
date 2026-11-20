@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { T } from "./ui";
 import { colors } from "@/theme";
@@ -52,7 +53,7 @@ export function monthWeeks(year: number, month: number) {
  * 한 달 달력에 날짜별 수입(+)·지출(-) 합계와 예정 지출("예정")을 표시한다. 일요일부터 시작한다.
  * 합계는 화면이 받은 거래 금액을 날짜별로 더한 값을 props로 받는다.
  */
-export function MonthCalendar({
+export const MonthCalendar = memo(function MonthCalendar({
   year,
   month,
   today,
@@ -145,7 +146,7 @@ export function MonthCalendar({
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row" },
