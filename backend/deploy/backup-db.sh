@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# 아카데미 VM cron(매일 04:00 KST): DB를 덤프하고 7일 지난 파일을 지운다(개인정보처리방침 "백업 최대 7일").
-# 등록: (crontab -l 2>/dev/null; echo '0 4 * * * /opt/flexable/backup-db.sh >> /opt/flexable/backups/backup.log 2>&1') | crontab -
+# EC2 cron(매일 04:00 KST): 앱 DB를 덤프하고 7일 지난 파일을 지운다(개인정보처리방침 "백업 최대 7일",
+# "수동 스냅샷과 다른 지역으로의 복제는 만들지 않습니다" — 그래서 EC2 디스크에만 둔다).
+# 등록: (crontab -l 2>/dev/null | grep -v backup-db.sh; echo '0 4 * * * /opt/flexable/backup-db.sh >> /opt/flexable/backups/backup.log 2>&1') | crontab -
 set -euo pipefail
 cd /opt/flexable
 mkdir -p backups && chmod 700 backups

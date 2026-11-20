@@ -86,19 +86,22 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 | `coin/CoinFlowTest` | 가입 선물·어제 예산 보너스·시간 적립, 코스튬 구매·적용·레벨 해금·환급, 추천 코드 |
 | `weblink/WebLinkFlowTest`·`WebLinkAttemptLimiterTest` | 웹 연동 코드 발급·연동·해제·서비스 키, 코드 실패 제한 |
 
-## 운영 배포 (EC2 + RDS)
+## 운영 배포 (EC2 + 로컬 MySQL)
 
-- 서버: EC2 Ubuntu t3.micro `ubuntu@3.36.103.99`, 경로 `/opt/flexable`
-- 구성: `deploy/docker-compose.yml` — `api`(app.jar) + `caddy`(Let's Encrypt 자동 HTTPS)
+- 서버: EC2 Ubuntu **t3.small**(2GB, swap 2GB), 탄력적 IP, 경로 `/opt/flexable`. SSH는 `ubuntu@flex-able-sh.duckdns.org`(키 `~/.ssh/sh-flex.pem`)
+- 구성: `deploy/docker-compose.yml` — `db`(MySQL 8.4) + `api`(app.jar, 호스트 `127.0.0.1:8080`) + `caddy`(호스트 네트워크, Let's Encrypt 자동 HTTPS). Caddy는 같은 EC2의 웹(flexable-web, 호스트 `127.0.0.1:8081`)도 `WEB_DOMAIN`으로 넘긴다. 메모리 예산은 [`docs/server-migration.md`](../docs/server-migration.md) §8-1
 - 주소: `https://flex-able-sh.duckdns.org/api/v1` (임시 DuckDNS)
-- DB: RDS MySQL `database-flex`, DB `flexable`, 앱 계정 `flexable_app`(admin 미사용)
+- DB: 같은 EC2의 `db` 컨테이너, DB `flexable`, 앱 계정 `flexable_app`. 백업은 `backup-db.sh` 매일 04:00(cron, 7일 보관)
 - 비밀값은 서버 `/opt/flexable/.env`(600)에만 있다. 저장소에 넣지 않는다.
+- 아카데미 VM에서 돌아오는 절차(복귀 전에는 EC2에 `RELAY_MODE`가 있어 `deploy.sh`가 멈춘다): [`docs/server-migration.md`](../docs/server-migration.md) §8-2
 
-최초 1회
+새 서버 최초 1회
 
 ```bash
-scp -i ~/.ssh/sh-flex.pem deploy/setup-server.sh ubuntu@3.36.103.99:/tmp/ && ssh ... 'bash /tmp/setup-server.sh'
-# 파일 업로드 후 서버에서 사용자가 직접: /opt/flexable/setup-db.sh  (admin 비밀번호 입력)
+scp -i ~/.ssh/sh-flex.pem deploy/setup-server.sh ubuntu@flex-able-sh.duckdns.org:/tmp/
+ssh -i ~/.ssh/sh-flex.pem ubuntu@flex-able-sh.duckdns.org 'bash /tmp/setup-server.sh'
+deploy/deploy.sh --upload-only                 # 파일만 올림
+# 서버에서: /opt/flexable/setup-db.sh 로 빈 비밀값을 채우고 .env의 WEB_DOMAIN 등을 넣는다
 ```
 
 코드 변경 배포
@@ -110,7 +113,7 @@ backend/deploy/deploy.sh          # jar 빌드 → 업로드 → docker compose 
 운영 확인
 
 ```bash
-ssh -i ~/.ssh/sh-flex.pem ubuntu@3.36.103.99 'cd /opt/flexable && docker compose ps && docker compose logs api --tail 100'
+ssh -i ~/.ssh/sh-flex.pem ubuntu@flex-able-sh.duckdns.org 'cd /opt/flexable && docker compose ps && docker compose logs api --tail 100 && free -m'
 ```
 
 외부 감시: GitHub Actions `server-health.yml`이 15분마다 `https://flex-able-sh.duckdns.org/actuator/health`(앱·DB·디스크)와 HTTPS 인증서 만료일을 확인하고, 실패하면 저장소에 이슈를 연다. 자세한 내용은 [`docs/HANDOFF.md`](../docs/HANDOFF.md) §5.
