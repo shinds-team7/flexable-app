@@ -25,7 +25,8 @@ cd /opt/flexable && chmod +x setup-db.sh backup-db.sh
 chmod 644 app.jar
 if [ "$UPLOAD_ONLY" = 1 ]; then echo "파일만 올렸습니다(컨테이너 변경 없음)."; exit 0; fi
 for k in DB_PASSWORD MYSQL_ROOT_PASSWORD JWT_SECRET API_DOMAIN WEB_DOMAIN; do
-  if ! grep -q "^$k=." .env 2>/dev/null; then
+  # KEY="" 처럼 따옴표만 있으면 compose에는 빈 값이다
+  if ! grep -qE "^$k=[\"']?[^\"'[:space:]]" .env 2>/dev/null; then
     echo ".env에 $k 값이 없습니다. 새 서버면 /opt/flexable/setup-db.sh, 복귀면 docs/server-migration.md §8-2를 먼저 하세요." >&2; exit 1
   fi
 done

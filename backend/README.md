@@ -98,7 +98,8 @@ curl http://localhost:8080/api/v1/health                    # {"status":"UP"}
 새 서버 최초 1회
 
 ```bash
-scp -i ~/.ssh/sh-flex.pem deploy/setup-server.sh ubuntu@flex-able-sh.duckdns.org:/tmp/ && ssh ... 'bash /tmp/setup-server.sh'
+scp -i ~/.ssh/sh-flex.pem deploy/setup-server.sh ubuntu@flex-able-sh.duckdns.org:/tmp/
+ssh -i ~/.ssh/sh-flex.pem ubuntu@flex-able-sh.duckdns.org 'bash /tmp/setup-server.sh'
 deploy/deploy.sh --upload-only                 # 파일만 올림
 # 서버에서: /opt/flexable/setup-db.sh 로 빈 비밀값을 채우고 .env의 WEB_DOMAIN 등을 넣는다
 ```

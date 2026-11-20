@@ -29,7 +29,9 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      # 빈 볼륨 첫 기동 때 entrypoint가 소켓 전용 임시 서버를 띄웠다 내린다. 그 서버를 healthy로 보지 않도록
+      # TCP로 앱 계정 인증·쿼리가 될 때만 healthy(그 전에 복원을 시작하면 중간에 끊긴다)
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" -e 'SELECT 1' flexable >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 10

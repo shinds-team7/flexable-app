@@ -435,16 +435,32 @@ curl -s https://flex-able-sh.duckdns.org/actuator/health; echo
 
 #### D. 되돌리기(문제가 크면, 아카데미 VM이 살아 있는 동안만)
 
-아카데미 DB는 B-1에서 api만 멈췄으므로 그대로 있다. EC2를 다시 중계로 돌리고 아카데미 api를 켠다.
+아카데미 DB는 B-1에서 api만 멈췄으므로 그대로 있다. **EC2가 쓰기를 받았는지**에 따라 둘 중 하나를 한다.
+
+**D-1. B-5 전에 멈춘 경우**(행 수가 다르거나 db·api가 안 뜸. EC2 api가 요청을 받은 적 없음): 아카데미 DB를 그대로 쓴다.
 
 ```bash
-ssh flex-ec2 'cd /opt/flexable && docker compose stop api && cp Caddyfile.relay-backup Caddyfile && touch RELAY_MODE && docker compose up -d --no-deps --force-recreate caddy && docker compose ps'
+ssh flex-ec2 'cd /opt/flexable && docker compose stop api; cp Caddyfile.relay-backup Caddyfile && touch RELAY_MODE && docker compose up -d --no-deps --force-recreate caddy && docker compose ps'
 ssh academy 'cd /opt/flexable && docker compose start api && docker compose ps'
 curl -s https://flex-able-sh.duckdns.org/actuator/health; echo
 ```
 
+**D-2. B-5 뒤**(EC2가 이미 운영 요청을 받음): EC2에 쌓인 기록을 아카데미로 먼저 옮기고 나서 중계로 돌린다. 양쪽 api가 모두 멈춘 상태에서 한다(덤프는 테이블을 지우고 다시 만드는 형식이라, 아카데미 api를 먼저 켜면 그 사이 기록이 덮인다).
+
+```bash
+ssh flex-ec2 'cd /opt/flexable && docker compose stop api && docker compose ps'
+ssh flex-ec2 'cd /opt/flexable && docker compose exec -T db sh -c "exec mysqldump --single-transaction --no-tablespaces -uroot -p\"\$MYSQL_ROOT_PASSWORD\" flexable"' | gzip > ~/dump-back.sql.gz
+gzip -t ~/dump-back.sql.gz && gzip -cd ~/dump-back.sql.gz | tail -1
+ssh flex-ec2 'cd /opt/flexable && docker compose exec -T db sh -c "exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" flexable" < count-rows.sql' > ~/rows-ec2-back.txt
+gzip -cd ~/dump-back.sql.gz | ssh academy 'cd /opt/flexable && docker compose exec -T db sh -c "exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" flexable" && echo restored'
+ssh academy 'cd /opt/flexable && docker compose exec -T db sh -c "exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" flexable"' < backend/deploy/count-rows.sql > ~/rows-academy-back.txt
+diff ~/rows-ec2-back.txt ~/rows-academy-back.txt && echo "행 수 같음"
+```
+
+`행 수 같음`이 나온 뒤에만 D-1의 세 줄(중계로 돌리기 → 아카데미 api 시작 → health)을 실행한다. 다르면 두 api를 멈춘 채로 두고 원인을 본다(EC2 DB가 원본이다). 끝나면 `rm -f ~/dump-back.sql.gz ~/rows-*-back.txt`.
+
 - 중계 Caddyfile은 호스트 네트워크 Caddy에서도 그대로 동작한다. EC2 db는 켜 둔 채 두어도 된다(쓰는 곳 없음)
-- 전환 뒤 EC2 DB에 쌓인 기록은 아카데미에 없다. 몇 시간 안이면 B-1·B-4를 방향만 바꿔(EC2 덤프 → 아카데미 복원) 옮긴다. 아카데미 VM이 꺼진 뒤에는 되돌릴 곳이 없다
+- 아카데미 VM이 꺼진 뒤에는 되돌릴 곳이 없다
 
 #### E. 웹 이전(앱 확인이 끝난 뒤, 웹 저장소 절차)
 
@@ -453,7 +469,7 @@ curl -s https://flex-able-sh.duckdns.org/actuator/health; echo
 - 웹 compose는 80·443을 열지 않는다. nginx는 **호스트 `127.0.0.1:8081`에만** 바인딩한다(앱 Caddy가 받는다)
 - 모든 웹 컨테이너에 `mem_limit`(8-1 표), 웹 api 힙 320m, worker는 기본으로 끈다
 - 웹 이미지는 EC2에서 Gradle로 빌드하지 않는다(8-1)
-- 웹 소셜 로그인 콜백·`OAUTH_CALLBACK_BASE_URL`이 `https://<웹 서브도메인>.duckdns.org`로 바뀌므로 카카오·Google 콘솔에 새 콜백을 등록한다(웹 담당)
+- 웹 소셜 로그인은 웹 서버가 따로 처리한다. 웹 `.env`의 `OAUTH_CALLBACK_BASE_URL`·`OAUTH_ALLOWED_REDIRECT_URIS`를 `https://<웹 서브도메인>.duckdns.org`로 바꾸고, 카카오·Google 콘솔에 새 콜백을 등록한다(웹 담당). 앱 서버 `.env`의 OAuth 값은 바꾸지 않는다(앱 주소 그대로)
 - 웹 서버 → 앱 서버 연동(`APP_LINK_BASE_URL`)은 계속 `https://flex-able-sh.duckdns.org`. 같은 EC2라도 공인 주소로 나갔다 들어온다(동작함)
 - 웹 확인 뒤 `https://<웹 서브도메인>.duckdns.org`가 열리는지, `free -m`이 8-1 경보 기준 안인지 본다
 

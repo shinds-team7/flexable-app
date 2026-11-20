@@ -8,9 +8,11 @@ cd /opt/flexable
 [ -f .env ] || cp .env.example .env
 umask 077
 gen() { openssl rand -base64 48 | tr -d '/+=\n' | cut -c1-32; }   # 영숫자만($ 없음 — compose 치환 방지)
+# 값이 있는지: KEY= 뒤에 따옴표·공백이 아닌 글자가 있어야 한다(KEY="" 처럼 따옴표만 있으면 compose에는 빈 값)
+has() { grep -qE "^$1=[\"']?[^\"'[:space:]]" .env; }
 fill() {   # 키가 없거나 값이 비어 있을 때만 채운다
   local key="$1" val="$2"
-  if grep -q "^${key}=." .env; then echo "유지: ${key}"; return; fi
+  if has "$key"; then echo "유지: ${key}"; return; fi
   if grep -q "^${key}=" .env; then sed -i "s|^${key}=.*|${key}=${val}|" .env; else echo "${key}=${val}" >> .env; fi
   echo "채움: ${key}"
 }
@@ -19,5 +21,5 @@ fill MYSQL_ROOT_PASSWORD "$(gen)"
 fill JWT_SECRET "$(openssl rand -base64 48 | tr -d '\n')"
 grep -q '^MYSQL_IMAGE=' .env || echo 'MYSQL_IMAGE=mysql:8.4' >> .env
 chmod 600 .env
-grep -q '^WEB_DOMAIN=.' .env || echo "주의: WEB_DOMAIN이 비어 있습니다. .env에 웹 도메인을 넣어야 deploy.sh가 진행합니다." >&2
+has WEB_DOMAIN || echo "주의: WEB_DOMAIN이 비어 있습니다. .env에 웹 도메인을 넣어야 deploy.sh가 진행합니다." >&2
 echo "완료: .env를 채웠습니다. DB는 'docker compose up -d db'로 처음 뜰 때 만들어집니다."
