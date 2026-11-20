@@ -22,6 +22,13 @@
 
 ## 2. 다음 할 일 (순서대로, 모두 사람)
 
+**최우선 — 아카데미 VM → EC2 복귀**([`server-migration.md`](server-migration.md) §8-2 A~E, 그다음 §8-3)
+
+- **기한: 아카데미 VM이 꺼지기 전.** owner 추정으로 VM은 **11-24(화)까지** 살아 있다. VM이 꺼지면 운영 DB를 옮길 수 없고 되돌릴 곳도 없다
+- **아카데미 네트워크 안의 PC에서만 할 수 있다**(VM SSH가 내부망 전용). 그 PC에 이 저장소 최신 `main`(PR #380 포함), JDK 21, `~/.ssh/sh-flex.pem`, `academy`·`flex-ec2` SSH 별칭이 있어야 한다
+- **우선순위: 앱이 메인이다.** A(t3.small·탄력적 IP·DuckDNS) → B(덤프·복원·행 수 비교·기동) → C(확인)를 먼저 끝낸다. 웹(E)은 앱 확인 뒤, **11-24 면접까지만 살아 있으면 된다**(메모리가 모자라면 웹을 먼저 끈다, §8-1). 문제가 크면 D(되돌리기)
+- 앱·웹 이전이 끝나고 문제가 없으면 VM 종료 전에 §8-3 정리(백업 cron 제거·DB 볼륨·`/opt/flexable` 삭제). 끝나면 이 항목과 §3 "서버·인프라"의 복귀 줄을 지우고 전환 시각·실측 메모리를 적는다
+
 **11-16(월) 할 일 — 2.1.0 출시(11-14 세션에서 정함)**
 
 1. ~~**서버 배포**~~ 완료(11-16 11:29 KST, #376 V30 포함, 9·11MB 업로드가 프록시를 지나 앱 서버까지 가는 것 확인): #362 거래내역서 PDF API(업로드 한도 10MB), #364 음성 일정 시간 초과 수정, #368 거래내역서 KB국민은행 형식, 결제 취소 쌍 빼기. 운영 앞단 프록시가 10MB 업로드를 막지 않는지 확인. EC2 복귀(§3 서버·인프라) 일정과 겹치면 복귀한 서버에 배포한다
@@ -46,7 +53,7 @@
 - [ ] **스토어 자세한 설명의 AI 메이트 전송처를 "OpenAI" → "Google(Gemini API)"로 고치기**(Play Console, 문구는 `play-store/README.md` §2). 금융 기능 선언(§3.7)·문의 줄·알림 권한(§3.8)은 11-08 확인 완료
 
 ### 서버·인프라
-- [ ] **EC2 로컬 DB로 복귀 11-14~16 → 아카데미 VM 데이터 삭제 11-17**(계획 [`server-migration.md`](server-migration.md) §8). 복귀 뒤에는 이 PC에서 `backend/deploy/deploy.sh`로 배포할 수 있다. 개인정보처리방침 백업 문구 손보기(§9). 복귀 때 `error_events`(V23)도 함께 옮긴다(30일 보관이라 비워도 된다)
+- [ ] **EC2 로컬 DB로 복귀 → 아카데미 VM 정리**: 위 §2 "최우선" 항목으로 옮김(기한 VM 종료 전, 11-24 추정). 복귀 뒤에는 이 PC에서 `backend/deploy/deploy.sh`로 배포할 수 있다. 개인정보처리방침 백업 문구 손보기(§9). 복귀 때 `error_events`(V23)도 함께 옮긴다(30일 보관이라 비워도 된다)
 - [ ] 작업 PC 홈의 `ec2.env`·`academy.env`(비밀값)는 비밀번호 관리자로 옮기고 지운다. 되돌림용 `dump-final.sql.gz`(EC2 `~`, 작업 PC `~`)도 지운다
 - [ ] 도메인 구매 → 서버 `API_DOMAIN`, `frontend/.env.production`, EAS 환경변수 `EXPO_PUBLIC_API_URL`(preview·production) 변경 → 재빌드 또는 원격 업데이트. EC2 탄력적 IP 할당(지금은 인스턴스를 멈추면 IP가 바뀜)
 
@@ -98,6 +105,7 @@
 - [ ] 기본 카테고리 개편·이름으로 카테고리 추정(PR #376): 지출 12·수입 6, 기존 사용자는 V30이 이름 변경·추가(고정지출은 남김), 스크린샷·거래내역서·카드 자동 기록이 같은 키워드 표로 분류. 반영: **서버 배포 먼저**(V30, 실제 MySQL에서는 미검증이니 배포 뒤 카테고리 목록 확인), 그다음 앱 원격 업데이트(runtime 2.1.0) 11-14 preview 게시(그룹 `db8b41fe-f6b2-436e-922a-6dedd22ada84`, 소스 `748dd82`, #376·#377 포함). 11-14 production 게시(그룹 `8ff75b7d-7327-4745-8853-3e91e2de7ae2`, 소스 `748dd82`) — 서버보다 앱이 먼저 나갔다. 11-16 11:29 KST 서버 배포 완료(백업 `flexable-20261116-1128`, 이전 JAR `app.jar.before-v30-20261116`, JAR SHA-256 `4738a430…944c` 서버·로컬 일치, 내부·공개 health UP), Flyway V30 적용(0.17초) 확인. 로그인한 앱에서 카테고리 목록 확인 필요.
 - [ ] NH pay(NH농협카드) 결제 알림 자동 기록(PR #377): `nh.smart.nhallonepay`를 수집 대상에 더하고 농협 승인 형식(줄 끝 마침표·누적금액)을 읽는다. 카카오뱅크는 은행 앱이라 넣지 않고 개발자용 원문 확인으로만 모은다. 앱 원격 업데이트로 반영(2.1.0 네이티브가 `setSources`를 지원), 서버 배포 순서 제약 없음. "승인" 없이 "일시불"만 있는 알림은 다음 새 빌드부터 받는다. 개인정보처리방침 추가 개정(6) 웹 반영은 Vercel 배포로. 실제 NH pay 푸시 원문·패키지명은 미확인. 11-14 preview 게시(그룹 `db8b41fe-f6b2-436e-922a-6dedd22ada84`, 소스 `748dd82`, #376·#377 포함), 11-14 production 게시(그룹 `8ff75b7d-7327-4745-8853-3e91e2de7ae2`).
 - [ ] 거래내역서 PDF 업로드가 앱에서 "연결이 불안정해요"로 실패하던 문제: Expo 57 전역 fetch(`expo/fetch`)가 RN식 `{ uri, name, type }` 파트를 "Unsupported FormDataPart implementation"으로 거부해 요청이 서버에 가지도 않았다. `expo-file-system` `File`로 실어 보낸다(`statementForm.ts`, 실제 expo 변환기로 단위 테스트). 반영: 앱 원격 업데이트(runtime 2.1.0, JS만), 서버 변경·배포 순서 제약 없음. 실기기 업로드 확인 필요. (PR #378) 11-16 preview 게시(그룹 `e3b0ab74-8860-4b31-bf8f-0f3bb9625c51`, 소스 `f42036f`) 뒤 production 승격(그룹 `61fd0702-7cc0-4af0-b77e-00b92258365c`, update `01a1e27c-39b8…`, runtime 2.1.0), 공개 manifest가 새 update를 주는 것 확인. 직전 production 그룹은 `8ff75b7d`.
+- [ ] Play vitals 메모리 권장 조치(#381, PR #382): 거래내역 스크린샷 OCR이 사진을 `inSampleSize`로 줄여 디코딩(짧은 변 1080px 이상 유지, 좌표는 원본 크기로 환산)하고, release R8을 `proguard-android-optimize.txt`로 바꿔 최적화를 켬(`plugins/withR8Optimize.js`). 반영: **새 빌드**(네이티브 변경, 원격 업데이트로는 안 나감). 서버 변경 없음, 배포 순서 제약 없음. R8 최적화는 리플렉션 쓰는 라이브러리에서 문제가 날 수 있으니 새 빌드 뒤 실기기에서 OCR·광고·알림·음성 인식 확인 필요
 - [ ] EC2 복귀(로컬 MySQL)·같은 EC2에 웹(PR #380): `backend/deploy/` compose에 MySQL 8.4·Caddy 호스트 네트워크(앱 + `WEB_DOMAIN` → 127.0.0.1:8081 웹 nginx), `deploy.sh --upload-only`, 백업 cron 7일. 반영: 서버 배포(사람, [server-migration §8-2](server-migration.md) A→B→C 순서, 아카데미 PC에서). **순서 제약**: A(t3.small·탄력적 IP·DuckDNS)를 먼저, DB 복원(B-4) 전에는 api를 띄우지 않는다, 웹은 앱 확인 뒤(웹 compose가 `127.0.0.1:8081`·`mem_limit`을 지킨 뒤). 앱 새 빌드·원격 업데이트 없음
 
 ## 5. 참고(자주 바뀌지 않는 정보)
@@ -169,7 +177,7 @@ npx eas-cli@latest build -p android --profile production   # Play 업로드용 A
 
 비용 때문에 **RDS는 삭제됐고(10-27)** 운영 API·MySQL은 신한 아카데미 앱 전용 VM(1코어·8GB, Ubuntu 22.04, Docker)에 있다. EC2는 Caddy 중계(`relay/Caddyfile`)로 `flex-able-sh.duckdns.org` 요청을 아카데미로 넘기고, **주소가 그대로라 앱·OAuth·웹 설정은 바꾸지 않았다.** 이전 기간에는 EC2에 `RELAY_MODE` 파일이 있다. VM 자동 백업은 매일 04:00(cron, `backup-db.sh`)이고 10-30에 확인했다. 단계별 명령은 [`server-migration.md`](server-migration.md).
 
-- 11-14~16 EC2 로컬 DB(RDS 없음)로 복귀 → 11-17 VM 데이터 삭제는 위 3번 목록. 복귀 전에는 RDS로 되돌릴 수 없다.
+- EC2 로컬 DB로 복귀(웹도 같은 EC2) → VM 정리는 위 §2 "최우선" 항목(VM 종료 전, 11-24 추정). 복귀 전에는 RDS로 되돌릴 수 없다.
 - 개인정보처리방침에 아카데미를 수탁자로 넣지 않는다(10-26 결정, 11-18 전 EC2 복귀).
 - VM에서 `sudo`는 `ssh -t academy '...'`. 터미널로 복사한 명령 끝에 `│`가 붙으면 지우고 한 줄씩 붙인다. 배포 스크립트는 jar 권한을 직접 고친다.
 - [ ] 홈 카드 높이 축소·굴비 고양이 출석 코스튬·거래 삭제 버튼 배경(Issue #339): 앱 2.0.0 원격 업데이트로 반영, 서버 배포 순서 제약 없음. Android 실기기에서 카드 높이·outfit-06 해금 영상·삭제 버튼 하단 여백 확인 필요

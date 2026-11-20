@@ -91,6 +91,7 @@
           }
         }
       ],
+      "./plugins/withR8Optimize",
       "expo-image",
       [
         "expo-video",
