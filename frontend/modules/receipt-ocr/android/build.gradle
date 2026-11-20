@@ -19,4 +19,6 @@ dependencies {
   // (the bundled ML Kit library added ~15MB of native code and five script models to every install).
   implementation 'com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1'
   implementation 'com.google.android.gms:play-services-base:18.5.0'
+  // EXIF rotation for photos decoded with inSampleSize (InputImage.fromFilePath decoded at full size)
+  implementation 'androidx.exifinterface:exifinterface:1.4.1'
 }
