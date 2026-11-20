@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.flexable.api.category.Category;
+import com.flexable.api.category.CategoryGuess;
 import com.flexable.api.category.CategoryRepository;
 import com.flexable.api.chat.ChatDtos.*;
 import com.flexable.api.common.TxType;
@@ -28,9 +29,9 @@ final class ExpenseProposals {
     ChatResponse reply(long userId, LocalDate today, ChatModel.ExpenseCall call) {
         List<Category> available = categories.findAllOrdered(userId, TxType.EXPENSE);
         if (available.isEmpty()) return ask("지출 카테고리를 먼저 만들어 주세요.");
-        Category category = call.category() == null ? null : available.stream()
-                .filter(c -> c.getName().equals(call.category().trim())).findFirst().orElse(null);
-        if (call.category() != null && category == null) return ask("등록된 지출 카테고리 이름을 알려 주세요.");
+        Category category = call.category() == null ? null : named(available, call.category().trim());
+        // 모델이 목록에 없는 이름을 주면 되묻지 않고 그 이름을 단서로 추정한다.
+        String hint = call.category() != null && category == null ? call.category().trim() : null;
         if (call.amount() != null && (call.amount() < 1 || call.amount() > MAX)) return ask("지출 금액을 원 단위로 알려 주세요.");
         LocalDate date = date(call.date());
         if (call.date() != null && (date == null || date.isAfter(today))) return ask("실제로 쓴 날짜를 오늘까지의 날짜로 알려 주세요.");
@@ -55,6 +56,7 @@ final class ExpenseProposals {
                     ? "일치하는 지출 기록을 찾지 못했어요. 기존 날짜·금액·제목을 다시 알려 주세요."
                     : "일치하는 지출 기록이 여러 개예요. 기존 날짜·금액·제목을 더 알려 주세요.");
             target = matches.getFirst();
+            if (category == null && hint != null) category = guess(available, hint);
             if (call.amount() != null) changes.add(IncomeField.AMOUNT);
             if (date != null) changes.add(IncomeField.DATE);
             if (title != null) changes.add(IncomeField.TITLE);
@@ -69,7 +71,13 @@ final class ExpenseProposals {
         } else if (!"CREATE".equals(call.operation())) return ask("지출을 새로 기록할까요, 기존 기록을 수정할까요?");
         Long amount = call.amount();
         if (amount == null && target != null) amount = target.getAmount();
-        if (amount == null || category == null) return ask("지출 금액과 카테고리를 함께 알려 주세요.");
+        if (amount == null) return ask("얼마를 썼는지 금액을 알려 주세요.");
+        if (category == null) {
+            // "스타벅스 5천원 썼어"처럼 카테고리를 말하지 않으면 제목으로 추정한다. 사용자는 반영 전에 카드에서 바꿀 수 있다.
+            String about = title != null ? title : hint;
+            if (about == null) return ask("어디에 쓴 돈인지 함께 알려 주세요.");
+            category = guess(available, about);
+        }
         if (title == null) title = category.getName();
         if (date == null) date = today;
         IncomeOperation operation = target == null ? IncomeOperation.CREATE : IncomeOperation.UPDATE;
@@ -77,6 +85,17 @@ final class ExpenseProposals {
                 new ChatAction(ActionType.EXPENSE_TRANSACTION, null, null, null, null, null,
                         new ExpenseTransactionProposal(operation, target == null ? null : target.getId(), title, date,
                                 category.getId(), category.getName(), amount, changes)));
+    }
+
+    private static Category named(List<Category> available, String name) {
+        return available.stream().filter(c -> c.getName().equals(name)).findFirst().orElse(null);
+    }
+
+    /** 키워드 표로 고른 이름이 사용자 카테고리에 없으면 "기타", 그것도 없으면 맨 앞 카테고리. */
+    private static Category guess(List<Category> available, String text) {
+        Category guessed = named(available, CategoryGuess.name(text, TxType.EXPENSE));
+        if (guessed == null) guessed = named(available, CategoryGuess.EXPENSE_FALLBACK);
+        return guessed != null ? guessed : available.getFirst();
     }
 
     private static LocalDate date(String text) {
