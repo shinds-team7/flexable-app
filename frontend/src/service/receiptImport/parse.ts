@@ -1,8 +1,9 @@
 // 거래내역 스크린샷의 OCR 줄(텍스트와 좌표)을 거래 후보로 바꾼다. expo·ML Kit 모듈을 쓰지 않아 단위 테스트에서 바로 돌린다.
-// 지원하는 화면: 토스(날짜 머리글형 / 왼쪽 날짜 열형), 카카오뱅크, 카카오페이. 못 읽은 값은 채우지 않고 review에 이유를 남긴다.
+// 지원하는 화면: 토스(날짜 머리글형 / 왼쪽 날짜 열형), 카카오뱅크, 카카오페이. 그 밖의 은행·카드 앱은 "원"이 붙은 금액 행을
+// 일반 규칙(parseGeneric)으로 읽는다. 못 읽은 값은 채우지 않고 review에 이유를 남긴다.
 
 export type OcrLine = { text: string; x: number; y: number };
-export type ImportSource = "toss" | "kakaobank" | "kakaopay";
+export type ImportSource = "toss" | "kakaobank" | "kakaopay" | "other";
 export type ImportCandidate = {
   /** "YYYY-MM-DD". 연도는 화면에 없어 오늘 기준 가장 가까운 과거로 추정한다 */
   date: string;
@@ -411,15 +412,184 @@ function parsePay(rows: OcrLine[][], today: string): Raw[] {
   return out;
 }
 
+// 다른 은행·카드·페이 앱 화면용. 연도가 있는 날짜("2026.11.14", "2026-11-14", "2026년 11월 14일")와
+// 슬래시 날짜("11/14")도 읽는다. 날짜 뒤에 시각·요일이 붙어 있어도 된다.
+const GENERIC_DATE =
+  /^(?:(20\d{2}|\d{2})\s*[.\-/년]\s*)?(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*(?:일)?\s*\.?\s*(?:\(?\s*[월화수목금토일]\s*(?:요일)?\s*\)?)?/;
+const CLOCK = /(?:^|\s)(?:오전|오후)?\s*\d{1,2}:\d{2}(?::\d{2})?(?=\s|$)/g;
+// 목록 위의 합계·잔액 카드는 거래가 아니다
+const SUMMARY =
+  /^(?:잔액|총|합계|이번\s*달|지난\s*달|이용\s*금액|이용\s*가능|출금\s*가능|결제\s*예정|청구|한도|누적|보유|자산|사용\s*금액|월\s*사용)/;
+const INCOME_WORD =
+  /입금|송금\s*받|받은|환불|취소|캐시백|페이백|급여|이자|환급/;
+const EXPENSE_WORD =
+  /출금|결제|승인|이체|송금|자동\s*납부|체크|신용|일시불|할부/;
+
+function genericDate(
+  text: string,
+  today: string,
+): { date: string; rest: string } | null {
+  const m = text.trim().match(GENERIC_DATE);
+  if (!m) return null;
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  // 연도 없는 "2/3 할부", "1-2 매장" 같은 내용은 날짜로 보지 않는다. 연도가 없으면 점·월 표기이거나 날짜만 있는 줄이어야 한다
+  const after = text.trim().slice(m[0].length).trim();
+  const rest = after.replace(CLOCK, " ").trim();
+  if (
+    !m[1] &&
+    /[/-]/.test(m[0]) &&
+    rest &&
+    !/^(?:오전|오후)?\s*\d{1,2}:\d{2}/.test(after)
+  )
+    return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = m[1]
+    ? `${m[1].length === 2 ? `20${m[1]}` : m[1]}-${pad(month)}-${pad(day)}`
+    : resolveDate(month, day, today);
+  return { date, rest: text.trim().slice(m[0].length).trim() };
+}
+
+/** 한 행에서 날짜를 떼어 낸다. 날짜만 있는 줄은 지우고, 날짜 뒤 내용은 남긴다. */
+function takeDate(row: OcrLine[], today: string) {
+  let date: string | null = null;
+  const rest: OcrLine[] = [];
+  for (const line of row) {
+    const found: { date: string; rest: string } | null = date
+      ? null
+      : genericDate(line.text, today);
+    if (found) {
+      date = found.date;
+      const text = found.rest.replace(CLOCK, " ").trim();
+      if (text) rest.push({ ...line, text });
+    } else rest.push(line);
+  }
+  return { date, rest };
+}
+
+/**
+ * 토스·카카오뱅크·카카오페이 규칙으로 못 읽은 화면을 위한 일반 규칙.
+ * "원"이 붙은 금액이 행 오른쪽에 있고 같은 행(또는 바로 위 행)에 내용이 있을 때만 거래로 본다.
+ * 날짜는 같은 행, 바로 아래 부제 행, 위의 날짜 머리글 순으로 찾는다. 방향을 모르면 확인을 받는다.
+ */
+function parseGeneric(rows: OcrLine[][], today: string): Raw[] {
+  const out: Raw[] = [];
+  let date: string | null = null;
+  let pendingTitle: string | null = null;
+  for (let i = 0; i < rows.length; i++) {
+    const { date: rowDate, rest } = takeDate(rows[i], today);
+    if (rowDate) date = rowDate;
+    const cells = rest
+      .map((l) => ({ ...l, text: l.text.replace(CLOCK, " ").trim() }))
+      .filter((l) => l.text && l.text !== "원");
+    let amountAt = -1;
+    for (let k = cells.length - 1; k >= 0; k--) {
+      const text = cells[k].text.replace(/\s+/g, "");
+      if (AMOUNT.test(text) && !/^잔액/.test(text)) {
+        amountAt = k;
+        break;
+      }
+    }
+    if (amountAt < 0) {
+      // 금액 없는 행은 다음 행 금액의 내용일 수 있다(내용 위, 금액 아래 화면)
+      const text = cells
+        .map((l) => l.text)
+        .join(" ")
+        .trim();
+      pendingTitle =
+        text && !SUMMARY.test(text) && !/^잔액/.test(text) ? text : null;
+      continue;
+    }
+    const am = cells[amountAt].text.replace(/\s+/g, "").match(AMOUNT)!;
+    let title = cells
+      .slice(0, amountAt)
+      .map((l) => l.text)
+      .join(" ")
+      .trim();
+    if (!title && pendingTitle) title = pendingTitle;
+    pendingTitle = null;
+    if (!title || SUMMARY.test(title) || /^[\d,.\s:+\-−–]+$/.test(title))
+      continue;
+    // 바로 아래 행이 금액 없는 부제(시각·잔액·결제 수단)면 날짜·잔액·방향 단서로 함께 쓴다
+    const next = rows[i + 1];
+    let sub = cells
+      .slice(amountAt + 1)
+      .map((l) => l.text)
+      .join(" ");
+    let balance: number | null = null;
+    let itemDate = rowDate ?? null;
+    if (next) {
+      const below = takeDate(next, today);
+      const belowCells = below.rest.map((l) =>
+        l.text.replace(CLOCK, " ").trim(),
+      );
+      const belowAmounts = belowCells.filter((t) =>
+        AMOUNT.test(t.replace(/\s+/g, "")),
+      );
+      const balanceText = belowCells.find((t) => /^잔액/.test(t));
+      const isSubRow =
+        belowAmounts.length === 0 ||
+        (belowAmounts.length === 1 && !!balanceText);
+      if (isSubRow) {
+        if (!itemDate && below.date) itemDate = below.date;
+        // "잔액 70,000원"은 OCR 줄 나누기에 따라 "잔액"과 금액이 따로 올 수 있다
+        const bm =
+          balanceText &&
+          (balanceText
+            .replace(/^잔액\s*/, "")
+            .replace(/\s+/g, "")
+            .match(AMOUNT) ??
+            belowAmounts[0]?.replace(/\s+/g, "").match(AMOUNT));
+        if (bm) balance = won(bm);
+        sub = [
+          sub,
+          ...belowCells.filter(
+            (t) => t && t !== balanceText && !belowAmounts.includes(t),
+          ),
+        ]
+          .join(" ")
+          .trim();
+        i++;
+      }
+    }
+    const words = `${title} ${sub}`;
+    const sign: Raw["sign"] = am[1]
+      ? am[1] === "+"
+        ? "+"
+        : "-"
+      : INCOME_WORD.test(words)
+        ? "+"
+        : EXPENSE_WORD.test(words)
+          ? "-"
+          : null;
+    out.push({
+      date: itemDate ?? date ?? "",
+      title,
+      sub,
+      amountText: cells[amountAt].text,
+      amount: won(am),
+      sign,
+      balance,
+    });
+  }
+  return out;
+}
+
 export function parseReceipt(lines: OcrLine[], today: string): ParseResult {
   const rows = toRows(lines);
   const source = detect(rows);
-  if (!source) return { source: null, items: [] };
-  const raws =
-    source === "kakaopay"
-      ? parsePay(rows, today)
-      : parseBalanceStyle(rows, today);
-  return { source, items: finish(source, raws) };
+  if (source) {
+    const raws =
+      source === "kakaopay"
+        ? parsePay(rows, today)
+        : parseBalanceStyle(rows, today);
+    if (raws.length > 0) return { source, items: finish(source, raws) };
+  }
+  // 아는 화면 규칙으로 못 읽었으면 다른 은행·카드 앱 화면으로 보고 일반 규칙을 쓴다
+  const generic = parseGeneric(rows, today);
+  if (generic.length === 0) return { source, items: [] };
+  return { source: source ?? "other", items: finish("other", generic) };
 }
 
 /** 원문 없이 실패한 단계를 구분하는 로컬 진단용 개수만 반환한다. */

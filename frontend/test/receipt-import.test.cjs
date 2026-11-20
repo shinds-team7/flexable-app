@@ -726,3 +726,58 @@ test("cropped numeric content without a dated bank layout stays unsupported", ()
     assert.deepEqual(result.items, []);
   }
 });
+
+test("other bank apps: full dates, inline amounts and a balance sub row", () => {
+  const result = parseReceipt(lines([
+    [80, [40, "거래내역조회"]],
+    [140, [40, "총 출금"], [800, "35,000원"]],
+    [220, [40, "2026.10.24 (금)"]],
+    [280, [40, "가상마트"], [800, "-30,000원"]],
+    [320, [40, "14:20 체크카드"], [800, "잔액 70,000원"]],
+    [400, [40, "가상급여"], [800, "100,000원"]],
+    [440, [40, "09:00 입금"], [800, "잔액 100,000원"]],
+    [520, [40, "2026.10.23"]],
+    [580, [40, "가상카페"], [800, "5,000원"]],
+    [620, [40, "18:00 출금"]],
+  ]), TODAY);
+  assert.equal(result.source, "toss");
+  assert.deepEqual(brief(result), [
+    ["10-24", "가상마트", "EXPENSE", 30000],
+    ["10-24", "가상급여", "INCOME", 100000],
+    ["10-23", "가상카페", "EXPENSE", 5000],
+  ]);
+  assert.equal(result.items[0].balance, 70000);
+  assert.deepEqual(result.items[1].review, []);
+});
+
+test("card apps: date under the merchant, unsigned approvals and cancellations", () => {
+  const result = parseReceipt(lines([
+    [100, [40, "가상편의점"], [800, "4,500원"]],
+    [140, [40, "10/25 12:01 승인"]],
+    [220, [40, "가상서점"], [800, "12,000원"]],
+    [260, [40, "10/24 18:30 승인취소"]],
+  ]), TODAY);
+  assert.equal(result.source, "toss");
+  assert.deepEqual(brief(result), [
+    ["10-25", "가상편의점", "EXPENSE", 4500],
+    ["10-24", "가상서점", "INCOME", 12000],
+  ]);
+  assert.equal(result.items[1].refund, false);
+});
+
+test("other apps: an unknown direction and a missing date are left for review", () => {
+  const result = parseReceipt(lines([
+    [100, [40, "가상항목"], [800, "8,000원"]],
+  ]), TODAY);
+  assert.equal(result.items.length, 1);
+  assert.ok(result.items[0].review.includes(api.REVIEW_DATE));
+  assert.ok(result.items[0].review.includes(api.REVIEW_TYPE));
+});
+
+test("other apps: a slash pair inside a title is not a date", () => {
+  const result = parseReceipt(lines([
+    [80, [40, "2026년 10월 20일"]],
+    [140, [40, "2/3 할부 가상가전"], [800, "-90,000원"]],
+  ]), TODAY);
+  assert.deepEqual(brief(result), [["10-20", "2/3 할부 가상가전", "EXPENSE", 90000]]);
+});
