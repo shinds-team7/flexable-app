@@ -212,9 +212,14 @@ test("calendar shows full amounts with income above expense, and the month title
   const current = page.getByRole("button", { name: "2026년 10월", exact: true });
   const previous = page.getByRole("button", { name: "2026년 9월", exact: true });
   await expect(current).toBeVisible();
-  // 이번 달이 맨 위, 바로 아래가 지난 달
-  const [a, b] = [await current.boundingBox(), await previous.boundingBox()];
-  expect(a && b && a.y < b.y).toBe(true);
+  await expect(previous).toBeVisible();
+  // 이번 달이 맨 위, 바로 아래가 지난 달. 시트가 올라오는 중에는 위치가 비어 있을 수 있어 자리 잡을 때까지 다시 잰다
+  await expect
+    .poll(async () => {
+      const [a, b] = [await current.boundingBox(), await previous.boundingBox()];
+      return !!a && !!b && a.y < b.y;
+    })
+    .toBe(true);
   await previous.click();
   await expect(page.getByText("월 선택하기", { exact: true })).toHaveCount(0);
   await expect(page.getByText("2026년 9월", { exact: true })).toBeVisible();
