@@ -523,6 +523,40 @@ class ContractTest {
     }
 
     @Test
+    void expenseProposalGuessesCategoryFromTitleInsteadOfAskingAgain() throws Exception {
+        String token = signup();
+        clock.seoulNoon("2026-11-09");
+        app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);
+        String body = "{\"accepts\":[\"EXPENSE\"],\"messages\":[{\"role\":\"USER\",\"text\":\"스타벅스 5천원 썼어\"}]}";
+        // 카테고리 없이 가게 이름만 말해도 제목으로 추정한다
+        when(chatModel.generate(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any()))
+                .thenReturn(new ChatModel.Reply("", null, null, null,
+                        new ChatModel.ExpenseCall("CREATE", "스타벅스", null, null, 5000L, null, null, null)));
+        MvcResult guessed = app(auth(json(post("/api/v1/chat/messages"), body), token), 200);
+        assertThat(read(guessed, "$.action.expenseTransaction.category")).isEqualTo("카페");
+        assertThat(read(guessed, "$.action.expenseTransaction.title")).isEqualTo("스타벅스");
+        // 목록에 없는 카테고리 이름은 되묻지 않고 그 이름으로 추정한다
+        when(chatModel.generate(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any()))
+                .thenReturn(new ChatModel.Reply("", null, null, null,
+                        new ChatModel.ExpenseCall("CREATE", null, null, "택시비", 12000L, null, null, null)));
+        assertThat(read(app(auth(json(post("/api/v1/chat/messages"), body), token), 200),
+                "$.action.expenseTransaction.category")).isEqualTo("교통");
+        // 단서가 없는 이름은 기타
+        when(chatModel.generate(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any()))
+                .thenReturn(new ChatModel.Reply("", null, null, null,
+                        new ChatModel.ExpenseCall("CREATE", "친구한테 준 돈", null, null, 3000L, null, null, null)));
+        assertThat(read(app(auth(json(post("/api/v1/chat/messages"), body), token), 200),
+                "$.action.expenseTransaction.category")).isEqualTo("기타");
+        // 금액이 없으면 되묻는다
+        when(chatModel.generate(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any()))
+                .thenReturn(new ChatModel.Reply("", null, null, null,
+                        new ChatModel.ExpenseCall("CREATE", "스타벅스", null, null, null, null, null, null)));
+        MvcResult noAmount = app(auth(json(post("/api/v1/chat/messages"), body), token), 200);
+        assertThat(read(noAmount, "$.action")).isEqualTo("null");
+        assertThat(read(noAmount, "$.reply")).contains("금액");
+    }
+
+    @Test
     void incomeSettingsProposalUsesCurrentOtherFieldAndDoesNotLeakRecords() throws Exception {
         String token = signup();
         app(auth(json(put("/api/v1/budget/settings"), SETTINGS), token), 200);

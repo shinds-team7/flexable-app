@@ -42,6 +42,24 @@ export function voiceInputAvailable() {
 
 export type VoiceStatus = "idle" | "starting" | "listening";
 
+const SPEECH_HINTS = [
+  "원",
+  "천 원",
+  "만 원",
+  "썼어",
+  "받았어",
+  "결제",
+  "용돈",
+  "월급",
+  "식비",
+  "카페",
+  "교통",
+  "택시",
+  "편의점",
+  "약속",
+  "회식",
+];
+
 /** 인식 실패를 사용자 문구로. aborted(사용자가 멈춤)는 안내하지 않는다 */
 export function voiceErrorMessage(code: string): string | null {
   switch (code) {
@@ -111,7 +129,13 @@ export function useVoiceInput(onText: (text: string, final: boolean) => void) {
         setNotice(voiceErrorMessage("not-allowed"));
         return;
       }
-      mod.start({ lang: "ko-KR", interimResults: true, continuous: false });
+      mod.start({
+        lang: "ko-KR",
+        interimResults: true,
+        continuous: false,
+        // 금액·가계부 말을 더 잘 알아듣게 한다(Android 13+, 지원하지 않는 기기는 무시)
+        contextualStrings: SPEECH_HINTS,
+      });
     } catch {
       setStatus("idle");
       setNotice(voiceErrorMessage("unknown"));
