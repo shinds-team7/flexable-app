@@ -17,7 +17,11 @@ import { speak, stopSpeaking, useVoiceReply } from "./voiceReply";
 
 type Schedule = NonNullable<NonNullable<ChatResponse["action"]>["schedule"]>;
 type State =
-  | { kind: "income"; heard: string; action: NonNullable<ChatResponse["action"]> }
+  | {
+      kind: "income";
+      heard: string;
+      action: NonNullable<ChatResponse["action"]>;
+    }
   | { kind: "listening" }
   | { kind: "thinking"; heard: string }
   | { kind: "card"; heard: string; schedule: Schedule }
@@ -28,8 +32,8 @@ const MATES = ["ANALYST", "FRIEND", "COACH"] as const;
 
 /**
  * + 시트의 [음성 입력]. 열리면 바로 마이크가 켜지고(빨간 멈춤 버튼), 들은 문장을 AI 메이트(POST /chat/messages,
- * accepts SCHEDULE)에 보내 예정 지출 제안을 받는다. 결과는 대화와 같은 한 줄 카드 + [반영 | 수정]이고,
- * 누른 뒤에만 POST /scheduled-expenses로 저장한다(실제 거래가 아니라 예정 지출).
+ * accepts SCHEDULE·INCOME·EXPENSE)에 보내 예정 지출·수입·지출 제안을 받는다. 결과는 대화와 같은 카드 + [반영]이고,
+ * 누른 뒤에만 저장한다.
  */
 export function VoiceScheduleModal({
   visible,
@@ -116,7 +120,11 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
           result.action?.type === "SCHEDULE"
             ? result.action.schedule
             : undefined;
-        if (result.action?.type === "INCOME_TRANSACTION" || result.action?.type === "INCOME_SETTINGS" || result.action?.type === "EXPENSE_TRANSACTION") {
+        if (
+          result.action?.type === "INCOME_TRANSACTION" ||
+          result.action?.type === "INCOME_SETTINGS" ||
+          result.action?.type === "EXPENSE_TRANSACTION"
+        ) {
           setState({ kind: "income", heard: text, action: result.action });
           if (voiceReply.on) speak(result.reply);
         } else if (schedule) {
@@ -227,7 +235,9 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
           onSubmit={(v) => void register(state.schedule, v)}
         />
       )}
-      {state.kind === "income" && <IncomeActionCard action={state.action} onSaved={onClose} />}
+      {state.kind === "income" && (
+        <IncomeActionCard action={state.action} onSaved={onClose} />
+      )}
       {state.kind === "message" && (
         <>
           <T size={14} color={colors.textSub} style={{ lineHeight: 21 }}>
@@ -243,7 +253,7 @@ function VoiceSchedule({ onClose }: { onClose: () => void }) {
 function failText(e: unknown) {
   if (e instanceof ApiError) {
     if (e.code === "CHAT_UNAVAILABLE")
-      return "지금은 음성 입력으로 예정 지출을 등록할 수 없어요. 예정 지출 화면에서 직접 등록해 주세요";
+      return "지금은 음성 입력을 쓸 수 없어요. 직접 입력으로 기록해 주세요";
     if (e.code === "TOO_MANY_ATTEMPTS")
       return "요청이 많아서 잠시 쉬어야 해요. 조금 뒤에 다시 말해 주세요";
     return e.message;

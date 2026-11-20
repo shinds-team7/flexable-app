@@ -117,7 +117,7 @@ public class GeminiChatModel implements ChatModel {
             }
             declarations.add(Map.of("name", EXPENSE, "description",
                     "이미 쓴 돈의 지출 거래 기록 추가·수정을 제안한다(예: '식비로 14000원 빼줘', '점심 9천원 썼어'). "
-                    + "앞으로의 약속·일정은 propose_schedule이다. CREATE는 금액과 category 필수, title은 말한 이름(없으면 category 이름), "
+                    + "앞으로의 약속·일정은 propose_schedule이다. CREATE는 금액 필수, category는 말한 카테고리 또는 쓴 곳으로 가장 가까운 것, title은 말한 가게·물건 이름(없으면 category 이름), "
                     + "date는 yyyy-MM-dd(말하지 않으면 넣지 않는다, 오늘 이하). UPDATE는 바꿀 필드만 넣고 matchDate·matchAmount·matchTitle로 "
                     + "기존 기록을 찾는다. 금액을 추정하거나 거래 ID를 만들지 않는다. 확인 전 저장되지 않는다.",
                     "parameters", Map.of("type", "object", "properties", fields, "required", List.of("operation"))));
