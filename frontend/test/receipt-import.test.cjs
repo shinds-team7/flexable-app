@@ -781,3 +781,20 @@ test("other apps: a slash pair inside a title is not a date", () => {
   ]), TODAY);
   assert.deepEqual(brief(result), [["10-20", "2/3 할부 가상가전", "EXPENSE", 90000]]);
 });
+
+test("other bank apps: direction words written inside the amount cell", () => {
+  const result = parseReceipt(lines([
+    [100, [40, "2026.10.24"], [300, "가상카페"], [800, "출금 5,000원"]],
+    [140, [300, "체크카드"], [800, "잔액 95,000원"]],
+    [200, [40, "2026.10.23"], [300, "가상이름"], [800, "입금30,000원"]],
+    [240, [800, "잔액 100,000원"]],
+    [300, [40, "2026.10.22"], [300, "가상가게"], [800, "승인취소 7,000원"]],
+  ]), TODAY);
+  assert.deepEqual(brief(result), [
+    ["10-24", "가상카페", "EXPENSE", 5000],
+    ["10-23", "가상이름", "INCOME", 30000],
+    ["10-22", "가상가게", "INCOME", 7000],
+  ]);
+  assert.equal(result.items[0].balance, 95000);
+  assert.deepEqual(result.items[0].review, []);
+});
