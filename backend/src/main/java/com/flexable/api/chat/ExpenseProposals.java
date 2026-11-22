@@ -7,7 +7,6 @@ import java.util.List;
 
 import com.flexable.api.category.Category;
 import com.flexable.api.category.CategoryGuess;
-import com.flexable.api.category.CategoryRepository;
 import com.flexable.api.chat.ChatDtos.*;
 import com.flexable.api.common.TxType;
 import com.flexable.api.transaction.Transaction;
@@ -17,17 +16,15 @@ import com.flexable.api.transaction.TransactionRepository;
 final class ExpenseProposals {
     private static final long MAX = 999_999_999_999L;
     private final TransactionRepository transactions;
-    private final CategoryRepository categories;
     private final ZoneId zone;
 
-    ExpenseProposals(TransactionRepository transactions, CategoryRepository categories, ZoneId zone) {
+    ExpenseProposals(TransactionRepository transactions, ZoneId zone) {
         this.transactions = transactions;
-        this.categories = categories;
         this.zone = zone;
     }
 
-    ChatResponse reply(long userId, LocalDate today, ChatModel.ExpenseCall call) {
-        List<Category> available = categories.findAllOrdered(userId, TxType.EXPENSE);
+    /** available: 사용자의 지출 카테고리(정렬 순서). */
+    ChatResponse reply(long userId, LocalDate today, ChatModel.ExpenseCall call, List<Category> available) {
         if (available.isEmpty()) return ask("지출 카테고리를 먼저 만들어 주세요.");
         Category category = call.category() == null ? null : named(available, call.category().trim());
         // 모델이 목록에 없는 이름을 주면 되묻지 않고 그 이름을 단서로 추정한다.
