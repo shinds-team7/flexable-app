@@ -7,7 +7,6 @@ import java.util.List;
 
 import com.flexable.api.budget.BudgetService;
 import com.flexable.api.category.Category;
-import com.flexable.api.category.CategoryRepository;
 import com.flexable.api.chat.ChatDtos.*;
 import com.flexable.api.common.ApiException;
 import com.flexable.api.common.ErrorCode;
@@ -20,20 +19,18 @@ final class IncomeProposals {
     private static final long MAX = 999_999_999_999L;
     private final BudgetService budget;
     private final TransactionRepository transactions;
-    private final CategoryRepository categories;
     private final ZoneId zone;
 
-    IncomeProposals(BudgetService budget, TransactionRepository transactions, CategoryRepository categories, ZoneId zone) {
+    IncomeProposals(BudgetService budget, TransactionRepository transactions, ZoneId zone) {
         this.budget = budget;
         this.transactions = transactions;
-        this.categories = categories;
         this.zone = zone;
     }
 
-    ChatResponse reply(long userId, LocalDate today, ChatModel.IncomeCall call) {
+    /** available: 사용자의 수입 카테고리(정렬 순서). */
+    ChatResponse reply(long userId, LocalDate today, ChatModel.IncomeCall call, List<Category> available) {
         if ("SETTINGS".equals(call.target())) return settings(userId, call);
         if (!"TRANSACTION".equals(call.target())) return ask("받은 돈을 기록할까요, 매달 받을 수입 설정을 바꿀까요?");
-        List<Category> available = categories.findAllOrdered(userId, TxType.INCOME);
         if (available.isEmpty()) return ask("수입 카테고리를 먼저 만들어 주세요.");
         Category category = call.category() == null ? null : available.stream()
                 .filter(c -> c.getName().equals(call.category().trim())).findFirst().orElse(null);
