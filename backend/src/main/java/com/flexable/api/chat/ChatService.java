@@ -1,20 +1,8 @@
 package com.flexable.api.chat;
 
-import jakarta.annotation.PreDestroy;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.Callable;
-import java.time.Duration;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.time.format.TextStyle;
-import java.util.Locale;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -22,10 +10,14 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.flexable.api.budget.BudgetDtos.DayWeightsResponse;
@@ -34,13 +26,9 @@ import com.flexable.api.budget.BudgetService;
 import com.flexable.api.budget.DayWeights.Preset;
 import com.flexable.api.category.Category;
 import com.flexable.api.category.CategoryRepository;
-import com.flexable.api.chat.ChatDtos.ActionType;
-import com.flexable.api.budget.BudgetDtos;
 import com.flexable.api.chat.ChatDtos.Accept;
-import com.flexable.api.chat.ChatDtos.Basis;
+import com.flexable.api.chat.ChatDtos.ActionType;
 import com.flexable.api.chat.ChatDtos.ChatAction;
-import com.flexable.api.chat.ChatDtos.Preview;
-import com.flexable.api.chat.ChatDtos.ScheduleProposal;
 import com.flexable.api.chat.ChatDtos.ChatRequest;
 import com.flexable.api.chat.ChatDtos.ChatResponse;
 import com.flexable.api.chat.ChatDtos.Role;
@@ -52,13 +40,14 @@ import com.flexable.api.common.ErrorCode;
 import com.flexable.api.common.TxType;
 import com.flexable.api.config.AppProperties;
 import com.flexable.api.config.ChatProperties;
-import org.springframework.beans.factory.annotation.Value;
 import com.flexable.api.transaction.Transaction;
 import com.flexable.api.transaction.TransactionRepository;
 
+import jakarta.annotation.PreDestroy;
+
 /**
- * AI 메이트 답변. 대화는 저장하지 않는다. 요일별 배분 변경은 제안(action)만 돌려주고 저장은 앱이 확인 뒤
- * PUT /budget/day-weights로 한다. 트랜잭션으로 묶지 않는다(모델 호출 동안 DB 연결을 잡지 않게).
+ * AI 메이트 답변. 대화는 저장하지 않는다. 요일별 배분·일정·수입·지출 변경은 제안(action)만 돌려주고 저장은 앱이
+ * 확인 뒤 각 API로 한다. 트랜잭션으로 묶지 않는다(모델 호출 동안 DB 연결을 잡지 않게).
  */
 @Service
 public class ChatService {
@@ -66,8 +55,6 @@ public class ChatService {
 	private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 	private static final List<Preset> PROPOSABLE = List.of(Preset.EVEN, Preset.RECORD, Preset.WEEKEND, Preset.WEEKDAY);
 	private static final int MAX_CATEGORIES = 8;
-	private static final int MAX_SCHEDULE_DAYS = 90;
-	private static final long MAX_AMOUNT = 999_999_999_999L;
 
 	private final ChatModel model;
 	private final ChatProperties props;
@@ -75,74 +62,38 @@ public class ChatService {
 	private final BudgetService budget;
 	private final TransactionRepository transactions;
 	private final CategoryRepository categories;
-	private final ScheduleEstimator estimator;
 	private final Clock clock;
 	private final ZoneId zone;
-	/** 일정 안내 문장(두 번째 모델 호출)에 쓸 최대 시간. 넘으면 서버 기본 문장으로 답한다. */
-	private final Duration narrateLimit;
 	/**
 	 * 한 요청 전체에 쓸 시간. 앱은 40초 뒤 끊으므로 그보다 짧게 둔다. 첫 호출이 오래 걸렸으면 문장 다듬기를 건너뛴다.
 	 */
 	private final Duration replyBudget;
-	/**
-	 * 모델 호출 전용 스레드. 시간 초과로 버린 호출도 HTTP 읽기 제한까지 스레드를 쥐고 있으므로 수를 제한한다.
-	 * 다 차면 첫 호출은 CHAT_FAILED, 안내 문장은 서버 기본 문장으로 답한다.
-	 */
-	private final ThreadPoolExecutor modelCalls = new ThreadPoolExecutor(MODEL_THREADS, MODEL_THREADS, 30,
-			TimeUnit.SECONDS, new ArrayBlockingQueue<>(MODEL_QUEUE), r -> {
-				Thread t = new Thread(r, "chat-model");
-				t.setDaemon(true);
-				return t;
-			});
-	static final int MODEL_THREADS = 8;
-	static final int MODEL_QUEUE = 8;
-
-	@PreDestroy
-	void shutdown() {
-		modelCalls.shutdownNow();
-	}
-
-	/** 기한 안에 모델 답을 받는다. 기한을 넘기면 TimeoutException, 대기열이 차면 RejectedExecutionException. */
-	private ChatModel.Reply within(Callable<ChatModel.Reply> call, Duration limit) throws TimeoutException {
-		Future<ChatModel.Reply> job = modelCalls.submit(call);
-		try {
-			return job.get(Math.max(1, limit.toMillis()), TimeUnit.MILLISECONDS);
-		}
-		catch (TimeoutException e) {
-			job.cancel(true);
-			throw e;
-		}
-		catch (InterruptedException e) {
-			job.cancel(true);
-			Thread.currentThread().interrupt();
-			throw new ChatModel.Failure("중단됨");
-		}
-		catch (ExecutionException e) {
-			if (e.getCause() instanceof ChatModel.Failure f) {
-				throw f;
-			}
-			if (e.getCause() instanceof RuntimeException re) {
-				throw re;
-			}
-			throw new ChatModel.Failure("모델 호출 오류: " + e.getCause());
-		}
-	}
+	private final ChatModelCalls calls = new ChatModelCalls();
+	private final ScheduleProposals schedules;
+	private final ExpenseProposals expenses;
+	private final IncomeProposals incomes;
 
 	public ChatService(ChatModel model, ChatProperties props, ChatRateLimiter limiter, BudgetService budget,
 			TransactionRepository transactions, CategoryRepository categories, ScheduleEstimator estimator, Clock clock,
 			AppProperties app, @Value("${app.chat.narrate-timeout:6s}") Duration narrateLimit,
 			@Value("${app.chat.reply-budget:30s}") Duration replyBudget) {
-		this.narrateLimit = narrateLimit;
-		this.replyBudget = replyBudget;
 		this.model = model;
 		this.props = props;
 		this.limiter = limiter;
 		this.budget = budget;
 		this.transactions = transactions;
 		this.categories = categories;
-		this.estimator = estimator;
 		this.clock = clock;
 		this.zone = app.zoneId();
+		this.replyBudget = replyBudget;
+		this.schedules = new ScheduleProposals(model, calls, budget, estimator, zone, narrateLimit, replyBudget);
+		this.expenses = new ExpenseProposals(transactions, zone);
+		this.incomes = new IncomeProposals(budget, transactions, zone);
+	}
+
+	@PreDestroy
+	void shutdown() {
+		calls.shutdown();
 	}
 
 	public ChatResponse reply(long userId, ChatRequest req) {
@@ -155,42 +106,19 @@ public class ChatService {
 		limiter.acquire(userId);
 		long started = System.nanoTime();
 
-		ChatPrompt.Context context = context(userId);
-		List<String> presets = context.proposable().stream().map(Preset::name).toList();
+		// 카테고리는 한 번만 읽어 종류별로 나눠 쓴다(정렬 순서는 저장소 쿼리와 같다).
+		List<Category> all = categories.findAllOrdered(userId);
+		List<Category> expense = ofType(all, TxType.EXPENSE);
+		List<Category> income = ofType(all, TxType.INCOME);
+		ChatPrompt.Context context = context(userId, all);
 		// 일정 제안은 앱이 알린 경우에만, 예산이 있고 지출 카테고리가 있을 때만 한다.
-		List<Category> expenseCategories = req.accepts(Accept.SCHEDULE) && context.today() != null
-				? categories.findAllOrdered(userId, TxType.EXPENSE) : List.of();
-		// DB에서 필요한 값은 여기서 읽고, 모델 호출만 기한이 있는 작업으로 돌린다(요청 전체 replyBudget).
-		Callable<ChatModel.Reply> call;
-            if (req.accepts(Accept.EXPENSE)) {
-                List<String> incomeCategories = req.accepts(Accept.INCOME)
-                        ? categories.findAllOrdered(userId, TxType.INCOME).stream().map(Category::getName).toList() : null;
-                List<String> expenseNames = categories.findAllOrdered(userId, TxType.EXPENSE).stream()
-                        .map(Category::getName).toList();
-                String system = ChatPrompt.system(req.mate(), context,
-                        expenseCategories.isEmpty() ? null : scheduleInfo(req, expenseCategories), incomeCategories,
-                        expenseNames);
-                call = () -> model.generate(system, req.messages(), presets,
-                        expenseCategories.stream().map(Category::getName).toList(), incomeCategories != null, expenseNames);
-            }
-            else if (req.accepts(Accept.INCOME)) {
-                List<String> incomeCategories = categories.findAllOrdered(userId, TxType.INCOME).stream()
-                        .map(Category::getName).toList();
-                String system = ChatPrompt.system(req.mate(), context,
-                        expenseCategories.isEmpty() ? null : scheduleInfo(req, expenseCategories), incomeCategories);
-                call = () -> model.generate(system, req.messages(), presets,
-                        expenseCategories.stream().map(Category::getName).toList(), true);
-            }
-            else if (expenseCategories.isEmpty()) {
-				call = () -> model.generate(ChatPrompt.system(req.mate(), context), req.messages(), presets);
-			}
-			else {
-				call = () -> model.generate(ChatPrompt.system(req.mate(), context, scheduleInfo(req, expenseCategories)),
-						req.messages(), presets, expenseCategories.stream().map(Category::getName).toList());
-			}
+		List<Category> scheduleCategories = req.accepts(Accept.SCHEDULE) && context.today() != null ? expense
+				: List.of();
+
 		ChatModel.Reply r;
 		try {
-			r = within(call, replyBudget);
+			// DB에서 필요한 값은 위에서 읽었고, 모델 호출만 기한이 있는 작업으로 돌린다(요청 전체 replyBudget).
+			r = calls.within(call(req, context, scheduleCategories, expense, income), replyBudget);
 		}
 		catch (TimeoutException | RejectedExecutionException e) {
 			log.warn("AI 메이트 응답 시간 초과 또는 대기 초과: {}", e.getClass().getSimpleName());
@@ -200,16 +128,47 @@ public class ChatService {
 			log.warn("AI 메이트 응답 실패: {}", e.getMessage());
 			throw new ApiException(ErrorCode.CHAT_FAILED);
 		}
-        if (req.accepts(Accept.EXPENSE) && r.expense() != null) {
-            return new ExpenseProposals(transactions, categories, zone).reply(userId, context.date(), r.expense());
-        }
-        if (req.accepts(Accept.INCOME) && r.income() != null) {
-            return new IncomeProposals(budget, transactions, categories, zone).reply(userId, context.date(), r.income());
-        }
-		if (r.schedule() != null && !expenseCategories.isEmpty()) {
-			return scheduleReply(userId, req, context, r, expenseCategories, started);
-		}
 
+		if (req.accepts(Accept.EXPENSE) && r.expense() != null) {
+			return expenses.reply(userId, context.date(), r.expense(), expense);
+		}
+		if (req.accepts(Accept.INCOME) && r.income() != null) {
+			return incomes.reply(userId, context.date(), r.income(), income);
+		}
+		if (r.schedule() != null && !scheduleCategories.isEmpty()) {
+			return schedules.reply(userId, req, context, r.schedule(), scheduleCategories, started);
+		}
+		return presetReply(r, context);
+	}
+
+	/** 앱이 받을 수 있다고 알린 제안(accepts)에 맞춰 프롬프트와 도구를 고른다. */
+	private Callable<ChatModel.Reply> call(ChatRequest req, ChatPrompt.Context context,
+			List<Category> scheduleCategories, List<Category> expense, List<Category> income) {
+		List<String> presets = context.proposable().stream().map(Preset::name).toList();
+		List<String> scheduleNames = names(scheduleCategories);
+		ChatPrompt.Schedule schedule = scheduleCategories.isEmpty() ? null
+				: ScheduleProposals.info(req, scheduleCategories);
+		if (req.accepts(Accept.EXPENSE)) {
+			List<String> incomeNames = req.accepts(Accept.INCOME) ? names(income) : null;
+			List<String> expenseNames = names(expense);
+			String system = ChatPrompt.system(req.mate(), context, schedule, incomeNames, expenseNames);
+			return () -> model.generate(system, req.messages(), presets, scheduleNames, incomeNames != null,
+					expenseNames);
+		}
+		if (req.accepts(Accept.INCOME)) {
+			String system = ChatPrompt.system(req.mate(), context, schedule, names(income));
+			return () -> model.generate(system, req.messages(), presets, scheduleNames, true);
+		}
+		if (schedule == null) {
+			String system = ChatPrompt.system(req.mate(), context);
+			return () -> model.generate(system, req.messages(), presets);
+		}
+		String system = ChatPrompt.system(req.mate(), context, schedule);
+		return () -> model.generate(system, req.messages(), presets, scheduleNames);
+	}
+
+	/** 요일별 배분 제안 또는 일반 답변. */
+	private static ChatResponse presetReply(ChatModel.Reply r, ChatPrompt.Context context) {
 		String proposed = r.proposedPreset() != null ? r.proposedPreset() : mentioned(r.text(), context.proposable());
 		ChatAction action = context.proposable()
 			.stream()
@@ -231,125 +190,12 @@ public class ChatService {
 		return new ChatResponse(reply, action);
 	}
 
-	private static ChatPrompt.Schedule scheduleInfo(ChatRequest req, List<Category> expense) {
-		ChatPrompt.PendingText pending = null;
-		if (req.pending() != null) {
-			pending = expense.stream()
-				.filter(c -> c.getId().equals(req.pending().categoryId()))
-				.findFirst()
-				.map(c -> new ChatPrompt.PendingText(req.pending().title(), req.pending().date(), c.getName(),
-						req.pending().amount()))
-				.orElse(null);
-		}
-		return new ChatPrompt.Schedule(expense.stream().map(Category::getName).toList(), pending);
+	private static List<Category> ofType(List<Category> all, TxType type) {
+		return all.stream().filter(c -> c.getType() == type).toList();
 	}
 
-	/**
-	 * 모델이 고른 일정(제목·날짜·카테고리·시간대)을 검증하고, 금액은 서버가 기록으로 예측한다. 모델은 서버 결과를
-	 * 전하는 문장만 쓴다. 저장은 하지 않고 제안(action)만 돌려준다.
-	 */
-	private ChatResponse scheduleReply(long userId, ChatRequest req, ChatPrompt.Context context, ChatModel.Reply r,
-			List<Category> expense, long started) {
-		ChatModel.ScheduleCall call = r.schedule();
-		LocalDate today = context.date();
-		LocalDate date = parseDate(call.date());
-		String title = call.title() == null ? "" : call.title().trim();
-		if (title.length() > 40) {
-			title = title.substring(0, 40);
-		}
-		String categoryName = call.category() == null ? "" : call.category().trim();
-		Category category = expense.stream().filter(c -> c.getName().equals(categoryName)).findFirst().orElse(null);
-		if (date == null || !date.isAfter(today) || date.isAfter(today.plusDays(MAX_SCHEDULE_DAYS)) || title.isEmpty()
-				|| category == null) {
-			log.warn("AI 메이트 일정 제안이 맞지 않아 되물음");
-			// 저장 제안이 없으므로 모델 문장("등록했어요" 등) 대신 되묻는 문장만 쓴다.
-			return new ChatResponse("일정 날짜를 정확히 모르겠어요. 내일부터 석 달 안의 날짜나 요일로 다시 알려 주세요.", null);
-		}
-
-		Long amount = call.amount() != null && call.amount() >= 1 && call.amount() <= MAX_AMOUNT ? call.amount() : null;
-		Basis basis = null;
-		if (amount == null) {
-			ScheduleEstimator.Estimate est = estimator.estimate(userId, category.getId(), today, zone);
-			amount = est.amount();
-			basis = est.basis();
-		}
-		Preview preview = null;
-		boolean afterPayday = false;
-		if (amount != null) {
-			TodayResponse after = budget.preview(userId, today, date, amount);
-			final LocalDate day = date;
-			Long dayBudget = after.dayPlans()
-				.stream()
-				.filter(d -> d.date().equals(day))
-				.findFirst()
-				.map(BudgetDtos.DayPlan::budget)
-				.orElse(null);
-			if (dayBudget == null) {
-				afterPayday = true; // 다음 수입일 이후 날짜는 이번 예산에 들어가지 않는다
-			}
-			else {
-				preview = new Preview(dayBudget, context.today().dailyBudget(), after.dailyBudget());
-			}
-		}
-
-		String reply = narrate(req, started, new ChatPrompt.ScheduleResult(title, date, category.getName(), amount,
-				basisText(basis), preview == null ? null : preview.dayBudget(),
-				preview == null ? null : preview.dailyBudgetBefore(),
-				preview == null ? null : preview.dailyBudgetAfter(), afterPayday));
-		return new ChatResponse(reply, new ChatAction(ActionType.SCHEDULE, null, null,
-				new ScheduleProposal(title, date, category.getId(), category.getName(), amount, basis, preview)));
-	}
-
-	/**
-	 * 서버 결과를 모델이 전하게 한다. 실패하거나, 남은 시간 안에 오지 않거나, 서버 금액이 문장에 그대로 없으면
-	 * 서버 기본 문장을 쓴다. 문장은 꾸밈일 뿐이라 제안(action)은 늘 서버 값으로 나간다.
-	 */
-	private String narrate(ChatRequest req, long started, ChatPrompt.ScheduleResult res) {
-		String text = "";
-		Duration left = replyBudget.minus(Duration.ofNanos(System.nanoTime() - started));
-		Duration limit = left.compareTo(narrateLimit) < 0 ? left : narrateLimit;
-		if (limit.toMillis() < 1000) {
-			log.warn("AI 메이트 일정 안내 문장 건너뜀: 첫 응답이 늦음");
-		}
-		else {
-			try {
-				ChatModel.Reply reply = within(
-						() -> model.generate(ChatPrompt.narrate(req.mate(), res), req.messages(), List.of()), limit);
-				text = reply == null || reply.text() == null ? "" : reply.text();
-			}
-			catch (TimeoutException | RejectedExecutionException e) {
-				log.warn("AI 메이트 일정 안내 문장 {}({}ms), 기본 문장 사용", e.getClass().getSimpleName(), limit.toMillis());
-			}
-			catch (ChatModel.Failure e) {
-				log.warn("AI 메이트 일정 안내 문장 실패, 기본 문장 사용: {}", e.getMessage());
-			}
-		}
-		if (!text.isBlank() && (res.amount() == null || text.contains(String.format("%,d", res.amount())))) {
-			return text;
-		}
-		String when = res.date().getMonthValue() + "/" + res.date().getDayOfMonth() + "("
-				+ res.date().getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.KOREAN) + ")";
-		if (res.amount() == null) {
-			return when + " **" + res.title() + "**에는 비슷한 기록이 적어서 얼마나 쓸지 예상하기 어려워요. 얼마 정도 쓸 것 같으세요?";
-		}
-		return when + " **" + res.title() + "**에 **" + String.format("%,d원", res.amount())
-				+ "** 정도 쓸 것 같아요.\n이 금액으로 예정 지출에 등록할까요?";
-	}
-
-	private static String basisText(Basis basis) {
-		if (basis == null) {
-			return null;
-		}
-		return "최근 " + basis.days() + "일 이 카테고리 지출이 있던 " + basis.samples() + "일의 하루 합계 가운데 값";
-	}
-
-	private static LocalDate parseDate(String s) {
-		try {
-			return s == null ? null : LocalDate.parse(s.trim());
-		}
-		catch (DateTimeParseException e) {
-			return null;
-		}
+	private static List<String> names(List<Category> list) {
+		return list.stream().map(Category::getName).toList();
 	}
 
 	/**
@@ -361,7 +207,7 @@ public class ChatService {
 		return found.size() == 1 ? found.get(0).name() : null;
 	}
 
-	private ChatPrompt.Context context(long userId) {
+	private ChatPrompt.Context context(long userId, List<Category> all) {
 		LocalDate today = LocalDate.now(clock.withZone(zone));
 		TodayResponse t;
 		try {
@@ -393,8 +239,7 @@ public class ChatService {
 			from = today;
 		}
 		long days = Math.min(ChronoUnit.DAYS.between(from, today) + 1, DateRange.MAX_DAYS);
-		Map<Long, String> names = categories.findAllOrdered(userId)
-			.stream()
+		Map<Long, String> names = all.stream()
 			.collect(Collectors.toMap(Category::getId, Category::getName, (a, b) -> a));
 		Spending current = spending(userId, from, today, names);
 		Spending previous = spending(userId, from.minusDays(days), from.minusDays(1), names);

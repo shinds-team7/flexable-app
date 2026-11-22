@@ -186,3 +186,4 @@ npx eas-cli@latest build -p android --profile production   # Play 업로드용 A
 - [ ] 홈 카드 높이 축소·굴비 고양이 출석 코스튬·거래 삭제 버튼 배경(Issue #339): 앱 2.0.0 원격 업데이트로 반영, 서버 배포 순서 제약 없음. Android 실기기에서 카드 높이·outfit-06 해금 영상·삭제 버튼 하단 여백 확인 필요
 - [ ] 상시 알림 스위치 위치 이동·삭제 버튼 색/여백(Issue #341): 앱 2.0.0 원격 업데이트로 반영, 서버 배포 순서 제약 없음. Android 실기기에서 마이 스위치 위치·알림창 표시 확인 필요
 - 11-10 원격 업데이트(production, runtime 2.0.0): #336 `53aca834-86d0-41d9-bb2e-2446718da33b`, #340 `ab602d04-dd24-4840-a017-4fdc8738a430`(홈 카드 높이·굴비 고양이 outfit-06), #342 `b4a77c19-d860-41d5-9862-cb5f04ab581b`(소스 `3208b7c`, 상시 알림 스위치 이동·삭제 버튼). 다음 날 할 일: **VM에서 `backend/deploy/academy/deploy.sh`로 서버 V27 배포**(DB 백업 확인 → `/actuator/health` UP, Flyway "now at version v27" 확인 → 이 문서의 운영 서버 V26 표기를 V27로 수정). 신한 외 카드 알림 자동 기록은 Issue #334, PDF 거래내역은 #327.
+- [ ] AI 메이트 서버 정리(#390, PR #391): ChatService에서 모델 호출 스레드·일정 제안을 분리하고 카테고리를 요청당 한 번만 조회. API·문구 변화 없음. 반영: 다음 서버 배포(`deploy.sh`, DB 변경 없음)에 함께, 앱 변경 없음.
