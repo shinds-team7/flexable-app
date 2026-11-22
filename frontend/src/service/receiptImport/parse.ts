@@ -425,6 +425,27 @@ const INCOME_WORD =
 const EXPENSE_WORD =
   /출금|결제|승인|이체|송금|자동\s*납부|체크|신용|일시불|할부/;
 
+// 은행 앱은 금액 칸에 방향을 붙여 쓰기도 한다("출금 5,000원", "입금30,000원").
+const WORD_AMOUNT =
+  /^(입금|출금|지급|결제|승인취소|승인|취소|이체|환불)?([+\-−–]?\s*(?:\d{1,3}(?:,\d{3})*|\d+)\s*원)$/;
+
+const DIRECTION_TAIL = /\s+(입금|출금|지급|결제|승인취소|승인|취소|이체|환불)$/;
+
+/** 일반 규칙의 금액 칸. 방향 낱말은 부호로 바꾸고, 잔액은 금액으로 보지 않는다. */
+function genericAmount(text: string): RegExpMatchArray | null {
+  const t = text.replace(/\s+/g, "");
+  if (/^잔액/.test(t)) return null;
+  const w = t.match(WORD_AMOUNT);
+  if (w) {
+    const m = w[2].match(AMOUNT);
+    if (!m) return null;
+    if (!m[1] && w[1]) m[1] = /입금|취소|환불/.test(w[1]) ? "+" : "-";
+    return m;
+  }
+  // "원" 없는 숫자는 계좌번호·잘린 글자와 구분할 수 없어 일반 규칙에서는 금액으로 보지 않는다.
+  return null;
+}
+
 function genericDate(
   text: string,
   today: string,
@@ -484,14 +505,15 @@ function parseGeneric(rows: OcrLine[][], today: string): Raw[] {
       .map((l) => ({ ...l, text: l.text.replace(CLOCK, " ").trim() }))
       .filter((l) => l.text && l.text !== "원");
     let amountAt = -1;
+    let am: RegExpMatchArray | null = null;
     for (let k = cells.length - 1; k >= 0; k--) {
-      const text = cells[k].text.replace(/\s+/g, "");
-      if (AMOUNT.test(text) && !/^잔액/.test(text)) {
+      am = genericAmount(cells[k].text);
+      if (am) {
         amountAt = k;
         break;
       }
     }
-    if (amountAt < 0) {
+    if (amountAt < 0 || !am) {
       // 금액 없는 행은 다음 행 금액의 내용일 수 있다(내용 위, 금액 아래 화면)
       const text = cells
         .map((l) => l.text)
@@ -501,7 +523,6 @@ function parseGeneric(rows: OcrLine[][], today: string): Raw[] {
         text && !SUMMARY.test(text) && !/^잔액/.test(text) ? text : null;
       continue;
     }
-    const am = cells[amountAt].text.replace(/\s+/g, "").match(AMOUNT)!;
     let title = cells
       .slice(0, amountAt)
       .map((l) => l.text)
@@ -509,14 +530,16 @@ function parseGeneric(rows: OcrLine[][], today: string): Raw[] {
       .trim();
     if (!title && pendingTitle) title = pendingTitle;
     pendingTitle = null;
+    // OCR이 "출금 5,000원"을 두 줄로 나누면 방향 낱말이 내용 끝에 붙는다. 내용에서 떼고 방향 단서로만 쓴다.
+    const word = title.match(DIRECTION_TAIL);
+    if (word) title = title.slice(0, word.index).trim();
     if (!title || SUMMARY.test(title) || /^[\d,.\s:+\-−–]+$/.test(title))
       continue;
     // 바로 아래 행이 금액 없는 부제(시각·잔액·결제 수단)면 날짜·잔액·방향 단서로 함께 쓴다
     const next = rows[i + 1];
-    let sub = cells
-      .slice(amountAt + 1)
-      .map((l) => l.text)
-      .join(" ");
+    let sub = [word?.[1] ?? "", ...cells.slice(amountAt + 1).map((l) => l.text)]
+      .join(" ")
+      .trim();
     let balance: number | null = null;
     let itemDate = rowDate ?? null;
     if (next) {
@@ -524,9 +547,7 @@ function parseGeneric(rows: OcrLine[][], today: string): Raw[] {
       const belowCells = below.rest.map((l) =>
         l.text.replace(CLOCK, " ").trim(),
       );
-      const belowAmounts = belowCells.filter((t) =>
-        AMOUNT.test(t.replace(/\s+/g, "")),
-      );
+      const belowAmounts = belowCells.filter((t) => !!genericAmount(t));
       const balanceText = belowCells.find((t) => /^잔액/.test(t));
       const isSubRow =
         belowAmounts.length === 0 ||
@@ -540,7 +561,7 @@ function parseGeneric(rows: OcrLine[][], today: string): Raw[] {
             .replace(/^잔액\s*/, "")
             .replace(/\s+/g, "")
             .match(AMOUNT) ??
-            belowAmounts[0]?.replace(/\s+/g, "").match(AMOUNT));
+            (belowAmounts[0] ? genericAmount(belowAmounts[0]) : null));
         if (bm) balance = won(bm);
         sub = [
           sub,
