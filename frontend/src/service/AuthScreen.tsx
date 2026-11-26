@@ -203,7 +203,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
               marginTop: -4,
             }}
           >
-            <TextLink label="비밀번호 찾기" onPress={() => setRecover(true)} />
+            <TextLink label={Platform.OS === "ios" ? "로그인 도움말" : "비밀번호 찾기"} onPress={() => setRecover(true)} />
             {/* replace: 가입 후 뒤로 가기에 이 로그인 화면이 남지 않게 한다(시작 → 가입과 같은 쌓임) */}
             <TextLink
               label="회원가입"
@@ -211,7 +211,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
             />
           </View>
           {recover && (
-            <T>비밀번호 재설정은 준비 중이에요. 문의: {SUPPORT_EMAIL}</T>
+            <T>{Platform.OS === "ios" ? "로그인에 도움이 필요하면 문의해 주세요." : "비밀번호 재설정은 준비 중이에요. 문의:"} {SUPPORT_EMAIL}</T>
           )}
         </>
       )}

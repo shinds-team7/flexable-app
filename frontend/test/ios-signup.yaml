@@ -1,0 +1,13 @@
+appId: com.flexable.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "이메일로 로그인"
+    timeout: 60000
+- assertNotVisible: "카카오 로그인"
+- assertNotVisible: "Google 계정으로 로그인"
+- tapOn: "이메일로 로그인"
+- tapOn: "회원가입"
+- assertVisible: "비밀번호 확인"
+- assertVisible: "서비스 이용약관 보기"

@@ -48,3 +48,16 @@ jobs:
           test -s "${apps[0]}/main.jsbundle"
           /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "${apps[0]}/Info.plist" | grep -Fx com.flexable.app
           test -n "$(find "${apps[0]}" -name PrivacyInfo.xcprivacy -print -quit)"
+      - name: Launch the Release app on an iPhone simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -er 'first(.devices | to_entries[] | select(.key | contains("iOS-26")) | .value[] | select(.name | startswith("iPhone")) | .udid)')
+          xcrun simctl boot "$udid"
+          workspaces=(ios/*.xcworkspace)
+          scheme=$(basename "${workspaces[0]}" .xcworkspace)
+          xcodebuild -workspace "${workspaces[0]}" -scheme "$scheme" -configuration Release \
+            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/iphone" build -quiet
+          apps=("$RUNNER_TEMP"/iphone/Build/Products/Release-iphonesimulator/*.app)
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl install "$udid" "${apps[0]}"
+          brew install mobile-dev-inc/tap/maestro
+          maestro --device "$udid" test test/ios-signup.yaml

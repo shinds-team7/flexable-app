@@ -26,7 +26,7 @@
 | 개인정보 / 지원 | https://project2-flex-sh.vercel.app/privacy · https://project2-flex-sh.vercel.app/support |
 | 심사 메모 | 이메일 계정으로 로그인하면 홈에서 예산을 확인할 수 있습니다. 하단 +에서 직접 거래를 등록하고 분석 탭에서 결과를 확인해 주세요. 예산은 직접 입력한 금액에 기반합니다. AI 메이트의 데이터 전송은 선택 사항입니다. 계정 삭제는 마이 → 계정 삭제에서 가능합니다. 코인은 앱 안에서만 사용합니다. |
 
-심사 전용 이메일 계정에 가상 예산과 거래를 넣어 유지하고 자격 증명은 App Review Information에만 입력한다. 공개 정책의 iOS 적용 안내가 게시됐는지 확인한다. 약관상 최소 연령은 만 14세다. 연령 등급 설문에는 실제 기능을 답하고 필요한 최소 연령을 적용한다. [Apple 심사 정보](https://developer.apple.com/help/app-review/before-submitting-for-review/complete-review)
+심사 전용 이메일 계정에 가상 예산과 거래를 넣어 유지하고 자격 증명은 App Review Information에만 입력한다. 공개 개인정보처리방침과 이용약관의 iOS 적용 안내가 게시됐는지 확인한다. 약관상 최소 연령은 만 14세다. 연령 등급 설문에는 실제 기능을 답하고 필요한 최소 연령을 적용한다. [Apple 심사 정보](https://developer.apple.com/help/app-review/before-submitting-for-review/complete-review)
 
 ## App Privacy 입력 근거
 

@@ -118,7 +118,7 @@ export const topicIntro: Record<
   { text: string; quick: { label: string; card?: CardKind }[] }
 > = {
   plan: {
-    text: "앞으로 있을 약속을 날짜와 함께 말해 주세요. 입력한 기록으로 쓸 돈을 예상해 드리고, [반영]을 누르면 예정 지출로 등록해요. 마이크 버튼으로 말해도 돼요.",
+    text: "앞으로 있을 약속을 날짜와 함께 말해 주세요. 입력한 기록으로 쓸 돈을 예상해 드리고, [반영]을 누르면 예정 지출로 등록해요.",
     quick: [
       { label: "이번 주 금요일에 친구랑 저녁" },
       { label: "토요일에 영화 보기" },
