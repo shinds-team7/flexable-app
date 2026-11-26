@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { Button, Card, T } from "@/components/ui";
 import { colors } from "@/theme";
 import { adsSupported } from "./adReward";
@@ -38,13 +38,13 @@ export function AdRewardCard({
             🪙 {money(balance)}
           </T>
         </View>
-        {hint !== "" && (
+        {Platform.OS !== "ios" && hint !== "" && (
           <T size={12} color={colors.textMuted}>
             {hint}
           </T>
         )}
       </View>
-      {ad && (
+      {Platform.OS !== "ios" && ad && (
         <Button
           label="광고 🪙"
           accessibilityLabel="광고 보고 코인 받기"

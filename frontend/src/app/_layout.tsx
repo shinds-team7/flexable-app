@@ -75,7 +75,11 @@ export default function RootLayout() {
                       headerShown: false,
                       contentStyle: { backgroundColor: colors.bg },
                     }}
-                  />
+                  >
+                    <Stack.Protected guard={Platform.OS !== "ios"}>
+                      <Stack.Screen name="oauth/callback" />
+                    </Stack.Protected>
+                  </Stack>
                 </BudgetDraftProvider>
               </SessionProvider>
             </ToastProvider>

@@ -137,6 +137,7 @@ test("the failure sheet shares only masked diagnostics and only after an explici
     "./voiceInput": { voiceInputAvailable: () => false },
     "./VoiceScheduleModal": { VoiceScheduleModal: "VoiceScheduleModal" },
     "react-native": {
+      Platform: { OS: "android" },
       View: "View",
       Share: {
         share: (value) => {
@@ -190,4 +191,10 @@ test("the failure sheet shares only masked diagnostics and only after an explici
   assert.equal(shared[0].message, diagnostic.detail);
   assert.equal(shared[0].message.includes("가상개인명"), false);
   assert.equal(shared[0].message.includes("42,000"), false);
+
+  modules["react-native"].Platform.OS = "ios";
+  nodes.length = 0;
+  visit(exports.AddTransactionSheet({ visible: true, onClose() {} }));
+  assert.ok(nodes.some((node) => node.props?.label === "직접 입력"));
+  assert.ok(!nodes.some((node) => node.props?.label === "결제내역 스크린샷 등록"));
 });

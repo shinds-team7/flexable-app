@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Platform, Pressable, TextInput, View } from "react-native";
 import { Button, T } from "@/components/ui";
 import { colors } from "@/theme";
 import { api, ApiError } from "./api/client";
@@ -170,8 +170,10 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
           ))}
         </>
       )}
-      <ErrorNotice error={error} />
-      {socialProvider && (
+      <ErrorNotice error={socialProvider && Platform.OS === "ios"
+        ? "이 계정은 Android 앱이나 웹에서 처음 가입한 방법으로 로그인해 주세요. iPhone에서는 이메일과 비밀번호로 가입한 계정을 사용할 수 있어요."
+        : error} />
+      {Platform.OS !== "ios" && socialProvider && (
         <SocialButton
           busy={social.busy === socialProvider}
           disabled={social.busy !== null}

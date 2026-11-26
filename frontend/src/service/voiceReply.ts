@@ -11,6 +11,7 @@ type SpeechApi = typeof import("expo-speech");
  * 네이티브 모듈은 1.8.0 빌드부터 있다. 옛 빌드에서는 패키지 JS가 바로 오류를 내므로 모듈을 먼저 확인하고 늦게 불러온다.
  */
 function load(): SpeechApi | null {
+  if (Platform.OS === "ios") return null;
   try {
     if (Platform.OS === "web") {
       if (typeof window === "undefined" || !("speechSynthesis" in window))

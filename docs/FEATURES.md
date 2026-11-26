@@ -3,12 +3,13 @@
 기준 2026-10-24, `main` `83c7981`(앱 1.4.0). 화면만 있는 것과 서버·DB까지 연결된 것을 구분한다. 코드에 있는 것과 운영에 배포된 것은 다를 수 있다. 배포·실기기 확인 기록은 [`HANDOFF.md`](HANDOFF.md)가 기준이다.
 기능을 추가하거나 바꾸면 이 표를 같이 고친다. README와 HANDOFF는 이 표를 기준으로 쓴다.
 
-구분: **서비스** = 실제 앱(Android·웹) / **시연** = 예시 데이터 웹 화면(2026-10-19부터 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `/m`) / **미구현** = 계획만 있음
+구분: **서비스** = 실제 앱(Android·iOS·웹) / **시연** = 예시 데이터 웹 화면(2026-10-19부터 웹사이트 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)의 `/m`) / **미구현** = 계획만 있음
 
 ## 서비스
 
 | 기능 | 화면·경로 | API·저장 | 확인 방법 |
 |---|---|---|---|
+| iPhone 첫 버전 (#394) | 이메일 가입·로그인·삭제, 직접 기록과 PDF 가져오기, 예산·분석·시드머니·기기 예약 알림, 코인·코스튬, 웹 연동. AI 메이트는 대화별 선택 동의 후 텍스트로 이용. 소셜 로그인, 카드 자동 기록, 스크린샷 OCR, 상시 알림, 음성, 광고 보상은 iOS에서 제공하지 않는다. | 기존 앱 API·같은 계정 DB. 계정에 소셜 로그인이 연결된 이용자는 Android·웹에서 접근 | [빌드·심사 확인 방법](ios-release.md), [결정 기록](decisions/2026-11-27-iphone.md) |
 | 필수 앱 업데이트 | Android 배포 앱은 시작할 때와 다시 열 때(10분 간격) 최소 지원 버전을 확인하고, 설치 버전이 낮으면 Play 스토어 업데이트 창을 표시한다(`service/ForceUpdate.tsx`). 최소 지원 버전 2.0.1(11-11 사용자 출시 확인·상향 요청) | 공개 `frontend/public/app-version.json`의 `android.minVersion`. 서버 API·계산·DB 변경 없음, Vercel 자동 반영 | 공개 `/app-version.json` 값 확인, 프론트 타입·린트·단위·CI. 실기기 업데이트 창 확인은 별도 |
 | 첫 화면·탭 전환·상시 알림 사용성(Issue #349) | 스플래시가 내려간 뒤 홈 승급 게이지가 시작되고 Android에서는 네이티브 애니메이션으로 움직인다. 분석은 이번 달이 기본이다. 내역·분석에서 달·기간을 바꾸는 동안 직전 카드를 유지하고, 내역 [전체·지출·수입]은 좌우 스와이프와 탭으로 전환한다. AI 메이트는 계정마다 첫 진입 때 스타일을 고르고 메뉴의 캐릭터를 줄여 하단 안내까지 한 화면에 보인다. 대화 음성 인식 최종 결과는 한 번 자동 전송한다. Android 상시 알림은 저장된 선택이 없으면 기본 꺼짐이며, 직접 켤 때 채널을 만든 뒤 권한을 요청한다. 기존에 직접 켜거나 끈 선택은 유지한다. 기본 앱 아이콘만 쓰고 금액은 흰색이다. 펼친 알림에는 서버가 준 이번 주 쓸 수 있는 돈을 구분선 아래에 표시한다. 구분선은 알림에서 지원하는 요소를 사용한다. 수정 전 네이티브 빌드(2.0.1 포함)는 접힌 알림으로 복구하고, 펼친 주간 금액은 수정된 네이티브 빌드에서만 사용한다. [홈]은 홈 최상단으로 간다. | 기존 `GET /budget/today`·`GET /transactions`·`GET /analysis/summary`·`POST /chat/messages` 사용. 알림의 주간 금액은 서버 `weekAvailable` 값이며 날짜가 바뀌거나 기기 결제 알림으로 추정 상태가 되면 숨긴다. 알림 모양·확장 내용·딥링크는 새 Android 빌드 필요 | 프론트 타입·린트·단위·웹 빌드, E2E `chatbot.spec.ts`·`ui-ux.spec.ts`·`ui-polish.spec.ts`, Android `BudgetRolloverTest`·`BudgetNotificationLayoutTest`(Android 9·13·15 실제 RemoteViews 읽기), 설정 복원 단위 테스트; 알림 실기기 확인 필요 |
 | 시작 분기 | `/` → `src/app/index.tsx` (로그인·예산 설정 여부로 `/home`·`/onboarding`·시작 화면) | `GET /me` | E2E `expired token returns to start…` |

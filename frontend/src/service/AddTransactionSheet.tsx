@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Share, View } from "react-native";
+import { Platform, Share, View } from "react-native";
 import { Button, Sheet, T } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import {
@@ -38,17 +38,19 @@ export function AddTransactionSheet({
               }}
             />
           )}
-          <Button
-            label="결제내역 스크린샷 등록"
-            icon="image-outline"
-            disabled={!imageImportSupported || imageImport.busy}
-            onPress={() => {
-              onClose();
-              imageImport.start();
-            }}
-          />
-          {!imageImportSupported && (
-            <T size={13}>결제내역 스크린샷 등록은 앱에서 쓸 수 있어요</T>
+          {Platform.OS !== "ios" && (
+            <Button
+              label="결제내역 스크린샷 등록"
+              icon="image-outline"
+              disabled={!imageImportSupported || imageImport.busy}
+              onPress={() => {
+                onClose();
+                imageImport.start();
+              }}
+            />
+          )}
+          {Platform.OS !== "ios" && !imageImportSupported && (
+            <T size={13}>결제내역 스크린샷 등록은 Android 앱에서 쓸 수 있어요</T>
           )}
           <Button
             label="직접 입력"

@@ -1,6 +1,6 @@
 # 프론트엔드(Expo) 지침
 
-루트 `AGENTS.md`의 공통 지침에 더해 `frontend/`에서만 지킬 것. Expo(React Native) + Expo Router로 한 코드에서 Android와 웹을 만든다. 모바일 우선, Android·웹 양쪽에서 동작해야 한다.
+루트 `AGENTS.md`의 공통 지침에 더해 `frontend/`에서만 지킬 것. Expo(React Native) + Expo Router로 한 코드에서 Android·iOS·웹을 만든다. 플랫폼별 지원 범위는 docs/FEATURES.md의 iPhone 항목을 따른다.
 
 ## 명령
 

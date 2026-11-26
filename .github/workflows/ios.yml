@@ -1,0 +1,50 @@
+name: iPhone Release
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ios.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Select Xcode 26.4 or newer in the SDK 57 toolchain
+        run: |
+          xcode=$(find /Applications -maxdepth 1 -name 'Xcode_26.*.app' | sort -V | tail -1)
+          sudo xcode-select --switch "$xcode/Contents/Developer"
+          xcodebuild -version
+      - run: npm ci
+      - run: npx expo prebuild --platform ios --no-install
+      - run: pod install --project-directory=ios
+      - name: Check linked dependencies and build for iPhone
+        run: |
+          if grep -E 'Google-Mobile-Ads-SDK|RNGoogleMobileAds|ExpoSpeechRecognition|ExpoImagePicker|PaymentNotifications|BudgetNotification|ReceiptOcr' ios/Podfile.lock; then exit 1; fi
+          workspaces=(ios/*.xcworkspace)
+          scheme=$(basename "${workspaces[0]}" .xcworkspace)
+          xcodebuild -workspace "${workspaces[0]}" -scheme "$scheme" -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/iphone" \
+            CODE_SIGNING_ALLOWED=NO build -quiet
+          apps=("$RUNNER_TEMP"/iphone/Build/Products/Release-iphoneos/*.app)
+          test -s "${apps[0]}/main.jsbundle"
+          /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "${apps[0]}/Info.plist" | grep -Fx com.flexable.app
+          test -n "$(find "${apps[0]}" -name PrivacyInfo.xcprivacy -print -quit)"

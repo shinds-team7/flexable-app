@@ -1,6 +1,6 @@
 # 공통 개발 지침(flexable-app)
 
-텅장관리(Flex-able) 앱이다. 화면은 `frontend/`(Expo·React Native, 한 코드로 Android·웹), 앱 서버는 `backend/`(Spring)다. 데스크톱 웹사이트와 시연(`/m`)은 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)이고 서버·DB·계정을 따로 쓴다. 파트별 지침은 [`frontend/AGENTS.md`](frontend/AGENTS.md)·[`backend/AGENTS.md`](backend/AGENTS.md)에 있다. 이 파일에는 무엇을 읽고 어떻게 작업할지만 적고, 제품 내용은 아래 문서에 둔다.
+텅장관리(Flex-able) 앱이다. 화면은 `frontend/`(Expo·React Native, 한 코드로 Android·iOS·웹), 앱 서버는 `backend/`(Spring)다. 데스크톱 웹사이트와 시연(`/m`)은 별도 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web)이고 서버·DB·계정을 따로 쓴다. 파트별 지침은 [`frontend/AGENTS.md`](frontend/AGENTS.md)·[`backend/AGENTS.md`](backend/AGENTS.md)에 있다. 이 파일에는 무엇을 읽고 어떻게 작업할지만 적고, 제품 내용은 아래 문서에 둔다.
 
 ## 기준 문서(저장소가 유일한 기준본)
 

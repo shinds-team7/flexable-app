@@ -27,14 +27,18 @@
         "buildType": "app-bundle"
       },
       "environment": "production",
-      "channel": "production"
+      "channel": "production",
+      "ios": {
+        "image": "sdk-57"
+      }
     }
   },
   "submit": {
     "production": {
       "android": {
         "track": "internal"
-      }
+      },
+      "ios": {}
     }
   }
 }
