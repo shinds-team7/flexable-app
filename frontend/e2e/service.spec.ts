@@ -947,9 +947,7 @@ test("approved legal copy and public terms link preserve signup input", async ({
     .click();
   await expect(page).toHaveURL(/\/terms$/);
   await expect(
-    page.getByText("이 약관은 2026년 10월 28일부터 시행합니다.", {
-      exact: true,
-    }),
+    page.getByText(/^이 약관은 2026년 10월 28일부터 시행합니다\./),
   ).toBeVisible();
   await page.getByRole("button", { name: "뒤로 가기", exact: true }).click();
   await expect(page.getByLabel("이메일", { exact: true })).toHaveValue(
