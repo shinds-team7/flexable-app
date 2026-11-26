@@ -80,8 +80,3 @@ export function outfitSource(id: string | null): ImageSourcePropType {
 export function outfitVideo(id: string | null): number | null {
   return VIDEOS[id ?? DEFAULT_OUTFIT_ID]?.video ?? null;
 }
-
-/** 진짜 영상 파일이 들어왔는지. false면 화면에 "준비 중" 표시를 붙인다 */
-export function hasAnimation(id: string | null): boolean {
-  return (id ?? DEFAULT_OUTFIT_ID) in VIDEOS;
-}
