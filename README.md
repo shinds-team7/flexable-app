@@ -7,25 +7,28 @@
 
 - 웹: https://project2-flex-sh.vercel.app (서비스·약관 등 공개 페이지)
 - 데스크톱 웹사이트·앱 시연: https://flexable-web-delta.vercel.app (시연은 `/m`, 저장소 [`shinds-team7/flexable-web`](https://github.com/shinds-team7/flexable-web))
-- Android: Google Play 비공개 테스트 중
+- Android: Google Play 출시(2.1.0)
+- iPhone: App Store 첫 제출 준비 중([`docs/ios-release.md`](docs/ios-release.md))
 
 ## 주요 기능
 
-- 이메일·카카오·Google 가입·로그인
+- 이메일·카카오·Google 가입·로그인(iPhone은 이메일만)
 - 초기 예산 설정: 잔액, 수입일·수입액, 고정지출, 카드 미결제액, 모아둔 돈, 매달 저축할 돈
 - 홈: 오늘·이번 주 쓸 수 있는 돈, 다음 수입일까지 남은 생활비, 예산을 지킨 만큼 성장하는 캐릭터
 - 거래 직접 기록·수정·삭제, 카테고리 관리, 고정지출 자동 기록
 - 소비 분석(기간별 카테고리 합계), 계정·데이터 삭제
 - 시드머니(모아둔 돈 + 수입일 전날 반영 기록), 앱에서만 쓰는 코인·코스튬 상점·추천 코드, 웹사이트 연동(선택 동의)
+- 예정 지출, 거래내역서 PDF 가져오기, AI 메이트(Gemini, 지출·수입·일정 제안은 확인 뒤 저장)
+- Android 전용: 카드 결제 알림 자동 기록(지원 카드 앱, 선택), 스크린샷 가져오기, 상시 예산 알림, 음성 입력, 광고 보상
 
-계좌 연결, AI 분석, 알림 자동 기록은 시연(웹사이트 저장소의 `/m`)에만 있다. 전체 목록과 구현 근거는 [`docs/FEATURES.md`](docs/FEATURES.md).
+계좌 연결, 정산은 시연(웹사이트 저장소의 `/m`)에만 있다. 전체 목록과 구현 근거는 [`docs/FEATURES.md`](docs/FEATURES.md).
 
 ## 구성
 
 ```text
-Android 앱 ─┐
-            ├─ HTTPS ─▶ API 서버 (Spring Boot, EC2 + Docker + Caddy) ─▶ MySQL (RDS)
-웹 (Vercel) ┘           https://flex-able-sh.duckdns.org/api/v1
+Android·iPhone 앱 ─┐
+                  ├─ HTTPS ─▶ API 서버 (Spring Boot, EC2 + Docker + Caddy) ─▶ MySQL (RDS)
+웹 (Vercel) ───────┘           https://flex-able-sh.duckdns.org/api/v1
 ```
 
 | 영역 | 기술 | 디렉토리 |
