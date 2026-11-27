@@ -11,6 +11,7 @@ type Speech = typeof SpeechModule;
  * 네이티브 모듈을 먼저 확인하고 늦게 불러온다(oauth.ts의 expo-web-browser와 같은 방식). 없으면 마이크 버튼을 숨긴다.
  */
 function loadSpeech(): Speech | null {
+  if (Platform.OS === "ios") return null;
   try {
     if (
       Platform.OS !== "web" &&

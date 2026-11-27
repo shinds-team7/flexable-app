@@ -7,7 +7,22 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.flexable.app",
+      "buildNumber": "1",
+      "runtimeVersion": {
+        "policy": "fingerprint"
+      },
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "ko",
+        "CFBundleLocalizations": [
+          "ko"
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true
+        }
+      }
     },
     "android": {
       "package": "com.flexable.app",
@@ -38,6 +53,7 @@
     },
     "scheme": "flexable",
     "plugins": [
+      "./plugins/withIosLocalFeatures",
       "expo-router",
       "expo-font",
       [
@@ -56,7 +72,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "거래내역 스크린샷을 고르려고 사진에 접근해요. 고른 사진은 기기에서만 읽어요",
+          "photosPermission": false,
           "cameraPermission": false
         }
       ],
@@ -103,8 +119,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3401841469269585~5466483972",
-          "iosAppId": "ca-app-pub-3401841469269585~5466483972"
+          "androidAppId": "ca-app-pub-3401841469269585~5466483972"
         }
       ],
       [

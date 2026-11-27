@@ -327,12 +327,14 @@ class ApiFlowTest {
 	void fixedExpensesArePostedAsTransactions() throws Exception {
 		String token = signup("fixed@example.com");
 		LocalDate from = todayDate.minusDays(40);
+		// 다음 월세보다 먼저 수입일이 오도록 해, 공휴일로 밀린 수입일이 이 검증에 영향을 주지 않게 한다.
+		int payday = todayDate.plusWeeks(1).getDayOfMonth();
 		String range = "?from=" + from + "&to=" + today;
 		// 40일 전 잔액, 오늘 날짜 월세 → 지난달과 오늘 두 번 나갔다
 		String settings = """
-				{"balance":1000000,"balanceAt":"%s","payday":25,"incomeAmount":2400000,
+				{"balance":1000000,"balanceAt":"%s","payday":%d,"incomeAmount":2400000,
 				 "fixedExpenses":[{"name":"월세","amount":450000,"day":%d}]}
-				""".formatted(OffsetDateTime.now(SEOUL).minusDays(40), todayDate.getDayOfMonth());
+				""".formatted(OffsetDateTime.now(SEOUL).minusDays(40), payday, todayDate.getDayOfMonth());
 		mvc.perform(json(put("/api/v1/budget/settings"), token, settings)).andExpect(status().isOk());
 
 		MvcResult list = mvc.perform(json(get("/api/v1/transactions" + range), token, null))
@@ -358,9 +360,9 @@ class ApiFlowTest {
 		mvc.perform(json(delete("/api/v1/transactions/" + older), token, null)).andExpect(status().isNoContent());
 		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(1)));
 		mvc.perform(json(put("/api/v1/budget/settings"), token, """
-				{"balance":550000,"payday":25,"incomeAmount":2400000,
+				{"balance":550000,"payday":%d,"incomeAmount":2400000,
 				 "fixedExpenses":[{"name":"월세","amount":450000,"day":%d}]}
-				""".formatted(todayDate.getDayOfMonth()))).andExpect(status().isOk());
+				""".formatted(payday, todayDate.getDayOfMonth()))).andExpect(status().isOk());
 		mvc.perform(json(get("/api/v1/transactions" + range), token, null)).andExpect(jsonPath("$.items", hasSize(1)));
 	}
 

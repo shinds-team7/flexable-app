@@ -2,6 +2,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -58,13 +59,13 @@ export function useHomeGuide() {
 }
 
 /** target: components/guideTargets에 등록된 id */
-type Step = { target: string; title: string; body: string };
+type Step = { target: string; title: string; body: string; androidGuide?: boolean };
 
 const STEPS: Step[] = [
   {
     target: "record",
     title: "+ 버튼으로 거래를 기록해요",
-    body: "수입/지출을 직접 입력하거나, 결제내역 스크린샷으로 여러 건을 한 번에 기록해요.\n카드 결제 자동 기록도 지원해요.",
+    body: Platform.OS === "ios" ? "수입과 지출의 금액, 날짜, 카테고리를 입력해 기록해요." : "수입/지출을 직접 입력하거나, 결제내역 스크린샷으로 여러 건을 한 번에 기록해요.\n카드 결제 자동 기록도 지원해요.",
   },
   {
     target: "hero",
@@ -108,11 +109,13 @@ const STEPS: Step[] = [
   },
   {
     target: "tab:마이",
+    androidGuide: true,
     title: "카드 결제 알림을 자동으로 기록해요",
     body: "Android에서 마이 → [카드 자동 기록]으로 들어가 동의하고 알림 접근을 허용한 뒤 켜 주세요. 신한·삼성·현대·KB국민·롯데·NH농협카드 앱의 국내 원화 승인 알림을 모아, 앱을 열면 지출로 기록해요. 취소·해외 결제는 직접 확인해 주세요",
   },
   {
     target: "tab:마이",
+    androidGuide: true,
     title: "알림창에서 오늘 남은 예산을 봐요",
     body: "Android에서 마이 → [알림창에 오늘 남은 예산]을 켜면 휴대폰 알림창에서 남은 예산을 볼 수 있어요. 기본은 꺼져 있고, 직접 켤 때 알림 권한을 요청해요. 필요 없으면 언제든 다시 끌 수 있어요",
   },
@@ -150,7 +153,7 @@ export function HomeGuide({
     setMeasured(undefined);
     if (visible) {
       setIndex(0);
-      setSteps(STEPS.filter((st) => hasGuideTarget(st.target)));
+      setSteps(STEPS.filter((st) => (Platform.OS !== "ios" || !st.androidGuide) && hasGuideTarget(st.target)));
     }
   }
   useEffect(() => {

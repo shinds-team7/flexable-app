@@ -41,16 +41,20 @@ export default function Start() {
           계산해요.
         </T>
         <View style={{ alignSelf: "stretch", gap: 10, marginTop: 30 }}>
-          <KakaoButton
-            busy={busy === "kakao"}
-            disabled={busy !== null}
-            onPress={() => social("kakao")}
-          />
-          <GoogleButton
-            busy={busy === "google"}
-            disabled={busy !== null}
-            onPress={() => social("google")}
-          />
+          {Platform.OS !== "ios" && (
+            <>
+              <KakaoButton
+                busy={busy === "kakao"}
+                disabled={busy !== null}
+                onPress={() => social("kakao")}
+              />
+              <GoogleButton
+                busy={busy === "google"}
+                disabled={busy !== null}
+                onPress={() => social("google")}
+              />
+            </>
+          )}
           <EmailButton
             disabled={busy !== null}
             onPress={() => router.push("/auth/login")}

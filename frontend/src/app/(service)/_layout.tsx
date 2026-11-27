@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { useBudgetNotification } from "@/service/budgetNotification";
 import { useEntryReminder, useEntryReminderTap } from "@/service/entryReminder";
@@ -14,7 +15,13 @@ export default function Layout() {
   useEntryReminderTap();
   return (
     <Guard>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={Platform.OS !== "ios"}>
+          <Stack.Screen name="payment-notifications" />
+          <Stack.Screen name="dev-notifications" />
+          <Stack.Screen name="transactions/import" />
+        </Stack.Protected>
+      </Stack>
     </Guard>
   );
 }

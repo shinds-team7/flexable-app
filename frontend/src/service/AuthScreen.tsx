@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Platform, Pressable, TextInput, View } from "react-native";
 import { Button, T } from "@/components/ui";
 import { colors } from "@/theme";
 import { api, ApiError } from "./api/client";
@@ -170,8 +170,10 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
           ))}
         </>
       )}
-      <ErrorNotice error={error} />
-      {socialProvider && (
+      <ErrorNotice error={socialProvider && Platform.OS === "ios"
+        ? "이 계정은 Android 앱이나 웹에서 처음 가입한 방법으로 로그인해 주세요. iPhone에서는 이메일과 비밀번호로 가입한 계정을 사용할 수 있어요."
+        : error} />
+      {Platform.OS !== "ios" && socialProvider && (
         <SocialButton
           busy={social.busy === socialProvider}
           disabled={social.busy !== null}
@@ -201,7 +203,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
               marginTop: -4,
             }}
           >
-            <TextLink label="비밀번호 찾기" onPress={() => setRecover(true)} />
+            <TextLink label={Platform.OS === "ios" ? "로그인 도움말" : "비밀번호 찾기"} onPress={() => setRecover(true)} />
             {/* replace: 가입 후 뒤로 가기에 이 로그인 화면이 남지 않게 한다(시작 → 가입과 같은 쌓임) */}
             <TextLink
               label="회원가입"
@@ -209,7 +211,7 @@ export function AuthScreen({ signup = false }: { signup?: boolean }) {
             />
           </View>
           {recover && (
-            <T>비밀번호 재설정은 준비 중이에요. 문의: {SUPPORT_EMAIL}</T>
+            <T>{Platform.OS === "ios" ? "로그인에 도움이 필요하면 문의해 주세요." : "비밀번호 재설정은 준비 중이에요. 문의:"} {SUPPORT_EMAIL}</T>
           )}
         </>
       )}

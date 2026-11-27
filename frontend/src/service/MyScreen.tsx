@@ -309,7 +309,7 @@ export function MyScreen() {
             />
           ) : (
             // 알림창 상시 알림은 기본 꺼짐. 직접 켤 때 권한을 요청한다.
-            Platform.OS !== "web" && (
+            Platform.OS === "android" && (
               <Row
                 key="budget-notification"
                 label="알림창에 오늘 남은 예산"

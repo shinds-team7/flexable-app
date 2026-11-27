@@ -10,7 +10,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Keyboard, Platform, ScrollView, View } from "react-native";
 import { goBack } from "@/components/SubHeader";
-import { ConfirmModal, T } from "@/components/ui";
+import { Button, ConfirmModal, T } from "@/components/ui";
 import { colors } from "@/theme";
 import { won } from "@/utils/format";
 import { api, sessionGeneration } from "./api/client";
@@ -59,6 +59,8 @@ import { styles } from "./chatbot/styles";
 
 export function ChatbotScreen() {
   const extensions = useServerExtensions();
+  const { user } = useSession();
+  const [consentedUser, setConsentedUser] = useState<number>();
   if (!extensions.available)
     return (
       <Page title="AI 메이트">
@@ -72,6 +74,15 @@ export function ChatbotScreen() {
         )}
       </Page>
     );
+  if (Platform.OS === "ios" && (!user || consentedUser !== user.id)) {
+    return (
+      <Page title="AI 메이트">
+        <T>질문에 답하기 위해 입력한 대화와 예산 요약, 카테고리별 지출 합계를 Google Gemini에 보내요. 동의는 이번 대화에만 적용돼요.</T>
+        <Button label="동의하고 대화하기" onPress={() => setConsentedUser(user?.id)} />
+        <Button label="나중에" variant="ghost" onPress={() => goBack("/home")} />
+      </Page>
+    );
+  }
   return <ChatbotRoom />;
 }
 
