@@ -52,7 +52,16 @@
 ### 출시·Play Console
 - [ ] **스토어 자세한 설명의 AI 메이트 전송처를 "OpenAI" → "Google(Gemini API)"로 고치기**(Play Console, 문구는 `play-store/README.md` §2). 금융 기능 선언(§3.7)·문의 줄·알림 권한(§3.8)은 11-08 확인 완료
 
+### iPhone 첫 출시(#395, 절차 [`ios-release.md`](ios-release.md))
+- [ ] **iPhone Release CI 결과 확인**: #395는 시뮬레이터 실행 검사가 끝나기 전에 병합했다(사용자 결정, 11-27). 기기용 Release 빌드는 통과, 시뮬레이터 빌드가 약 40분 걸려 제한을 120분으로 늘렸다. Actions "iPhone Release"를 main에서 `workflow_dispatch`로 돌려 통과를 확인하고, 실패하면 고친다
+- [ ] Apple Developer 팀에서 Bundle ID `com.flexable.app` 확인 → App Store Connect에 앱 등록(한국어, 이름 텅장관리)
+- [ ] EAS production 환경 `EXPO_PUBLIC_API_URL`이 운영 HTTPS 주소인지 확인 → `npx eas-cli@latest build --platform ios --profile production`(첫 빌드에서 팀·인증서 선택) → `eas submit`으로 TestFlight
+- [ ] TestFlight 실기기 확인(ios-release.md "TestFlight 확인" 목록: 가입·예산·기록·분석·PDF·알림·AI 메이트 동의·계정 삭제, Android 전용 기능이 안 보이는지)
+- [ ] 심사 전용 이메일 계정에 가상 데이터 준비, 스크린샷 캡처, 스토어 문구·App Privacy·연령 등급 입력(ios-release.md 표) → 심사 제출
+- [ ] 출시 뒤 이 묶음을 지우고 §1 표 "iPhone" 줄을 버전·출시일로 바꾼다
+
 ### 서버·인프라
+- [ ] **서버 이전 결과 기록**: 11-27 기준 저장소에 EC2 복귀 완료 여부·전환 시각이 없다. 끝났으면 §1 표 "코드"·"서버" 줄, §2 "최우선", README 구성도(지금 "MySQL (RDS)")를 함께 고친다
 - [ ] **EC2 로컬 DB로 복귀 → 아카데미 VM 정리**: 위 §2 "최우선" 항목으로 옮김(기한 VM 종료 전, 11-24 추정). 복귀 뒤에는 이 PC에서 `backend/deploy/deploy.sh`로 배포할 수 있다. 개인정보처리방침 백업 문구 손보기(§9). 복귀 때 `error_events`(V23)도 함께 옮긴다(30일 보관이라 비워도 된다)
 - [ ] 작업 PC 홈의 `ec2.env`·`academy.env`(비밀값)는 비밀번호 관리자로 옮기고 지운다. 되돌림용 `dump-final.sql.gz`(EC2 `~`, 작업 PC `~`)도 지운다
 - [ ] 도메인 구매 → 서버 `API_DOMAIN`, `frontend/.env.production`, EAS 환경변수 `EXPO_PUBLIC_API_URL`(preview·production) 변경 → 재빌드 또는 원격 업데이트. EC2 탄력적 IP 할당(지금은 인스턴스를 멈추면 IP가 바뀜)
