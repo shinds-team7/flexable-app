@@ -11,7 +11,7 @@
 |---|---|
 | 코드 | `main`에 iPhone 첫 버전 준비(#395)와 낡은 코드·문서 정리(#397)까지 병합. 앱 버전 2.1.0. 서버 배포본과 EC2 복귀(아래 "최우선") 결과는 이 표에 아직 반영하지 않았다 |
 | iPhone | App Store 첫 제출 준비 코드 병합 단계. Apple Developer 등록, EAS iOS 빌드, TestFlight 확인, 심사 입력은 사람이 한다([`ios-release.md`](ios-release.md)) |
-| 최신 원격 업데이트 | production **runtime 2.1.0 그룹 `24a0c6df-6c95-44db-bdf4-42bb001e2661`**(11-22 승격, preview `e4ddccaa`·소스 `301eae4`에서 republish, #385·#386·#389·#393 포함). 실기기 적용은 별도 |
+| 최신 원격 업데이트 | production **runtime 2.1.0 그룹 `d5d481d1-9fb5-44bc-b94b-803033e41d8f`**(11-27 승격, preview `074bd8e3`·소스 `bb03ad8`에서 republish, #395·#397 포함. 그 전 11-22 `24a0c6df`). 실기기 적용은 별도 |
 | 현재 운영 앱 | **Play 프로덕션 2.1.0(versionCode 26)**, EAS `44e9bc0a`(소스 `910367a`). 11-14 사용자 출시 확인, `minVersion` 2.1.0(PR #375) |
 | 마이크 권한 경고 | 1.8.0부터 `RECORD_AUDIO` 때문에 Play가 마이크 없는 기기 약 20종을 지원하지 않는다고 경고한다. 영향이 작아 그대로 둔다(11-07 사용자 결정). 고치려면 `android.hardware.microphone`을 `required="false"`로 선언하는 config plugin과 새 빌드 |
 | 서버 | **11-10 13:20 KST 아카데미 VM 배포 완료**, 소스 `d1fce4b`(#344 병합본 `3db9737`과 backend 동일). V28 누적 7일 이상 출석자의 outfit-06 누락 복구·V29 시드머니 총액 정정 적용. 기존 보상·기록 유지, EC2 중계·비밀값 변경 없음 |
@@ -112,7 +112,7 @@
 - [ ] 내역 필터 전환 성능(#388, PR #389): [전체·지출·수입]을 넘길 때 달력·다른 쪽 목록을 다시 그리지 않게 memo. 화면 변화 없음. 반영: 앱 원격 업데이트(JS만), 서버 변경 없음. 11-20 runtime 2.1.0 preview 게시(그룹 `46e8e1e8-11b2-49e1-8d2d-75187f77568b`, 소스 `76d814d`, #385·#386 포함) 11-22 production 승격(그룹 `24a0c6df-6c95-44db-bdf4-42bb001e2661`, preview `e4ddccaa`에서 republish).
 - [ ] AI 메이트 서버 정리(#390, PR #391): ChatService에서 모델 호출 스레드·일정 제안을 분리하고 카테고리를 요청당 한 번만 조회. API·문구 변화 없음. 반영: 다음 서버 배포(`deploy.sh`, DB 변경 없음)에 함께, 앱 변경 없음.
 - [ ] 스크린샷 가져오기 금액 칸 방향 낱말(#392, PR #393): 일반 규칙에서 "출금 5,000원"·"입금30,000원"·"승인취소 7,000원"을 금액과 방향으로 읽는다. 반영: 앱 원격 업데이트(JS만), 서버 변경 없음. 실기기에서 신한·농협 거래내역 스크린샷 확인 필요 11-22 runtime 2.1.0 preview 게시(그룹 `e4ddccaa-7d62-4bf6-b7ad-c8ab558e8e2d`, 소스 `301eae4`, #385·#386·#389·#393 포함) 11-22 production 승격(그룹 `24a0c6df-6c95-44db-bdf4-42bb001e2661`, preview `e4ddccaa`에서 republish).
-- [ ] iPhone 첫 출시(#394, PR #395). 공개 개인정보처리방침·이용약관을 먼저 반영한 뒤 iOS 새 빌드 → TestFlight 실기기 확인 → App Store 심사. 서버 배포 순서 제약 없음. [제출 절차](ios-release.md) 11-27 Android runtime 2.1.0 preview 게시(그룹 `074bd8e3-5677-4278-a6e8-edcd55a1e704`, 소스 `bb03ad8`, #397 포함). Android는 약관 문구만 바뀜, production 승격 전
+- [ ] iPhone 첫 출시(#394, PR #395). 공개 개인정보처리방침·이용약관을 먼저 반영한 뒤 iOS 새 빌드 → TestFlight 실기기 확인 → App Store 심사. 서버 배포 순서 제약 없음. [제출 절차](ios-release.md) 11-27 Android runtime 2.1.0 preview 게시(그룹 `074bd8e3-5677-4278-a6e8-edcd55a1e704`, 소스 `bb03ad8`, #397 포함). Android는 약관 문구만 바뀜. 11-27 production 승격(그룹 `d5d481d1-9fb5-44bc-b94b-803033e41d8f`, preview `074bd8e3`에서 republish)
 
 ## 5. 참고(자주 바뀌지 않는 정보)
 
